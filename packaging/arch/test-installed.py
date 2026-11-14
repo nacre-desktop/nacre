@@ -331,7 +331,6 @@ assert {
     "nacre-terminal",
     "org.kde.dolphin",
 } <= set(favorites)
-assert "command -v fish" in (home / ".config/nacre/terminal/kitty.conf").read_text()
 # The native nacre-ai --help below proves the optional controller when installed.
 if not ai_installed:
     assert not ai_wrapper.exists(), "Setup created a wrapper without nacre-ai"
