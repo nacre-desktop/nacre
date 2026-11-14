@@ -2713,16 +2713,22 @@ fn native_status_release_opens_once_and_clears_press_but_drag_does_not_open() {
         click.session.stores.get("bead.pressed"),
         Some(&Value::Bool(false))
     );
+    // Owner 2026-11-14: a status click opens its section of the docked control panel, once.
     assert!(
-        click.status_pill.panel().is_some(),
-        "the registered host route opens the status dropdown once"
+        click.status_pill.panel().is_none(),
+        "a status click no longer opens a dropdown"
     );
-    assert!(
-        click_routes.lock().unwrap().iter().any(|event| matches!(
-            event,
-            UiEvent::CompanionSelect { .. } | UiEvent::CompanionSelectAt { .. }
-        )),
-        "the registered host route requests the production dropdown panel"
+    assert_eq!(
+        click_routes
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(
+                |event| matches!(event, UiEvent::CompanionSelect { view, .. } if view == "control")
+            )
+            .count(),
+        1,
+        "the click requests the control dock once"
     );
 
     let (mut drag, _) = real_bar_runtime_with_popouts(dir.join("drag-widgets.json"));

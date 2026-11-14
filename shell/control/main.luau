@@ -393,6 +393,15 @@ local function detail()
         return stack("detail",items,T.spacing.lg)
     end
     if id=="notifications" or id=="dnd" then return notifications_page() end
+    if id=="updates" then
+        -- Owner 2026-11-14: the updates icon opens its own section: the pending count and the System page.
+        local count=get("cc.updates") or 0
+        local items={header(ui.tr("bead.panel.control-updates"),ui.action("page","home"))}
+        table.insert(items,{ui.Text{id="updates-summary",text=count>0 and ui.tr("bead.panel.control-updates-pending",{count=tostring(count)}) or ui.tr("bead.panel.control-updates-none"),
+            width=INNER,height=BODY*1.5,font_size=BODY,color="onSurface"},BODY*1.5})
+        table.insert(items,{row_button("updates-open","system_update",ui.tr("bead.panel.control-updates-open"),"chevron_right",ui.action("view.open","dashboard-system")),ROW})
+        return stack("detail",items)
+    end
     local t=reg.by_id[id]
     local s=t and t.source and src[t.source] or {}
     local items={header(t and ui.tr(t.label) or "",ui.action("page","home"))}

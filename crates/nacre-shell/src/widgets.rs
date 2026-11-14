@@ -220,6 +220,7 @@ pub fn control_page(kind: &str) -> Option<&'static str> {
         "audio" | "sound" => Some("audio"),
         "battery" => Some("battery"),
         "notifications" => Some("notifications"),
+        "updates" => Some("updates"),
         _ => None,
     }
 }

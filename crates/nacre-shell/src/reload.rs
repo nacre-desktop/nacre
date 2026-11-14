@@ -7667,7 +7667,8 @@ impl SceneSource for Runtime {
                     bead::core::Value::Text(String::new()),
                 ),
             ])));
-            return Ok(None);
+            // The press/release feedback still renders; only the dropdown route is dropped.
+            host_action = None;
         }
         if matches!(&event, UiEvent::HorizontalScroll { .. })
             && !host_action
