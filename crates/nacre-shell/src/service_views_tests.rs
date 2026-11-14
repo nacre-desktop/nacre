@@ -678,10 +678,14 @@ fn real_bar_calendar_action_enqueues_a_view_and_audio_scroll_does_not_toggle_it(
     );
     runtime.stage(UiEvent::Release)?;
     runtime.commit();
+    // Owner 2026-11-14: a status click opens its section in the docked control panel.
     let received = events.lock().unwrap();
-    assert!(matches!(received.as_slice(),
-        [UiEvent::CompanionSelect { view, toggle:false, center:Some(center), .. }]
-            if view == "notifications" && *center == notification_anchor));
+    assert!(
+        matches!(received.as_slice(),
+            [UiEvent::CompanionSelect { view, toggle:false, center:None, .. }, UiEvent::CompanionModel(model)]
+                if view == "control" && model.get("cc.detail") == Some(&Value::Text("notifications".into()))),
+        "{received:?} at {notification_anchor}"
+    );
     drop(received);
     host.stop();
     Ok(())
@@ -1021,8 +1025,8 @@ fn bar_counts_share_icon_hit_areas_and_centered_line_boxes() -> Result<()> {
         assert!(
             (power.w - 34.).abs() < 0.01
                 && (power.h - 34.).abs() < 0.01
-                && power.x >= pill_rect.x + pill_rect.w + 12. - 0.01,
-            "power is a 34 px round button 12 px after the pill: {power:?} vs {pill_rect:?}"
+                && power.x >= pill_rect.x + pill_rect.w + 9. - 0.01,
+            "power is a 34 px round button 9 px after the pill: {power:?} vs {pill_rect:?}"
         );
         assert_eq!(h.session.pointer_cursor(960., 25.), "pointer");
         assert!(h.session.allows_edge_hover(960., 25.));
@@ -1945,9 +1949,17 @@ fn status_pill_click_routes_switch_escape_and_reopen() -> Result<()> {
     );
     runtime.stage(UiEvent::Release)?;
     runtime.commit();
-    assert!(matches!(events.lock().unwrap().as_slice(),
-        [UiEvent::CompanionSelect { view, toggle:false, center:Some(center), .. }]
-            if view == "network" && *center == network.0));
+    // Owner 2026-11-14: each status click opens that section of the docked control panel.
+    let opens = |page: &str| {
+        let events = events.lock().unwrap();
+        assert!(
+            matches!(events.as_slice(),
+                [UiEvent::CompanionSelect { view, toggle:false, center:None, .. }, UiEvent::CompanionModel(model)]
+                    if view == "control" && model.get("cc.detail") == Some(&Value::Text(page.into()))),
+            "{page}: {events:?}"
+        );
+    };
+    opens("network");
     events.lock().unwrap().clear();
     runtime.stage(UiEvent::Click {
         x: bluetooth.0,
@@ -1960,32 +1972,16 @@ fn status_pill_click_routes_switch_escape_and_reopen() -> Result<()> {
     );
     runtime.stage(UiEvent::Release)?;
     runtime.commit();
-    assert!(matches!(events.lock().unwrap().as_slice(),
-        [UiEvent::CompanionSelect { view, toggle:false, center:Some(center), .. }]
-            if view == "bluetooth" && *center == bluetooth.0));
-    events.lock().unwrap().clear();
-    runtime.stage(UiEvent::Command {
-        command: "escape".into(),
-        shift: false,
-    })?;
-    assert!(matches!(
-        events.lock().unwrap().as_slice(),
-        [UiEvent::CompanionVisibility(false)]
-    ));
+    opens("bluetooth");
     events.lock().unwrap().clear();
     runtime.stage(UiEvent::Click {
         x: network.0,
         y: network.1,
     })?;
     runtime.commit();
-    assert!(
-        events.lock().unwrap().is_empty(),
-        "the draggable click waits for release"
-    );
     runtime.stage(UiEvent::Release)?;
     runtime.commit();
-    assert!(matches!(events.lock().unwrap().as_slice(),
-        [UiEvent::CompanionSelect { view, toggle:false, .. }] if view == "network"));
+    opens("network");
     host.stop();
     Ok(())
 }

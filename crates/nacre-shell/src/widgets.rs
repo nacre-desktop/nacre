@@ -212,6 +212,17 @@ pub fn dropdown_view(argument: &Value) -> Option<&str> {
         _ => None,
     }
 }
+/// The docked control panel page a status icon's click opens (owner 2026-11-14), if it has one.
+pub fn control_page(kind: &str) -> Option<&'static str> {
+    match kind {
+        "network" => Some("network"),
+        "bluetooth" => Some("bluetooth"),
+        "audio" | "sound" => Some("audio"),
+        "battery" => Some("battery"),
+        "notifications" => Some("notifications"),
+        _ => None,
+    }
+}
 pub fn dropdown_hover(argument: &Value) -> bool {
     match argument {
         Value::List(records) => records

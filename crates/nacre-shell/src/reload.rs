@@ -5982,7 +5982,10 @@ impl SceneSource for Runtime {
                         } else {
                             None
                         }
-                    } else if self.bar && node.action.as_deref() == Some("status.pill.open") {
+                    } else if self.bar
+                        && node.action.as_deref() == Some("status.pill.open")
+                        && !matches!(&node.action_arg, Some(bead::core::Value::Text(kind)) if crate::widgets::control_page(kind).is_some())
+                    {
                         node.action_arg
                             .as_ref()
                             .and_then(crate::widgets::dropdown_view)
@@ -7634,6 +7637,30 @@ impl SceneSource for Runtime {
                     || (self.routes.is_some() && self.bar_route(&event, id, name, arg).is_some())
             })
         {
+            return Ok(None);
+        }
+        // Owner 2026-11-14: clicking a status icon opens its section in the docked control panel
+        // (the hover peek stays); the separate click dropdowns are gone for these kinds.
+        if self.bar
+            && matches!(&event, UiEvent::Click { .. } | UiEvent::Release)
+            && let Some((_, name, bead::core::Value::Text(kind))) = &host_action
+            && name == "status.pill.open"
+            && let Some(page) = crate::widgets::control_page(kind)
+        {
+            self.actions.authorize("view.open")?;
+            let wakeup = self.wakeup.as_ref().ok_or("control event channel unavailable")?;
+            wakeup(UiEvent::CompanionSelect {
+                view: "control".into(),
+                output: self.output.clone(),
+                toggle: false,
+                center: None,
+            });
+            wakeup(UiEvent::CompanionModel(BTreeMap::from([
+                ("cc.page".into(), bead::core::Value::Text("detail".into())),
+                ("cc.detail".into(), bead::core::Value::Text(page.into())),
+                ("cc.scroll".into(), bead::core::Value::Number(0.)),
+                ("bead.focused".into(), bead::core::Value::Text(String::new())),
+            ])));
             return Ok(None);
         }
         if matches!(&event, UiEvent::HorizontalScroll { .. })
