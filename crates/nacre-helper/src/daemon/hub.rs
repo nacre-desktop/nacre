@@ -122,6 +122,20 @@ pub struct Hub {
     /// wallpaper producer observes a successful selection.
     pub(super) wallpaper_history: super::behaviours::WallpaperHistory,
 }
+/// N0332: the topic fields `fixed_methods` gates on (besides topic presence and `services`).
+/// Keep in step with the `available_methods` gates; a missed field only delays the republish.
+fn gates_methods(topic: &str, old: &Value, new: &Value) -> bool {
+    let changed = |field: fn(&Value) -> &Value| field(old) != field(new);
+    let outputs = |value: &Value| value["outputs"].as_object().is_some_and(|o| o.is_empty());
+    changed(|v| &v["available"])
+        || changed(|v| &v["health"]["available"])
+        || topic == "compositor"
+            && (changed(|v| &v["backend"])
+                || changed(|v| &v["capabilities"])
+                || outputs(old) != outputs(new))
+        || topic == nacre_protocol::control_center::TOPIC
+            && old["night_light"].is_null() != new["night_light"].is_null()
+}
 impl Hub {
     pub fn configure_spectrum(
         &mut self,
@@ -254,19 +268,21 @@ impl Hub {
         if !force && old.is_some_and(|old| old.data == data) {
             return Ok(());
         }
+        // N0332: a new topic or a changed method gate republishes the registry below.
+        let registry = topic != "daemon" && old.is_none_or(|old| gates_methods(topic, &old.data, &data));
         let seq = old.map_or(Ok(0), |old| {
             old.seq
                 .checked_add(1)
                 .filter(|s| *s <= MAX_SAFE_INTEGER)
                 .ok_or_else(|| failure(ErrorCode::Internal, "Topic sequence exhausted", false))
         })?;
-        // One encode validates the frame and sizes the topic (envelope included).
+        // One counted encode validates the frame and sizes the topic (envelope included).
         let message = Message::Snap {
             topic: topic.into(),
             seq,
             data,
         };
-        let bytes = nacre_protocol::framing::encode(&message)?.len();
+        let bytes = nacre_protocol::framing::encoded_len(&message)?;
         let Message::Snap { data, .. } = message else {
             unreachable!("snap message")
         };
@@ -315,6 +331,11 @@ impl Hub {
             topic: topic.into(),
             available: self.topics[topic].data["available"].as_bool(),
         });
+        if registry {
+            if let Err(error) = self.registry_changed() {
+                tracing::warn!(code = ?error.code, "Method registry was not republished");
+            }
+        }
         Ok(())
     }
     pub fn add_client(&mut self) -> Result<(u64, Rc<Notify>), Failure> {
@@ -357,6 +378,9 @@ impl Hub {
             }
             self.provider = None;
             self.provider_misses = 0;
+            if let Err(error) = self.registry_changed() {
+                tracing::warn!(code = ?error.code, "Method registry was not republished");
+            }
         }
         self.routes.retain(|_, route| route.provider != id);
         if self
@@ -453,6 +477,8 @@ impl Hub {
     }
     pub fn methods(&self) -> BTreeMap<String, Method> {
         use nacre_protocol::Capability;
+        #[cfg(test)]
+        tests::REBUILDS.with(|count| count.set(count.get() + 1));
         let mut methods = self.fixed_methods();
         if let Some((_, provider)) = &self.provider {
             for (name, version) in provider {
@@ -515,8 +541,16 @@ impl Hub {
         json!({"boot":self.boot,"safe":self.safe,"clients":self.clients.len(),"services":self.services,"topics":self.topics.keys().cloned().collect::<Vec<_>>(),"methods":self.methods()})
     }
     pub fn service(&mut self, name: &str, status: &str, failures: usize) -> Result<(), Failure> {
-        self.services
-            .insert(name.into(), json!({"status":status,"failures":failures}));
+        let entry = json!({"status":status,"failures":failures});
+        if self.services.get(name) == Some(&entry) {
+            return Ok(());
+        }
+        self.services.insert(name.into(), entry);
+        self.registry_changed()
+    }
+    /// N0332: the method set may have changed; republish `daemon` (deduplicated when it did not).
+    /// Every state change that gates `methods()` outside `service()` and topic publishes calls this.
+    pub fn registry_changed(&mut self) -> Result<(), Failure> {
         self.publish("daemon", self.status())
     }
     pub fn subscribe(&mut self, id: u64, topics: &[String], resync: bool) -> Result<(), Failure> {
@@ -599,7 +633,7 @@ impl Hub {
         self.refresh_interest();
     }
     pub fn enqueue(&mut self, id: u64, message: Message) -> Result<(), Failure> {
-        let bytes = nacre_protocol::framing::encode(&message)?.len();
+        let bytes = nacre_protocol::framing::encoded_len(&message)?;
         let client = self
             .clients
             .get_mut(&id)
@@ -680,7 +714,7 @@ impl Hub {
             seq,
             data,
         };
-        let bytes = nacre_protocol::framing::encode(&message)?.len();
+        let bytes = nacre_protocol::framing::encoded_len(&message)?;
         self.event_seq.insert(topic.into(), seq);
         if let Message::Ev {
             topic, name, data, ..
@@ -906,6 +940,9 @@ impl Hub {
             self.provider_misses = 0;
         }
         self.provider = Some((id, methods));
+        if let Err(error) = self.registry_changed() {
+            tracing::warn!(code = ?error.code, "Method registry was not republished");
+        }
         Ok(())
     }
     pub fn forward(
@@ -1078,6 +1115,50 @@ mod tests {
             panic!("welcome invalid; out-of-range timeouts: {bad:?}")
         });
     }
+    thread_local!(pub(super) static REBUILDS: std::cell::Cell<u64> = const { std::cell::Cell::new(0) });
+    #[test]
+    fn registry_is_rebuilt_only_when_a_service_or_method_gate_changes() {
+        let mut hub = Hub::new("fixture".into(), false, Duration::from_millis(16));
+        hub.service("settings", "running", 0).unwrap();
+        hub.service("compositor", "starting", 0).unwrap();
+        let built = REBUILDS.with(std::cell::Cell::get);
+        let seq = hub.topic_seq("daemon").unwrap();
+        let compositor = |available: bool, window: u64| {
+            json!({"available":available,"backend":"niri","outputs":{"DP-1":{}},"capabilities":{},"windows":[window]})
+        };
+        // Scripted: the compositor producer calls service() after each of its publishes; nacrectl connects once.
+        for window in 0..50 {
+            hub.publish("compositor", compositor(true, window)).unwrap();
+            hub.service("compositor", "running", 0).unwrap();
+        }
+        let (client, _) = hub.add_client().unwrap();
+        let _ = hub.welcome();
+        hub.remove_client(client);
+        let built = REBUILDS.with(std::cell::Cell::get) - built;
+        let published = hub.topic_seq("daemon").unwrap() - seq;
+        eprintln!("N0332 registry: {built} builds, {published} daemon publishes");
+        // New topic, compositor running, welcome; before N0332 every service() call built (51).
+        assert_eq!((built, published), (3, 2));
+        // A gate change (compositor availability drops the display methods) still republishes.
+        assert!(hub.snapshot_ref("daemon").unwrap()["methods"]
+            .get("display.apply")
+            .is_some());
+        hub.publish("compositor", compositor(false, 0)).unwrap();
+        assert!(hub.snapshot_ref("daemon").unwrap()["methods"]
+            .get("display.apply")
+            .is_none());
+        // So do provider registration and retirement.
+        let (provider, _) = hub.add_client().unwrap();
+        hub.register(provider, BTreeMap::from([("ui.dispatch".to_owned(), 1)]))
+            .unwrap();
+        assert!(hub.snapshot_ref("daemon").unwrap()["methods"]
+            .get("ui.dispatch")
+            .is_some());
+        hub.remove_client(provider);
+        assert!(hub.snapshot_ref("daemon").unwrap()["methods"]
+            .get("ui.dispatch")
+            .is_none());
+    }
     #[test]
     fn status_reports_methods_added_after_service_readiness() {
         let mut hub = Hub::new("fixture".into(), false, Duration::from_millis(16));
@@ -1103,6 +1184,10 @@ mod tests {
                 ..
             }
         ));
+        // N0332: a new topic republishes the method registry.
+        assert!(
+            matches!(observer.try_recv().unwrap(),Notice::Changed{ref topic,..} if topic=="daemon")
+        );
         hub.event("compositor", "outputs-changed", json!({}))
             .unwrap();
         assert!(

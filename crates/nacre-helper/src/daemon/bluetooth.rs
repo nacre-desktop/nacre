@@ -931,6 +931,10 @@ impl Service {
             }
         }
         self.publish(hub);
+        // N0332: `methods()` follows `ready`, and `service()` no longer republishes the registry.
+        if let Err(error) = hub.borrow_mut().registry_changed() {
+            tracing::warn!(code = ?error.code, "Method registry was not republished");
+        }
     }
 }
 

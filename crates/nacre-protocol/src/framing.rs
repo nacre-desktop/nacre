@@ -89,6 +89,26 @@ pub fn encode(message: &Message) -> Result<Vec<u8>, Failure> {
     bytes.push(b'\n');
     Ok(bytes)
 }
+/// `encode(message)?.len()` without building the frame (N0332: the hub sizes every snapshot).
+pub fn encoded_len(message: &Message) -> Result<usize, Failure> {
+    struct Count(usize);
+    impl std::io::Write for Count {
+        fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
+            self.0 += bytes.len();
+            Ok(bytes.len())
+        }
+        fn flush(&mut self) -> std::io::Result<()> {
+            Ok(())
+        }
+    }
+    message.validate()?;
+    let mut count = Count(0);
+    serde_json::to_writer(&mut count, message).map_err(|_| invalid())?;
+    if count.0 > MAX_FRAME {
+        return Err(large());
+    }
+    Ok(count.0 + 1)
+}
 #[derive(Default)]
 pub struct Decoder {
     buffer: Vec<u8>,
@@ -200,4 +220,17 @@ pub async fn write<W: AsyncWrite + Unpin>(
         .flush()
         .await
         .map_err(|_| Failure::new(ErrorCode::Io, "Protocol flush failed", true))
+}
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn encoded_len_matches_the_encoded_frame() {
+        let message = crate::Message::Snap {
+            topic: "daemon".into(),
+            seq: 3,
+            data: serde_json::json!({"text":"é\n\"\u{1}","list":[1,2.5,null,true]}),
+        };
+        let frame = super::encode(&message).unwrap();
+        assert_eq!(super::encoded_len(&message).unwrap(), frame.len());
+    }
 }

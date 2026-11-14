@@ -82,8 +82,9 @@ impl Requests {
     pub(super) fn disable(&self) {
         self.capabilities.set(0);
     }
-    pub(super) fn enable(&self, capabilities: u8) {
-        self.capabilities.set(capabilities);
+    /// True when the capability bits (and so the network methods) changed.
+    pub(super) fn enable(&self, capabilities: u8) -> bool {
+        self.capabilities.replace(capabilities) != capabilities
     }
     fn supports(&self, method: &str) -> bool {
         let bit = match method {

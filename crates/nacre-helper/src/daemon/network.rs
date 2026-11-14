@@ -1434,7 +1434,9 @@ async fn observe_on_connection(
             *published_devices.borrow_mut() = projection.ids.live.iter().filter_map(|(key, id)| {
                 key.strip_prefix("device\0").map(|path| (path.to_owned(), id.clone()))
             }).collect();
-            requests.enable(capabilities);
+            if requests.enable(capabilities) {
+                hub.borrow_mut().registry_changed()?;
+            }
             projection.last_good = Some(state);
         }
     }
