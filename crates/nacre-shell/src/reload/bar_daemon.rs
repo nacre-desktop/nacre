@@ -141,8 +141,11 @@ fn battery(snapshot: &Snapshot) -> BTreeMap<String, Value> {
     let value = state
         .percentage
         .map_or(String::new(), |percentage| format!("{percentage:.0}"));
-    // Plugged in: charging, or on AC at full / a charge threshold (UPower reports those as not charging).
-    let plugged = state.charging == Some(true) || state.on_battery == Some(false);
+    // Plugged in follows UPower's root OnBattery, which flips at once on a line-power event; the
+    // DisplayDevice State behind `charging` lags it by UPower's battery refresh (often 10-60 s).
+    let plugged = state
+        .on_battery
+        .map_or(state.charging == Some(true), |on| !on);
     BTreeMap::from([
         (
             KEYS[2].into(),
@@ -393,6 +396,26 @@ mod tests {
             );
         }
         assert_eq!(super::battery_glyph(None), "battery_full");
+    }
+
+    #[test]
+    fn battery_bolt_follows_on_battery_before_the_lagging_state() {
+        let unplugged = serde_json::json!({
+            "health":{"available":true,"stale":false}, "percentage":83.0, "charging":true,
+            "state":1, "time_to_full_seconds":5400, "on_battery":true
+        });
+        assert_eq!(
+            battery(&snapshot(unplugged, true))[KEYS[12]],
+            Value::Bool(false)
+        );
+        let plugged = serde_json::json!({
+            "health":{"available":true,"stale":false}, "percentage":83.0, "charging":false,
+            "state":2, "time_to_empty_seconds":7200, "on_battery":false
+        });
+        assert_eq!(
+            battery(&snapshot(plugged, true))[KEYS[12]],
+            Value::Bool(true)
+        );
     }
 
     #[test]
