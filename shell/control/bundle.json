@@ -5,7 +5,8 @@
     "status/battery-body.luau",
     "status/body.luau",
     "sound/body.luau",
-    "control/vpn-body.luau"
+    "control/vpn-body.luau",
+    "ui/components/notice-row.luau"
   ],
   "assets": ["notifications/fallback.themed.svg"]
 }

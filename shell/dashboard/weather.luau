@@ -63,10 +63,41 @@ return function()
                 ui.Text{text=item.label,width=slotWidth,height=16,font_size=10.667,text_align="center",color="onSurfaceVariant"}})
         end
     end
-    if #points>=2 then
-        table.insert(area,{points[1][1],1})
-        for _,point in ipairs(points) do table.insert(area,point) end
-        table.insert(area,{points[#points][1],1})
+    -- Monotone cubic (Fritsch-Carlson) through the readings, sampled so the line curves
+    -- without overshooting (design review D9).
+    local function monotone(pts,steps)
+        local n=#pts
+        if n<3 then return pts end
+        local d,m={},{}
+        for i=1,n-1 do d[i]=(pts[i+1][2]-pts[i][2])/math.max(1e-6,pts[i+1][1]-pts[i][1]) end
+        m[1],m[n]=d[1],d[n-1]
+        for i=2,n-1 do m[i]=d[i-1]*d[i]<=0 and 0 or (d[i-1]+d[i])/2 end
+        for i=1,n-1 do
+            if d[i]==0 then m[i],m[i+1]=0,0
+            else
+                local a,b=m[i]/d[i],m[i+1]/d[i]
+                local s=a*a+b*b
+                if s>9 then local t=3/math.sqrt(s) m[i],m[i+1]=t*a*d[i],t*b*d[i] end
+            end
+        end
+        local out={}
+        for i=1,n-1 do
+            local x0,y0,x1,y1=pts[i][1],pts[i][2],pts[i+1][1],pts[i+1][2]
+            local h=x1-x0
+            for k=0,steps-1 do
+                local t=k/steps
+                local t2,t3=t*t,t*t*t
+                table.insert(out,{x0+t*h,(2*t3-3*t2+1)*y0+(t3-2*t2+t)*h*m[i]+(-2*t3+3*t2)*y1+(t3-t2)*h*m[i+1]})
+            end
+        end
+        table.insert(out,pts[n])
+        return out
+    end
+    local curve=monotone(points,8)
+    if #curve>=2 then
+        table.insert(area,{curve[1][1],1})
+        for _,point in ipairs(curve) do table.insert(area,point) end
+        table.insert(area,{curve[#curve][1],1})
     end
     return ui.Box{id="weather",width=940,height=562,
         ui.Box{id="hero",position="absolute",left=0,top=0,width=style.width,height=style.height,radius=style.radius,fill="surfaceContainer",
@@ -93,7 +124,7 @@ return function()
             ui.Polyline{id="area",position="absolute",left=16,top=42,width=chartWidth,height=chartHeight,
                 points=area,closed=true,stroke_width=2,color={0,0,0,0},fill=ui.alpha("primary",.08)},
             ui.Polyline{id="temperature",position="absolute",left=16,top=42,width=chartWidth,height=chartHeight,
-                points=points,stroke_width=2,color="primary",round_caps=true},
+                points=curve,stroke_width=2,color="primary",round_caps=true},
             ui.Text{id="empty",visible=#hours==0,position="absolute",left=16,top=100,width=chartWidth,height=24,
                 text=ui.tr("bead.dashboard.weather-none"),font_size=13.333,text_align="center",color="onSurfaceVariant"},
             table.unpack(labels),

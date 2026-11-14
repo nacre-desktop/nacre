@@ -200,28 +200,11 @@ local function build_tile(t,w,h,embedded)
         on_activate=(t.navigate or not s.toggle) and opener or act(t,"toggle"),on_detail=split,
         detail_label=ui.tr("bead.panel.control-details",{name=label})}
 end
-local NOTICE_H=72
-local function noticeIcon(n)
-    local px=T.icons.medium*4/3
-    local image
-    if n.icon_path and n.icon_path~="" then image=ui.Image{id="app-icon",icon=n.icon_path,width=px,height=px,aria_label=n.app}
-    else image=ui.Image{id="app-icon",path="notifications/fallback.themed.svg",width=px,height=px,aria_label=n.app} end
-    return ui.Box{id="app-tile",width=END,height=END,radius=T.radii.small,fill="surfaceContainerHighest",shrink=0,padding=(END-px)/2,image}
-end
--- A notification row: app glyph in a tinted square, "app · time", the title, one line of body, and a dismiss button.
+local notice=require("../ui/components/notice-row")
+local NOTICE_H=notice.height
+-- A notification row (shared with the dashboard's Notifications page); × dismisses (history rows are forgotten).
 local function notice_row(n)
-    local caption=n.when and n.when~="" and n.app.." · "..n.when or n.app
-    local text_w=INNER-T.spacing.md*2-END-T.spacing.compact*2-END
-    return ui.Row{id="notice-"..n.id,width=INNER,height=NOTICE_H,shrink=0,radius=T.radii.medium,fill="surfaceContainer",
-        padding_left=T.spacing.md,padding_right=T.spacing.md,gap=T.spacing.compact,align="center",
-        noticeIcon(n),
-        ui.Column{id="notice-text",width=text_w,gap=0,
-            ui.Text{id="app",text=caption,width=text_w,height=16,font_size=CAPTION,color="onSurfaceVariant"},
-            ui.Text{id="summary",text=n.summary,width=text_w,height=20,font_size=BODY,font_weight=600,color="onSurface"},
-            ui.Text{id="body",text=n.body,width=text_w,height=16,font_size=CAPTION,color="onSurfaceVariant"}},
-        kit.IconButton{id="dismiss",text="close",aria_label=ui.tr("bead.notifications.dismiss"),width=END,height=END,padding=0,radius=T.radii.full,shrink=0,
-            font_size=T.icons.medium*4/3,fill="transparent",hover_fill="surfaceContainerHighest",color="onSurfaceVariant",
-            on_activate=n.rev~=nil and ui.action("cc.do","dismiss:notifications:"..n.id.."|"..n.rev) or nil}}
+    return notice.Row(n,{width=INNER,on_dismiss=n.rev~=nil and ui.action("cc.do","dismiss:notifications:"..n.id.."|"..n.rev) or nil})
 end
 local function notices_empty()
     local text=get("cc.notice_ready") and ui.tr("bead.panel.control-notices-empty") or ui.tr("bead.panel.control-notices-loading")

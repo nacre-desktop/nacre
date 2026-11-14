@@ -129,9 +129,21 @@ fn pages_have_complete_state_defaults_and_project_published_rows() -> Result<()>
                 assert_eq!(list[0]["label"], json!("shot-2.png"));
                 assert_eq!(list[0]["act"], json!("shot.open:s2"));
             }
-            Page::AiUsage => assert_eq!(rows(&shown, "dashboard.rows").len(), 5),
+            Page::AiUsage => {
+                // Claude reports two windows (ring rows, no text lines); Codex only text.
+                let list = rows(&shown, "dashboard.rows");
+                assert_eq!(list.len(), 4);
+                assert_eq!(list[0]["percent"], json!(40.0));
+                assert_eq!(list[0]["label"], json!("Claude · 5 hour"));
+                assert_eq!(list[0]["detail"], json!("Resets in 3h"));
+                assert_eq!(list[1]["detail"], json!(""), "no reset time, no countdown");
+                assert_eq!(list[2]["head"], json!(true));
+                assert!(list[2].get("percent").is_none());
+            }
             Page::Brain => {
-                assert_eq!(rows(&shown, "dashboard.rows").len(), 2);
+                let list = rows(&shown, "dashboard.rows");
+                assert_eq!(list.len(), 2);
+                assert_eq!(list[0]["act"], json!("brain.open:n1"));
                 assert_eq!(rows(&shown, "dashboard.secondary").len(), 1);
             }
             Page::Customize => {
@@ -982,6 +994,9 @@ fn media_and_system_cards_have_deterministic_pixels() -> Result<()> {
                 h
             };
             let frame = h.render()?;
+            if page == Page::Media {
+                assert!(crate::icon_centre_tests::assert_buttons(&h, scale, true)? >= 3);
+            }
             let golden = root().join(format!("tests/goldens/dashboard-{name}-{scale}.png"));
             if std::env::var("BEAD_UPDATE_GOLDENS").as_deref() == Ok("1") {
                 frame.save(&golden)?;
@@ -1194,11 +1209,12 @@ async fn advertised_methods_send_exact_params_and_unknown_ids_are_never_sent() {
         "clipboard.clear",
         "screenshots.open",
         "ai.usage.refresh",
+        "ui.dispatch",
     ];
     let (dir, client, mut calls) = lab(
         &methods,
         &["dashboard.focus"],
-        vec![ok(), ok(), ok(), ok(), ok(), ok()],
+        vec![ok(), ok(), ok(), ok(), ok(), ok(), ok()],
     )
     .await;
     let run = |page: Page, op: &'static str| {
@@ -1240,6 +1256,15 @@ async fn advertised_methods_send_exact_params_and_unknown_ids_are_never_sent() {
         calls.recv().await.unwrap(),
         ("ai.usage.refresh".into(), json!({}))
     );
+    run(Page::Brain, "brain.open:n1").await;
+    assert_eq!(
+        calls.recv().await.unwrap(),
+        (
+            "ui.dispatch".into(),
+            json!({"target":"nacre","method":"brain","args":["n1"]})
+        )
+    );
+    run(Page::Brain, "brain.open:n9").await; // not in the topic
     assert!(calls.try_recv().is_err(), "rejected input sent nothing");
     std::fs::remove_dir_all(dir).ok();
 }

@@ -1235,22 +1235,11 @@ impl Dashboard {
                     &tr("bead.dashboard.notifications-heading", &[]),
                     48,
                 );
-                text(
-                    &mut out,
-                    "summary",
-                    &tr(
-                        if s.do_not_disturb {
-                            "bead.dashboard.dnd-summary-on"
-                        } else {
-                            "bead.dashboard.dnd-summary-off"
-                        },
-                        &[],
-                    ),
-                    48,
-                );
                 out.insert("dashboard.dnd".into(), Value::Bool(s.do_not_disturb));
                 // Active first, then the service-ordered history window. A row's
                 // `act` carries the displayed revision; the daemon refuses a stale one.
+                // Rows carry the control panel's notice-row fields (app, when, summary, body, icon).
+                let now = (self.now)();
                 let rows: Vec<Json> = s
                     .active
                     .order
@@ -1260,16 +1249,19 @@ impl Dashboard {
                         s.history.items.get(id).map(|n| (id, n, "forget"))
                     }))
                     .map(|(id, n, op)| {
-                        let verb = tr(
-                            if op == "dismiss" {
-                                "bead.dashboard.notification-dismiss"
-                            } else {
-                                "bead.dashboard.notification-forget"
-                            },
-                            &[],
+                        let mut row = json!({"id":id,"app":line(&n.app_name, 32),"summary":line(&n.summary, 80),
+                            "body":line(n.body.lines().next().unwrap_or_default(), 96),
+                            "when":crate::notice_service::time_str(now.saturating_sub(n.created_ms)),
+                            "act":format!("notif.{op}:{}|{}", id.0, n.revision.unwrap_or(0))});
+                        let icon = crate::notice_service::icon_fields(
+                            n.icon.as_deref(),
+                            n.desktop_entry.as_deref(),
+                            n.image_path.as_deref(),
                         );
-                        json!({"id":id,"label":line(&format!("{}: {}", n.app_name, n.summary), 52),
-                            "value":verb,"act":format!("notif.{op}:{}|{}", id.0, n.revision.unwrap_or(0))})
+                        if let (Some(row), Some(icon)) = (row.as_object_mut(), icon.as_object()) {
+                            row.extend(icon.clone());
+                        }
+                        row
                     })
                     .collect();
                 text(

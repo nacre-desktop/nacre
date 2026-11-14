@@ -1,1 +1,1 @@
-{"modules":["dashboard/components.luau"]}
+{"modules":["ui/components/notice-row.luau","ui/components/empty-state.luau","widgets/segment.luau"],"assets":["notifications/fallback.themed.svg"]}

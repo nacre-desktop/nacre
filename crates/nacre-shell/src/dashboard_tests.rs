@@ -35,6 +35,10 @@ pub(super) fn fixture(name: &str) -> Json {
     )
     .unwrap()
 }
+// Fixed clock: relative times in rows ("now", "3h") must not drift with the real date.
+fn fixed_now() -> u64 {
+    1709193600000 - 750_000
+}
 fn view(page: Page, data: Json, updates: Option<Json>) -> Dashboard {
     Dashboard::new(
         page,
@@ -42,6 +46,7 @@ fn view(page: Page, data: Json, updates: Option<Json>) -> Dashboard {
         updates.map(|data| Arc::new(FakeSource::new(data).unwrap()) as Arc<dyn Source>),
         true,
     )
+    .with_now(fixed_now)
 }
 
 #[test]
@@ -735,7 +740,8 @@ fn hourly_chart_preserves_a_full_day_of_samples() -> Result<()> {
             .primitives
             .iter()
             .any(|primitive| matches!(primitive,
-        bead::render::Primitive::Polyline { points, closed:false, .. } if points.len()==24))
+        bead::render::Primitive::Polyline { points, closed:false, .. } if points.len()==(24-1)*8+1)),
+        "the monotone curve samples each hourly step 8 times (D9)"
     );
     Ok(())
 }
@@ -979,6 +985,8 @@ fn dashboard_pages_have_deterministic_pixels_and_only_navigation_actions() -> Re
                             "sources=11"
                         } else if page == Page::Weather {
                             "sources=25"
+                        } else if page == Page::Media {
+                            "sources=8"
                         } else {
                             "sources=6"
                         }),
@@ -986,7 +994,8 @@ fn dashboard_pages_have_deterministic_pixels_and_only_navigation_actions() -> Re
                 h.session.resource_counts()
             );
             if page == Page::Media {
-                assert!(crate::icon_centre_tests::assert_buttons(&h, scale, true)? >= 3);
+                // the preview has no player, so the page shows the empty state (no transport)
+                crate::icon_centre_tests::assert_buttons(&h, scale, true)?;
             }
             let frame = h.render()?;
             if page == Page::Today {

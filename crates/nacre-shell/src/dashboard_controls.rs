@@ -218,9 +218,15 @@ impl Dashboard {
             }
             (
                 Page::Notifications,
-                "notif.dismiss" | "notif.forget" | "notif.dnd" | "notif.clear",
+                "notif.dismiss" | "notif.forget" | "notif.dnd" | "notif.all" | "notif.clear",
             ) => self.notice_call(op, id, wake),
             (Page::AiUsage, "usage.refresh") => c.submit("ai.usage.refresh", json!({}), wake),
+            // The Brain app, as `nacrectl ui nacre brain [note]` opens it (N0217 deep link).
+            (Page::Brain, "brain.open") if id.is_empty() || self.holds(id) => c.submit(
+                "ui.dispatch",
+                json!({"target":"nacre","method":"brain","args":if id.is_empty() { json!([]) } else { json!([id]) }}),
+                wake,
+            ),
             (Page::Customize, "tab.toggle" | "tab.up" | "tab.down") => self.customize(op, id, wake),
             _ => {}
         }
@@ -281,7 +287,13 @@ impl Dashboard {
             return;
         };
         let (name, arg) = match op {
-            "notif.dnd" => ("notifications.dnd", "toggle"),
+            // The All | DND segment: the selected option is a no-op, the other one toggles.
+            "notif.dnd" | "notif.all" => {
+                if state.do_not_disturb == (op == "notif.dnd") {
+                    return;
+                }
+                ("notifications.dnd", "toggle")
+            }
             "notif.clear" => ("notifications.clear", ""),
             "notif.forget" => ("notifications.forget", id),
             _ => ("notifications.dismiss", id),
@@ -312,6 +324,7 @@ impl Dashboard {
         match extra(&self.page.topic(), &snapshot.data) {
             Some(Extra::Clipboard(s)) => s.entries.items.keys().any(|k| k.0 == id),
             Some(Extra::Screenshots(s)) => s.items.items.keys().any(|k| k.0 == id),
+            Some(Extra::BrainRecent(s)) => s.notes.items.keys().any(|k| k.0 == id),
             _ => false,
         }
     }
@@ -889,13 +902,34 @@ impl Dashboard {
                     },
                     48,
                 );
+                // A provider with structured windows (N0319) gets one ring row per window and no
+                // text lines; one without keeps its lines. Nothing is estimated.
+                let now = (self.now)();
                 for id in &s.providers.order {
                     let Some(p) = s.providers.items.get(id) else {
                         continue;
                     };
-                    rows.push(json!({"id":id.0,"label":line(&p.name,32),"value":"","detail":""}));
-                    for (n, l) in p.lines.iter().enumerate() {
-                        rows.push(json!({"id":format!("{}-{n}", id.0),"label":line(l,96),"value":"","detail":""}));
+                    let windows = &p.windows;
+                    let name = line(&p.name, 32);
+                    if windows.is_empty() {
+                        rows.push(json!({"id":id.0,"label":name,"value":"","detail":"","provider":name,"head":true}));
+                        for (n, l) in p.lines.iter().enumerate() {
+                            rows.push(json!({"id":format!("{}-{n}", id.0),"label":line(l,96),"value":"","detail":"","provider":name}));
+                        }
+                    }
+                    for (n, w) in windows.iter().enumerate() {
+                        let resets = w
+                            .resets_ms
+                            .filter(|t| *t > now)
+                            .map(|t| {
+                                tr(
+                                    "bead.dashboard.ai-usage-resets",
+                                    &[("value", &crate::notice_service::time_str(t - now))],
+                                )
+                            })
+                            .unwrap_or_default();
+                        rows.push(json!({"id":format!("{}-w{n}", id.0),"label":format!("{name} · {}", line(&w.label,24)),
+                            "value":format!("{:.0}%", w.used_percent),"detail":resets,"provider":name,"percent":w.used_percent}));
                     }
                 }
                 rows.truncate(14);
@@ -918,7 +952,7 @@ impl Dashboard {
                     .iter()
                     .filter_map(|id| {
                         s.notes.items.get(id).map(
-                            |n| json!({"id":id.0,"label":line(&n.title,56),"value":"","detail":""}),
+                            |n| json!({"id":id.0,"label":line(&n.title,56),"value":"","detail":"","act":format!("brain.open:{}", id.0)}),
                         )
                     })
                     .collect();
