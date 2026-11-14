@@ -27,7 +27,9 @@ pub fn handle(
     }
 }
 /// The pearl grabber (design review D6): a rounded bar in primary centred on the lip, 6 x 56 at
-/// rest, 8 x 72 while the dwell charges; the charge fills it top-down in the secondary role.
+/// rest. While the dwell charges it swells from its centre to 8 x 72 and a soft accent glow the
+/// width of the lip grows around it (owner 2026-11-14: no top-down fill). With reduced motion the
+/// charging look is static.
 pub fn grabber(
     lip: &Lip,
     (width, height): (f32, f32),
@@ -39,24 +41,35 @@ pub fn grabber(
         return None;
     }
     let charging = !state.active && state.progress > 0. && state.progress < 1.;
-    let (thick, long): (f32, f32) = if charging { (8., 72.) } else { (6., 56.) };
+    let charge = if !charging {
+        0.
+    } else if bead::core::animation::reduced_motion() {
+        1.
+    } else {
+        state.progress
+    };
+    let (thick, long) = (6. + 2. * charge, 56. + 16. * charge);
     let thick = thick.min((width - 2.).max(2.));
     let (x, y) = ((width - thick) / 2., (height - long) / 2.);
-    let r = thick / 2.;
-    let mut body = format!(
-        r#"<rect x="{x}" y="{y}" width="{thick}" height="{long}" rx="{r}" fill="{}" opacity="{}"/>"#,
-        rgb(accent),
-        if charging { 1. } else { 0.9 }
-    );
-    if charging {
+    let mut body = String::new();
+    if charge > 0. {
         body.push_str(&format!(
-            r#"<rect x="{x}" y="{y}" width="{thick}" height="{}" rx="{r}" fill="{}" clip-path="url(#bar)"/>"#,
-            long * state.progress.clamp(0., 1.),
-            rgb(secondary)
+            r#"<rect x="0" y="{}" width="{width}" height="{}" rx="{}" fill="{}" opacity="{}"/>"#,
+            y - 4.,
+            long + 8.,
+            width / 2.,
+            rgb(secondary),
+            0.35 * charge
         ));
     }
+    body.push_str(&format!(
+        r#"<rect x="{x}" y="{y}" width="{thick}" height="{long}" rx="{}" fill="{}" opacity="{}"/>"#,
+        thick / 2.,
+        rgb(accent),
+        0.9 + 0.1 * charge
+    ));
     Some(format!(
-        r#"<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}"><defs><clipPath id="bar"><rect x="{x}" y="{y}" width="{thick}" height="{long}" rx="{r}"/></clipPath></defs>{body}</svg>"#
+        r#"<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">{body}</svg>"#
     ))
 }
 
@@ -183,30 +196,29 @@ mod tests {
         assert_eq!(&bytes[..4], &surface);
     }
     #[test]
-    fn the_grabber_is_a_centred_bar_that_grows_and_charges_with_the_dwell() {
+    fn the_grabber_is_a_centred_bar_that_swells_and_glows_with_the_dwell() {
         assert!(grabber(&lip(Edge::Top), (208., 50.), idle(), A, S).is_none());
         let rest = grabber(&lip(Edge::Left), (10., 144.), idle(), A, S).unwrap();
         assert!(
             rest.contains(r#"<rect x="2" y="44" width="6" height="56" rx="3""#),
             "{rest}"
         );
-        assert!(
-            !rest.contains("clip-path=\"url(#bar)\""),
-            "no charge at rest"
-        );
+        assert_eq!(rest.matches("<rect").count(), 1, "no glow at rest: {rest}");
         let half = LipState {
             progress: 0.5,
             active: false,
         };
         let charging = grabber(&lip(Edge::Right), (10., 144.), half, A, S).unwrap();
+        // Half way: the bar is 7 x 64 from the centre and the lip-wide glow sits behind it.
         assert!(
-            charging.contains(r#"<rect x="1" y="36" width="8" height="72" rx="4""#),
+            charging.contains(r#"<rect x="1.5" y="40" width="7" height="64" rx="3.5""#),
             "{charging}"
         );
         assert!(
-            charging.contains(r#"height="36" rx="4" fill="rgb(40,50,60)" clip-path="url(#bar)""#),
+            charging.contains(r#"<rect x="0" y="36" width="10" height="72" rx="5" fill="rgb(40,50,60)" opacity="0.175""#),
             "{charging}"
         );
+        assert!(!charging.contains("clip-path"), "{charging}");
         assert!(
             handle(&lip(Edge::Left), (10., 144.), idle(), A, S, true)
                 .unwrap()
