@@ -1904,8 +1904,7 @@ class ArchPackageLayoutTests(unittest.TestCase):
             self.assertNotIn("hypridle", package_map["core"])
             self.assertIn("hypridle", package_map["session_niri"])
             self.assertIn("hypridle", package_map["session_hyprland"])
-            if (TOOLS.parent / "nacre/shell-tools/emoji-LICENSE.txt").is_file():
-                self.assertIn(Path("usr/share/licenses/nacre/emoji-LICENSE.txt"), owned)
+            self.assertIn(Path("usr/share/licenses/nacre/emoji-LICENSE.txt"), owned)
             self.assertIn(Path("usr/share/nacre/nacre/shell-tools/nacre-helper"), owned)
             self.assertIn(
                 Path("usr/share/nacre/config/uwsm/sessions/nacre-niri-managed.desktop"),

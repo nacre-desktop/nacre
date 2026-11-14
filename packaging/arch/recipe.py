@@ -36,8 +36,7 @@ def render(root, revision, sequence=None):
             for row in group["files"]:
                 sources.append(row["name"] + "::" + row["url"])
                 checksums.append(row["sha256"])
-    if (root / "nacre/shell-tools/emoji-LICENSE.txt").is_file():
-        core_licenses.append("Unicode-3.0")
+    core_licenses.append("Unicode-3.0")  # nacre/shell-tools/emoji-LICENSE.txt
     core = [
         "orient=" + lock["version"].replace("-dev.", "dev") if v == "orient" else v
         for v in mapping["core"]

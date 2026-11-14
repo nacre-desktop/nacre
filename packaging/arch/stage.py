@@ -29,12 +29,7 @@ def stage(root, destination, component, build):
                 target,
                 dirs_exist_ok=True,
                 ignore=shutil.ignore_patterns(
-                    "tests",
-                    "fuzz",
-                    "__pycache__",
-                    "*.pyc",
-                    ".qmlls.ini",
-                    "nacre-helper",
+                    "tests", "fuzz", "__pycache__", "*.pyc", "nacre-helper"
                 ),
             )
         else:
@@ -105,9 +100,7 @@ def stage(root, destination, component, build):
                         "orient"
                     ],
                     "vendor_user_units": True,
-                    "compositors": list(
-                        json.loads((root / "packaging/sessions.json").read_text())
-                    ),
+                    "compositors": list(sessions),
                 }
             )
             + "\n"
@@ -289,11 +282,10 @@ def stage(root, destination, component, build):
             copy(source, destination / "usr/share/fonts/nacre" / source.name)
         for source in (build / "fonts").glob("*.txt"):
             copy(source, destination / "usr/share/licenses/nacre" / source.name)
-        if (tools / "emoji-LICENSE.txt").is_file():
-            copy(
-                tools / "emoji-LICENSE.txt",
-                destination / "usr/share/licenses/nacre/emoji-LICENSE.txt",
-            )
+        copy(
+            tools / "emoji-LICENSE.txt",
+            destination / "usr/share/licenses/nacre/emoji-LICENSE.txt",
+        )
     elif component.startswith("session-"):
         name = component.removeprefix("session-")
         if name != "nacre-niri":
@@ -378,7 +370,7 @@ def stage(root, destination, component, build):
         )
 
 
-def stage_ui_shell(bundle, destination, product_root=None, embedded_notice=None):
+def stage_ui_shell(bundle, destination, product_root, embedded_notice):
     """Install the matched Bead UI bundle and its required license notices."""
     names = ("nacre-shell", "bead-wallpaper-video", "nacre-wallpaper-decode")
     for name in names:
@@ -400,19 +392,16 @@ def stage_ui_shell(bundle, destination, product_root=None, embedded_notice=None)
         elif path.is_file():
             path.chmod(0o755 if path.stat().st_mode & 0o111 else 0o644)
     notices = destination.parents[2] / "share/licenses/nacre/ui-shell"
-    if product_root is not None:
-        for name, relative in (
-            ("LICENSE-MIT", "packaging/licenses/LICENSE-Bead-MIT"),
-            ("LICENSE-GPL-3.0", "LICENSE"),
-        ):
-            source = product_root / relative
-            if not source.is_file():
-                raise FileNotFoundError(f"Missing product license notice: {source}")
-            notices.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(source, notices / name)
-    if embedded_notice is not None:
-        notices.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(embedded_notice, notices / "Outfit-OFL.txt")
+    notices.mkdir(parents=True, exist_ok=True)
+    for name, relative in (
+        ("LICENSE-MIT", "packaging/licenses/LICENSE-Bead-MIT"),
+        ("LICENSE-GPL-3.0", "LICENSE"),
+    ):
+        source = product_root / relative
+        if not source.is_file():
+            raise FileNotFoundError(f"Missing product license notice: {source}")
+        shutil.copy2(source, notices / name)
+    shutil.copy2(embedded_notice, notices / "Outfit-OFL.txt")
 
 
 if __name__ == "__main__":

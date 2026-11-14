@@ -43,10 +43,12 @@ class UiShellBundleTests(unittest.TestCase):
                 notice = product / relative
                 notice.parent.mkdir(parents=True, exist_ok=True)
                 notice.write_text("notice: " + name + "\n")
+            font_notice = product / "Outfit-OFL.txt"
+            font_notice.write_text("notice: Outfit-OFL.txt\n")
             dest = root / "pkg"
 
             stage_module.stage_ui_shell(
-                bundle, dest / "usr/lib/nacre/ui-shell", product
+                bundle, dest / "usr/lib/nacre/ui-shell", product, font_notice
             )
 
             private = dest / "usr/lib/nacre/ui-shell"
@@ -79,7 +81,7 @@ class UiShellBundleTests(unittest.TestCase):
                 (bundle / "shell/bar/main.luau").stat().st_mode & 0o777, 0o775
             )
             self.assertFalse((dest / "usr/bin/nacre-shell").exists())
-            for name in ("LICENSE-MIT", "LICENSE-GPL-3.0"):
+            for name in ("LICENSE-MIT", "LICENSE-GPL-3.0", "Outfit-OFL.txt"):
                 self.assertEqual(
                     (dest / "usr/share/licenses/nacre/ui-shell" / name).read_text(),
                     "notice: " + name + "\n",
