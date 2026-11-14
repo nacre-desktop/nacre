@@ -689,8 +689,15 @@ class Arm:
         parent_env["WAYLAND_DISPLAY"] = str(socket)
         randr = self.stage / "bin/wlr-randr"
         outputs = json.loads(self.run([randr, "--json"], env=parent_env).stdout)
+        hz = getattr(self.args, "refresh_hz", 60)
         self.run(
-            [randr, "--output", outputs[0]["name"], "--custom-mode", "1920x1080@60Hz"],
+            [
+                randr,
+                "--output",
+                outputs[0]["name"],
+                "--custom-mode",
+                f"1920x1080@{hz}Hz",
+            ],
             env=parent_env,
         )
         rules = self.stage / "nacre/config/niri/window-rules.kdl"
@@ -739,7 +746,8 @@ class Arm:
         output, mode = wait_until(sized, 20, "a 1920x1080 nested output")
         if output["logical"]["scale"] != 1:
             raise RuntimeError(f"nested output is not scale 1: {output}")
-        if abs(mode.get("refresh_rate", 0) - 60000) > 100:
+        # The nested winit output always advertises 60 Hz; labwc's mode sets the real pace.
+        if hz == 60 and abs(mode.get("refresh_rate", 0) - 60000) > 100:
             raise RuntimeError(f"nested output is not 60 Hz: {mode}")
         self.trees["niri"].roots = [self.procs[-1][1].pid]
         self.trees["labwc"].roots = [p.pid for n, p in self.procs if n == "labwc"]
