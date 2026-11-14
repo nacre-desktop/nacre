@@ -16,7 +16,7 @@ local function bar(props,settings,_data)
     local tone=glyph=="battery_android_alert" and "peach" or glyph=="battery_android_0" and "error" or nil
     local content=(tone or style=="icon+value") and value~="" and value.." %" or style=="icon+text" and "Battery" or nil
     local width=content and math.ceil(ui.text_width(content,"IBM Plex Sans",t.detail_font)) or 0
-    return (popouts and kit.StatusIcon or ui.Row){id="battery",direction="row",height=t.status_height,radius=t.status_radius,gap=content and t.item_gap or 0,padding=0,padding_left=t.status_padding,padding_right=t.status_count_padding,fill="transparent",hover_fill="surfaceContainerHigh",align="center",justify="center",
+    return (popouts and kit.StatusIcon or ui.Row){id="battery",direction="row",height=t.status_height,radius=t.status_radius,gap=content and t.item_gap or 0,padding=0,padding_left=t.status_padding,padding_right=t.status_count_padding,fill="transparent",hover_fill=ui.alpha("onSurface",t.status_hover),align="center",justify="center",
         aria_label=ui.tr("bead.bar.open-battery"),on_activate=popouts and ui.action("status.pill.open","battery") or nil,
         status_glyph("glyph",ui.bind("bead.desktop.battery"),"battery",tone,nil,glyph~="battery_unknown"),
         content and status_text{id="battery-value",text=content,width=width,font_size=t.detail_font,color=tone or "onSurface"} or nil,

@@ -15,7 +15,7 @@ local function bar(props,settings,_data)
     local content=style=="icon+value" and value or style=="icon+text" and "Wi-Fi" or nil
     local width=content and math.ceil(ui.text_width(content,"IBM Plex Sans",t.detail_font)) or 0
     local box=t.icon_font*t.line_height
-    return (popouts and kit.StatusIcon or ui.Row){id="network",direction="row",height=t.status_height,radius=t.status_radius,gap=content and t.item_gap or nil,padding=0,padding_left=t.status_padding,padding_right=t.status_padding,fill="transparent",hover_fill="surfaceContainerHigh",align="center",justify="center",
+    return (popouts and kit.StatusIcon or ui.Row){id="network",direction="row",height=t.status_height,radius=t.status_radius,gap=content and t.item_gap or nil,padding=0,padding_left=t.status_padding,padding_right=t.status_padding,fill="transparent",hover_fill=ui.alpha("onSurface",t.status_hover),align="center",justify="center",
         aria_label=ui.tr("bead.bar.open-network"),on_activate=popouts and ui.action("status.pill.open","network") or nil,
         status_glyph("glyph",ui.bind("bead.desktop.network"),"network",nil,nil,active),
         -- D1: a VPN shows as a small primary lock at the glyph's corner.

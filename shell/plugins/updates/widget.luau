@@ -21,7 +21,7 @@ local function bar(props,settings,_data)
     local text=style=="icon+text" and measure.ellipsize("Updates",props.available_width and math.max(0,props.available_width-item_width-t.item_gap) or ui.text_width("Updates",font,t.detail_font),font,t.detail_font) or nil
     local width=text and math.ceil(ui.text_width(text,font,t.detail_font)) or 0
     local action=popouts and ui.action("status.pill.open","updates") or nil
-    return updates_on and kit.Button{id="updates",width=text and props.available_width or nil,direction="row",padding=0,fill="transparent",hover_fill="surfaceContainerHigh",on_activate=action,height=t.status_height,radius=t.status_radius,gap=text and t.item_gap or 0,padding_left=t.status_padding,padding_right=t.status_count_padding,align="center",justify=text and "start" or "center",
+    return updates_on and kit.Button{id="updates",width=text and props.available_width or nil,direction="row",padding=0,fill="transparent",hover_fill=ui.alpha("onSurface",t.status_hover),on_activate=action,height=t.status_height,radius=t.status_radius,gap=text and t.item_gap or 0,padding_left=t.status_padding,padding_right=t.status_count_padding,align="center",justify=text and "start" or "center",
         status_glyph("package","deployed_code_update","package",nil,badge,false),
         text and status_text{id="label",text=text,width=width,font_size=t.detail_font,color="onSurfaceVariant"} or nil,
     } or ui.Box{id="updates",width=0,height=0,shrink=0,visible=false}
