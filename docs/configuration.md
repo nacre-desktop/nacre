@@ -23,7 +23,7 @@ conflicting edits. Startup entries are argument arrays, not shell snippets.
 ## Monitor workspaces
 
 **Settings → Windows & workspaces** selects Niri's monitor policy. The default is
-**Primary fixed, other monitors dynamic**. The primary keeps `workspaceCount`
+**Primary monitor dynamic**. The primary keeps `workspaceCount`
 named workspaces (six for new profiles). Other monitors start with Niri's single
 unnamed workspace and grow when used; unused workspaces disappear. Nacre never
 creates additional empty workspaces. Niri itself keeps its native trailing spare.
@@ -35,7 +35,7 @@ connector in name order. Leaving it blank uses the same fallback. The fixed set
 follows the selected primary, including when undocking. Startup app routes keep
 using workspace names rather than unstable display numbers.
 
-Opt into **Fixed sets on all monitors** to keep an equal named set on every
+Opt into **Fixed on all monitors** to keep an equal named set on every
 connected output. On disconnect, occupied workspaces visit a remaining monitor.
 Empty named visitors lose their names and are removed by Niri. Reconnect recreates
 the full set with `open-on-output`; occupied visitors retain their identities and

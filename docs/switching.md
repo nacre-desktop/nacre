@@ -30,8 +30,9 @@ the login screen.
 Nacre generates the compositor config and leaves you one file that always wins:
 
 - niri and nacre-niri: `~/.config/nacre/niri/custom.kdl`, included last. Put
-  binds, output settings and window rules there. `niri validate --config
-  ~/.config/nacre/niri/config.kdl` checks the whole thing.
+  binds, output settings and window rules there. `nacre-niri validate --config
+  ~/.config/nacre/niri/nacre-niri.kdl` checks the whole thing (stock niri:
+  `niri validate --config ~/.config/nacre/niri/config.kdl`).
 - Hyprland: `~/.config/nacre/shortcuts.lua` for binds, `keyboard.lua` for the
   keyboard. Unbind a combination before you rebind it.
 

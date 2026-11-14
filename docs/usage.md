@@ -14,8 +14,6 @@ Type to search individual preferences, their synonyms and page breadcrumbs.
 Results show the current value; Enter opens and highlights the matching row.
 Escape clears search, then closes Settings. Arrow keys navigate the sidebar.
 Changes apply immediately; display changes still require confirmation or revert.
-The overflow menu contains Reset to defaults. A small “Set by profile” badge
-identifies values held by the selected desktop preset.
 
 `nacre-settings panels/dashboard#pages` opens a specific preference. IPC callers
 use `nacrectl ui nacre settings panels/dashboard#pages`; the old desktop, workflows,
@@ -27,8 +25,8 @@ Launcher source switches control `#` notes, `:` files, `=` calculations, `>`
 actions and `?` AI. Web search offers DuckDuckGo, Google and Brave. Automatic
 power profiles is opt-in: its AC and battery rows apply on source changes while
 it is enabled. Turning it off keeps the active profile. Lip hover delay defaults
-to 350 ms and accepts 0–800 ms. Colors retains Light / Dark / Match wallpaper, and
-its small desktop preview uses the live palette and current wallpaper thumbnail.
+to 350 ms and accepts 0–800 ms. Colors' small desktop preview uses the live
+palette and current wallpaper thumbnail.
 Colors studio remains the full editor; App theming lists the publisher’s actual
 target manifest and last publication status.
 
@@ -86,8 +84,9 @@ conversion writes a new file alongside the original.
 Sharing uses optional LocalSend; annotation uses Satty; compression and image/GIF
 conversion use FFmpeg. The optional Voice typing actions use your configured
 Voxtype daemon. Configure its model and service before recording dictation.
-Optional tools are available through Recommended software; adding launcher
-features does not install them or download voice models automatically.
+Optional tools are available through **Settings → Apps → Optional tools**;
+adding launcher features does not install them or download voice models
+automatically.
 
 Type `=` or choose Calculator for a keypad with arithmetic, parentheses, sign
 change, square and square root. Type expressions directly or use the buttons;
@@ -186,7 +185,7 @@ Nacre runs on [nacre-niri](https://github.com/nacre-desktop/nacre-niri), its own
 New Nacre sessions use a window border width of 3. On Niri this is measured in
 logical pixels: each display's scale determines its physical thickness, so scale
 1 draws 3 pixels and scale 2 draws 6. Niri handles fractional scales and moving
-windows between displays. Adjust **Settings → Windows & workspaces → Window border width**
+windows between displays. Adjust **Settings → Windows & workspaces → Border width**
 to suit your preference; saved widths remain intact when you update Nacre.
 See [Niri's border configuration](https://niri-wm.github.io/niri/Configuration%3A-Layout.html#width).
 
@@ -464,9 +463,9 @@ dashboard.
 
 Settings provides graphical font and wallpaper-folder choices, searchable time
 zones and keyboard layouts, and pointer/repeat/touchpad controls where supported.
-Wallpaper's **Open folder** uses your default file manager. Appearance →
-**Interface gradients** switches the decorative desktop blends to solid colors.
-Colors → **Match wallpaper** chooses Light or Dark from the current scene.
+Appearance → **Interface gradients** switches the decorative desktop blends to
+solid colors.
+Colors → **Automatic mode** switches light and dark at sunrise and sunset.
 Launcher → **Sidebar** controls category order and visibility; hidden sidebar
 categories stay searchable. **Brain** opens the installed knowledge add-on.
 

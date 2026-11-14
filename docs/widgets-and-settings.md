@@ -12,8 +12,6 @@ Super+I opens Settings. `nacre-settings` opens it from a terminal;
 - Type to search. Results show the current value; Enter opens and highlights the
   row. Escape clears the search, then closes Settings.
 - Changes apply as you make them. Display changes ask you to keep or revert.
-- The overflow menu has **Reset to defaults**. A small "Set by profile" badge
-  marks values that come from the selected desktop preset.
 - Pages for hardware you do not have, and compositor options your compositor
   does not support, are hidden.
 
@@ -28,7 +26,7 @@ Pages worth knowing early:
 | Power & battery | automatic AC/battery profiles |
 | Displays | scale, mode, position, with a revert timeout |
 | Colors | palette mode, Colors studio, App theming targets |
-| Software | Apps, Themes, Extensions |
+| Apps | default apps, startup apps, optional tools |
 
 Preferences live in `~/.config/nacre` (`desktop.json`, `launcher.json`,
 `launcher-sources.json`, `apps.json`, `widgets.json`). Do not hand-edit them
@@ -75,7 +73,7 @@ To write one, start from Bead's
 
 ## Extensions
 
-Settings → Software → **Extensions** manages launcher packs, palette themes and
+Launcher → **Software → Extensions** manages launcher packs, palette themes and
 independent shell panels. Imported extensions start disabled; updates leave the
 new version disabled until you review it. Panels run as separate processes
 with your normal user permissions. Format:

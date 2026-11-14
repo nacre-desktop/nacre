@@ -69,8 +69,9 @@ contain paths.
 ## Compositor config errors
 
 ```sh
-niri validate --config ~/.config/nacre/niri/config.kdl    # niri tiers
-hyprctl configerrors                                       # Hyprland
+nacre-niri validate --config ~/.config/nacre/niri/nacre-niri.kdl  # nacre-niri
+niri validate --config ~/.config/nacre/niri/config.kdl              # stock niri
+hyprctl configerrors                                                # Hyprland
 ```
 
 On niri, your own overrides are in `~/.config/nacre/niri/custom.kdl`. Reload

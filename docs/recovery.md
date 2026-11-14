@@ -34,9 +34,9 @@ Nacre build and apply its setup again; do not repeatedly restart a failed build.
 
 ## Package update checks in isolated sessions
 
-The update checker uses `checkupdates` and its separate pacman database, leaving
-the system database untouched. In a session with remapped user IDs, Nacre runs
-package checks through the systemd user manager. The interactive updater also
+The update checker uses `checkupdates` (pacman-contrib) when it is installed,
+otherwise `pacman -Qu`; neither changes the system database. In a session with
+remapped user IDs, Nacre runs package checks through the systemd user manager. The interactive updater also
 uses a user service so pacman's download user and the normal sudo password prompt
 work. Update confirmation and package signatures remain
 in effect; normal sessions continue to run the tools directly.
@@ -100,13 +100,14 @@ journalctl --user -u nacre-shell.service --no-pager -n 50
 journalctl --user -u nacre-ui-shell-fallback.service --no-pager -n 50
 ```
 
-Launcher → **Health → Logs** opens recent service logs. Release records are in
+Launcher → **Health → Desktop logs** opens recent service logs. Release records are in
 `~/.local/state/nacre/releases`; optional AI and Brain have their own state under
 `~/.local/state/nacre`. Paths and messages in raw logs can be private.
 
 For Hyprland configuration errors, run `hyprctl configerrors` in the Hyprland
-session. For niri, run `niri validate` against its actual config; if using a
-prepared/custom path, pass `niri validate --config /path/to/config.kdl`.
+session. For nacre-niri, run `nacre-niri validate --config
+~/.config/nacre/niri/nacre-niri.kdl`; for stock niri, `niri validate --config
+~/.config/nacre/niri/config.kdl`.
 
 ## How do I reset settings safely?
 
@@ -132,13 +133,3 @@ from the backup. Keep `profile.json`, keyboard/monitor overrides, accounts,
 conversations and the Brain vault. Never remove all of `~/.config/nacre` or
 `~/.local/share/nacre` as a reset shortcut. See [path limits](configuration.md#files-and-xdg-paths)
 if you have changed XDG variables.
-
-## Legacy shell archives
-
-A successful source update archives the old shell's owned source copies and
-recognized launch scripts under
-`~/.local/state/nacre/shell/backups/<UTC>/legacy-shell/`; the adjacent
-`manifest.json` lists each move. The path to that backup is recorded in
-`~/.local/state/nacre/shell/backups/latest-legacy-shell-backup`. Unrecognized
-configuration and modified legacy scripts are preserved. These archives are
-recovery evidence; supported shell rollback selects a healthy Bead copy.

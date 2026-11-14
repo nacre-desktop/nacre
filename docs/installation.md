@@ -61,10 +61,11 @@ nacre update
 ```
 
 This runs the normal system update, including packages and configured AUR or
-Flatpak updates. AUR recipe review is enabled by default. After package changes,
-Nacre shows the private setup plan and asks before applying it. The bar's Updates
-item uses the same updater. Review the package summary and log in again if the
-compositor or shell needs a restart.
+Flatpak updates. AUR recipe review is enabled by default; to skip it with paru,
+choose **Native package-manager flow** in **Settings → System → Package review**.
+After package changes, Nacre shows the private setup plan and asks before
+applying it. The bar's Updates item uses the same updater. Review the package
+summary and log in again if the compositor or shell needs a restart.
 
 ## Uninstall
 

@@ -48,9 +48,10 @@ browser theme once, or enabling the Vencord and Spicetify themes. See
 ## 4. Save and share palettes
 
 Launcher → **Software → Themes** previews and applies saved palettes, imports a
-Nacre theme file, and **Create a theme** opens Nacre Colors to fine-tune and save
-one. **Settings → Colors → Theme bundles** previews a theme's dark and light
-palettes with its original wallpapers before you apply it. Apply another theme
+Nacre theme file, and **Create a theme** opens Settings → Colors, where **Open
+Colors studio** fine-tunes and saves one. **Settings → Colors → Theme bundles**
+previews a theme's dark and light palettes with its original wallpapers before
+you apply it. Apply another theme
 before removing the one in use.
 
 ## Related settings
