@@ -1049,6 +1049,9 @@ fn bar_counts_share_icon_hit_areas_and_centered_line_boxes() -> Result<()> {
             trace.own.is_empty(),
             "the title trace must not paint without a title change"
         );
+        // Every capture waits for the view's own motions (hover washes, the title trace) to end, so
+        // the golden never depends on how fast the runner reaches `pose`.
+        settle_harness_animations(&mut h)?;
         let hover = h.pose((0., 0.), 1.)?;
         bar_golden(&hover, &format!("bar-parity-hover-{scale}"))?;
 
@@ -1057,6 +1060,7 @@ fn bar_counts_share_icon_hit_areas_and_centered_line_boxes() -> Result<()> {
             x: first.x + first.w / 2.,
             y: first.y + first.h / 2.,
         }])?;
+        settle_harness_animations(&mut h)?;
         let status_hover = h.pose((0., 0.), 1.)?;
         bar_golden(&status_hover, &format!("status-pill-hover-{scale}"))?;
         // The power button turns error-red only under the pointer.
@@ -1064,6 +1068,7 @@ fn bar_counts_share_icon_hit_areas_and_centered_line_boxes() -> Result<()> {
             x: power.x + power.w / 2.,
             y: power.y + power.h / 2.,
         }])?;
+        settle_harness_animations(&mut h)?;
         let power_hover = h.pose((0., 0.), 1.)?;
         assert_ne!(
             power_hover.pixels, frame.pixels,
