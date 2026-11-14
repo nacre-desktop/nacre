@@ -30,15 +30,6 @@ fn helper(paths: &Paths) -> PathBuf {
 fn state() -> Result<Value> {
     crate::diagnostics_native::maintenance_state()
 }
-fn py_quote(value: &str) -> String {
-    format!(
-        "'{}'",
-        value
-            .replace('\\', "\\\\")
-            .replace('\'', "\\'")
-            .replace('\n', "\\n")
-    )
-}
 fn sample(paths: &Paths, seconds: u64, label: &str) -> Result<()> {
     if !(1..=30).contains(&seconds) {
         return Err("Sample duration must be 1–30 seconds".into());
@@ -88,7 +79,6 @@ pub fn run(args: &[String]) -> Result<i32> {
     let allowed = [
         "state",
         "doctor",
-        "check",
         "profile",
         "restart",
         "repair-portals",
@@ -116,39 +106,6 @@ pub fn run(args: &[String]) -> Result<i32> {
     }
     let outcome: Result<Value> = (|| {
         match action {
-            "check" => {
-                let home = env::var_os("HOME").ok_or("Missing home directory")?;
-                let argv = [
-                    "python3".to_owned(),
-                    PathBuf::from(home)
-                        .join(".local/share/nacre/control/check-overlays.py")
-                        .to_string_lossy()
-                        .into_owned(),
-                    "--keyboard".into(),
-                    "/usr/bin/wtype".into(),
-                ];
-                let output =
-                    crate::process::run(&argv[0], &argv[1..], None, Duration::from_secs(30))?;
-                if !output.status.success() {
-                    let executable = env::split_paths(&env::var_os("PATH").unwrap_or_default())
-                        .map(|p| p.join(&argv[0]))
-                        .find(|p| p.is_file())
-                        .map(|p| p.to_string_lossy().into_owned())
-                        .unwrap_or_else(|| argv[0].clone());
-                    let mut full = vec![executable];
-                    full.extend(argv[1..].iter().cloned());
-                    let rendered = full
-                        .iter()
-                        .map(|s| py_quote(s))
-                        .collect::<Vec<_>>()
-                        .join(", ");
-                    return Err(format!(
-                        "Command '[{rendered}]' returned non-zero exit status {}.",
-                        output.status.code().unwrap_or(1)
-                    )
-                    .into());
-                }
-            }
             "profile" => {
                 let seconds = args
                     .windows(2)

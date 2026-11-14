@@ -570,15 +570,6 @@
    "icon": "build"
   },
   {
-   "id": "health.check",
-   "kind": "action",
-   "name": "Check the desktop",
-   "operation": "maintenance",
-   "disabled": false,
-   "value": "check",
-   "icon": "health_and_safety"
-  },
-  {
    "id": "health.status",
    "kind": "action",
    "name": "Current health",

@@ -209,7 +209,6 @@ fn every_audited_supported_launcher_action_resolves_to_a_supported_route() {
                                 )
                                 | ("software-environments", "run")
                                 | ("software-package", "install")
-                                | ("maintenance", "check")
                                 | ("monitor-workspaces", "bring")
                         ),
                         "{row}: missing helper target {argv:?}"

@@ -26,7 +26,6 @@ fn rows_open_the_forms_qml_drew() {
     }
     // Saved actions, snippets and the rest still open their Settings page.
     assert_eq!(kind_for("form", "snippet"), None);
-    assert_eq!(kind_for("maintenance", "check"), None);
 }
 
 #[test]

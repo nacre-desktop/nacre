@@ -690,8 +690,6 @@
   "launcher.catalog.gparted.label": "GParted",
   "launcher.catalog.handbrake.description": "Video conversion",
   "launcher.catalog.handbrake.label": "HandBrake",
-  "launcher.catalog.health.check.description": "Run the existing desktop health checks",
-  "launcher.catalog.health.check.label": "Check the desktop",
   "launcher.catalog.health.description": "Updates, checks and recovery",
   "launcher.catalog.health.fixits.description": "Review maintenance and repair actions",
   "launcher.catalog.health.fixits.label": "Fix a problem",

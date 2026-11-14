@@ -927,7 +927,6 @@ def main():
             "rollback",
             "doctor",
             "profile",
-            "check",
             "session",
             "restart",
             "update",
@@ -952,7 +951,7 @@ def main():
     if (a.report or a.json) and a.action != "doctor":
         p.error("--report and --json are only valid for doctor")
     STATE.mkdir(parents=True, exist_ok=True, mode=0o700)
-    if a.action in ("doctor", "profile", "check", "session", "restart"):
+    if a.action in ("doctor", "profile", "session", "restart"):
         subprocess.run(
             [
                 str(HOME / ".local/share/nacre/shell/tools/nacre-helper"),

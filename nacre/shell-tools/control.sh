@@ -22,7 +22,7 @@ case "${1:-start}" in
  wallpaper)
   if [[ $# -gt 1 ]]; then exec "$HOME/.local/share/nacre/shell/bin/nacre_shell" "$@"; fi
   exec "$HOME/.local/bin/nacrectl" ui nacre launcher ">wallpaper " ;;
- doctor|profile|check|rollback) exec "$HOME/.local/share/nacre/shell/tools/nacre-helper" maintenance "${1/doctor/state}" ;;
+ doctor|profile|rollback) exec "$HOME/.local/share/nacre/shell/tools/nacre-helper" maintenance "${1/doctor/state}" ;;
  detach) exec "$HOME/.local/bin/nacrectl" ui pearls detach ;;
  pearl) exec "$HOME/.local/bin/nacrectl" ui pearls open "${2:-launcher}" ;;
  controls) exec "$HOME/.local/bin/nacrectl" ui nacre controls "${2:-home}" ;;

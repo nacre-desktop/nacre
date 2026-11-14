@@ -1081,17 +1081,6 @@
       "descriptionId": "launcher.catalog.health.nacre.description"
     },
     {
-      "id": "health.check",
-      "kind": "action",
-      "label": "Check the desktop",
-      "icon": "health_and_safety",
-      "operation": "maintenance",
-      "value": "check",
-      "description": "Run the existing desktop health checks",
-      "labelId": "launcher.catalog.health.check.label",
-      "descriptionId": "launcher.catalog.health.check.description"
-    },
-    {
       "id": "health.status",
       "kind": "action",
       "label": "Current health",

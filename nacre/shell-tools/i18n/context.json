@@ -684,8 +684,6 @@
   "launcher.catalog.gparted.label": "Common application name in launcher install search",
   "launcher.catalog.handbrake.description": "Description of a common application available to install",
   "launcher.catalog.handbrake.label": "Common application name in launcher install search",
-  "launcher.catalog.health.check.description": "Launcher description for health.check.",
-  "launcher.catalog.health.check.label": "Launcher label for health.check.",
   "launcher.catalog.health.description": "Launcher description for health.",
   "launcher.catalog.health.fixits.description": "Health repair catalog description",
   "launcher.catalog.health.fixits.label": "Health repair catalog label",

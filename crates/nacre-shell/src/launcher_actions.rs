@@ -462,9 +462,6 @@ fn act(row: &MenuUiRow) -> Result<(Act, bool, Option<MenuView>), Option<&'static
         }
         "bring-visitors" => done(run(helper(&["monitor-workspaces", "bring"]))),
         "tool" => tool(text).map_or(bad, done),
-        "maintenance" if text == "check" => {
-            done(terminal("Nacre maintenance", &["maintenance", text]))
-        }
         "config" if word(text) => done(terminal(
             "Nacre configuration",
             &["menu-backend", "config", text],

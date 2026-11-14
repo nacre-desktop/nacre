@@ -435,11 +435,6 @@
    "note": "Maintenance helper."
   },
   {
-   "command": "check",
-   "kind": "native",
-   "note": "Maintenance helper."
-  },
-  {
    "command": "rollback",
    "kind": "native",
    "note": "Maintenance helper."
