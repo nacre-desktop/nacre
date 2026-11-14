@@ -73,7 +73,6 @@ pub mod palette_api;
 pub mod palette_cli;
 pub mod palette_engine;
 pub mod paths;
-pub mod pearl_state;
 pub mod pearl_window;
 pub mod process;
 pub mod resource_state;

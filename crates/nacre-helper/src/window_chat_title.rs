@@ -255,20 +255,6 @@ pub fn has_tmux_session(pid: i64, proc: &Path, uid: u32, session: &str) -> bool 
     })
 }
 
-pub fn execute(arguments: &[String], _request: Option<Value>) -> Result<Option<Value>> {
-    let pid = arguments
-        .first()
-        .ok_or("Missing process ID")?
-        .trim()
-        .parse()?;
-    Ok(Some(serde_json::to_value(resolve_info(
-        pid,
-        Path::new("/proc"),
-        &Paths::environment()?,
-        nix::unistd::getuid().as_raw(),
-    ))?))
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

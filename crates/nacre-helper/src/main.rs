@@ -1,8 +1,7 @@
 //! Multi-call dispatcher; installation switches callers only after contract parity.
 use nacre_helper::{
-    dashboard_data, dashboard_media, dashboard_system, json, launcher_preferences, light_devices,
-    menu, menu_cli, network_state, notification_history, resource_state, service,
-    window_chat_title, Result,
+    dashboard_data, dashboard_media, json, launcher_preferences, menu, menu_cli, network_state,
+    notification_history, service, Result,
 };
 use serde_json::Value;
 use std::io::{self, BufRead};
@@ -362,9 +361,6 @@ fn run() -> Result<i32> {
             }
         }
     }
-    if tool == "pearl-state" {
-        return nacre_helper::pearl_state::run(&arguments);
-    }
     if tool == "pearl-window" {
         return nacre_helper::pearl_window::run(&arguments);
     }
@@ -373,8 +369,8 @@ fn run() -> Result<i32> {
     }
     if let Some(module) = match tool.as_str() {
         "compositor_config" => Some("neutral"),
-        "hyprland_config" | "compositor-backends-hyprland-config" => Some("hyprland"),
-        "niri_config" | "compositor-backends-niri-config" => Some("niri"),
+        "hyprland_config" => Some("hyprland"),
+        "niri_config" => Some("niri"),
         _ => None,
     } {
         if arguments.is_empty() {
@@ -558,13 +554,6 @@ fn run() -> Result<i32> {
         println!("{}", json::encode(&value)?);
         return Ok(code);
     }
-    if tool == "diagnostics" && (arguments == ["report"] || arguments == ["report", "--json"]) {
-        print!(
-            "{}",
-            nacre_helper::diagnostics_native::report(arguments.len() == 2)?
-        );
-        return Ok(0);
-    }
     if tool == "dashboard-data" || tool == "launcher-preferences" {
         arguments = match nacre_helper::arguments::hosted(&arguments, &tool) {
             Ok(Some(arguments)) => arguments,
@@ -629,9 +618,6 @@ fn run() -> Result<i32> {
     }
     if tool == "idle-brightness" {
         return nacre_helper::idle_brightness::run(&arguments);
-    }
-    if tool == "light-devices" {
-        return light_devices::run(&arguments);
     }
     if (tool == "serve" || tool == "helper-service") && arguments.is_empty() {
         if let Some(code) = nacre_helper::daemon::serve_bridge::run()? {
@@ -743,9 +729,6 @@ fn run() -> Result<i32> {
                 return Ok(1);
             }
         },
-        "window-chat-title" => window_chat_title::execute(&arguments, None)?,
-        "dashboard-system" => dashboard_system::execute(&arguments, None)?,
-        "resource-state" => resource_state::execute(&arguments, None)?,
         "dashboard-media" => match dashboard_media::execute(&arguments, None) {
             Ok(value) => value,
             Err(error) if error.is::<dashboard_media::Attribute>() => return Err(error),

@@ -1,6 +1,5 @@
 //! Bounded light discovery and identity-checked brightness tool requests.
-use crate::{i18n, json, process, Result};
-use clap::Parser;
+use crate::{i18n, Result};
 use regex::Regex;
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
@@ -161,11 +160,6 @@ fn resolved_name(path: &Path) -> String {
         .unwrap_or_default()
         .to_string_lossy()
         .into_owned()
-}
-
-fn native_run(program: &str, arguments: &[String], timeout: Duration) -> Result<String> {
-    let output = process::checked(program, arguments, None, timeout)?;
-    Ok(String::from_utf8(output.stdout)?)
 }
 
 pub fn parse_ddc(output: &str) -> Result<(i64, i64)> {
@@ -450,95 +444,6 @@ pub fn write(
         return Ok(result);
     }
     Err(message("unsupported-light-device", "Unsupported light device").into())
-}
-
-pub fn execute(arguments: &[String], _input: Option<Value>) -> Result<Option<Value>> {
-    let action = arguments.first().ok_or("Missing action")?;
-    let data: Value = serde_json::from_str(arguments.get(1).ok_or("Missing light descriptor")?)?;
-    let result = match action.as_str() {
-        "discover" => discover(
-            data.as_array()
-                .ok_or_else(|| message("invalid-display-list", "Invalid display list"))?,
-            Path::new("/sys"),
-            None,
-            &mut native_run,
-        )?,
-        "set" => write(
-            &data,
-            arguments
-                .get(2)
-                .ok_or_else(|| message("invalid-brightness-request", "Invalid brightness request"))?
-                .trim()
-                .parse()?,
-            Path::new("/sys"),
-            &mut native_run,
-        )?,
-        "read-ddc" => {
-            let bus = data["bus"].as_i64().filter(|bus| (0..=65535).contains(bus));
-            if !data.is_object() || data["kind"] != "ddc" || bus.is_none() {
-                return Err(message("invalid-display-control", "Invalid display control").into());
-            }
-            let (current, maximum) = ddc_read(bus.unwrap(), &mut native_run)?;
-            let mut result = data;
-            result["current"] = json!(current);
-            result["maximum"] = json!(maximum);
-            result
-        }
-        _ => return Err("Unknown light action".into()),
-    };
-    Ok(Some(result))
-}
-
-#[derive(Parser)]
-#[command(
-    name = "light-devices.py",
-    infer_long_args = true,
-    args_override_self = true
-)]
-struct Arguments {
-    #[arg(value_parser=["discover","set","read-ddc"])]
-    action: String,
-    #[arg(allow_negative_numbers = true)]
-    data: String,
-    #[arg(allow_negative_numbers=true, value_parser=crate::arguments::integer)]
-    value: Option<i64>,
-}
-const HELP: &str = "usage: light-devices.py [-h] {discover,set,read-ddc} data [value]\n\nBounded light discovery/actions; native QML owns reads and write coalescing.\n\npositional arguments:\n  {discover,set,read-ddc}\n  data\n  value\n\noptions:\n  -h, --help            show this help message and exit\n";
-pub fn run(arguments: &[String]) -> Result<i32> {
-    let parsed = match Arguments::try_parse_from(
-        std::iter::once("light-devices.py").chain(arguments.iter().map(String::as_str)),
-    ) {
-        Ok(parsed) => parsed,
-        Err(error) if error.kind() == clap::error::ErrorKind::DisplayHelp => {
-            print!("{HELP}");
-            return Ok(0);
-        }
-        Err(error) => {
-            error.print()?;
-            return Ok(2);
-        }
-    };
-    let mut arguments = vec![parsed.action, parsed.data];
-    if let Some(value) = parsed.value {
-        arguments.push(value.to_string());
-    }
-    match execute(&arguments, None) {
-        Ok(Some(value)) => {
-            println!("{}", json::encode(&value)?);
-            Ok(0)
-        }
-        Ok(None) => Ok(0),
-        Err(error) => {
-            eprintln!("Light control: {error}");
-            println!(
-                "{}",
-                json::encode(
-                    &json!({"error":message("light-control-failed-refresh-the-controls-and-check-device-access", "Light control failed; refresh the controls and check device access.")})
-                )?
-            );
-            Ok(1)
-        }
-    }
 }
 
 #[cfg(test)]

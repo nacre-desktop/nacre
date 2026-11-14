@@ -1,8 +1,6 @@
-//! Visible-only process/disk snapshot and identity-checked process termination.
-use crate::{i18n, Result};
-use rustix::process::{
-    getpid, getppid, getuid, pidfd_open, pidfd_send_signal, Pid, PidfdFlags, Signal,
-};
+//! Visible-only process/disk snapshot.
+use crate::Result;
+use rustix::process::getuid;
 use serde::Serialize;
 use serde_json::{json, Value};
 use std::{collections::HashSet, fs, io, os::unix::fs::MetadataExt, path::Path};
@@ -108,70 +106,6 @@ pub fn snapshot(proc: &Path) -> Result<Value> {
     Ok(json!({"processes":processes,"disks":disks}))
 }
 
-fn require_identity(info: Option<&ProcessInfo>, start: &str, uid: u32) -> Result<()> {
-    if !info.is_some_and(|info| info.start == start && info.uid == uid) {
-        return Err(i18n::tr(
-            "helper.dashboard-system.process-changed-refresh-before-ending-it",
-            "Process changed; refresh before ending it",
-        )
-        .into());
-    }
-    Ok(())
-}
-
-pub fn terminate(pid: i64, start: &str, proc: &Path) -> Result<()> {
-    require_identity(process_info(pid, proc).as_ref(), start, getuid().as_raw())?;
-    let mut ancestors = HashSet::from([i64::from(getpid().as_raw_nonzero().get())]);
-    let mut parent = getppid().map_or(0, |pid| i64::from(pid.as_raw_nonzero().get()));
-    for _ in 0..20 {
-        ancestors.insert(parent);
-        let Some(info) = process_info(parent, proc).filter(|info| info.parent > 1) else {
-            break;
-        };
-        parent = info.parent;
-    }
-    if pid <= 1 || ancestors.contains(&pid) {
-        return Err(i18n::tr(
-            "helper.dashboard-system.cannot-end-the-dashboard-or-its-session",
-            "Cannot end the dashboard or its session",
-        )
-        .into());
-    }
-    let pid = Pid::from_raw(i32::try_from(pid)?).ok_or("Invalid process ID")?;
-    let descriptor = pidfd_open(pid, PidfdFlags::empty())?;
-    let current = process_info(i64::from(pid.as_raw_nonzero().get()), proc);
-    if !current.is_some_and(|info| info.start == start) {
-        return Err(i18n::tr("helper.dashboard-system.process-changed", "Process changed").into());
-    }
-    pidfd_send_signal(&descriptor, Signal::TERM)?;
-    Ok(())
-}
-
-pub fn execute(arguments: &[String], _input: Option<Value>) -> Result<Option<Value>> {
-    let result = (|| -> Result<Value> {
-        if let Some(action) = arguments.first() {
-            if action != "end" {
-                return Err(
-                    i18n::tr("helper.dashboard-system.unknown-action", "Unknown action").into(),
-                );
-            }
-            let pid = arguments
-                .get(1)
-                .ok_or("list index out of range")?
-                .trim()
-                .parse()?;
-            let start = arguments.get(2).ok_or("list index out of range")?;
-            terminate(pid, start, Path::new("/proc"))?;
-        }
-        snapshot(Path::new("/proc"))
-    })();
-    // This helper historically reports operation errors as JSON with exit zero.
-    Ok(Some(match result {
-        Ok(value) => value,
-        Err(error) => json!({"error":error.to_string().chars().take(180).collect::<String>()}),
-    }))
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -189,44 +123,6 @@ mod tests {
             json!({"pid":123,"name":"demo worker","start":"1000","uid":getuid().as_raw(),"memory":10 * rustix::param::page_size(),"cpuSeconds":150.0 / rustix::param::clock_ticks_per_second() as f64,"parent":1})
         );
         assert_eq!(snapshot["disks"], json!([]));
-        Ok(())
-    }
-
-    #[test]
-    fn changed_identity_and_foreign_owner_are_rejected() {
-        let info = ProcessInfo {
-            pid: 5000,
-            name: String::new(),
-            start: "new".into(),
-            uid: 1000,
-            memory: 0,
-            cpu_seconds: 0.0,
-            parent: 1,
-        };
-        assert_eq!(
-            require_identity(Some(&info), "old", 1000)
-                .unwrap_err()
-                .to_string(),
-            "Process changed; refresh before ending it"
-        );
-        assert_eq!(
-            require_identity(Some(&info), "new", 1001)
-                .unwrap_err()
-                .to_string(),
-            "Process changed; refresh before ending it"
-        );
-    }
-
-    #[test]
-    fn current_helper_cannot_receive_a_termination_signal() -> Result<()> {
-        let proc = tempfile::tempdir()?;
-        let pid = i64::from(getpid().as_raw_nonzero().get());
-        fs::create_dir(proc.path().join(pid.to_string()))?;
-        fs::write(proc.path().join(pid.to_string()).join("stat"), STAT)?;
-        assert_eq!(
-            terminate(pid, "1000", proc.path()).unwrap_err().to_string(),
-            "Cannot end the dashboard or its session"
-        );
         Ok(())
     }
 }

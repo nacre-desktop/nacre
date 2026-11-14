@@ -174,8 +174,8 @@ and honor the existing request deadline without logging private payloads.
 
 Current `dashboard-data` and `dashboard-media` are `helper.execute` v1 lanes with
 the original stdout JSON string in `HelperReply`; they are **not** dedicated
-`dashboard.media` or `dashboard.system` topics. `dashboard-system` is currently a
-standalone native helper. Existing clients retain those contracts.
+`dashboard.media` or `dashboard.system` topics. The `dashboard-system` process list
+is collected inside the daemon (`dashboard_metrics`). Existing clients retain those contracts.
 Calendar already exists in `dashboard-data`'s ICS snapshot: the future typed
 topic adapts it rather than creating a second parser or changing recurrence rules.
 The reserved `dashboard.media` adapter maps `lines` to entities and renames

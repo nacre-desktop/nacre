@@ -437,17 +437,6 @@ pub fn snapshot(root: &Path, mount: &Path) -> Value {
 pub fn gpu_inventory(root: &Path) -> Value {
     Value::Array(inventory(&gpu_devices(root)))
 }
-pub fn execute(arguments: &[String], _input: Option<Value>) -> Result<Option<Value>> {
-    if arguments
-        .first()
-        .is_some_and(|action| action == "inventory")
-    {
-        return Ok(Some(gpu_inventory(Path::new(
-            arguments.get(1).map(String::as_str).unwrap_or("/sys"),
-        ))));
-    }
-    Ok(Some(snapshot(Path::new("/sys"), Path::new("/"))))
-}
 
 #[cfg(test)]
 mod tests {
