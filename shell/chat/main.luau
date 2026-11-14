@@ -32,7 +32,7 @@ local function button(id,x,y,w,h,label,icon,action,selected,size,aria)
 end
 -- Round icon button (the review's `ib`): transparent at rest, container-high on hover, primary while selected.
 local function icon_button(id,icon,action,aria,selected,x,y)
-    return kit.PillButton{id=id,position=x and "absolute" or nil,left=x,top=y,width=BTN,height=BTN,glyph=icon,on_activate=action,compact=true,aria_label=aria,focus_ring=true,selected=selected,
+    return kit.PillButton{id=id,position=x and "absolute" or nil,left=x,top=y,width=BTN,height=BTN,shrink=0,glyph=icon,on_activate=action,compact=true,aria_label=aria,focus_ring=true,selected=selected,
         fill=not selected and "transparent" or nil,hover_fill=not selected and (action and "surfaceContainerHigh" or "transparent") or nil}
 end
 local function action(name) return ui.action("chat.do",name) end
@@ -55,11 +55,24 @@ local function compose(top,field_h,placeholder,on_send,can_send,left,right)
         ui.Row{id="left",width=0,grow=1,height=BTN,gap=T.spacing.xs,align="center",table.unpack(left)},
         table.unpack(right)})
 end
+-- Icon-only buttons say their name one hover (or focus) away; `bar_size` is the top edge's distance.
+local tooltip_height=CAPTION+2*T.spacing.sm
+local function tooltip(id,label,right,bar_size)
+    local w=ui.text_width(label,T.fonts.sans,CAPTION)+2*T.spacing.sm
+    add(kit.Tooltip{id=id,position="absolute",edge="top",bar_size=bar_size,left=right-w,width=w,height=tooltip_height,padding=T.spacing.xs,visible=true,
+        ui.Text{text=label,width="fill",height=META_H,font_size=CAPTION,color="onSurface"}})
+end
 -- N0234: without the optional AI package the panel only says so (no provider or chat controls).
 local missing=get("chat.missing")
 local quick=section=="chat" and get("launcher.quick_chat") and not missing
 local busy=get("chat.busy")
+-- Owner 2026-11-14: New terminal chat is one click at the top of both the launcher and a quick chat
+-- (the panel reopens on the quick chat it left), a round icon button like the pin.
+local terminal_label=ui.tr("bead.panel.launcher-terminal")
+local terminal=icon_button("terminal","terminal",get("launcher.can_new") and action("launcher:new") or nil,terminal_label)
+local terminal_right,header_bottom
 if quick then
+    terminal_right,header_bottom=E+INNER-BTN-T.spacing.xs,E+HEADER_H
     add(ui.Row{id="header",position="absolute",left=E,top=E,width=INNER,height=HEADER_H,gap=T.spacing.xs,align="center",
         icon_button("back","arrow_back",action("launcher:back"),ui.tr("bead.panel.launcher-back")),
         ui.Column{id="heading",width=0,grow=1,justify="center",gap=T.spacing.xs/4,
@@ -68,18 +81,20 @@ if quick then
                 -- D16: the review's 1.6 s attention pulse waits on the kit (N0237 kit ask 3).
                 ui.Box{id="working-dot",width=T.spacing.sm-T.spacing.hairline/2,height=T.spacing.sm-T.spacing.hairline/2,radius=T.radii.full,fill="success",visible=busy},
                 ui.Text{id="subtitle",text=ui.bind("chat.subtitle"),width=0,grow=1,font_size=CAPTION,color="onSurfaceVariant",height=META_H}}},
+        terminal,
         icon_button("overflow","more_vert",ui.action("chat.menu.toggle",""),ui.tr("bead.launcher.actions"))})
 else
+    local pin=not get("view.detached")
+    terminal_right,header_bottom=E+INNER-(pin and BTN+T.spacing.sm or 0),E+BTN
     add(ui.Row{id="header",position="absolute",left=E,top=E,width=INNER,height=BTN,gap=T.spacing.sm,align="center",
         ui.Image{id="logo",width=T.icons.xlarge,height=T.icons.xlarge,path="chat/assets/nacre-ai.themed.svg",aria_label=ui.tr("bead.panel.chat-title")},
         ui.Text{id="title",width=0,grow=1,text=ui.tr("bead.panel.chat-title"),font_size=BODY,font_weight=600,color="onSurface"},
-        -- Owner 2026-11-14: the terminal chat is one click at the top, a round icon button like the pin.
-        icon_button("terminal","terminal",get("launcher.can_new") and action("launcher:new") or nil,ui.tr("bead.panel.launcher-terminal")),
         -- Segmented provider switch: one pill, the chosen provider filled.
         ui.Row{id="provider",height=BTN,gap=T.spacing.hairline,padding=T.spacing.hairline+1,radius=T.radii.full,fill="surfaceContainerHigh",align="center",visible=not missing,
             button("codex",nil,nil,nil,BTN-2*(T.spacing.hairline+1),ui.tr("bead.panel.chat-codex"),"",action("launcher:provider:codex"),get("launcher.provider")=="codex",CAPTION),
             button("claude",nil,nil,nil,BTN-2*(T.spacing.hairline+1),ui.tr("bead.panel.chat-claude"),"",action("launcher:provider:claude"),get("launcher.provider")=="claude",CAPTION)},
-        not get("view.detached") and icon_button("pin","push_pin",action("pin"),ui.tr("bead.panel.chat-pin"),get("chat.pinned")==true) or nil})
+        terminal,
+        pin and icon_button("pin","push_pin",action("pin"),ui.tr("bead.panel.chat-pin"),get("chat.pinned")==true) or nil})
 end
 if missing then
     local top=(H-TITLE_H-T.spacing.xs-META_H)/2
@@ -240,17 +255,12 @@ else
         ui.Box{id="spacer",width=0,grow=1,height=1},
         icon_button("brain","neurology",action("launcher:brain"),ui.tr("bead.panel.launcher-brain")),
         icon_button("settings","settings",action("launcher:settings"),ui.tr("bead.panel.chat-tab-settings"))})
-    -- Icon-only footer buttons say their name one hover away.
-    local tooltip_height=CAPTION+2*T.spacing.sm
-    local function tooltip(id,label,right,bar_size)
-        local w=ui.text_width(label,T.fonts.sans,CAPTION)+2*T.spacing.sm
-        add(kit.Tooltip{id=id,position="absolute",edge="top",bar_size=bar_size,left=right-w,width=w,height=tooltip_height,padding=T.spacing.xs,visible=true,
-            ui.Text{text=label,width="fill",height=META_H,font_size=CAPTION,color="onSurface"}})
-    end
     if cued("secondary.brain") then tooltip("footer-tooltip",ui.tr("bead.panel.launcher-brain"),E+INNER-BTN-T.spacing.xs,footer_top-tooltip_height-2*T.spacing.sm) end
     if cued("secondary.settings") then tooltip("footer-tooltip",ui.tr("bead.panel.chat-tab-settings"),E+INNER,footer_top-tooltip_height-2*T.spacing.sm) end
     if cued("refresh") then tooltip("refresh-tooltip",refresh_label,E+INNER,search_top-tooltip_height-2*T.spacing.sm) end
 end
+-- Last, so it paints over the composer below the header.
+if cued("header.terminal") then tooltip("header-tooltip",terminal_label,terminal_right,header_bottom) end
 -- Motion (design review "Timings for 120 Hz", edge slide): open 240 ms ease-out, close 160 ms
 -- (Bead closes with its accelerate curve, at most return_duration). D16: out-quint once the kit has it.
 return kit.Panel{id="chat",edge=get("view.edge"),open=ui.bind("panel.open"),duration=.24,return_duration=.16,return_transition="ease",transition="ease",fade=false,reveal=not ui.resolve_for_check(ui.bind("view.detached")),

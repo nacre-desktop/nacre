@@ -1151,6 +1151,7 @@ async fn launcher_matches_scale_and_detached_goldens() -> bead_test::Result<()> 
             "chat.header.logo",
             "chat.header.title",
             "chat.header.pin",
+            "chat.header.terminal",
             "chat.compose",
             "chat.composer",
             "chat.actions.send",
@@ -1217,6 +1218,17 @@ async fn launcher_matches_scale_and_detached_goldens() -> bead_test::Result<()> 
                 }
             }
         }
+        assert_header_terminal(&mut regular, "chat.header.pin");
+        let mut cued = projected.clone();
+        cued.insert("bead.hovered".into(), text("chat.header.terminal"));
+        assert!(
+            harness(cued, scale)?
+                .scene()
+                .layers
+                .iter()
+                .any(|layer| layer.id == "chat.header-tooltip"),
+            "the terminal button names itself on hover"
+        );
         golden("launcher", &mut regular, scale)?;
         if scale == 1. {
             // D7: the same launcher on the Orient light fixture.
@@ -1545,6 +1557,28 @@ fn transcript_scroll_preserves_touchpad_pixels_and_shared_wheel_distance() {
     }
 }
 
+/// Owner 2026-11-14: New terminal chat paints at full size at the top of the panel, on the row of
+/// (and left of) the header button `neighbour`, in the launcher and in a quick chat alike.
+fn assert_header_terminal(h: &mut Harness, neighbour: &str) {
+    let layers = &h.scene().layers;
+    let bounds = |id: &str| {
+        layers
+            .iter()
+            .find(|layer| layer.id == id)
+            .map(|layer| layer.bounds)
+            .unwrap_or_else(|| panic!("missing {id}"))
+    };
+    let (button, next) = (bounds("chat.header.terminal"), bounds(neighbour));
+    assert!(
+        button.w >= 10.
+            && button.h >= 10.
+            && button.x > 0.
+            && button.x + button.w <= next.x
+            && (button.y + button.h / 2. - next.y - next.h / 2.).abs() < 1.,
+        "terminal button not visible in the header: {button:?}, {neighbour}: {next:?}"
+    );
+}
+
 fn golden(name: &str, h: &mut Harness, scale: f32) -> bead_test::Result<()> {
     // Stills use the flat CPU oracle: every primitive is painted into a fresh
     // target, independent of retained-tree repair/preparation between captures.
@@ -1652,6 +1686,7 @@ fn chat_states_match_goldens() -> bead_test::Result<()> {
                 .map(|n| n.id.clone())
                 .collect();
             assert!(ids.iter().any(|i| i == "chat.composer"), "{ids:?}");
+            assert_header_terminal(&mut h, "chat.header.overflow");
             assert_eq!(
                 ids.iter().any(|i| i.starts_with("chat.questions")),
                 *name == "approval"

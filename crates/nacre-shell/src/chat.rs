@@ -876,6 +876,17 @@ impl Chat {
         if self.ready(OPEN).is_none() {
             self.st.borrow_mut().opened_at = None;
         }
+        // The header's New terminal chat button is in both sections (shell/chat/main.luau).
+        let action_pending = self
+            .st
+            .borrow()
+            .pending
+            .iter()
+            .any(|p| p.call == Call::LauncherAction);
+        out.insert(
+            "launcher.can_new".into(),
+            Value::Bool(!action_pending && self.ready("ai.launcher.new").is_some()),
+        );
         if section != "chat" {
             let should_list = {
                 let st = self.st.borrow();
@@ -978,7 +989,7 @@ impl Chat {
                     .unwrap_or("codex")
                     .to_owned(),
             };
-            out.insert("launcher.provider".into(), text(selected_provider.clone()));
+            out.insert("launcher.provider".into(), text(selected_provider));
             out.insert(
                 "launcher.search".into(),
                 text(match stores.get("launcher.search") {
@@ -1032,15 +1043,6 @@ impl Chat {
                     } else {
                         tr("bead.panel.launcher-empty-history", &[])
                     },
-                ),
-            );
-            let action_pending = st.pending.iter().any(|p| p.call == Call::LauncherAction);
-            out.insert(
-                "launcher.can_new".into(),
-                Value::Bool(
-                    !action_pending
-                        && !selected_provider.is_empty()
-                        && self.ready("ai.launcher.new").is_some(),
                 ),
             );
             out.insert(
