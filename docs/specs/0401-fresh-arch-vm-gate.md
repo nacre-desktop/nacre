@@ -57,6 +57,18 @@ For each run:
 7. Print a table of each stage with pass or fail and its time. Write logs and the
    screenshot to `--out`. Raw logs stay out of Git.
 
+Upgrade stage (N0418): with `--upgrade-from OLD`, steps 1-4 install and start the session
+from the older archive set. The harness then appends a comment to a file setup seeds once and
+then leaves to the user (kept when edited, spec 0101), listed by `nacre status --files`:
+`~/.config/nacre/niri/custom.kdl` on the Niri tiers, `~/.config/nacre/hypridle.local.conf`
+on Hyprland. It rebuilds the guest repository from `--packages` (same name and key, new
+database) and runs `nacre update` on a pty in the session environment, as a user in a
+terminal would, taking every default and answering yes to the update and to applying setup.
+It passes only on the outcome: `pacman -Q nacre` shows the new version, the summary has
+`nacre OLD -> NEW`, setup kept the tier's compositor, the restarted session passes step 4
+again, and the edit is unchanged. Steps 5-7 follow. Step 5 alone proves little: at main
+86433e4a `nacre update` only hands off to the running shell and exits 0 (N0422, fix N0428).
+
 Acceptance: all three tiers pass on dev-1 with packages built from one main commit, in
 under 15 minutes per tier. The harness is at most about 300 lines. The Clasp greeter VM
 (C0003) may reuse the boot part.

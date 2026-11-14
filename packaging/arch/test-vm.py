@@ -2,6 +2,7 @@
 """Fresh Arch tty1 gate; run under a resource slot with QEMU/KVM and virgl.
 
 Archives become a guest-only signed repository; --repo accepts a published root.
+--upgrade-from installs an older archive set first, then upgrades to --packages.
 """
 
 import argparse
@@ -9,6 +10,7 @@ import fcntl
 import json
 from pathlib import Path
 import posixpath
+import re
 import shlex
 import signal
 import socket
@@ -25,6 +27,47 @@ QEMU = """nice -n 10 qemu-system-x86_64 -machine q35,accel=kvm
     -cpu host -smp 4 -m 6144 -device virtio-net-pci,netdev=net0
     -device virtio-rng-pci -device virtio-vga-gl
     -display egl-headless,rendernode=/dev/dri/renderD128 -rtc base=utc -monitor none"""
+
+ENVIRONMENT = 'export XDG_RUNTIME_DIR=/run/user/$(id -u); eval "$(systemctl --user show-environment | sed "s/^/export /" )"; '
+
+# A file setup seeds once and then leaves to the user (0101: kept when edited).
+USER_EDIT = {
+    "nacre-niri": ".config/nacre/niri/custom.kdl",
+    "niri": ".config/nacre/niri/custom.kdl",
+    "hyprland": ".config/nacre/hypridle.local.conf",
+}
+
+# Runs `nacre update` on a pty like a user in a session terminal taking every default.
+UPDATE = r"""
+import os, pty, re, select
+answers = [
+    (rb"\(yes/no\) \[no\]: $", b"yes\n"),
+    (rb"\[[yY]/[nN]\] $", b"y\n"),
+    (rb"Press Enter to close\.$", b"\n"),
+    (rb"\]: $", b"\n"),
+]
+pid, fd = pty.fork()
+if pid == 0:
+    os.execvp("nacre", ["nacre", "update"])
+tail = b""
+while select.select([fd], [], [], 600)[0]:
+    try:
+        data = os.read(fd, 4096)
+    except OSError:
+        break
+    if not data:
+        break
+    os.write(1, data)
+    tail = (tail + data)[-300:]
+    for pattern, reply in answers:
+        if re.search(pattern, tail):
+            os.write(fd, reply)
+            tail = b""
+            break
+else:
+    raise SystemExit("nacre update stalled")
+raise SystemExit(os.waitstatus_to_exitcode(os.waitpid(pid, 0)[1]))
+"""
 
 INVENTORY = r"""
 import hashlib, json, os, stat
@@ -88,7 +131,10 @@ def main():
     parser.add_argument("--base", type=Path, required=True)
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--lock", type=Path, required=True)
+    parser.add_argument("--upgrade-from", type=Path, help="older archive directory")
     args = parser.parse_args()
+    if args.upgrade_from and not args.packages:
+        parser.error("--upgrade-from needs --packages")
     out = args.out.resolve()
     out.mkdir(parents=True, exist_ok=False)
     rows = []
@@ -127,6 +173,62 @@ def main():
         (out / (label + ".json")).write_text(json.dumps(data, indent=2))
         (out / (label + "-packages.txt")).write_text(guest("pacman -Qq"))
         return data
+
+    def publish(packages):
+        """(Re)build the guest repository from one archive set, same name and key."""
+        archives = sorted(packages.resolve().rglob("*.pkg.tar.zst"))
+        if not archives:
+            raise ValueError("No package archives")
+        guest("rm -rf /tmp/repository/arch; mkdir -p /tmp/repository/arch/dev/x86_64")
+        for archive in archives:
+            if not archive.name.startswith(("nacre-debug-", "python-orient-colors-")):
+                copy(archive, "/tmp/repository/arch/dev/x86_64/")
+        guest("""export GNUPGHOME=/tmp/repo-key
+ cd /tmp/repository/arch/dev/x86_64
+ for p in *.pkg.tar.zst; do gpg --batch --detach-sign "$p"; done
+ repo-add --sign nacre-dev.db.tar.gz *.pkg.tar.zst
+""")
+
+    def session(screenshot, restart=""):
+        """Start the tty1 session, then require outputs, the shell and a real image."""
+        guest(f"""touch /tmp/start-session; {restart}
+sudo systemctl daemon-reload; sudo systemctl restart getty@tty1.service
+for i in $(seq 60); do systemctl --user is-active --quiet nacre-shell.service && break; sleep 2; done
+systemctl --user is-active nacre-shell.service
+""")
+        time.sleep(10)
+        command = (
+            "hyprctl -j monitors"
+            if args.tier == "hyprland"
+            else args.tier + " msg --json outputs"
+        )
+        outputs = json.loads(guest(ENVIRONMENT + command))
+        if not outputs:
+            raise RuntimeError("Empty compositor outputs")
+        journal = guest("journalctl --user -b --no-pager")
+        if "UI_ERROR" in journal:
+            raise RuntimeError("UI_ERROR in user journal")
+        guest(ENVIRONMENT + "grim /tmp/screenshot.png")
+        copy("/tmp/screenshot.png", out / screenshot, download=True)
+        guest(
+            "python - <<'PY'\n"
+            "from pathlib import Path\n"
+            "import struct, zlib\n"
+            "data = Path('/tmp/screenshot.png').read_bytes()\n"
+            "assert data.startswith(b'\\x89PNG\\r\\n\\x1a\\n')\n"
+            "width, height = struct.unpack('>II', data[16:24])\n"
+            "assert width > 1 and height > 1\n"
+            "offset, chunks = 8, []\n"
+            "while offset < len(data):\n"
+            "    size = struct.unpack('>I', data[offset:offset + 4])[0]\n"
+            "    kind = data[offset + 4:offset + 8]\n"
+            "    if kind == b'IDAT': chunks.append(data[offset + 8:offset + 8 + size])\n"
+            "    offset += size + 12\n"
+            "pixels = zlib.decompress(b''.join(chunks))\n"
+            "assert len(pixels) > height and len(set(pixels)) > 10\n"
+            "PY"
+        )
+        guest("systemctl --user is-active nacre-shell.service")
 
     def interrupted(signum, frame):
         raise RuntimeError("Interrupted by signal " + str(signum))
@@ -203,27 +305,13 @@ printf '%s\\n' 'Server = https://mirror.osbeck.com/archlinux/$repo/os/$arch' 'Se
             finish("repository")
             url = args.repo.rstrip("/") if args.repo else "http://127.0.0.1:8080"
             if args.packages:
-                archives = sorted(args.packages.resolve().rglob("*.pkg.tar.zst"))
-                if not archives:
-                    raise ValueError("No package archives")
-                guest(
-                    "mkdir -p /tmp/repository/arch/dev/x86_64 /tmp/repo-key; chmod 700 /tmp/repo-key"
-                )
-                for archive in archives:
-                    if not archive.name.startswith(
-                        ("nacre-debug-", "python-orient-colors-")
-                    ):
-                        copy(archive, "/tmp/repository/arch/dev/x86_64/")
+                guest("mkdir -p /tmp/repo-key; chmod 700 /tmp/repo-key")
                 fingerprint = guest("""export GNUPGHOME=/tmp/repo-key
  gpg --batch --pinentry-mode loopback --passphrase '' --quick-generate-key 'VM gate <vm@example.invalid>' ed25519 sign 1d
  gpg --batch --with-colons --list-secret-keys | awk -F: '$1=="fpr" {print $10; exit}'
 """).splitlines()[-1]
-                guest("""set -e
-export GNUPGHOME=/tmp/repo-key
- gpg --armor --export > /tmp/repository/nacre-repo.asc
- cd /tmp/repository/arch/dev/x86_64
- for p in *.pkg.tar.zst; do gpg --batch --detach-sign "$p"; done
- repo-add --sign nacre-dev.db.tar.gz *.pkg.tar.zst
+                publish(args.upgrade_from or args.packages)
+                guest("""GNUPGHOME=/tmp/repo-key gpg --armor --export > /tmp/repository/nacre-repo.asc
  nohup python -m http.server 8080 --bind 127.0.0.1 --directory /tmp/repository </dev/null >/tmp/repo-http.log 2>&1 & echo $! >/tmp/repo-http.pid
 """)
                 bootstrap = render_bootstrap(ROOT).replace(FINGERPRINT, fingerprint)
@@ -256,45 +344,42 @@ export GNUPGHOME=/tmp/repo-key
                 if "\t~/" in line
             ]
             finish("session")
-            guest("""touch /tmp/start-session
-sudo systemctl daemon-reload; sudo systemctl restart getty@tty1.service
-for i in $(seq 60); do systemctl --user is-active --quiet nacre-shell.service && break; sleep 2; done
-systemctl --user is-active nacre-shell.service
-""")
-            time.sleep(10)
-            environment = 'export XDG_RUNTIME_DIR=/run/user/$(id -u); eval "$(systemctl --user show-environment | sed "s/^/export /" )"; '
-            command = (
-                "hyprctl -j monitors"
-                if args.tier == "hyprland"
-                else args.tier + " msg --json outputs"
-            )
-            outputs = json.loads(guest(environment + command))
-            if not outputs:
-                raise RuntimeError("Empty compositor outputs")
-            journal = guest("journalctl --user -b --no-pager")
-            if "UI_ERROR" in journal:
-                raise RuntimeError("UI_ERROR in user journal")
-            guest(environment + "grim /tmp/screenshot.png")
-            copy("/tmp/screenshot.png", out / "screenshot.png", download=True)
-            guest(
-                "python - <<'PY'\n"
-                "from pathlib import Path\n"
-                "import struct, zlib\n"
-                "data = Path('/tmp/screenshot.png').read_bytes()\n"
-                "assert data.startswith(b'\\x89PNG\\r\\n\\x1a\\n')\n"
-                "width, height = struct.unpack('>II', data[16:24])\n"
-                "assert width > 1 and height > 1\n"
-                "offset, chunks = 8, []\n"
-                "while offset < len(data):\n"
-                "    size = struct.unpack('>I', data[offset:offset + 4])[0]\n"
-                "    kind = data[offset + 4:offset + 8]\n"
-                "    if kind == b'IDAT': chunks.append(data[offset + 8:offset + 8 + size])\n"
-                "    offset += size + 12\n"
-                "pixels = zlib.decompress(b''.join(chunks))\n"
-                "assert len(pixels) > height and len(set(pixels)) > 10\n"
-                "PY"
-            )
-            guest("systemctl --user is-active nacre-shell.service")
+            session("screenshot.png")
+            if args.upgrade_from:
+                finish("upgrade")
+                edit = "/home/tester/" + USER_EDIT[args.tier]
+                if edit not in managed:
+                    raise RuntimeError("Edit target is not a managed file: " + edit)
+                comment = "//" if edit.endswith(".kdl") else "#"
+                guest(
+                    f"echo '{comment} vm-gate user edit' >> {edit}; sha256sum {edit} >/tmp/edit.sha256"
+                )
+                publish(args.packages)
+                transcript = guest(
+                    ENVIRONMENT + "python - <<'PY'\n" + UPDATE + "PY", timeout=1200
+                )
+                version = next(
+                    m[1]
+                    for p in args.packages.rglob("nacre-*.pkg.tar.zst")
+                    if (
+                        m := re.fullmatch(
+                            r"nacre-(\d[^-]*-\d+)-x86_64\.pkg\.tar\.zst", p.name
+                        )
+                    )
+                )
+                # The outcome, not the exit status, proves the update ran.
+                installed = guest("pacman -Q nacre").strip()
+                if installed != "nacre " + version:
+                    raise RuntimeError(f"nacre update left {installed}, not {version}")
+                if not re.search(
+                    rf"^nacre \S+ -> {re.escape(version)}\s*$", transcript, re.M
+                ):
+                    raise RuntimeError("Update summary lacks nacre -> " + version)
+                if f"compositor={args.tier};" not in transcript:
+                    raise RuntimeError("Setup review chose another compositor")
+                finish("upgrade-session")
+                session("screenshot-upgrade.png", "uwsm stop;")
+                guest("sha256sum -c /tmp/edit.sha256")  # The user edit survived.
             finish("update")
             update = guest(
                 "if nacre --help 2>&1 | grep -qw update; then nacre update; else echo 'SKIP: update absent in candidate'; fi"
