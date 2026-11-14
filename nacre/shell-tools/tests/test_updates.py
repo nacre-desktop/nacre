@@ -1,50 +1,9 @@
-import importlib.util
 from pathlib import Path
 import subprocess
 import unittest
 import os
 import shutil
 import tempfile
-from unittest.mock import patch
-
-spec = importlib.util.spec_from_file_location(
-    "updates", Path(__file__).resolve().parents[1] / "updates.py"
-)
-updates = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(updates)
-
-
-class UpdateTests(unittest.TestCase):
-    def check(self, helper_result):
-        results = [
-            subprocess.CompletedProcess(["checkupdates"], 2, "", ""),
-            helper_result,
-        ]
-        with (
-            patch.object(updates.shutil, "which", side_effect=lambda name: name),
-            patch.object(updates, "needs_host_runtime", return_value=False),
-            patch.object(updates.subprocess, "run", side_effect=results),
-        ):
-            return updates.count_updates()
-
-    def test_empty_aur_result_refreshes_to_zero(self):
-        result = self.check(subprocess.CompletedProcess(["paru", "-Qua"], 1, "", ""))
-        self.assertEqual(result["count"], 0)
-        self.assertEqual(result["text"], "0")
-
-    def test_aur_update_is_counted(self):
-        result = self.check(
-            subprocess.CompletedProcess(["paru", "-Qua"], 0, "chrome 1 -> 2\n", "")
-        )
-        self.assertEqual(result["count"], 1)
-
-    def test_failed_aur_query_does_not_report_zero(self):
-        with self.assertRaises(RuntimeError):
-            self.check(
-                subprocess.CompletedProcess(
-                    ["paru", "-Qua"], 1, "", "error: network failure"
-                )
-            )
 
 
 class UpdateFailureTests(unittest.TestCase):
@@ -245,56 +204,6 @@ class UpdateSetupFlowTests(unittest.TestCase):
 
 
 class UpdateRuntimeTests(unittest.TestCase):
-    def test_namespace_detection(self):
-        for mapping, expected in (
-            ("0 0 4294967295\n", False),
-            ("1000 1000 1\n", True),
-            ("0 1000 1\n", True),
-        ):
-            with patch.object(Path, "read_text", return_value=mapping):
-                self.assertEqual(updates.needs_host_runtime(), expected)
-
-    def test_native_package_commands_remain_direct(self):
-        with patch.object(updates, "needs_host_runtime", return_value=False):
-            self.assertEqual(
-                updates.package_command(["checkupdates"]), ["checkupdates"]
-            )
-
-    def test_namespaced_check_preserves_output_and_failure(self):
-        for code, output, error in (
-            (0, "fish 4 -> 5\n", ""),
-            (1, "", "Cannot fetch updates"),
-        ):
-            with (
-                patch.object(updates, "needs_host_runtime", return_value=True),
-                patch.object(
-                    updates.shutil, "which", side_effect=lambda n: n == "checkupdates"
-                ),
-                patch.object(
-                    updates.subprocess,
-                    "run",
-                    return_value=subprocess.CompletedProcess([], code, output, error),
-                ) as run,
-            ):
-                if code:
-                    with self.assertRaises(RuntimeError):
-                        updates.preflight()
-                else:
-                    updates.preflight()
-                self.assertEqual(
-                    run.call_args.args[0],
-                    [
-                        "systemd-run",
-                        "--user",
-                        "--wait",
-                        "--pipe",
-                        "--collect",
-                        "--quiet",
-                        "--",
-                        "checkupdates",
-                    ],
-                )
-
     def test_interactive_script_routes_before_confirmation(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

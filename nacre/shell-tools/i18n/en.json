@@ -508,8 +508,6 @@
   "helper.terminal-branding.terminal-device-changed": "Terminal device changed",
   "helper.terminal-branding.terminal-shell-ended-or-process-id-reused": "Terminal shell ended or process id reused",
   "helper.terminal-branding.unexpected-terminal-path": "Unexpected terminal path",
-  "helper.updates.update-check-failed": "Update check failed",
-  "helper.updates.update-preflight-failed-value0": "Update preflight failed: {value0}",
   "helper.wallpaper-media.choose-a-valid-wallpaper-accent": "Choose a valid wallpaper accent",
   "helper.wallpaper-media.choose-a-wallpaper-before-changing-its-palette": "Choose a wallpaper before changing its palette",
   "helper.wallpaper-media.choose-a-wallpaper-interval-between-5-and-1440-minutes": "Choose a wallpaper interval between 5 and 1440 minutes",

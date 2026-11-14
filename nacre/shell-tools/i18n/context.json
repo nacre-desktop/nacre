@@ -490,8 +490,6 @@
   "helper.terminal-branding.terminal-device-changed": "nacre/shell-tools/terminal-branding.py: helper UI message; not a command identifier.",
   "helper.terminal-branding.terminal-shell-ended-or-process-id-reused": "nacre/shell-tools/terminal-branding.py: helper UI message; not a command identifier.",
   "helper.terminal-branding.unexpected-terminal-path": "nacre/shell-tools/terminal-branding.py: helper UI message; not a command identifier.",
-  "helper.updates.update-check-failed": "nacre/shell-tools/updates.py: helper UI message; not a command identifier.",
-  "helper.updates.update-preflight-failed-value0": "nacre/shell-tools/updates.py: user-visible message; dynamic data stays in arguments.",
   "helper.wallpaper-media.choose-a-valid-wallpaper-accent": "nacre/shell-tools/wallpaper-media.py: helper UI message; not a command identifier.",
   "helper.wallpaper-media.choose-a-wallpaper-before-changing-its-palette": "nacre/shell-tools/wallpaper-media.py: helper UI message; not a command identifier.",
   "helper.wallpaper-media.choose-a-wallpaper-interval-between-5-and-1440-minutes": "nacre/shell-tools/wallpaper-media.py: helper UI message; not a command identifier.",
