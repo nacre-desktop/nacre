@@ -86,11 +86,6 @@ function M.tone(instance,minimum)
     if not wall then return DEFAULT_TONE end
     return M.pick_tone(wall,on_surface,surface,minimum or 4.5)
 end
--- Box props that put the scrim behind a widget's content.
-function M.scrim_props(tone)
-    if not tone.scrim then return {fill="transparent"} end
-    return {fill=tone.scrim,radius=M.radius}
-end
 
 -- `shadow`: true for the default glow, a colour for an adaptive one, nil/false for none.
 local function shadow_colour(shadow)

@@ -8,7 +8,6 @@ local popouts=c.popouts
 local t=c.t
 local visual=require("../desktop-visuals")
 local clock_font="IBM Plex Sans"
-local display_font=visual.display_font
 -- Whole pixels, as each drawn label box (context.whole_width), so the widest value still fits.
 local time_max=math.ceil(math.max(t.clock_min_width,ui.text_width("23:59",clock_font,t.clock_font),
     ui.text_width("11:59 PM",clock_font,t.clock_font),ui.text_width("12:59 PM",clock_font,t.clock_font)))
