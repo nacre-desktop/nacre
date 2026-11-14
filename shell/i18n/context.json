@@ -420,6 +420,7 @@
   "bead.panel.launcher-earlier": "AI launcher: heading of chats older than a day.",
   "bead.panel.launcher-open": "AI launcher: hint on a running chat's row; the row opens it.",
   "bead.panel.launcher-new-in-project": "AI launcher: bottom chip that starts a new chat in the project.",
+  "bead.panel.launcher-terminal": "AI launcher: composer button that starts a new terminal chat with the chosen provider.",
   "bead.panel.chat-assistant": "AI sidebar: generic name shown before the conversation title when the provider is not yet known.",
   "bead.panel.chat-claude": "AI sidebar settings: button that selects the Claude Code assistant.",
   "bead.panel.chat-codex": "AI sidebar settings: button that selects the Codex assistant.",
