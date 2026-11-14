@@ -291,11 +291,17 @@ def commits(text):
     return rows
 
 
+# The longest open motion: Nacre's dashboard slide (Noctalia's panels finish sooner).
+MOTION_MS = 360
+
+
 def frame_stats(text, opened):
     """niri's commits to labwc after an open call: one per composited frame.
 
     first_ms is open call to the first composited frame; the burst is that frame plus
-    every following one closer than 100 ms; late counts gaps over 1.5 refreshes (25 ms).
+    every following one closer than 100 ms, ended early by a late gap once MOTION_MS
+    have passed: that next frame is an unrelated redraw (Nacre's 2 s dashboard gauge
+    re-stage, N0331), not a stall. late counts gaps over 1.5 refreshes (25 ms).
     """
     hits = commits(text)
     if not hits:
@@ -306,7 +312,10 @@ def frame_stats(text, opened):
     times = [(ms - opened * 1e3) % period for ms, period, s in hits if s == surface]
     burst = [ms for ms in times if ms < 5000][:1]
     for ms in times[times.index(burst[0]) + 1 :] if burst else []:
-        if ms - burst[-1] >= 100:
+        gap = ms - burst[-1]
+        # shortcut: a stall in the motion's last ~25 ms reads as its end; niri's log
+        # cannot tell them apart without the shell's own slide clock.
+        if gap >= 100 or (gap > 25 and burst[-1] - burst[0] >= MOTION_MS):
             break
         burst.append(ms)
     if not burst:
@@ -330,6 +339,30 @@ assert frame_stats(
     "[23:59:59.999000] -> wl_surface#3.commit()\n[00:00:00.016000] -> wl_surface#3.commit()\n",
     86399.990,
 ) == {"first_ms": 9.0, "frames": 2, "span_ms": 17.0, "max_gap_ms": 17.0, "late": 0}
+
+
+def _trace(*times):
+    return "".join(f"[{t:.3f}] -> wl_surface#7.commit()\n" for t in times)
+
+
+# N0331, from Shell's dash-gap evidence: the slide's frames end at +396.6 and the gauge
+# re-stage draws at +449.2; the 100 ms rule alone reported that as a 52.6 ms stall.
+_slide = [12.6 + 16 * k for k in range(25)]
+assert frame_stats(_trace(*_slide, 449.2), 0) == {
+    "first_ms": 12.6,
+    "frames": 25,
+    "span_ms": 384.0,
+    "max_gap_ms": 16.0,
+    "late": 0,
+}
+# The same gap inside the motion is still a stall.
+assert frame_stats(_trace(*_slide[:12], *(t + 52.6 for t in _slide[11:])), 0) == {
+    "first_ms": 12.6,
+    "frames": 26,
+    "span_ms": 436.6,
+    "max_gap_ms": 52.6,
+    "late": 1,
+}
 
 
 def note(path, text):
@@ -1072,8 +1105,8 @@ class Arm:
         elif panel == "launcher":
             self.dispatch("nacre", "launcher", "")
         else:
+            # One call, as the product's Super+O key sends.
             self.dispatch("drawers", "toggle", "dashboard")
-            self.dispatch("nacre", "tab", "0")
 
     def close_panels(self):
         if self.arm == "noctalia":

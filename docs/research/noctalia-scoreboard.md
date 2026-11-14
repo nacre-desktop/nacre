@@ -91,9 +91,22 @@ against 17-18 ms, no late frames) and package power (within noise).
    the desktop smoke, before N0305): daemon main thread 4.1/s,
    `nacre-offload` 2.1/s, a shell `blocking-1` thread on a 500 ms timer 2.0/s.
    Idle CPU is still lower than Noctalia's.
-5. **Dashboard open stalls.** In every Nacre run on both hosts, 2-3 of 5
-   dashboard opens have one 54-97 ms gap between composited frames; the
-   launcher has none and Noctalia's control center has none.
+5. **Dashboard open stalls: mostly a harness artifact, with a Bead residue
+   (N0331).** The rows above show 2-3 of 5 Nacre dashboard opens with one
+   54-97 ms gap between composited frames. Shell's capture
+   (`~/.local/share/nacre/ai/lead/shell-allhands/dash-gap-evidence/`) shows the
+   slide itself commits every 16.0 ± 0.3 ms. The 54-57 ms gaps are the
+   dashboard's 2 s system-gauge re-stage, drawn within 100 ms after the slide's
+   last frame, which the probe's 100 ms burst rule merged into the open. The
+   3.03 s probe period drifts that phase, hence "2-3 of 5". In Shell's capture
+   the 90 ms gap on the first (cold) open is the slide's terminal pose waiting
+   for that next redraw. Since N0331 the harness opens the dashboard with one
+   call, as Super+O does, and a gap over 25 ms after the 360 ms motion ends the
+   burst. The rows above predate that, and the matrix was not re-run. What
+   remains is Bead's, sent to the Bead lead: the late cold-open terminal pose
+   and a 36 ms wait for the first frame callback on warm opens, which niri's
+   frames do not show. The launcher and Noctalia's control center have no
+   gaps.
 
 ## Method (N0308)
 

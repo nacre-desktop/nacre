@@ -99,7 +99,9 @@ compositor instead of the staged copy. Summarize again any time:
   own commits to labwc, one per composited frame, for both shells alike.
   `first_ms` is the IPC call (client process start included) to the first
   composited frame, `frames`/`span_ms` the open animation burst (frames closer
-  than 100 ms), `max_gap_ms` its longest gap and `late` its gaps over 25 ms.
+  than 100 ms; once the 360 ms open motion has passed, a gap over 25 ms ends it,
+  so a later unrelated redraw is not a stall), `max_gap_ms` its longest gap and
+  `late` its gaps over 25 ms. Nacre's dashboard opens with one call, as its key does.
 - `power.<window>`: PPT, GPU busy and VRAM means minus the last 30 s of the
   no-shell baseline (host sensors; the baseline already contains the
   compositors and fixture).
