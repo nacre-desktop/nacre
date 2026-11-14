@@ -749,7 +749,7 @@ impl Drop for QueryActor {
 }
 fn navigation_target(
     rows: &[Json],
-    selection: &str,
+    selection: Option<&str>,
     mut scroll: f64,
     key: &str,
     geometry: NavigationGeometry,
@@ -760,9 +760,8 @@ fn navigation_target(
         "down" | "right" => 1,
         _ => return (String::new(), 0.),
     };
-    let current = rows
-        .iter()
-        .position(|row| row["id"].as_str() == Some(selection));
+    let current =
+        selection.and_then(|id| rows.iter().position(|row| row["id"].as_str() == Some(id)));
     let count = rows.len();
     if count == 0 {
         return (String::new(), 0.);
@@ -1146,80 +1145,18 @@ impl Menu {
             }
         }
         let view = self.view.borrow();
-        let current = match stores.get("launcher.selection") {
-            Some(Value::Text(id)) => view
-                .rows
-                .iter()
-                .position(|row| row["id"].as_str() == Some(id.as_str())),
+        let selection = match stores.get("launcher.selection") {
+            Some(Value::Text(id)) => Some(id.as_str()),
             _ => None,
         };
-        let count = view.rows.len();
-        let mut next = current.map_or(
-            if direction > 0 {
-                0
-            } else {
-                count.saturating_sub(1)
-            },
-            |index| {
-                if grid && matches!(key, "up" | "down") {
-                    (index as i64 + direction * geometry.columns.max(1) as i64)
-                        .clamp(0, count.saturating_sub(1) as i64) as usize
-                } else {
-                    (index as i64 + direction).rem_euclid(count.max(1) as i64) as usize
-                }
-            },
-        );
-        let mut selected = None;
-        for _ in 0..count {
-            if view.rows[next]["disabled"] != true {
-                selected = Some(next);
-                break;
-            }
-            let candidate = next as i64 + direction;
-            if grid && matches!(key, "up" | "down") && !(0..count as i64).contains(&candidate) {
-                selected = current.filter(|index| view.rows[*index]["disabled"] != true);
-                break;
-            }
-            next = candidate.rem_euclid(count as i64) as usize;
-        }
-        let mut scroll = match stores.get("launcher.scroll.y") {
+        let scroll = match stores.get("launcher.scroll.y") {
             Some(Value::Number(value)) => *value,
             _ => 0.,
         };
-        if let Some(index) = selected {
-            let columns = if grid { geometry.columns.max(1) } else { 1 };
-            if geometry.pitch.is_finite()
-                && geometry.pitch > 0.
-                && geometry.row_height > 0.
-                && geometry.viewport_height > 0.
-            {
-                let top = (index / columns) as f64 * geometry.pitch;
-                let bottom = top + geometry.row_height;
-                if top < scroll {
-                    scroll = top;
-                } else if bottom > scroll + geometry.viewport_height {
-                    scroll = bottom - geometry.viewport_height;
-                }
-                let rows = count.div_ceil(columns);
-                let maximum = (rows.saturating_sub(1) as f64 * geometry.pitch
-                    + geometry.row_height
-                    - geometry.viewport_height)
-                    .max(0.);
-                scroll = scroll.clamp(0., maximum);
-            }
-        } else {
-            scroll = 0.;
-        }
+        let (selection, scroll) =
+            navigation_target(&view.rows, selection, scroll, key, geometry, grid);
         expanded.extend(BTreeMap::from([
-            (
-                "launcher.selection".into(),
-                Value::Text(
-                    selected
-                        .and_then(|index| view.rows[index]["id"].as_str())
-                        .unwrap_or("")
-                        .into(),
-                ),
-            ),
+            ("launcher.selection".into(), Value::Text(selection)),
             ("launcher.scroll.y".into(), Value::Number(scroll)),
         ]));
         Some(expanded)
@@ -1718,8 +1655,14 @@ impl Menu {
                 false
             } else {
                 for (key, geometry) in pending {
-                    let (next_selection, next_scroll) =
-                        navigation_target(&view.rows, &selection, scroll, &key, geometry, grid);
+                    let (next_selection, next_scroll) = navigation_target(
+                        &view.rows,
+                        Some(selection.as_str()),
+                        scroll,
+                        &key,
+                        geometry,
+                        grid,
+                    );
                     selection = next_selection;
                     scroll = next_scroll;
                 }
