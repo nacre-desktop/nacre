@@ -3297,3 +3297,64 @@ fn hover_opened_dock_shows_the_full_overview() {
         );
     }
 }
+
+/// Owner 2026-11-14 round 4: a status click picks Wi-Fi; after the dock closes, the right lip (hover,
+/// push or key, all plain PanelVisibility opens) shows the full overview again.
+#[tokio::test]
+async fn a_closed_dock_reopens_on_the_overview_after_a_status_click() -> bead_test::Result<()> {
+    use bead::wayland::{SceneSource, UiEvent};
+    let mut methods = ALL.to_vec();
+    methods.push("power.set_profile");
+    let lab = lab(&methods).await;
+    let control = control_for(&lab).await;
+    let palette_path = root().join("palette.json");
+    let colors = bead::render::Palette::read(&palette_path)?;
+    let cold = crate::sound::fallback(colors.get("surface")?);
+    let session = bead::ui::Session::new(
+        root(),
+        "control/main.luau".into(),
+        palette_path,
+        colors,
+        cold,
+    );
+    let mut runtime = crate::reload::Runtime::new(session)
+        .with_control_center(control)?
+        .with_docked_details(lab.client.clone())?;
+    runtime.isolate_state(&lab.dir.join("dock-reopen"));
+    runtime.services(Box::new(|_| {}));
+    runtime.stage(UiEvent::Reload)?;
+    runtime.commit();
+    // The status click: the dock opens, then its model picks the Wi-Fi section.
+    runtime.stage(UiEvent::PanelVisibility(true))?;
+    runtime.stage(UiEvent::Model(BTreeMap::from([
+        ("cc.page".into(), Value::Text("detail".into())),
+        ("cc.detail".into(), Value::Text("network".into())),
+    ])))?;
+    runtime.commit();
+    assert!(
+        runtime
+            .session
+            .view_nodes()
+            .iter()
+            .any(|node| node.id.contains("detail.header.back")),
+        "the click opened the Wi-Fi section"
+    );
+    runtime.stage(UiEvent::PanelVisibility(false))?;
+    runtime.commit();
+    runtime.stage(UiEvent::PanelVisibility(true))?;
+    runtime.commit();
+    assert_eq!(
+        runtime.session.stores.get("cc.page"),
+        Some(&Value::Text("home".into()))
+    );
+    let nodes = runtime.session.view_nodes();
+    assert!(
+        nodes.iter().any(|node| node.id.contains("home.status"))
+            && !nodes
+                .iter()
+                .any(|node| node.id.contains("detail.header.back")),
+        "the lip reopened the overview"
+    );
+    drop(lab);
+    Ok(())
+}

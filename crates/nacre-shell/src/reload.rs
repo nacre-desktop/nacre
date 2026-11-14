@@ -8987,6 +8987,14 @@ impl SceneSource for Runtime {
                             values.insert(key.into(), bead::core::Value::Bool(false));
                         }
                     }
+                    // Owner 2026-11-14: a closed dock forgets its page, so the lip (hover, push or
+                    // key) always reopens the overview; only a status click (CompanionModel after
+                    // the open) picks a section.
+                    if !self.dock_status.is_empty() {
+                        values.insert("cc.page".into(), bead::core::Value::Text("home".into()));
+                        values.insert("cc.detail".into(), bead::core::Value::Text(String::new()));
+                        values.insert("cc.scroll".into(), bead::core::Value::Number(0.));
+                    }
                 }
                 if !open && self.chat.is_some() {
                     values.extend(
