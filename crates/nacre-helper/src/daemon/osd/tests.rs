@@ -77,12 +77,44 @@ async fn the_fallback_tick_follows_the_caps_lock_source() {
     // NN0036: the compositor reports Caps Lock and inotify covers night light.
     assert_eq!(period(true, true, true), None);
     assert_eq!(period(true, false, true), None);
-    // A known LED is read every tick; without one a slower tick looks for one.
-    assert_eq!(period(false, true, true), Some(tick));
+    // N0321: a known LED is polled by its read job; without one a slower tick looks for one.
+    assert_eq!(period(false, true, true), None);
     assert_eq!(period(false, false, true), Some(tick * REDISCOVER));
     // Unwatched night-light records keep the full tick.
     assert_eq!(period(true, false, false), Some(tick));
     assert_eq!(period(false, false, false), Some(tick));
+}
+
+/// N0321: the read job keeps polling an unchanged LED on its own thread and returns only
+/// with a change, or with no reading once the session dropped its guard.
+#[test]
+fn a_known_led_is_polled_by_its_job_until_it_changes_or_the_session_ends() {
+    let f = Fixture::new();
+    let known = Some(f.path("leds/input3::capslock/brightness"));
+    let tick = Duration::from_millis(10);
+    let alive = std::sync::Arc::new(());
+    let job = {
+        let (leds, known, alive) = (
+            f.path("leds"),
+            known.clone(),
+            std::sync::Arc::downgrade(&alive),
+        );
+        std::thread::spawn(move || watch_caps(leds, known, Some(false), tick, alive))
+    };
+    std::thread::sleep(tick * 10);
+    assert!(!job.is_finished(), "an unchanged LED ended the poll");
+    f.set("leds/input3::capslock/brightness", "1\n");
+    assert_eq!(job.join().unwrap(), (known.clone(), Some(true)));
+    let job = {
+        let (leds, known, alive) = (
+            f.path("leds"),
+            known.clone(),
+            std::sync::Arc::downgrade(&alive),
+        );
+        std::thread::spawn(move || watch_caps(leds, known, Some(true), tick, alive))
+    };
+    drop(alive);
+    assert_eq!(job.join().unwrap(), (known, None));
 }
 
 #[test]

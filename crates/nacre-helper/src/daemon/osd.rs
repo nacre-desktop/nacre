@@ -214,16 +214,43 @@ fn read_caps(leds: PathBuf, known: Option<PathBuf>) -> CapsRead {
     let value = path.as_deref().and_then(read_flag);
     (path.filter(|_| value.is_some()), value)
 }
+/// N0321: a known LED is polled every `tick` on the job's own offload thread, which returns
+/// only when the reading differs from `last` (or the LED vanished) or the session dropped
+/// `alive`. An unchanged LED then wakes that one thread, not the daemon's main thread too.
+fn watch_caps(
+    leds: PathBuf,
+    known: Option<PathBuf>,
+    last: Option<bool>,
+    tick: Duration,
+    alive: std::sync::Weak<()>,
+) -> CapsRead {
+    if known.is_none() {
+        return read_caps(leds, known);
+    }
+    loop {
+        std::thread::sleep(tick);
+        if alive.strong_count() == 0 {
+            return (known, None); // no reading: never a baseline or an event
+        }
+        let read = read_caps(leds.clone(), known.clone());
+        if read != (known.clone(), last) {
+            return read;
+        }
+    }
+}
 /// At most one read is in flight; a LED that hangs only stops its own updates.
 fn start_caps(
     job: &mut Option<tokio::task::JoinHandle<Option<CapsRead>>>,
-    leds: &Path,
+    env: &Env,
     known: &Option<PathBuf>,
+    last: Option<bool>,
+    alive: &std::sync::Arc<()>,
 ) {
     if job.is_none() {
-        let (leds, known) = (leds.to_owned(), known.clone());
+        let (leds, known, tick) = (env.leds.clone(), known.clone(), env.tick);
+        let alive = std::sync::Arc::downgrade(alive);
         *job = Some(tokio::task::spawn_local(async move {
-            crate::process::offload(move || read_caps(leds, known))
+            crate::process::offload(move || watch_caps(leds, known, last, tick, alive))
                 .await
                 .ok()
         }));
@@ -284,17 +311,18 @@ fn night_changed(names: &[OsString], records: &[PathBuf]) -> bool {
 /// Without a known LED the tick only re-discovers one (sysfs sends no inotify events for LED
 /// devices): 2 s at the production 500 ms tick.
 const REDISCOVER: u32 = 4;
-/// The fallback tick: it reads the LED (or looks for one) unless the compositor reports Caps
-/// Lock, and polls night light when its records cannot be watched.
+/// The fallback tick: it looks for a LED unless the compositor reports Caps Lock (a known LED
+/// is polled by its read job, `watch_caps`), and polls night light when its records cannot be
+/// watched.
 fn cap_ticker(
     compositor: bool,
     has_caps_led: bool,
     watches_inputs: bool,
     fallback: Duration,
 ) -> Option<tokio::time::Interval> {
-    let period = if !watches_inputs || (!compositor && has_caps_led) {
+    let period = if !watches_inputs {
         fallback
-    } else if !compositor {
+    } else if !compositor && !has_caps_led {
         fallback * REDISCOVER
     } else {
         return None;
@@ -304,7 +332,7 @@ fn cap_ticker(
     Some(ticker)
 }
 
-async fn next_watch(
+pub(super) async fn next_watch(
     watch: &mut Option<super::dashboard_extras::watch::Watch>,
 ) -> crate::Result<Vec<OsString>> {
     match watch {
@@ -421,6 +449,11 @@ pub async fn session(hub: Shared, env: Env, system: Option<zbus::Connection>) ->
         }
     };
     let mut caps_job = None;
+    // Dropped (and replaced) to end a known LED's poll job.
+    let mut alive = std::sync::Arc::new(());
+    if !compositor && capslock_path.is_some() {
+        start_caps(&mut caps_job, &env, &capslock_path, caps, &alive);
+    }
     let mut input_watch = watch_inputs(&env.night).ok();
     let mut night = read_night(&env.night);
     let mut profile = match &system {
@@ -439,7 +472,7 @@ pub async fn session(hub: Shared, env: Env, system: Option<zbus::Connection>) ->
         tokio::select! {
             _ = next_cap_tick(&mut ticker) => {
                 if !compositor {
-                    start_caps(&mut caps_job, &env.leds, &capslock_path);
+                    start_caps(&mut caps_job, &env, &capslock_path, caps, &alive);
                 }
                 if input_watch.is_none() {
                     let next = read_night(&env.night);
@@ -470,10 +503,12 @@ pub async fn session(hub: Shared, env: Env, system: Option<zbus::Connection>) ->
                     }
                 }
             }
-            Some((path, value)) = caps_done(&mut caps_job) => {
+            read = caps_done(&mut caps_job) => {
                 if compositor {
                     continue; // a read started before the compositor reported
                 }
+                // A failed job counts as a lost LED: the rediscovery tick reads again.
+                let (path, value) = read.unwrap_or((None, None));
                 let had_path = capslock_path.is_some();
                 capslock_path = path;
                 if let Some(next) = value {
@@ -492,6 +527,9 @@ pub async fn session(hub: Shared, env: Env, system: Option<zbus::Connection>) ->
                         env.tick,
                     );
                 }
+                if capslock_path.is_some() {
+                    start_caps(&mut caps_job, &env, &capslock_path, caps, &alive);
+                }
             }
             Ok(()) = lock_keys.changed() => {
                 let reported = *lock_keys.borrow_and_update();
@@ -504,11 +542,12 @@ pub async fn session(hub: Shared, env: Env, system: Option<zbus::Connection>) ->
                             pending.add(event);
                         }
                         caps = Some(next);
+                        alive = std::sync::Arc::new(());
                     }
                     // The stream ended: back to the LED, from a silent baseline.
                     None => {
                         caps = None;
-                        start_caps(&mut caps_job, &env.leds, &capslock_path);
+                        start_caps(&mut caps_job, &env, &capslock_path, caps, &alive);
                     }
                 }
                 compositor = reported.is_some();
