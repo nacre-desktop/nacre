@@ -6,7 +6,7 @@ from pathlib import Path
 import subprocess
 import tempfile
 
-SOURCE = "f405f1a931edd1489abec927f1907422c040b0c4"  # nacre r3110
+SOURCE = "a2e27dc00c1d43e0113dcb93ef9e559acba84848"  # nacre r3117
 URL = "https://github.com/nacre-desktop/nacre-niri.git"
 FILES = ("PKGBUILD", "nacre-niri-session", "nacre-niri-fork.desktop")
 
