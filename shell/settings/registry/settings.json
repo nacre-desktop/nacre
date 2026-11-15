@@ -653,10 +653,7 @@
       "apply": "instant",
       "synonyms": [],
       "advanced": false,
-      "dependsOn": "panels.lips.detachablePanels",
-      "visibleWhen": {
-        "capability": "panelDragging"
-      }
+      "dependsOn": "panels.lips.detachablePanels"
     },
     {
       "id": "panels.lips.handleStyle",

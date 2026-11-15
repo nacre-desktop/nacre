@@ -28,7 +28,7 @@ The sidebar gets a fresh conversation. Selecting a conversation already in a win
 focuses that window. Docking preserves the sidebar's other conversation in Chats;
 closing a view never stops an assistant response or deletes a draft.
 
-Settings has no switch to turn panel dragging off yet; Super+Ctrl+D works either way.
+Disable panel dragging in Settings to retain ordinary window movement everywhere.
 The motion and geometry publisher run only during interaction or panel changes;
 there is no permanent pointer polling. Reduced motion disables decorative motion.
 Reload recovery retains floating placement, navigation and conversation ownership.
