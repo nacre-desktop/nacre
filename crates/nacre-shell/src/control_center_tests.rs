@@ -3387,6 +3387,10 @@ fn the_dock_keeps_one_height_and_never_renders_a_bare_back_row() -> bead_test::R
         assert_eq!(back, matches!(detail, "dnd" | "updates"), "{detail}: {ids:?}");
         assert_ne!(overview, back, "{detail}");
     }
+    // The popup variant (the notification history under the bar) still sizes to its content.
+    let mut out = base();
+    out.insert("view.edge".into(), Value::Text("top".into()));
+    assert!(panel_height(&harness(out, "home", 1.)?) < max);
     Ok(())
 }
 
@@ -3439,16 +3443,18 @@ async fn a_pointer_leave_never_closes_the_dock_by_itself() -> bead_test::Result<
             .any(|node| node.id.contains("detail.header.back")),
         "the page the click opened is still shown"
     );
-    // A second click on the same status icon (the same model again) closes the panel.
-    runtime.stage(UiEvent::Model(BTreeMap::from([
-        ("cc.page".into(), Value::Text("detail".into())),
-        ("cc.detail".into(), Value::Text("bluetooth".into())),
-    ])))?;
-    runtime.commit();
-    assert_eq!(
-        runtime.session.stores.get("panel.open"),
-        Some(&Value::Bool(false))
-    );
+    // Another status icon switches the section; the icon of the shown section closes the panel.
+    for (page, open) in [("network", true), ("network", false)] {
+        runtime.stage(UiEvent::Model(BTreeMap::from([
+            ("cc.page".into(), Value::Text("detail".into())),
+            ("cc.detail".into(), Value::Text(page.into())),
+        ])))?;
+        runtime.commit();
+        assert_eq!(
+            runtime.session.stores.get("panel.open"),
+            Some(&Value::Bool(open))
+        );
+    }
     drop(lab);
     Ok(())
 }

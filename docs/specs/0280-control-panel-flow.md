@@ -37,6 +37,8 @@ round (265e4a9ad) go away: the panel node is the body.
   `cc.detail=<section>`). Hover on an icon stays a peek. A second click on the icon of the section
   that is already on screen closes the panel; a click on another icon switches to that section. The
   bar cannot see the dock's page, so the dock judges the repeat (`reload.rs`, the dock's model arm).
+  The same rule toggles the `nacre controls <page>` IPC route. An unknown detail id shows the overview
+  but keeps `cc.page=detail`, so Escape there goes "back" to the overview first and closes on the second press.
 - Overview tile chevron, the volume end button, the battery header, the Notifications heading: open
   the detail page in place (`detail` action). The panel does not move or resize.
 - Back arrow or Escape on a detail page: back to the overview. Escape on the overview: close.
@@ -72,8 +74,8 @@ detail=""`; (b) the `control` IPC route forwards any page name as a detail id; (
 sets `cc.page=detail` without `cc.detail`. 8126115db reset the stores on close, which covers (c) only
 after a close. The new design removes the state at its source: `detail()` renders an unknown or empty
 id as the overview (the fallback branch is deleted), and the panel is frame-high on every page, so no
-page can render as a strip. (a) is one line in `pearls.rs` (also remember `cc.detail`, or stop
-remembering `cc.page`); it is outside this unit's files and is asked of the lead.
+page can render as a strip. (a) `pearls.rs` no longer remembers `cc.page`: a restored dock always opens on the overview
+(remembering `cc.detail` instead had an edge: restored while open, the first same-icon click closed it).
 
 ## Mock renders
 

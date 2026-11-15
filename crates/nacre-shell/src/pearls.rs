@@ -26,7 +26,7 @@ const FILM_STRETCH: f64 = 170.;
 /// View-owned state only: never providers, results, credentials or image data.
 pub fn capture_state(stores: &bead::core::Stores) -> serde_json::Value {
     let mut values = crate::launcher::remember(stores);
-    for key in ["dashboard.page", "cc.page", "cc.detail", "chat.mode", "chat.page"] {
+    for key in ["dashboard.page", "chat.mode", "chat.page"] {
         if let Some(bead::core::Value::Text(value)) = stores.get(key)
             && value.len() <= 256
         {
@@ -915,10 +915,8 @@ mod tests {
             restored.get("launcher.search.text"),
             Some(&Value::Text("hello".into()))
         );
-        assert_eq!(
-            restored.get("cc.page"),
-            Some(&Value::Text("network".into()))
-        );
+        // 0280: a restored dock always opens on the overview, so its page is not remembered.
+        assert!(!restored.contains_key("cc.page"));
         assert!(!restored.contains_key("network.secret"));
         let invalid = serde_json::json!({"network.secret":"injected", "launcher.search.text":"x".repeat(65537)});
         assert!(restore_state(invalid, &stores).is_empty());
