@@ -1293,13 +1293,10 @@ async fn observe_on_connection(
                 }
                 return Ok(false);
             }
-            if matches!(
+            Ok(!matches!(
                 event_refresh.try_send(()),
                 Err(tokio::sync::mpsc::error::TrySendError::Closed(()))
-            ) {
-                return Ok(false);
-            }
-            Ok(true)
+            ))
         })
         .await
     });
