@@ -394,12 +394,40 @@ local function detail()
     end
     if id=="notifications" or id=="dnd" then return notifications_page() end
     if id=="updates" then
-        -- Owner 2026-11-14: the updates icon opens its own section: the pending count and the System page.
-        local count=get("cc.updates") or 0
-        local items={header(ui.tr("bead.panel.control-updates"),ui.action("page","home"))}
-        table.insert(items,{ui.Text{id="updates-summary",text=count>0 and ui.tr("bead.panel.control-updates-pending",{count=tostring(count)}) or ui.tr("bead.panel.control-updates-none"),
-            width=INNER,height=BODY*1.5,font_size=BODY,color="onSurface"},BODY*1.5})
-        table.insert(items,{row_button("updates-open","system_update",ui.tr("bead.panel.control-updates-open"),"chevron_right",ui.action("view.open","dashboard-system")),ROW})
+        -- The status popout's data (`cc.updates_*`): summary, checked line, health note and the package list.
+        local items={header(ui.tr("bead.panel.control-updates"),ui.action("page","home")),
+            {ui.Text{id="updates-summary",text=ui.bind("cc.updates_summary"),width=INNER,height=BODY*1.5,font_size=BODY,color="onSurface"},BODY*1.5},
+            {ui.Text{id="updates-checked",text=ui.bind("cc.updates_checked"),width=INNER,height=CAPTION*1.5,font_size=CAPTION,color="onSurfaceVariant"},CAPTION*1.5}}
+        local health=get("cc.updates_health")
+        if health~="" then
+            local note=kit.Paragraph{id="updates-health",text=health,width=INNER,font_size=CAPTION,color="onSurfaceVariant"}
+            table.insert(items,{note,note.props.height})
+        end
+        local button_height=T.spacing.xxl+T.spacing.md
+        local buttons={ui.Row{id="updates-actions",width=INNER,height=button_height,gap=T.spacing.sm,
+            kit.ActionButton{id="updates-now",label=ui.tr("bead.panel.updates-open"),primary=true,
+                on_activate=get("cc.updates_can_open") and ui.action("cc.do","open:updates") or nil,height=button_height},
+            kit.ActionButton{id="updates-check",label=ui.tr("bead.panel.updates-check"),
+                on_activate=get("cc.updates_can_refresh") and ui.action("cc.do","press:updates.refresh") or nil,height=button_height}},button_height}
+        local system={row_button("updates-open","system_update",ui.tr("bead.panel.control-updates-open"),"chevron_right",ui.action("view.open","dashboard-system")),ROW}
+        local model=ui.bind("cc.updates_packages")
+        local count=ui.model_count(model)
+        if count>0 then
+            local row_h,gap=ROW,T.spacing.xs
+            local used=TOP+PAD+(#items+3)*GAP+buttons[2]+system[2]
+            for _,item in ipairs(items) do used=used+item[2] end
+            local fit=get("cc.max_height")-used
+            local list_h=math.min(count*(row_h+gap)-gap,math.max(row_h,fit))
+            table.insert(items,{require("bead.widgets.kit.virtual-list"){id="updates-packages",model=model,key="id",scroll=ui.bind("cc.updates_scroll"),
+                width=INNER,height=list_h,row_height=row_h,gap=gap,render=function(item)
+                    return ui.Column{id="package",width=INNER,height=row_h,padding_left=T.spacing.md,gap=0,justify="center",shrink=0,
+                        radius=T.radii.small,fill="surfaceContainer",
+                        ui.Text{id="name",text=item.name,width=INNER-T.spacing.md*2,height=22,font_size=BODY,color="onSurface"},
+                        ui.Text{id="versions",text=item.old.." → "..item.new,width=INNER-T.spacing.md*2,height=18,font_size=CAPTION,color="onSurfaceVariant"}}
+                end},list_h})
+        end
+        table.insert(items,buttons)
+        table.insert(items,system)
         return stack("detail",items)
     end
     -- 0280: an unknown or empty id (a remembered or routed page) is the overview, never a bare back row.

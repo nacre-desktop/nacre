@@ -1093,6 +1093,19 @@ impl ControlCenter {
     }
     /// N0062: the VPN page's rows and its one status line (QML `NacreControlVpn`): the failure text
     /// until the next attempt, else the busy text, else "none saved"; unavailable when the topic is.
+    /// The Updates page: the status popout's projection (summary, checked, health, packages) under `cc.`.
+    fn updates_page(&self) -> Vec<(String, Value)> {
+        let Some((_, source)) = self.topics.iter().find(|(name, _)| *name == "dashboard.updates")
+        else {
+            return Vec::new();
+        };
+        crate::status_views::core_updates_values(&source.snapshot())
+            .into_iter()
+            .filter_map(|(key, value)| Some((key.strip_prefix("status.")?.to_owned(), value)))
+            .filter(|(key, _)| key.starts_with("updates_"))
+            .map(|(key, value)| (format!("cc.{key}"), value))
+            .collect()
+    }
     fn vpn_page(&self) -> Vec<(String, Value)> {
         let data = self.data("vpn").filter(|data| healthy(data));
         let busy = self.quick_pending(VPN);
@@ -1168,6 +1181,9 @@ impl ControlCenter {
         }
         match verb {
             "toggle" => self.toggle(source),
+            "press" if source == "updates.refresh" => {
+                self.begin(source, "dashboard.updates.refresh", json!({}));
+            }
             "press" => self.press(source),
             "choose" => self.choose(source, rest),
             "switch" if source == VPN => self.vpn_switch(rest),
@@ -1193,6 +1209,8 @@ impl ControlCenter {
             // `open:settings[:page]` (the gear, Wallpaper) and `open:clipboard`.
             "open" if source == "settings" => self.open_settings(rest),
             "open" if source == "clipboard" => self.open_clipboard(),
+            // The Updates page: `Update now` runs the updater tool in a terminal; `Check again` refreshes.
+            "open" if source == "updates" => self.after_close("tools.launch", json!({"tool": "updates"})),
             "set" => {
                 if let Ok(percent) = rest.parse::<f64>()
                     && percent.is_finite()
@@ -1455,6 +1473,7 @@ impl ControlCenter {
         .into_iter()
         .chain(self.notices())
         .chain(self.vpn_page())
+        .chain(self.updates_page())
         .collect()
     }
 }

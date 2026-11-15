@@ -1278,6 +1278,41 @@ fn control_center_pages_match_goldens() -> bead_test::Result<()> {
     Ok(())
 }
 
+/// The Updates page: the status popout's summary, checked line and package list inside the dock.
+fn updates_view(packages: usize, scale: f32) -> bead_test::Result<Harness> {
+    let mut out = base();
+    let rows: Vec<Json> = (0..packages)
+        .map(|i| {
+            json!({"id": i.to_string(), "name": format!("package-{i}"), "old": format!("1.{i}.0-1"),
+                "new": format!("1.{}.0-1", i + 1), "repo": "extra"})
+        })
+        .collect();
+    let text = |key: &str, v: String| out.insert(key.into(), Value::Text(v));
+    text("cc.updates_summary", if packages > 0 { format!("{packages} updates pending") } else { "Everything is up to date".into() });
+    text("cc.updates_checked", "Last checked 2026-11-15 10:00".into());
+    text("cc.updates_health", String::new());
+    text("cc.detail", "updates".into());
+    out.insert("cc.updates_packages".into(), Value::list(rows));
+    out.insert("cc.updates_can_open".into(), Value::Bool(packages > 0));
+    out.insert("cc.updates_can_refresh".into(), Value::Bool(true));
+    harness(out, "detail", scale)
+}
+
+#[test]
+fn the_updates_page_lists_packages_and_matches_goldens() -> bead_test::Result<()> {
+    assert!(offline().project(&Stores::default()).contains_key("cc.updates_packages"));
+    for scale in [1., 1.5] {
+        for (name, packages) in [("updates-packages", 8), ("updates-none", 0)] {
+            let mut h = updates_view(packages, scale)?;
+            let ids = node_ids(&h);
+            assert_eq!(ids.iter().any(|i| i.contains("updates-now")), true, "{ids:?}");
+            assert_eq!(ids.iter().any(|i| i.contains("package")), packages > 0);
+            golden(name, &mut h, scale)?;
+        }
+    }
+    Ok(())
+}
+
 #[test]
 fn dragging_a_tile_over_another_reorders_the_draft_and_a_new_press_starts_a_new_drag()
 -> bead_test::Result<()> {

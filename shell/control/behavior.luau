@@ -14,7 +14,8 @@ local behavior={stores={
     ["cc.page"]="home",["cc.detail"]="",["cc.scroll"]=0,["cc.max_height"]=800,
     ["cc.src"]={},["cc.views"]={},["cc.saved"]={},["cc.saved_known"]=false,["cc.writable"]=false,["cc.message"]="",
     ["cc.battery"]="",["cc.battery_icon"]="battery_charging_full",["cc.battery_estimate"]="",
-    ["cc.notice_note"]="",["cc.notices"]={},["cc.updates"]=0,["cc.notice_count"]=0,["cc.notice_ready"]=false,["cc.notice_clear"]=false,
+    ["cc.notice_note"]="",["cc.notices"]={},["cc.updates"]=0,["cc.updates_summary"]="",["cc.updates_detail"]="",["cc.updates_checked"]="",["cc.updates_health"]="",
+    ["cc.updates_packages"]={},["cc.updates_can_refresh"]=false,["cc.updates_can_open"]=false,["cc.updates_scroll"]=0,["cc.notice_count"]=0,["cc.notice_ready"]=false,["cc.notice_clear"]=false,
     ["cc.vpn"]={},["cc.vpn_message"]="",
     ["cc.edited"]=false,["cc.order"]={},["cc.drag"]="",
 },actions={

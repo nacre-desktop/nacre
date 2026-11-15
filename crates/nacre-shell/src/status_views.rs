@@ -728,113 +728,17 @@ impl Status {
             self.updates_pending.borrow_mut().take();
         }
         let snapshot = self.source.snapshot();
-        let state = serde_json::from_value::<nacre_protocol::core_services::UpdatesState>(
-            snapshot.data.as_ref().clone(),
-        )
-        .ok()
-        .filter(|state| CoreSnapshot::Updates(state.clone()).valid());
-        let fresh = snapshot.connected
-            && state
-                .as_ref()
-                .is_some_and(|s| s.health.available && !s.health.stale);
-        let summary = state.as_ref().and_then(|s| s.count).map_or_else(
-            || tr("bead.dashboard.updates-unavailable", &[]),
-            |count| {
-                if count == 0 {
-                    tr("bead.dashboard.updates-current", &[])
-                } else {
-                    tr_n("bead.panel.updates-available", u64::from(count), &[])
-                }
-            },
-        );
-        // `Updates.message` is the local Qt preflight warning. The published core
-        // snapshot has no such field, so do not reuse its count text as a message.
-        let detail = String::new();
-        let checked = state.as_ref().and_then(|s| s.checked).and_then(|seconds| {
-            let seconds = seconds as libc::time_t;
-            // SAFETY: localtime_r writes only to this initialized, uniquely borrowed tm.
-            unsafe {
-                let mut tm: libc::tm = std::mem::zeroed();
-                if libc::localtime_r(&seconds, &mut tm).is_null() {
-                    return None;
-                }
-                Some(format!(
-                    "{:04}-{:02}-{:02} {:02}:{:02}",
-                    tm.tm_year + 1900,
-                    tm.tm_mon + 1,
-                    tm.tm_mday,
-                    tm.tm_hour,
-                    tm.tm_min
-                ))
-            }
-        });
-        let refreshing = state.as_ref().is_some_and(|s| s.refreshing);
-        let health = if refreshing {
-            tr("bead.panel.updates-refreshing", &[])
-        } else if !fresh {
-            let error = line(
-                snapshot.data["health"]["error"]["message"]
-                    .as_str()
-                    .unwrap_or(""),
-                160,
-            );
-            if error.is_empty() {
-                tr("bead.dashboard.state-stale", &[])
-            } else {
-                error
-            }
-        } else {
-            String::new()
-        };
-        // N0077's additive field is optional: older producers remain count-only.
-        // Keep this adapter at the shell edge until the pinned protocol exposes it.
-        let packages = state.as_ref().and_then(|_| snapshot.data["packages"].as_array())
-            .filter(|rows| rows.len() <= 4096)
-            .map(|rows| rows.iter().enumerate().filter_map(|(index, row)| {
-                let name = row["name"].as_str()?;
-                let old = row["old"].as_str()?;
-                let new = row["new"].as_str()?;
-                let repo = row["repo"].as_str().unwrap_or("");
-                if name.is_empty() || [name, old, new, repo].iter().any(|s| s.len() > 256 || s.chars().any(char::is_control)) {
-                    return None;
-                }
-                Some(serde_json::json!({"id":index.to_string(),"name":name,"old":old,"new":new,"repo":repo}))
-            }).collect())
-            .unwrap_or_default();
-        let mut values = BTreeMap::from([
-            ("status.ready".into(), Value::Bool(fresh)),
-            ("status.active".into(), Value::Bool(fresh)),
+        let mut values = core_updates_values(&snapshot);
+        values.extend([
             ("status.heading".into(), Value::Text(self.kind.title())),
             ("status.icon".into(), Value::Text(self.kind.icon().into())),
             ("status.kind".into(), Value::Text(self.kind.name().into())),
-            (
-                "status.updates_summary".into(),
-                Value::Text(summary.clone()),
-            ),
-            ("status.updates_detail".into(), Value::Text(detail.clone())),
-            (
-                "status.updates_checked".into(),
-                Value::Text(checked.map_or_else(
-                    || tr("bead.panel.updates-never-checked", &[]),
-                    |time| tr("bead.panel.updates-checked", &[("time", &time)]),
-                )),
-            ),
-            ("status.updates_health".into(), Value::Text(health)),
-            ("status.updates_packages".into(), Value::list(packages)),
-            (
-                "status.updates_can_refresh".into(),
-                Value::Bool(snapshot.connected && !refreshing),
-            ),
-            (
-                "status.updates_can_open".into(),
-                Value::Bool(
-                    state
-                        .as_ref()
-                        .and_then(|s| s.count)
-                        .is_some_and(|count| count > 0),
-                ),
-            ),
         ]);
+        let text = |key: &str| match &values[key] {
+            Value::Text(text) => text.clone(),
+            _ => String::new(),
+        };
+        let (summary, detail) = (text("status.updates_summary"), text("status.updates_detail"));
         insert_peek(&mut values, self.kind, &summary, &detail, Vec::new());
         values
     }
@@ -1396,6 +1300,116 @@ impl Status {
             .unwrap_or_default();
         core_audio_values(display, false, &health)
     }
+}
+
+/// The updates page projection (`status.updates_*`), shared by the status popout and the control dock.
+pub(crate) fn core_updates_values(
+    snapshot: &bead::core::source::Snapshot,
+) -> BTreeMap<String, Value> {
+        let state = serde_json::from_value::<nacre_protocol::core_services::UpdatesState>(
+            snapshot.data.as_ref().clone(),
+        )
+        .ok()
+        .filter(|state| CoreSnapshot::Updates(state.clone()).valid());
+        let fresh = snapshot.connected
+            && state
+                .as_ref()
+                .is_some_and(|s| s.health.available && !s.health.stale);
+        let summary = state.as_ref().and_then(|s| s.count).map_or_else(
+            || tr("bead.dashboard.updates-unavailable", &[]),
+            |count| {
+                if count == 0 {
+                    tr("bead.dashboard.updates-current", &[])
+                } else {
+                    tr_n("bead.panel.updates-available", u64::from(count), &[])
+                }
+            },
+        );
+        // `Updates.message` is the local Qt preflight warning. The published core
+        // snapshot has no such field, so do not reuse its count text as a message.
+        let detail = String::new();
+        let checked = state.as_ref().and_then(|s| s.checked).and_then(|seconds| {
+            let seconds = seconds as libc::time_t;
+            // SAFETY: localtime_r writes only to this initialized, uniquely borrowed tm.
+            unsafe {
+                let mut tm: libc::tm = std::mem::zeroed();
+                if libc::localtime_r(&seconds, &mut tm).is_null() {
+                    return None;
+                }
+                Some(format!(
+                    "{:04}-{:02}-{:02} {:02}:{:02}",
+                    tm.tm_year + 1900,
+                    tm.tm_mon + 1,
+                    tm.tm_mday,
+                    tm.tm_hour,
+                    tm.tm_min
+                ))
+            }
+        });
+        let refreshing = state.as_ref().is_some_and(|s| s.refreshing);
+        let health = if refreshing {
+            tr("bead.panel.updates-refreshing", &[])
+        } else if !fresh {
+            let error = line(
+                snapshot.data["health"]["error"]["message"]
+                    .as_str()
+                    .unwrap_or(""),
+                160,
+            );
+            if error.is_empty() {
+                tr("bead.dashboard.state-stale", &[])
+            } else {
+                error
+            }
+        } else {
+            String::new()
+        };
+        // N0077's additive field is optional: older producers remain count-only.
+        // Keep this adapter at the shell edge until the pinned protocol exposes it.
+        let packages = state.as_ref().and_then(|_| snapshot.data["packages"].as_array())
+            .filter(|rows| rows.len() <= 4096)
+            .map(|rows| rows.iter().enumerate().filter_map(|(index, row)| {
+                let name = row["name"].as_str()?;
+                let old = row["old"].as_str()?;
+                let new = row["new"].as_str()?;
+                let repo = row["repo"].as_str().unwrap_or("");
+                if name.is_empty() || [name, old, new, repo].iter().any(|s| s.len() > 256 || s.chars().any(char::is_control)) {
+                    return None;
+                }
+                Some(serde_json::json!({"id":index.to_string(),"name":name,"old":old,"new":new,"repo":repo}))
+            }).collect())
+            .unwrap_or_default();
+        BTreeMap::from([
+            ("status.ready".into(), Value::Bool(fresh)),
+            ("status.active".into(), Value::Bool(fresh)),
+            (
+                "status.updates_summary".into(),
+                Value::Text(summary),
+            ),
+            ("status.updates_detail".into(), Value::Text(detail)),
+            (
+                "status.updates_checked".into(),
+                Value::Text(checked.map_or_else(
+                    || tr("bead.panel.updates-never-checked", &[]),
+                    |time| tr("bead.panel.updates-checked", &[("time", &time)]),
+                )),
+            ),
+            ("status.updates_health".into(), Value::Text(health)),
+            ("status.updates_packages".into(), Value::list(packages)),
+            (
+                "status.updates_can_refresh".into(),
+                Value::Bool(snapshot.connected && !refreshing),
+            ),
+            (
+                "status.updates_can_open".into(),
+                Value::Bool(
+                    state
+                        .as_ref()
+                        .and_then(|s| s.count)
+                        .is_some_and(|count| count > 0),
+                ),
+            ),
+        ])
 }
 
 /// The last good display, or an unavailable placeholder, marked not ready under the card's
