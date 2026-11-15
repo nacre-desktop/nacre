@@ -3380,7 +3380,11 @@ fn the_dock_keeps_one_height_and_never_renders_a_bare_back_row() -> bead_test::R
         let ids = node_ids(&h);
         let back = ids.iter().any(|id| id.contains("detail.header.back"));
         let overview = ids.iter().any(|id| id.contains("home.status"));
-        assert_eq!(back, matches!(detail, "dnd" | "updates"), "{detail}: {ids:?}");
+        assert_eq!(
+            back,
+            matches!(detail, "dnd" | "updates"),
+            "{detail}: {ids:?}"
+        );
         assert_ne!(overview, back, "{detail}");
     }
     // The popup variant (the notification history under the bar) still sizes to its content.
@@ -3424,6 +3428,7 @@ async fn a_pointer_leave_never_closes_the_dock_by_itself() -> bead_test::Result<
         ("cc.page".into(), Value::Text("detail".into())),
         ("cc.detail".into(), Value::Text("bluetooth".into())),
     ])))?;
+    runtime.commit();
     runtime.stage(UiEvent::PointerRegion(false))?;
     runtime.commit();
     assert_eq!(
