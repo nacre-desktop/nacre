@@ -41,10 +41,10 @@ USER_EDIT = {
 UPDATE = r"""
 import os, pty, re, select
 answers = [
-    (rb"\(yes/no\) \[no\]: $", b"yes\n"),
-    (rb"\[[yY]/[nN]\] $", b"y\n"),
-    (rb"Press Enter to close\.$", b"\n"),
-    (rb"\]: $", b"\n"),
+    (rb"\(yes/no\) \[no\]: (?:\x1b\[[0-9;?]*[a-zA-Z])*$", b"yes\n"),
+    (rb"\[[yY]/[nN]\] (?:\x1b\[[0-9;?]*[a-zA-Z])*$", b"y\n"),
+    (rb"Press Enter to close\.(?:\x1b\[[0-9;?]*[a-zA-Z])*$", b"\n"),
+    (rb"\]: (?:\x1b\[[0-9;?]*[a-zA-Z])*$", b"\n"),
 ]
 pid, fd = pty.fork()
 if pid == 0:
@@ -389,6 +389,12 @@ printf '%s\\n' 'Server = https://mirror.osbeck.com/archlinux/$repo/os/$arch' 'Se
                 ENVIRONMENT + "python - <<'PY'\n" + UPDATE + "PY", timeout=1200
             ):
                 raise RuntimeError("nacre update did not run the updater")
+            active = guest(
+                ENVIRONMENT
+                + "systemctl --user is-active nacre-daemon.socket nacre-daemon.service nacre-shell.service || true"
+            )
+            if active.split() != ["active"] * 3:
+                raise RuntimeError("Daemon or shell inactive after update: " + active)
             # The default profile keeps AUR review on.
             guest(
                 "~/.local/share/nacre/shell/tools/nacre-helper aur-review policy"
