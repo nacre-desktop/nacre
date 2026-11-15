@@ -97,3 +97,36 @@ point only.
 The item is **done** when all 8 steps pass on stock niri, Hyprland and nacre-niri. Record
 the three runs (commit, compositor version, pass or fail per step, and the screenshot
 names) in one short table in this spec. Raw logs stay on the host.
+
+### Tier smoke results (Platform, 2026-11-16)
+
+Desktop TEST host, private nested sessions, 1920×1080, components `configs,shell`, Nacre `f3997131c`
+(origin/main, release build, held pointer for every click and drag). Compositors: stock niri 26.04
+(8ed0da4), Hyprland 0.56.2 (efb5099, no crash), nacre-niri `26.04.r3123.g95ea41bb`. R0 = 0 on all
+three. Runs and shots: `niri1`/`niri2`, `hypr1`, `nn1` (`<run>-NN-name.png`). The Hyprland window was
+moved off the clock with `hl.dsp.window.move` and the niri ones with `move-floating-window`, so the
+desktop clock was visible and grabbable.
+
+| # | Stock niri | Hyprland | nacre-niri |
+| --- | --- | --- | --- |
+| 1 | PASS, rev 0 (`niri1-01-bar-idle`) | PASS, rev 0 (`hypr1-01-widgets-open`) | PASS, rev 0 (`nn1-01-bar-idle`) |
+| 2 | PASS 1330×765 (`niri1-03-widgets-app`) | PASS 1344×810 (`hypr1-01-widgets-open`) | PASS 1330×765 (`nn1-02-widgets-app`) |
+| 3 | PASS rev 1; clock 00:19 → 00:23 (`niri1-05-…`, `-23-clock-minute`) | PASS rev 1; 00:27 (`hypr1-18-clock-t2`), but first draws as "00:2" | PASS rev 1; tens digit 2 → 3, last digit clipped (`nn1-04-…`, `-14-clock-t1`) |
+| 4 | PASS rev 2; ghost shown; moved (+300, +152) (`niri1-08-mid-drag`, `niri2-04-after-drag`) | PASS rev 2; ghost shown; moved (+300, +150) (`hypr1-06-mid-drag`, `-07-after-drag`) | PASS rev 2; ghost shown; moved (+300, +152) (`nn1-05-mid-drag`, `-06-after-drag`) |
+| 5 | **FAIL** (`niri1-12-settled-bar`, `niri2-05-after-drop-pill`) | **FAIL** (`hypr1-08-after-drop-pill`) | **FAIL** (`nn1-07-after-drop-pill`, `nn1-08-bar-crop`) |
+| 6 | PASS rev +1, desktop clock gone (`niri2-08-after-remove`) | PASS rev +1 (`hypr1-12-after-remove`) | PASS rev +1 (`nn1-11-after-remove`) |
+| 7 | PASS rev +1, clock stays in the pill after Super+Q (`niri2-09-after-close`) | PASS (`hypr1-13-after-close`) | PASS (`nn1-12-after-close`) |
+| 8 | PASS: shell 0 `UI_ERROR`, 0 "Reload failed", 0 RPC errors | PASS | PASS |
+
+**Step 5 fails on all three tiers.** Dropping the desktop clock on the pill (at 1520, 1620 and 1650,
+25) raises rev by 1, but the clock becomes a separate `top_bar` instance (region right, start 0)
+beside the pill, not a pill child. On the two niri tiers the bar then draws an oversized dark panel
+over the top right (about 285×265 px, with a stale "00:2x"); on Hyprland the new bar clock is not
+drawn at all, and I could not drag it back out. Dragging the pill's own clock out to the desktop
+works on all three (rev +1, `canvas` clock at 220×92, drawn "00" clipped) and the title stays
+centred. Other findings: the digital desktop clock clips its last digit at some times (seen
+00:24 to 00:30, on all three tiers); a drop settles for over 1.4 s; the niri tiers move the dropped
+y by 2 px.
+
+The item stays **open** until step 5 is fixed and re-run on all three tiers. Raw logs and all shots:
+`~/.local/share/nacre/ai/lead/platform/v01-tier-smoke-20261115/`.
