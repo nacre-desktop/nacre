@@ -733,7 +733,6 @@ async fn open_heartbeat_send_stop_and_approve_use_the_published_calls() {
 }
 
 #[tokio::test(flavor = "current_thread")]
-#[ignore = "hosted-CI hang under investigation (shell queue 2026-11-15)"]
 async fn a_failed_call_shows_an_error_and_a_refused_send_restores_the_text() {
     let _guard = serial();
     let mut lab = lab(topic(&[], state(false, "", None))).await;
@@ -776,11 +775,12 @@ async fn a_failed_call_shows_an_error_and_a_refused_send_restores_the_text() {
 }
 
 #[tokio::test(flavor = "current_thread")]
-#[ignore = "hosted-CI hang under investigation (shell queue 2026-11-15)"]
 async fn a_dropped_daemon_link_reopens_the_worker_and_resyncs() {
     let _guard = serial();
     let mut lab = lab(topic(&[("u1", "user", "before")], state(false, "", None))).await;
-    let chat = chat_for(&lab).await;
+    let chat = chat_for(&lab)
+        .await
+        .with_heartbeat(Duration::from_millis(200));
     let none = stores(&[]);
     until(&chat, &none, "history", |o| num(o, "chat.extent") > 0.).await;
     assert_eq!(call_with_timeout(&mut lab).await.0, "ai.chat.open");
@@ -802,7 +802,17 @@ async fn a_dropped_daemon_link_reopens_the_worker_and_resyncs() {
         num(&out, "chat.extent") > 0.,
         "transcript survives the reconnect"
     );
-    assert_eq!(call_with_timeout(&mut lab).await.0, "ai.chat.open");
+    // A reopen that fails right after the reconnect is retried by the next projection,
+    // as the heartbeat does in the product, so keep projecting while waiting.
+    for _ in 0..800 {
+        chat.project(&none);
+        if let Ok((method, _)) = lab.calls.try_recv() {
+            assert_eq!(method, "ai.chat.open");
+            return;
+        }
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+    panic!("timed out waiting for the reopen call");
 }
 
 #[tokio::test(flavor = "current_thread")]
