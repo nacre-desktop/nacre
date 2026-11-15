@@ -534,8 +534,6 @@
   "bead.panel.control-screenshot": "Screenshot",
   "bead.panel.control-settings": "Settings",
   "bead.panel.control-updates": "Updates",
-  "bead.panel.control-updates-pending": "{count} updates pending",
-  "bead.panel.control-updates-none": "Everything is up to date",
   "bead.panel.control-updates-open": "Open the System page",
   "bead.panel.control-volume": "Volume",
   "bead.panel.control-vpn": "VPN",

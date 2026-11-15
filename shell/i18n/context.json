@@ -506,8 +506,6 @@
   "bead.panel.control-screenshot": "Bead control center: name of the screenshot action tile, shown under its icon and in the edit lists.",
   "bead.panel.control-settings": "Bead control center: accessible name of the header button that opens the Settings window.",
   "bead.panel.control-updates": "Bead control center: name of the updates tile that opens the system page, shown under its icon and in the edit lists.",
-  "bead.panel.control-updates-pending": "Control panel Updates section: how many package updates wait; {count} is the number.",
-  "bead.panel.control-updates-none": "Control panel Updates section: nothing to update.",
   "bead.panel.control-updates-open": "Control panel Updates section: row that opens the dashboard System page with the update action.",
   "bead.panel.control-volume": "Bead control center: name of the full-width volume slider tile, shown under its icon and in the edit lists.",
   "bead.panel.control-vpn": "Bead control center: name of the VPN toggle tile, shown under its icon and in the edit lists.",

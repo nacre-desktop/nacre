@@ -1095,7 +1095,10 @@ impl ControlCenter {
     /// until the next attempt, else the busy text, else "none saved"; unavailable when the topic is.
     /// The Updates page: the status popout's projection (summary, checked, health, packages) under `cc.`.
     fn updates_page(&self) -> Vec<(String, Value)> {
-        let Some((_, source)) = self.topics.iter().find(|(name, _)| *name == "dashboard.updates")
+        let Some((_, source)) = self
+            .topics
+            .iter()
+            .find(|(name, _)| *name == "dashboard.updates")
         else {
             return Vec::new();
         };
@@ -1210,7 +1213,9 @@ impl ControlCenter {
             "open" if source == "settings" => self.open_settings(rest),
             "open" if source == "clipboard" => self.open_clipboard(),
             // The Updates page: `Update now` runs the updater tool in a terminal; `Check again` refreshes.
-            "open" if source == "updates" => self.after_close("tools.launch", json!({"tool": "updates"})),
+            "open" if source == "updates" => {
+                self.after_close("tools.launch", json!({"tool": "updates"}))
+            }
             "set" => {
                 if let Ok(percent) = rest.parse::<f64>()
                     && percent.is_finite()
