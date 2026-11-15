@@ -3096,13 +3096,13 @@ impl Runtime {
         }
         Ok(self)
     }
-    /// B0199: the recording indicator follows `controls.recorder.recording` (one more lease while
-    /// a bar exists; nothing ticks unless a recording runs).
+    /// B0199: the recording indicator follows the daemon's `recorder` topic (N0325: one lease
+    /// while a bar exists; the daemon reads it from systemd signals, so nothing ticks).
     pub fn with_bar_recording(
         mut self,
         client: &crate::nacre_source::Client,
     ) -> Result<Self, Box<dyn Error>> {
-        match client.lease_topic("controls") {
+        match client.lease_topic("recorder") {
             Ok(topic) => {
                 let on =
                     crate::bar_recording::recording(&bead::core::source::Source::snapshot(&topic));

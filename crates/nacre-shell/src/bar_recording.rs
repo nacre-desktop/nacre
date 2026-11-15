@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 //! B0199: the bar's recording indicator. QML showed a red stop button with the elapsed time in
-//! the status column while a recording ran. The daemon publishes `controls.recorder.recording`;
+//! the status column while a recording ran. The daemon publishes `recorder.recording` (N0325);
 //! this turns it into `bar.recording` and a once-a-second `bar.recording.elapsed`, and only while
 //! it is true does anything tick. Stop is `recorder.stop` on the same daemon.
 use bead::core::{Value, source::Snapshot};
@@ -15,7 +15,7 @@ use std::{
 
 /// The daemon is connected and says a recording is running.
 pub fn recording(snapshot: &Snapshot) -> bool {
-    snapshot.connected && snapshot.data["recorder"]["recording"] == true
+    snapshot.connected && snapshot.data["recording"] == true
 }
 /// QML `elapsed`: `m:ss`, with hours once there are any.
 pub fn elapsed(seconds: u64) -> String {
@@ -85,7 +85,7 @@ mod tests {
         Snapshot {
             epoch: "test".into(),
             revision: 1,
-            data: Arc::new(serde_json::json!({"recorder": {"recording": recording}})),
+            data: Arc::new(serde_json::json!({"recording": recording})),
             connected,
         }
     }
