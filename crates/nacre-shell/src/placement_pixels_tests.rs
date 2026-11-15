@@ -326,12 +326,22 @@ fn compose(
             }
         }
     }
-    let (accent, secondary) = (palette.get("primary")?, palette.get("secondary")?);
+    let (accent, secondary, surface) = (
+        palette.get("primary")?,
+        palette.get("secondary")?,
+        palette.get("surface")?,
+    );
     for (lip, state) in lips {
         let rect = lip.rect((w, h));
-        if let Some(svg) =
-            crate::frame_art::handle(lip, (rect.w, rect.h), *state, accent, secondary, false)
-        {
+        if let Some(svg) = crate::frame_art::handle(
+            lip,
+            (rect.w, rect.h),
+            *state,
+            accent,
+            secondary,
+            surface,
+            false,
+        ) {
             tile(&mut pixels, rect, svg.as_bytes(), SCALE)?;
         }
     }
@@ -471,6 +481,24 @@ fn configurable_frame_variants_match_their_goldens() -> Result<()> {
                     LipState {
                         progress: 0.,
                         active: true,
+                        ..Default::default()
+                    },
+                ),
+            ],
+        ),
+        // B0279: the right lip docked on its panel as a lit tab (drawn on the screen edge here).
+        (
+            "lips-docked",
+            frame_with(|_| {}),
+            false,
+            vec![
+                (left.clone(), idle),
+                (
+                    right.clone(),
+                    LipState {
+                        active: true,
+                        attach: 1.,
+                        hovered: true,
                         ..Default::default()
                     },
                 ),
