@@ -31,7 +31,7 @@ fn rows_json() -> Vec<Json> {
         ("k6", "Capture screenshot", "SUPER+SHIFT+S", "screenshot", ""),
         ("k7", "Open launcher", "SUPER+SPACE", "launcher", ""),
         ("k8", "Show window overview", "SUPER+TAB", "overview", ""),
-        ("k9", "nacrectl", "SUPER+O", "", ""),
+        ("k9", "Open the dashboard", "SUPER+O", "dashboard", ""),
         ("k10", "Resize · Grow", "L", "", "Resize"),
     ]
     .into_iter()
@@ -255,7 +255,17 @@ fn page_model(
     colors: bool,
     size: (u32, u32),
 ) -> BTreeMap<String, Value> {
-    let welcome = Welcome::new(None).with_shortcuts(rows_json());
+    page_model_rows(rows_json(), page, guide, ai, colors, size)
+}
+fn page_model_rows(
+    rows: Vec<Json>,
+    page: &str,
+    guide: &str,
+    ai: bool,
+    colors: bool,
+    size: (u32, u32),
+) -> BTreeMap<String, Value> {
+    let welcome = Welcome::new(None).with_shortcuts(rows);
     welcome.set_viewport(size.0, size.1);
     let mut model = welcome.project(&stores(page));
     for (key, on) in [
@@ -348,7 +358,7 @@ fn welcome_pages_match_goldens() {
 }
 
 /// The key caps come from the topic by each bind's `Nacre:<id>` action: the first ten minutes in
-/// catalog order, four to a row, then the panels; the untitled Super+O and the submap row stay out.
+/// catalog order, four to a row, then the panels; the submap row stays out.
 #[test]
 fn the_shortcut_grid_picks_binds_by_their_nacre_action() {
     let model = page_model("shortcuts", "", true, true, (1100, 800));
@@ -397,9 +407,45 @@ fn the_shortcut_grid_picks_binds_by_their_nacre_action() {
     }
     assert!(at("Open the AI sidebar").1 > above);
     assert!(at("Enter").1 > 0., "RETURN shows as Enter");
-    for absent in ["nacrectl", "Resize · Grow"] {
-        assert!(texts.iter().all(|(t, ..)| t != absent), "{absent}");
-    }
+    assert!(at("Open the dashboard").1 > above);
+    assert!(texts.iter().all(|(t, ..)| t != "Resize · Grow"));
+}
+
+/// Only untitled binds (no action) fill a short grid: a titled non-catalog bind (Focus workspace)
+/// never does, and an old daemon's rows (no `action` at all) show no Panels section.
+#[test]
+fn the_grid_filler_skips_titled_binds_outside_the_catalog() {
+    let texts = |rows: Vec<Json>| -> Vec<String> {
+        let model = page_model_rows(rows, "shortcuts", "", true, true, (1100, 800));
+        let h = harness(model, 1100, 800, 1., "palette.json");
+        h.scene()
+            .primitives
+            .iter()
+            .filter_map(|p| match p {
+                bead::render::Primitive::Text { text, .. } => Some(text.clone()),
+                _ => None,
+            })
+            .collect()
+    };
+    let row = |id: &str, title: &str, key: &str, action: Option<&str>| {
+        let mut r = json!({"id": id, "title": title, "key": key, "group": "", "menu": false});
+        if let Some(a) = action {
+            r["action"] = json!(a);
+        }
+        r
+    };
+    let new = texts(vec![
+        row("a", "Open launcher", "SUPER+SPACE", Some("launcher")),
+        row("b", "Focus workspace", "SUPER+1", Some("workspace")),
+        row("c", "My tool", "SUPER+U", Some("")),
+    ]);
+    assert!(new.contains(&"Open launcher".to_string()) && new.contains(&"My tool".to_string()));
+    assert!(!new.contains(&"Focus workspace".to_string()));
+    let old = texts(vec![
+        row("a", "Open launcher", "SUPER+SPACE", None),
+        row("b", "Open files", "SUPER+E", None),
+    ]);
+    assert!(old.contains(&"Open files".to_string()) && !old.contains(&"Panels".to_string()));
 }
 
 fn assert_fits(h: &Harness, page: &str) {

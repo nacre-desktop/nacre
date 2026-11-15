@@ -891,10 +891,7 @@ pub(crate) fn bindings_from(backend: &mut Backend, paths: &Paths) -> Result<Valu
             });
         // A `Nacre:<id>` title names the action (Welcome picks its key caps by it).
         let action = titled.strip_prefix("Nacre:").map(str::to_owned);
-        let mut description = action.clone().unwrap_or(titled);
-        if niri {
-            description = translated_collection_description(&description);
-        }
+        let mut description = translated_collection_description(&action.clone().unwrap_or(titled));
         if !submap.is_empty() {
             description = format!("{submap} · {description}");
         }
@@ -1239,6 +1236,37 @@ mod tests {
             .unwrap()
             .iter()
             .any(|r| r["key"] == "SUPER+Mod5+Q" && r["description"] == "Close window"));
+        Ok(())
+    }
+
+    #[test]
+    fn hyprland_nacre_titles_are_translated_like_niri() -> Result<()> {
+        use std::io::{Read, Write};
+        let home = tempfile::tempdir()?;
+        let folder = home.path().join("hypr/fixture");
+        fs::create_dir_all(&folder)?;
+        let listener = std::os::unix::net::UnixListener::bind(folder.join(".socket.sock"))?;
+        let peer = std::thread::spawn(move || -> Result<()> {
+            let (mut socket, _) = listener.accept()?;
+            let mut command = String::new();
+            socket.read_to_string(&mut command)?;
+            assert_eq!(command, "j/binds");
+            socket.write_all(br#"[{"modmask":64,"key":"space","description":"Nacre:launcher"}]"#)?;
+            Ok(())
+        });
+        let paths = Paths::new(home.path());
+        let mut backend = Backend::new(
+            paths.clone(),
+            BTreeMap::from([
+                ("NACRE_COMPOSITOR".into(), "hyprland".into()),
+                ("XDG_RUNTIME_DIR".into(), home.path().to_string_lossy().into_owned()),
+                ("HYPRLAND_INSTANCE_SIGNATURE".into(), "fixture".into()),
+            ]),
+        )?;
+        let rows = bindings_from(&mut backend, &paths)?;
+        peer.join().map_err(|_| "Hyprland socket fixture panicked")??;
+        assert_eq!(rows[0]["description"], "Open launcher");
+        assert_eq!(rows[0]["action"], "launcher");
         Ok(())
     }
 

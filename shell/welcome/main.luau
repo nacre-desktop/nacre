@@ -234,13 +234,13 @@ function pages.shortcuts()
     local rows=get("welcome.shortcuts")
     local want=catalog.shortcuts
     local grid,panels=byAction(rows,want.grid),byAction(rows,want.panels)
-    -- Binds without Nacre titles (custom setups): fill the grid in the topic's order.
+    -- Untitled binds (custom setups, no action): fill the grid in the topic's order.
     local used={}
     for _,row in ipairs(grid) do used[row.id]=true end
     for _,row in ipairs(panels) do used[row.id]=true end
     for _,row in ipairs(rows) do
         if #grid>=#want.grid then break end
-        if not used[row.id] and (row.group or "")=="" then grid[#grid+1]=row;used[row.id]=true end
+        if not used[row.id] and (row.group or "")=="" and (row.action or "")=="" then grid[#grid+1]=row;used[row.id]=true end
     end
     local cols=CW>=760 and 4 or 2
     local gap=sp.md

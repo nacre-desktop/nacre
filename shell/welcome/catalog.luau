@@ -18,7 +18,7 @@ return {
     -- then the panels (a panel without a titled bind is left out).
     shortcuts={
         grid={"launcher","terminal","files","browser","close","overview","screenshot","settings"},
-        panels={"ai-sidebar","dashboard","control-panel"},
+        panels={"ai-sidebar","dashboard"},
     },
     apps={
         {id="settings",icon="settings",route="settings",needs="welcome.can.settings",
