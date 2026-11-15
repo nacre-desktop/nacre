@@ -382,8 +382,13 @@ printf '%s\\n' 'Server = https://mirror.osbeck.com/archlinux/$repo/os/$arch' 'Se
                 guest("sha256sum -c /tmp/edit.sha256")  # The user edit survived.
             finish("update")
             update = guest(
-                "if nacre --help 2>&1 | grep -qw update; then nacre update; else echo 'SKIP: update absent in candidate'; fi"
+                "nacre --help 2>&1 | grep -qw update || echo 'SKIP: update absent in candidate'"
             )
+            # Nothing pending: the updater must still run to its end (exit 0 alone proves nothing).
+            if "SKIP" not in update and "Update complete" not in guest(
+                ENVIRONMENT + "python - <<'PY'\n" + UPDATE + "PY", timeout=1200
+            ):
+                raise RuntimeError("nacre update did not run the updater")
             # The default profile keeps AUR review on.
             guest(
                 "~/.local/share/nacre/shell/tools/nacre-helper aur-review policy"
