@@ -77,18 +77,10 @@ id as the overview (the fallback branch is deleted), and the panel is frame-high
 page can render as a strip. (a) `pearls.rs` no longer remembers `cc.page`: a restored dock always opens on the overview
 (remembering `cc.detail` instead had an edge: restored while open, the first same-icon click closed it).
 
-## Mock renders
+## Renders
 
-SVG mocks (the build hosts were saturated on the night of 2026-11-14, so the real-renderer goldens
-follow in a later commit): drawn at the shell's real geometry (424 px wide, frame-high at 1040 px,
-`size-scale.json` spacing, text and radii, `shell/palette.json` colours, the shell's fonts and Material
-Symbols glyphs), converted with rsvg-convert:
-
-- Overview: `assets/0280/overview-mock.png`
-- Bluetooth detail page: `assets/0280/bluetooth-mock.png`
-
-Real renders through the shell's harness (`control_center_pages_match_goldens`, 488 x 704 at scale 1)
-replace them as `assets/0280/overview.png` and `assets/0280/bluetooth.png` when the dev-1 run lands.
+The SVG mocks were replaced by real-renderer goldens (`control_center_pages_match_goldens`, 488 x 704):
+`shell/tests/goldens/control-overview-1.png`, `control-docked-bluetooth-1.png` and the `-1.5` variants.
 
 ## Tests (phase 2)
 
@@ -97,3 +89,47 @@ model opens its section; (c) overview and detail pages have the same panel heigh
 declares no close-on-leave of its own and a pinned panel stays open across a pointer leave; (e) the
 back-arrow-only state cannot occur: `cc.page=detail` with an empty or unknown `cc.detail` renders the
 overview.
+
+## Status (2026-11-15, evidence pass for N0205)
+
+Implemented; waits for the owner's live check. Last full dev-1 run on main: whole nacre-shell binary 939
+passed, 0 failed (recorded in the v0.1 checklist, N0203 row). Not re-run for this docs commit.
+
+Evidence per item:
+
+- Fixed 424 px, frame-high dock on every page: 265e4a9ad, then ac5f1ef40 and 94d8be535 (frame height on
+  every page, popup keeps content sizing). Test `the_dock_keeps_one_height_and_never_renders_a_bare_back_row`
+  (tests c and e: same height for home, dnd, updates, empty and unknown detail; popup stays smaller).
+  Goldens `control-overview-1.png` (full panel, 640 px, overview with tiles, chips and notifications) and
+  `control-docked-bluetooth-1.png` (the Bluetooth page in the same dock) were read and show this.
+- Lip hover always opens the overview: 8126115db (reset on close), c8e970b4f. Tests `hover_opened_dock_shows_the_full_overview`
+  and `a_closed_dock_reopens_on_the_overview_after_a_status_click` (test a).
+- Status icon click opens its own section, a second click closes, another icon switches: 7f2ebe3a9 (the dock
+  judges the repeat in `reload.rs`), 16c413295 (Updates section). Tests `status_pill_click_routes_switch_escape_and_reopen`
+  (service_views_tests, the bar emits `CompanionSelect` then `CompanionModel` per icon; test b) and
+  `a_pointer_leave_never_closes_the_dock_by_itself` (switch keeps it open, repeat closes it).
+- Overview chevrons and back arrow open and leave a page in place: `docked_pages_keep_the_surface_route_actions_and_return_home`.
+- Hover-close 450 ms and the press pin: Bead 56a46431 (`DOCK_EXIT_MS` 450, `edge_panel_pin`), on main via the pin
+  dc014a640 (now 285aede6). Guarded in Bead by `docked_panels_get_a_longer_exit_grace_and_reentry_cancels_the_close`
+  and `pinning_clears_hover_ownership_and_its_pending_exit`; Nacre's side (test d) is
+  `a_pointer_leave_never_closes_the_dock_by_itself` (no view-side close-on-leave, no pending hover deadline).
+- Back-arrow strip root cause removed: `detail()` fallback deleted, `pearls.rs` no longer saves `cc.page` (7f2ebe3a9).
+- Updates page lists pending packages: 62864b71b, 76b605a3a; test `the_updates_page_lists_packages_and_matches_goldens`;
+  golden `control-updates-packages-1.png` (read: 8 packages old to new, Update now, Refresh, System page link).
+- Docked tab rides the panel: Nacre b5d9ccf7b (`frame-lips-docked.png`), Bead B0279, B0287, B0289, B0292 (pins 2a1ebd2ce to 1a4d17df6).
+
+Not done or not automated: no test drives the real 450 ms timer against a live compositor (Bead unit tests only);
+the real hover-and-click flow, the tab look and 120 Hz smoothness (N0207) are live-only. The "Bead ask" above
+is satisfied (Bead 56a46431), so the "until it lands" sentence is history. Parity of the dock against the old
+QML sidebar is not re-captured here.
+
+### Owner live check
+
+1. Move the pointer to the right edge: the overview opens in full (424 px wide, full height, Wi-Fi/Bluetooth tiles, notifications).
+2. Click each top-right status icon (Wi-Fi, Bluetooth, sound, battery, updates, notifications): each opens its own section, with the panel size unchanged.
+3. With a section open, click a different icon: it switches. Click the icon of the open section: the panel closes.
+4. Open the panel by hover only and move the pointer off: it closes about 0.5 s after leaving both dock and lip, and not sooner. Move back within that time: it stays.
+5. Hover-open, then click inside (a tile chevron): the panel pins and stays open after the pointer leaves; Escape goes back to the overview, Escape again closes.
+6. Open Bluetooth and move the pointer around the list: the panel never shrinks or closes by itself.
+7. Updates icon: the page lists the pending packages with old and new versions; Refresh and Update now respond.
+8. The lip tab sits on the panel's inner edge while it is open and lights on hover; after close, the next lip hover opens the overview again, not the last section.
