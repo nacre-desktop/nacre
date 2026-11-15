@@ -22,8 +22,7 @@ pub fn handle(
     accent: [u8; 4],
     secondary: [u8; 4],
     surface: [u8; 4],
-    arrows: bool,
-    top_tab: bool,
+    (arrows, top_tab): (bool, bool),
 ) -> Option<String> {
     if arrows {
         edge_tab(lip, size, state, accent, secondary)
@@ -60,7 +59,11 @@ pub fn grabber(
         return None;
     }
     // Side art as drawn (join side x = w); the top art is that picture rotated, w = thickness.
-    let (w, h) = if top { (height, width) } else { (width, height) };
+    let (w, h) = if top {
+        (height, width)
+    } else {
+        (width, height)
+    };
     let attach = if lip.edge == Edge::Left {
         0.
     } else {
@@ -226,7 +229,7 @@ pub fn art(colors: &Palette) -> Result<EdgeArt, Box<dyn std::error::Error>> {
         // palette the shell started with.
         let [surface, accent, secondary] = crate::placement::live_colors().unwrap_or(startup);
         let arrows = ARROWS.load(SeqCst);
-        handle(lip, size, state, accent, secondary, surface, arrows, TOP_TAB.load(SeqCst)).map(|svg| {
+        handle(lip, size, state, accent, secondary, surface, (arrows, TOP_TAB.load(SeqCst))).map(|svg| {
             if !arrows {
                 return Arc::from(svg.into_bytes());
             }
@@ -377,13 +380,19 @@ mod tests {
         }
         assert!(alpha(&rest, 104, 45) > 200);
         // Dwell: the glow stays inside the 10 px strip, never over the title.
-        let half = LipState { progress: 0.5, ..idle() };
+        let half = LipState {
+            progress: 0.5,
+            ..idle()
+        };
         let dwell = raster(&top(half));
         assert!(alpha(&dwell, 104, 40) > 0 && alpha(&dwell, 104, 38) == 0);
         assert!((0..40).all(|y| (0..208).all(|x| alpha(&dwell, x, y) == 0)));
         // Opening: the plate fades in under the join (y 0) and the pill rides to its middle.
         let tab = top(docked(1., false));
-        assert!(tab.contains(r#"opacity="1""#) && tab.matches("<path").count() == 2, "{tab}");
+        assert!(
+            tab.contains(r#"opacity="1""#) && tab.matches("<path").count() == 2,
+            "{tab}"
+        );
         let docked_px = raster(&tab);
         assert_eq!(alpha(&docked_px, 104, 0), 255, "flush with the panel edge");
         assert_eq!(alpha(&docked_px, 104, 31), 255, "plate to the 32 px band");
@@ -392,7 +401,10 @@ mod tests {
         let half_open = top(docked(0.5, false));
         assert!(half_open.contains(r#"opacity="0.5""#), "{half_open}");
         // Hover lights the docked tab: a glow rect around the pill, inside the plate band.
-        assert!(top(docked(1., true)).contains(r#"width="10" height="80" rx="5" fill="rgb(10,20,30)" opacity="0.3""#));
+        assert!(
+            top(docked(1., true))
+                .contains(r#"width="10" height="80" rx="5" fill="rgb(10,20,30)" opacity="0.3""#)
+        );
         assert!(!tab.contains(r#"opacity="0.3""#));
     }
     #[test]
@@ -478,14 +490,30 @@ mod tests {
             "a completed dwell draws no glow"
         );
         assert!(
-            handle(&lip(Edge::Left), (10., 144.), idle(), A, S, S, true, false)
-                .unwrap()
-                .contains("<path")
+            handle(
+                &lip(Edge::Left),
+                (10., 144.),
+                idle(),
+                A,
+                S,
+                S,
+                (true, false)
+            )
+            .unwrap()
+            .contains("<path")
         );
         assert!(
-            !handle(&lip(Edge::Left), (10., 144.), idle(), A, S, S, false, false)
-                .unwrap()
-                .contains("<path")
+            !handle(
+                &lip(Edge::Left),
+                (10., 144.),
+                idle(),
+                A,
+                S,
+                S,
+                (false, false)
+            )
+            .unwrap()
+            .contains("<path")
         );
     }
     #[test]
