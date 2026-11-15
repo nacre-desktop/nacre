@@ -177,6 +177,7 @@ mod tests {
         LipState {
             progress: 0.,
             active: false,
+            ..Default::default()
         }
     }
     #[test]
@@ -218,6 +219,7 @@ mod tests {
         let half = LipState {
             progress: 0.5,
             active: false,
+            ..Default::default()
         };
         let charging = grabber(&lip(Edge::Right), (10., 144.), half, A, S).unwrap();
         // Half way: the bar is 7 x 64 from the centre and the lip-wide glow sits behind it.
@@ -234,6 +236,7 @@ mod tests {
         let open = LipState {
             progress: 0.,
             active: true,
+            ..Default::default()
         };
         let opened = grabber(&lip(Edge::Right), (10., 144.), open, A, S).unwrap();
         assert!(
@@ -244,6 +247,7 @@ mod tests {
         let done = LipState {
             progress: 1.,
             active: false,
+            ..Default::default()
         };
         assert_eq!(
             grabber(&lip(Edge::Right), (10., 144.), done, A, S)
@@ -279,6 +283,7 @@ mod tests {
         let open = LipState {
             progress: 0.,
             active: true,
+            ..Default::default()
         };
         let opened = edge_tab(&lip(Edge::Left), (10., 144.), open, A, S).unwrap();
         assert!(opened.contains(r#"d="M8 64 L2 72 L8 80""#), "{opened}");
@@ -292,7 +297,11 @@ mod tests {
             edge_tab(
                 &lip(Edge::Left),
                 (10., 144.),
-                LipState { progress, active },
+                LipState {
+                    progress,
+                    active,
+                    ..Default::default()
+                },
                 A,
                 S,
             )
@@ -313,6 +322,7 @@ mod tests {
             LipState {
                 progress: 0.5,
                 active: false,
+                ..Default::default()
             },
             A,
             S,
@@ -347,6 +357,7 @@ mod tests {
                 let cue_pixels = raster(LipState {
                     progress: 0.5,
                     active: false,
+                    ..Default::default()
                 });
                 let alpha_at =
                     |pixels: &[u8], x: u32, y: u32| pixels[((y * width + x) * 4 + 3) as usize];

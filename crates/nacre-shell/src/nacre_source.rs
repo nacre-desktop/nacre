@@ -866,10 +866,9 @@ fn apply_snapshot(
             connected: true,
         });
         if mirror.accept(snapshot, Instant::now())? == Applied::Updated
-            && let Some(snapshot) = mirror.snapshot()
             && let Some(publisher) = shared.publisher(topic)
         {
-            publisher.publish_shared(snapshot.data.clone())?;
+            publisher.publish_mirror(mirror)?;
         }
     }
     Ok(())
@@ -888,10 +887,9 @@ fn apply_patch(
     };
     let applied = mirror.patch(boot, base, seq, data, Instant::now())?;
     if applied == Applied::Updated
-        && let Some(snapshot) = mirror.snapshot()
         && let Some(publisher) = shared.publisher(topic)
     {
-        publisher.publish_shared(snapshot.data.clone())?;
+        publisher.publish_mirror(mirror)?;
     }
     if applied == Applied::Resync
         && let Some(publisher) = shared.publisher(topic)

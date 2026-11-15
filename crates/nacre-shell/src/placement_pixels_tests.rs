@@ -357,6 +357,7 @@ fn configurable_frame_variants_match_their_goldens() -> Result<()> {
     let idle = LipState {
         progress: 0.,
         active: false,
+        ..Default::default()
     };
     let left = lip_at(Edge::Left, 10.);
     let right = lip_at(Edge::Right, 10.);
@@ -439,6 +440,7 @@ fn configurable_frame_variants_match_their_goldens() -> Result<()> {
                     LipState {
                         progress: 0.5,
                         active: false,
+                        ..Default::default()
                     },
                 ),
                 (
@@ -446,6 +448,7 @@ fn configurable_frame_variants_match_their_goldens() -> Result<()> {
                     LipState {
                         progress: 0.8,
                         active: false,
+                        ..Default::default()
                     },
                 ),
             ],
@@ -460,6 +463,7 @@ fn configurable_frame_variants_match_their_goldens() -> Result<()> {
                     LipState {
                         progress: 0.,
                         active: true,
+                        ..Default::default()
                     },
                 ),
                 (
@@ -467,6 +471,7 @@ fn configurable_frame_variants_match_their_goldens() -> Result<()> {
                     LipState {
                         progress: 0.,
                         active: true,
+                        ..Default::default()
                     },
                 ),
             ],
