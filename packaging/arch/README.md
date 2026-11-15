@@ -193,6 +193,8 @@ The pinned public key/fingerprint are in `packaging/keys`; bootstrap has the sam
 fingerprint, checked by a regression test. Back up the certification key and
 revocation certificate in a secure offline/OS key store. GitHub receives only an
 expiring signing subkey as `ARCH_REPO_SIGNING_KEY`, never the certification key.
+It is a secret of the `arch-signing` environment, which only main can use, so
+each publication waits for the owner's approval.
 No key values belong in commands, logs or Git history.
 
 Track signing-subkey and certificate expiry. `nacre` depends on `nacre-keyring`,
