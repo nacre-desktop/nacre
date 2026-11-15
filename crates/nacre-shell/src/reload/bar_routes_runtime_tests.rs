@@ -625,6 +625,23 @@ async fn single_collection_bar_entry_keeps_the_switcher() {
 }
 
 #[tokio::test(flavor = "current_thread")]
+async fn stock_compositor_topic_draws_no_collection_switcher() {
+    // N0202: a topic without `workspaceCollections` (stock niri, Hyprland) hides the switcher.
+    let (dir, client, _calls, _kick) = daemon(ALL).await;
+    let (mut runtime, events) = bar_with(&client, "right", true);
+    // The origins prove this compositor topic was projected into the bar stores.
+    until(&mut runtime, &events, |r| {
+        matches!(r.session.stores.get("bar.workspace.origins"),
+            Some(bead::core::Value::List(rows)) if !rows.is_empty())
+    })
+    .await;
+    settle_runtime_animations(&mut runtime);
+    assert!(!flag(&runtime, "bar.collection.enabled"));
+    assert!(node(&runtime, "collection.switcher.open", None).is_none());
+    std::fs::remove_dir_all(dir).ok();
+}
+
+#[tokio::test(flavor = "current_thread")]
 async fn unadvertised_methods_disable_controls_and_send_nothing() {
     let (dir, client, mut calls, _kick) = daemon(&["audio.adjust_volume"]).await;
     let (mut runtime, events) = bar(&client, "left");

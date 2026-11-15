@@ -56,20 +56,31 @@ The Nacre tests were run for this unit (see the checklist row). Per-frame CPU co
 
 All of these fit well inside the 8.33 ms frame. They are render cost, not frame gaps.
 
-## Measurement tonight
+## Measurement tonight and what still fails
 
-See [`docs/benchmarks/shell-motion-idle-20261114.md`](../benchmarks/shell-motion-idle-20261114.md),
-written by the 2026-11-14 benchmark unit on main 86433e4a4 or newer. It covers per-panel
-max, p95 and p50 gaps, first open against warm open, and the values over the gate with an
-attribution guess. That document holds the numbers; this spec does not copy them.
+[`docs/benchmarks/shell-motion-idle-20261114.md`](../benchmarks/shell-motion-idle-20261114.md)
+(aba6a02c5) is a nested run with the swap gate waived, so it supports the verdict but is
+not acceptance. The numbers live there. Against the gate:
 
-## Known gaps
+- **Fails, Bead:** nearly every transition (230 of 236) misses the gate once, at its start.
+  Bead commits the first 3-4 frames before the first frame callback, and then one vblank
+  is skipped (a 12-20 ms gap). This is the only failure for the launcher, the control
+  centre and the AI sidebar. Their mid-motion max is 8.4-10.6 ms. Fix: pace the first
+  frames (benchmark top-3 item 1).
+- **Fails, dashboard:** 5 mid-motion single-vblank misses (16 ms), and a late settle on a
+  cold open. Fix: warm the panel views (item 2, N0231).
+- **Passes:** the OSD and toasts (`PANEL_SLIDE` max 9.1-10.9 ms).
+- **Measurement caveat:** the last frame of an open is committed only on the next unrelated
+  wakeup, after up to 5 s. That puts a ~5 s `max_gap_ms` in every launcher and control
+  `PANEL_SLIDE` marker, although nothing visible changes. Until Bead commits that repaint
+  with the motion (item 3), judge the gate on the start and mid-motion gaps of the
+  benchmark's frame trace, not on the marker's `max_gap_ms`.
 
-- No nested 120 Hz `PANEL_SLIDE` capture was taken for the D7 AI sidebar or the D11
-  launcher. The desktop TEST host failed the swap gate at the time ([spec 0237](0237-design-review.md)).
+Other gaps:
+
+- No nested 120 Hz capture was taken for the D7 AI sidebar or the D11 launcher when they
+  landed ([spec 0237](0237-design-review.md)). The benchmark covers both now.
 - The N0316 tier-2 smoke logged one launcher open at `max_gap_ms=1013.6` ([spec 0237](0237-design-review.md),
-  B4). It ran on a 60 Hz nested labwc parent, so it is not a 120 Hz measurement. A stall
-  that size would show in tonight's first-open and warm-open columns if it is still there.
-- The item stays **active** until the benchmark document shows every panel at a max gap of
-  12 ms or less, and the lead's live laptop audit agrees. Each panel over the gate becomes
-  its own fix unit, named in the benchmark's top-3 list.
+  B4). It ran on a 60 Hz nested parent, so it is not a 120 Hz measurement.
+- The item stays **active** until the three fixes above land and a re-run of the benchmark
+  shows every panel at 12 ms or less, and the lead's live laptop audit agrees.

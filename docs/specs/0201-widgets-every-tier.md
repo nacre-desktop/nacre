@@ -26,8 +26,8 @@ From the checklist and [compatibility.md](../compatibility.md):
 The widget system does not depend on the compositor. Widgets are Luau views (`shell/widgets/`)
 drawn on Bead layer surfaces: the bar, the desktop canvas and the drag ghost canvases
 (`drag_visuals_are_quiet_and_drag_surfaces_are_layer_canvases`). No widget reads the backend
-or a compositor capability. The only backend reference is the Workspaces widget's
-`backend.workspace.switch` action. Three things differ per tier:
+or a compositor capability. The only backend references are the Workspaces widget's
+`backend.workspace.switch` and `backend.window.focus` actions. Three things differ per tier:
 
 | Piece | nacre-niri | Stock niri | Hyprland |
 | --- | --- | --- | --- |
