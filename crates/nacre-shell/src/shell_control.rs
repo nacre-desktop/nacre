@@ -440,8 +440,9 @@ impl Gate {
             frame.handles = p.edge_handles;
             frame.arrows = p.edge_arrows;
             crate::frame_art::ARROWS.store(p.edge_arrows, SeqCst);
-            crate::frame_art::TOP_TAB.store(p.top_tab, SeqCst);
-            changed |= lips;
+            // The top handle also sets the top lip's docked input band.
+            let top_tab = crate::frame_art::TOP_TAB.swap(p.top_tab, SeqCst) != p.top_tab;
+            changed |= lips || top_tab;
             moved
         };
         crate::placement::set_frame_lips(&self.visible_frame_lips());
@@ -551,7 +552,15 @@ impl ShellControl for Gate {
                     && self.panel_allowed(&l.opens)
             })
             .filter_map(|l| configured_lip(l, geometry))
-            .collect();
+            .collect::<Vec<Lip>>();
+        let docked_input_depth = if crate::frame_art::TOP_TAB.load(SeqCst) {
+            lips.iter()
+                .filter(|l| l.edge == bead::core::Edge::Top)
+                .map(|l| (l.id.clone(), crate::frame_art::TOP_TAB_DEPTH))
+                .collect()
+        } else {
+            Default::default()
+        };
         EdgeChrome {
             reserved: [
                 top as u32,
@@ -563,6 +572,7 @@ impl ShellControl for Gate {
             hover_delay_ms: frame.delay,
             click_to_open: frame.click,
             external_source: self.native_edge_source.load(SeqCst) && !frame.click,
+            docked_input_depth,
         }
     }
     fn edge_input_regions(&self, output: (i32, i32)) -> Vec<bead::render::Rect> {

@@ -13,6 +13,8 @@ pub static ARROWS: AtomicBool = AtomicBool::new(false);
 
 /// `desktop.edgeHandleTopVisible` (opt-in): the top lip draws its handle under the bar title.
 pub static TOP_TAB: AtomicBool = AtomicBool::new(false);
+/// The docked top tab's depth inside its 50 px lip; Bead keeps the tab's input to the same band.
+pub const TOP_TAB_DEPTH: f32 = 32.;
 
 /// The handle for a side lip (and the top lip with `top_tab`) in the configured style.
 pub fn handle(
@@ -82,7 +84,7 @@ pub fn grabber(
     };
     let (thick, long) = (6. + 2. * charge, 56. + 16. * charge);
     let thick = thick.min((w - 2.).max(2.));
-    let band = if top { w.min(32.) } else { w };
+    let band = if top { w.min(TOP_TAB_DEPTH) } else { w };
     // At rest the pill sits mid-strip: the lip's thickness past the bar (all of it without a bar).
     let bar = crate::placement::BAR_HEIGHT;
     let strip = if w > bar { (w - bar) / 2. } else { w / 2. };
