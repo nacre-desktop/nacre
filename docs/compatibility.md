@@ -29,11 +29,12 @@ features. Some shared features use a fallback or have reduced behavior.
 | **Settings** | | | |
 | Compositor-specific options | Yes | Partly: unsupported choices are hidden | Partly: some options may not apply |
 
-On nacre-niri and stock niri, idle lock and lock-on-suspend stay off until you
-confirm that password unlock works; until then Nacre locks only on request.
-Lock with Super+L, unlock with your password, then create
-`~/.config/nacre/niri-on-pc/acceptance.json` containing
-`{"phase":"nacre","backendReady":true,"unlockVerified":true}`.
+On nacre-niri and stock niri, Nacre always locks before suspend. Idle lock stays
+off until you confirm that password unlock works: lock with Super+L, unlock with
+your password, then create `~/.config/nacre/niri-on-pc/acceptance.json`
+containing `{"phase":"nacre","backendReady":true,"unlockVerified":true}`. It
+takes effect at your next login, or at once after
+`systemctl --user restart nacre-niri-lock.service`.
 
 The fresh-Arch VM gate checks install, session startup, rendered output and
 purge for each tier. It last ran on 2026-11-14 (main b94eba50) and passed every

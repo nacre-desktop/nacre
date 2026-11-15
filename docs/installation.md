@@ -8,8 +8,10 @@ integrations are optional extras.
 ## Install
 
 The installer adds a separate signed pacman repository and installs Nacre and
-its Orient engine. It does not replace the Arch or CachyOS repositories. Save it
-and read it first, then run it as your ordinary desktop user:
+its Orient engine. It does not replace the Arch or CachyOS repositories: on
+CachyOS, dependencies such as niri and Hyprland come from CachyOS's own
+repositories. Save it and read it first, then run it as your ordinary desktop
+user:
 
 ```sh
 sudo pacman -Syu --needed curl gnupg
