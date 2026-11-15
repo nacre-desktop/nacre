@@ -1,7 +1,7 @@
 # N0401 — Fresh-Arch VM install gate
 
-Status: done; all three tiers pass every stage at main b94eba50 (2026-11-14 rerun below).
-Rerun at the cut.
+Status: fresh installs pass every stage on all three tiers at main 86433e4a (N0418, below);
+the upgrade stage waits on N0428. Rerun both at the cut.
 
 v0.1 ships only when a fresh Arch Linux VM can install Nacre from a signed repository,
 start a working session on each tier, and remove it again. This unit builds that check.
@@ -122,3 +122,23 @@ and `--purge` kept theme outputs that the palette had rewritten, such as `~/.con
 
 The packages and the stage log are kept on dev-1 under `~/nacre-lead/release-packages/b94eba50…` for the cut.
 
+
+## Rerun 2026-11-14 evening (N0418)
+
+Core and splits built from main `86433e4a` (r3337, lean profile, `makepkg --nocheck` after green
+hosted Source checks), with Orient 0.1.0-dev.7 and nacre-niri r3079 reused from the `b94eba50` set.
+Fresh overlays on dev-1 with KVM/virgl; the upgrade run starts from the `b94eba50` set.
+
+| Tier | Mode | Stages | nacre-niri | Time | Main SHA |
+|---|---|---|---|---|---|
+| nacre-niri | fresh | all PASS (prepare → leftovers) | r3079 | 2m56s | 86433e4a |
+| niri | fresh | all PASS | r3079 | 2m09s | 86433e4a |
+| hyprland | fresh | all PASS | r3079 | 1m55s | 86433e4a |
+| nacre-niri | upgrade from b94eba50 | prepare → session PASS; upgrade FAIL: `nacre update` exits 0 without updating, nacre stays r3292 | r3079 | 2m01s | 86433e4a |
+
+An upgrade runs the old package's `nacre update`, so the N0428 fix cannot reach installs that
+predate it; they need one manual `sudo pacman -Syu`, then `nacre setup`. The other two tiers
+run the same old command and were not repeated. The real upgrade proof needs the fix on both
+sides: dev-1 keeps `86433e4a4+5abe472c` (pkgrel 1) and the same build repackaged as pkgrel 2 for
+that run, plus nacre-niri r3110 (`f405f1a9`) for a fresh nacre-niri rerun; neither VM run got a
+build-host slot before the night's cut-off.
