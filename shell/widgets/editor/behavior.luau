@@ -252,7 +252,7 @@ return {
         ["bar.collections"]={},["bar.collection.current"]="",
         ["bar.workspace.count"]=6,["bar.workspace.icons"]={},["bar.workspace.hints"]=true,["bar.workspace.style"]="pearls",["bar.workspace.overflow"]=true,
         ["bar.clock.twelve"]=false,["bar.updates.count"]=0,["bar.updates.enabled"]=true,
-        ["bar.notifications.count"]=0,["bead.edge.dwell"]=0,["bead.edge.fade"]=0,
+        ["bar.notifications.count"]=0,
         ["status.hovered"]="",["status.peek.visible"]=false,["status.peek.kind"]="",["status.panel.kind"]="",
         ["bead.focused_title"]="",["bead.windows"]={},["bead.workspaces"]={},
         ["bead.overview.open"]=false,["bead.overview.title"]="",["bead.overview.has_window"]=false,

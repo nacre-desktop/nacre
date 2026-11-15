@@ -21,7 +21,7 @@ return {stores={
     ["bar.collections"]={},["bar.collection.current"]="",
     ["bar.workspace.count"]=0,["bar.workspace.icons"]={},["bar.workspace.hints"]=true,["bar.workspace.style"]="pearls",["bar.workspace.overflow"]=true,
     ["bar.clock.twelve"]=false,["bar.updates.count"]=0,["bar.updates.enabled"]=true,
-    ["bar.notifications.count"]=0,["bead.edge.dwell"]=0,["bead.edge.fade"]=0,
+    ["bar.notifications.count"]=0,
     ["bead.windows"]={},["bead.workspaces"]={},["bead.focused_title"]="",
     ["bead.overview.open"]=false,["bead.overview.title"]="",["bead.overview.has_window"]=false,
     ["bead.title.app_id"]="",["bead.title.rev"]=0,["bead.title.app_glyph"]="desktop_windows",["bead.title.app_icon"]="",["bar.dnd"]=false,["bar.stack.style"]="pearls",["bar.status.badges"]=true,["bead.desktop.network.vpn"]=false,["bead.desktop.battery.plugged"]=false,["bead.desktop.bluetooth.value"]="",
