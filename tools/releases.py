@@ -35,6 +35,19 @@ CONTROL = HOME / ".local/share/nacre/control"
 LOCKFILES = {".writer.lock", "release.lock"}
 
 
+def recorded_compositors():
+    """The compositors of the last package setup, primary first; empty if none."""
+    current = STATE / "current.json"
+    record = (
+        _state.read_json_file(
+            Path(_state.read_json_file(current)["release"]) / "release.json"
+        )
+        if current.is_file()
+        else {}
+    )
+    return [c for c in record.get("compositors") or [record.get("compositor")] if c]
+
+
 def _ignore_snapshot_locks(directory, names):
     del directory
     return [

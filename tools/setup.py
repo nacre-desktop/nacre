@@ -117,10 +117,17 @@ def selection(args, root, home, interactive):
     choices = supported_compositors(root)
     if not choices:
         raise RuntimeError("No supported compositor integration is installed")
+    import releases
+
+    try:
+        recorded = releases.recorded_compositors()[:1]
+    except (OSError, ValueError, KeyError):
+        recorded = []  # A damaged record must not block setup, which rewrites it.
     detected = next(
         (
             name
-            for name in os.environ.get("XDG_CURRENT_DESKTOP", "").lower().split(":")
+            for name in recorded
+            + os.environ.get("XDG_CURRENT_DESKTOP", "").lower().split(":")
             if name in choices
         ),
         choices[0],

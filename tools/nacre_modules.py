@@ -467,16 +467,8 @@ def _package_context(home, root):
     import setup
     from keyboard import system_keyboard
 
-    current = releases.STATE / "current.json"
-    record = (
-        _state().read_json_file(
-            Path(_state().read_json_file(current)["release"]) / "release.json"
-        )
-        if current.is_file()
-        else {}
-    )
-    compositors = record.get("compositors") or [record.get("compositor")]
-    if not compositors[0]:
+    compositors = releases.recorded_compositors()
+    if not compositors:
         raise RuntimeError("Run nacre setup before changing modules")
     return releases, setup.policy(root).load(home), system_keyboard(), compositors
 

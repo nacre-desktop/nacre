@@ -1242,6 +1242,50 @@ class PackageSetupTests(unittest.TestCase):
             with patch.dict(os.environ, {"XDG_CURRENT_DESKTOP": "niri"}):
                 self.assertEqual(setup.selection(args, root, home, False)[2], "niri")
 
+    def test_setup_default_prefers_recorded_compositor(self):
+        for recorded, desktop, choices, expected in (
+            ("nacre-niri", "niri", ["niri", "nacre-niri"], "nacre-niri"),
+            (None, "niri", ["niri", "nacre-niri"], "niri"),
+            ("gone", "niri", ["niri", "nacre-niri"], "niri"),
+            ("dangling", "niri", ["niri", "nacre-niri"], "niri"),
+        ):
+            with (
+                self.subTest(recorded=recorded),
+                tempfile.TemporaryDirectory() as folder,
+            ):
+                root, home, _ = self.fixture(folder)
+                state = home / "releases"
+                if recorded == "dangling":
+                    state.mkdir(parents=True, exist_ok=True)
+                    (state / "current.json").write_text(
+                        json.dumps({"release": str(state / "pruned")})
+                    )
+                elif recorded:
+                    (state / "r1").mkdir(parents=True)
+                    (state / "r1/release.json").write_text(
+                        json.dumps({"compositors": [recorded]})
+                    )
+                    (state / "current.json").write_text(
+                        json.dumps({"release": str(state / "r1")})
+                    )
+                args = setup.argparse.Namespace(
+                    layout=None,
+                    variant=None,
+                    model=None,
+                    options=None,
+                    compositor=None,
+                    profile=None,
+                    optional=[],
+                )
+                with (
+                    patch.dict(os.environ, {"XDG_CURRENT_DESKTOP": desktop}),
+                    patch.object(releases, "STATE", state),
+                    patch.object(setup, "supported_compositors", return_value=choices),
+                ):
+                    self.assertEqual(
+                        setup.selection(args, root, home, False)[2], expected
+                    )
+
     def test_normal_wizard_asks_compositors_ai_tools_and_optional_modules(self):
         with tempfile.TemporaryDirectory() as folder:
             root, home, _ = self.niri_fixture(folder)
