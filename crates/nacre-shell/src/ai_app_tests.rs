@@ -168,14 +168,22 @@ fn the_projection_fills_every_page_and_follows_the_stored_choice() {
     ] {
         assert!(!list(&model, key).is_empty(), "{key}");
     }
-    assert_eq!(model["ai.provider_id"], text("codex"));
     assert_eq!(model["ai.connected"], Value::Bool(true));
     let model = app.project(&stores(&[
         ("ai.provider", "claude"),
         ("ai.project", "remote"),
     ]));
-    assert_eq!(model["ai.provider_label"], text("Claude Code"));
-    assert_eq!(model["ai.project_path"], text("dev-1:/home/dev/remote"));
+    let selected = |key: &str, field: &str| {
+        list(&model, key)
+            .into_iter()
+            .find(|r| r["selected"] == true)
+            .map(|r| r[field].clone())
+    };
+    assert_eq!(selected("ai.providers", "id"), Some(json!("claude")));
+    assert_eq!(
+        selected("ai.projects", "path"),
+        Some(json!("dev-1:/home/dev/remote"))
+    );
     // Without a daemon the window says so instead of showing stale rows.
     let offline = AiApp::new(None).project(&stores(&[]));
     assert_eq!(offline["ai.connected"], Value::Bool(false));
@@ -195,6 +203,33 @@ fn actions_without_a_daemon_change_nothing() {
         app.act(arg, &stores(&[]));
     }
     assert!(app.calls.borrow().pending.is_empty());
+}
+
+#[test]
+fn a_success_clears_the_note_and_a_failed_list_is_asked_again() {
+    let mut calls = Calls::default();
+    calls.settle(Err(source::Error::new("failed", "resume failed", false)));
+    assert_eq!(calls.message, "resume failed");
+    calls.settle(Ok(json!({})));
+    assert!(calls.message.is_empty());
+    // A failed first list keeps `asked`; the refresh button marks the list stale to ask again.
+    calls.asked = true;
+    calls.settle(Err(source::Error::new("failed", "list failed", false)));
+    assert!(calls.listed.is_none() && !calls.stale);
+    let app = app();
+    app.act("refresh", &stores(&[]));
+    assert!(app.calls.borrow().stale);
+}
+
+#[test]
+fn a_new_daemon_boot_lists_the_chats_again() {
+    let mut calls = Calls::default();
+    calls.see_boot(Some("a".into()));
+    assert!(!calls.stale, "the first boot seen is not a restart");
+    calls.see_boot(Some("a".into()));
+    assert!(!calls.stale);
+    calls.see_boot(Some("b".into()));
+    assert!(calls.stale);
 }
 
 // ---- goldens ---------------------------------------------------------------------------------

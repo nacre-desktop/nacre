@@ -12,7 +12,7 @@ local sp,M=T.spacing,kit.metrics
 local function get(n) return ui.resolve_for_check(ui.bind(n)) end
 local function act(arg) return ui.action("ai.do",arg) end
 local function line(size) return math.ceil(size*1.35) end
-local W,H=get("ai.win_w"),get("ai.win_h")
+local W=get("ai.win_w")
 local PAGE=get("ai.page")
 local BODY,CAPTION,TITLE=M.text.body,M.text.caption,M.text.title
 local MONO=CAPTION-1
@@ -24,19 +24,11 @@ local PAD_X,PAD_Y=sp.xl,sp.md+sp.xs
 local CW=W-RAIL
 local IW=CW-2*PAD_X
 local providers,projects=get("ai.providers"),get("ai.projects")
--- The view's choice: the stored id when listed (and able to chat), else the first.
-local function chosen(rows,key,ok)
-    local first
-    for _,r in ipairs(rows) do
-        if ok==nil or r[ok] then
-            first=first or r
-            if r.id==get(key) then return r end
-        end
-    end
-    return first
+-- The view's choice is the row the adapter marked `selected`.
+local function chosen(rows)
+    for _,r in ipairs(rows) do if r.selected then return r end end
 end
-local provider=chosen(providers,"ai.provider","chat")
-local project=chosen(projects,"ai.project")
+local provider,project=chosen(providers),chosen(projects)
 local function glyph(id,name,size,color,w,h)
     return ui.Text{id=id,text=name,family=T.fonts.icon,width=w or size+2,height=h or line(size),font_size=size,text_align="center",color=color,shrink=0}
 end
@@ -123,7 +115,7 @@ local function new_chat()
     local where=(project and project.path or "")..(who~="" and " · "..who or "")
     local can=get("ai.can.start") and provider~=nil and project~=nil
     local inner=IW-sp.lg-sp.compact
-    local text=ui.tr("bead.panel.ai-new",{provider=who})
+    local text=who~="" and ui.tr("bead.panel.ai-new",{provider=who}) or ui.tr("bead.panel.chat-new")
     return kit.Button{id="new-chat",width=IW,height=sp.compact+line(BODY)+sp.sm+BTN+sp.sm,shrink=0,padding=0,padding_left=sp.lg,padding_right=sp.compact,padding_top=sp.compact,
         radius=T.radii.medium,fill="surfaceContainerHigh",hover_fill=ui.tint("surfaceContainerHigh","onSurface",.06),focus_ring=true,aria_label=text,on_activate=can and act("start") or nil,
         ui.Column{id="card",width=inner,gap=sp.sm,
@@ -166,9 +158,13 @@ local function chats()
         icon_button("refresh","refresh",ui.tr("bead.panel.chat-refresh"),get("ai.connected") and act("refresh") or nil)}),
         new_chat()}
     local rows=get("ai.chats")
-    if get("ai.message")~="" then table.insert(kids,note("message",get("ai.message"),"error")) end
+    local failed=get("ai.message")~=""
+    if failed then table.insert(kids,note("message",get("ai.message"),"error")) end
     if #rows==0 then
-        table.insert(kids,empty("empty",get("ai.connected") and (get("ai.loaded") and ui.tr("bead.panel.ai-no-chats") or ui.tr("bead.panel.ai-loading")) or ui.tr("bead.panel.ai-offline")))
+        -- After an error the note stands alone: no "Loading chats…" that never ends.
+        if not failed or not get("ai.connected") then
+            table.insert(kids,empty("empty",get("ai.connected") and (get("ai.loaded") and ui.tr("bead.panel.ai-no-chats") or ui.tr("bead.panel.ai-loading")) or ui.tr("bead.panel.ai-offline")))
+        end
     else
         table.insert(kids,ui.Column{id="chats",width=IW,gap=sp.xs,shrink=0,ui.Repeat{id="rows",model=ui.bind("ai.chats"),key="key",render=chat_row}})
     end
@@ -231,7 +227,7 @@ local function usage_page()
     -- The chosen provider's rings are primary, every other provider's secondary.
     for _,item in ipairs(get("ai.usage")) do
         if type(item.percent)=="number" then
-            table.insert(rings,ring(item,provider~=nil and item.provider==provider.label and "primary" or "secondary"))
+            table.insert(rings,ring(item,provider~=nil and item.provider==provider.id and "primary" or "secondary"))
         else
             table.insert(lines,label("line-"..item.id,item.label,item.head and BODY or CAPTION,item.head and "onSurface" or "onSurfaceVariant",IW,{font_weight=item.head and 500 or 400}))
         end

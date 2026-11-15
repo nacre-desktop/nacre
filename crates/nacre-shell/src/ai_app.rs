@@ -8,7 +8,7 @@ use crate::i18n::tr;
 use crate::nacre_source::{CallGuard, CallTicket, CallWake, Client};
 use bead::core::{
     Stores, Value,
-    source::{Source, Subscription},
+    source::{self, Source, Subscription},
 };
 use nacre_protocol::ai_app::{AccountStatus, Accounts, ChatState, Chats, Projects, Providers};
 use nacre_protocol::dashboard_extras::AiUsageState;
@@ -29,12 +29,31 @@ struct Calls {
     chats: Option<CallTicket>,
     /// The last `ai.chats.list` result; `None` until one arrives.
     listed: Option<Json>,
-    /// The first list was requested; a failed one is not retried until something changes.
+    /// The first list was requested; a failed one is asked again by the next refresh (`stale`).
     asked: bool,
     /// A list is requested again after a start/resume/refresh finishes.
     stale: bool,
     pending: Vec<CallTicket>,
     message: String,
+    /// The daemon boot the list was asked under.
+    boot: Option<String>,
+}
+
+impl Calls {
+    /// A finished call: the note shows its error and clears on the next success.
+    fn settle(&mut self, reply: source::Result<Json>) {
+        match reply {
+            Ok(_) => self.message.clear(),
+            Err(error) => self.message = error.message,
+        }
+    }
+    /// A restarted daemon (new boot) invalidates the listed chats.
+    fn see_boot(&mut self, boot: Option<String>) {
+        if boot != self.boot {
+            self.stale |= self.boot.is_some();
+            self.boot = boot;
+        }
+    }
 }
 
 pub struct AiApp {
@@ -152,10 +171,10 @@ pub(crate) fn usage_rows(s: &AiUsageState, now: u64) -> Vec<Json> {
         let name = line(&p.name, 32);
         if p.windows.is_empty() {
             rows.push(
-                json!({"id":id.0,"label":name,"value":"","detail":"","provider":name,"head":true}),
+                json!({"id":id.0,"label":name,"value":"","detail":"","provider":id.0,"head":true}),
             );
             for (n, l) in p.lines.iter().enumerate() {
-                rows.push(json!({"id":format!("{}-{n}", id.0),"label":line(l,96),"value":"","detail":"","provider":name}));
+                rows.push(json!({"id":format!("{}-{n}", id.0),"label":line(l,96),"value":"","detail":"","provider":id.0}));
             }
         }
         for (n, w) in p.windows.iter().enumerate() {
@@ -170,7 +189,7 @@ pub(crate) fn usage_rows(s: &AiUsageState, now: u64) -> Vec<Json> {
                 })
                 .unwrap_or_default();
             rows.push(json!({"id":format!("{}-w{n}", id.0),"label":format!("{name} · {}", line(&w.label,24)),
-                "value":format!("{:.0}%", w.used_percent),"detail":resets,"provider":name,"percent":w.used_percent}));
+                "value":format!("{:.0}%", w.used_percent),"detail":resets,"provider":id.0,"percent":w.used_percent}));
         }
     }
     rows.truncate(14);
@@ -307,24 +326,26 @@ impl AiApp {
         let calls = &mut *guard;
         if let Some(reply) = calls.chats.as_mut().and_then(CallTicket::try_take) {
             calls.chats = None;
-            match reply {
-                Ok(listed) => calls.listed = Some(listed),
-                Err(error) => calls.message = error.message,
+            if let Ok(listed) = &reply {
+                calls.listed = Some(listed.clone());
             }
+            calls.settle(reply);
         }
         let mut finished = false;
-        let message = &mut calls.message;
+        let mut replies = Vec::new();
         calls.pending.retain_mut(|ticket| match ticket.try_take() {
             None => true,
             Some(reply) => {
-                finished = true;
-                if let Err(error) = reply {
-                    *message = error.message;
-                }
+                replies.push(reply);
                 false
             }
         });
+        for reply in replies {
+            finished = true;
+            calls.settle(reply);
+        }
         calls.stale |= finished;
+        calls.see_boot(self.client.as_ref().and_then(|c| c.status().boot.clone()));
         if calls.chats.is_none() && (calls.stale || !calls.asked) {
             calls.chats = self.begin("ai.chats.list", json!({}));
             calls.asked |= calls.chats.is_some();
@@ -347,27 +368,13 @@ impl AiApp {
             .as_ref()
             .map(|reply| chat_rows(reply, now))
             .unwrap_or_default();
-        let chosen = |rows: &[Json], key: &str| {
-            rows.iter()
-                .find(|r| r["selected"] == true)
-                .and_then(|r| r[key].as_str())
-                .unwrap_or_default()
-                .to_owned()
-        };
         let connected = self.client.as_ref().is_some_and(|c| c.snapshot().connected)
             || (cfg!(test) && !providers.is_empty());
-        let (width, height) = self.viewport.get();
+        let (width, _) = self.viewport.get();
         let flag = |name: &str, on: bool| (format!("ai.can.{name}"), Value::Bool(on));
         BTreeMap::from([
             ("ai.win_w".into(), Value::Number(f64::from(width))),
-            ("ai.win_h".into(), Value::Number(f64::from(height))),
             ("ai.connected".into(), Value::Bool(connected)),
-            ("ai.provider_id".into(), text(&chosen(&providers, "id"))),
-            (
-                "ai.provider_label".into(),
-                text(&chosen(&providers, "label")),
-            ),
-            ("ai.project_path".into(), text(&chosen(&projects, "path"))),
             ("ai.loaded".into(), Value::Bool(calls.listed.is_some())),
             ("ai.message".into(), text(&calls.message)),
             flag(
@@ -431,7 +438,10 @@ impl AiApp {
                 _ => self.calls.borrow_mut().stale = true,
             },
             "brain" => {
-                let _ = crate::app::route(0, "brain", "open", &[]);
+                // The window route can wait on its socket, so it runs off the UI thread.
+                std::thread::spawn(|| {
+                    let _ = crate::app::route(0, "brain", "open", &[]);
+                });
             }
             "settings" => call("ai.launcher.action", json!({"action":"settings"})),
             _ => {}
@@ -503,7 +513,12 @@ pub fn window_spec(
         args.first()
             .and_then(Json::as_str)
             .filter(|page| PAGES.contains(page))
-            .map(|page| BTreeMap::from([("ai.page".into(), text(page))]))
+            .map(|page| {
+                BTreeMap::from([
+                    ("ai.page".into(), text(page)),
+                    ("ai.scroll".into(), Value::Number(0.)),
+                ])
+            })
             .unwrap_or_default()
     });
     Ok(spec)

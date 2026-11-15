@@ -5,7 +5,7 @@
 return {stores={
     ["window.width"]=1120,["window.height"]=760,["window.min_width"]=760,["window.min_height"]=520,
     ["ai.page"]="chats",["ai.provider"]="",["ai.project"]="",["ai.scroll"]=0,
-    ["ai.win_w"]=1120,["ai.win_h"]=760,["ai.connected"]=false,["ai.loaded"]=false,["ai.message"]="",
+    ["ai.win_w"]=1120,["ai.connected"]=false,["ai.loaded"]=false,["ai.message"]="",
     ["ai.can.start"]=false,["ai.can.resume"]=false,["ai.can.refresh"]=false,
     ["ai.providers"]={},["ai.projects"]={},["ai.accounts"]={},["ai.usage"]={},["ai.chats"]={},
 },actions={
