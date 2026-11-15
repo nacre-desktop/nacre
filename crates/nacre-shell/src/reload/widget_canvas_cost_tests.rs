@@ -8,16 +8,24 @@ use serde_json::json;
 use std::{collections::BTreeMap, path::Path, time::Duration};
 
 fn clock_canvas() -> Harness {
+    clock_canvas_at("digital", 320, 300, "12:00", "12:00:00")
+}
+
+fn clock_canvas_at(style: &str, w: u32, h: u32, time: &str, seconds: &str) -> Harness {
     let shell = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../shell");
     let doc = json!({"version":1,"preset":"Nacre default","hosts":{
         "top_bar":{"tiles":60,"mode":"content","regions":{"left":{"start":0,"span":60},
             "centre":{"start":0,"span":60},"right":{"start":0,"span":60}},"instances":[]},
-        "canvas":{"width":400,"height":400,"instances":[{"iid":"clock-2","widget":"clock","group":"clock-2",
-            "host":"canvas","style":"digital","settings":{},"slot":{"x":40,"y":50,"w":320,"h":300}}]}},
-        "widgets":{"clock-2":{"widget":"clock","settings":{},"forms":{"desktop":{"enabled":true,"style":"digital","placement":{}}}}}});
+        "canvas":{"width":w+80,"height":h+100,"instances":[{"iid":"clock-2","widget":"clock","group":"clock-2",
+            "host":"canvas","style":style,"settings":{},"slot":{"x":40,"y":50,"w":w,"h":h}}]}},
+        "widgets":{"clock-2":{"widget":"clock","settings":{},"forms":{"desktop":{"enabled":true,"style":style,"placement":{}}}}}});
     let mut stores = crate::desktop::values(&Default::default(), "");
     stores.insert("widgets.layout".into(), Value::list(vec![doc]));
-    stores.insert("bead.desktop.clock".into(), Value::Text("12:00".into()));
+    stores.insert("bead.desktop.clock".into(), Value::Text(time.into()));
+    stores.insert(
+        "bead.desktop.clock.seconds".into(),
+        Value::Text(seconds.into()),
+    );
     stores.insert(
         "bead.desktop.clock.date".into(),
         Value::Text("2026-10-30".into()),
@@ -28,12 +36,47 @@ fn clock_canvas() -> Harness {
         &shell.join("palette.json"),
         stores,
         Config {
-            width: 400,
-            height: 400,
+            width: w + 80,
+            height: h + 100,
             scale: 1.5,
         },
     )
     .unwrap()
+}
+
+/// The desktop clock's face is drawn whole: no time, in any style or slot, is wider than its box
+/// (a clipped last digit was seen at 00:24 to 00:30).
+#[test]
+fn the_desktop_clock_face_fits_its_box_at_every_size() {
+    for (style, w, h) in [("digital", 420, 220), ("time", 220, 92), ("seconds", 240, 92)] {
+        for time in ["00:24", "00:30", "08:08", "23:59"] {
+            let harness = clock_canvas_at(style, w, h, time, &format!("{time}:30"));
+            let mut faces = 0;
+            for primitive in &harness.scene().primitives {
+                let Primitive::Text {
+                    rect,
+                    text,
+                    family,
+                    size,
+                    ..
+                } = primitive
+                else {
+                    continue;
+                };
+                if family != "Outfit" {
+                    continue;
+                }
+                faces += 1;
+                let drawn = bead::render::text_width(harness.scene(), text, family, *size).unwrap();
+                assert!(
+                    drawn <= rect.w + 0.5,
+                    "{style} {w}x{h} {time}: {text:?} is {drawn}px in a {}px box",
+                    rect.w
+                );
+            }
+            assert!(faces >= 1, "{style} {time}: the face is drawn");
+        }
+    }
 }
 
 /// Median redraw time of the canvas over minute ticks, one renderer as on the live surface.

@@ -737,3 +737,56 @@ fn an_inspect_request_opens_the_app_on_that_copy() {
     assert_eq!(search["widgets.search"], Value::Text("batt".into()));
     assert!(!search.contains_key("widgets.selected"));
 }
+
+/// A desktop clock released over the status pill joins it. The drop model finds the pill in the
+/// rects the bar publishes on every commit: a drag that starts on the desktop never sets the
+/// bar's own drag store, so these were missing and the clock landed beside the pill.
+#[test]
+fn a_desktop_clock_dropped_on_the_pill_joins_it_through_the_published_bar_rects() {
+    let mut model = Model::new(owner_layout());
+    assert!(
+        model.drag("clock", "desktop", 900., 500.),
+        "the pill's clock leaves for the desktop"
+    );
+    let desktop_doc = model.doc.clone();
+    assert_eq!(locate(&desktop_doc, "clock").unwrap()["host"], "canvas");
+    let harness = bar_harness(&desktop_doc, false);
+    crate::widgets::widget_drag::note_bar_geometry(
+        "pill-drop-test",
+        super::widget_instance_rects(harness.session.view_nodes()),
+    );
+    let pill = instance_rects(&harness)["status-pill"];
+    for x in [pill.x + 4., centre(pill), pill.x + pill.w - 4.] {
+        let event = |phase: &str| {
+            let Value::List(rows) = drop_event(&desktop_doc, "clock", "bar", x as f64, 25., phase)
+            else {
+                unreachable!()
+            };
+            let mut row = rows[0].clone();
+            row["context"]["geometry"] =
+                json!(crate::widgets::widget_drag::bar_geometry("pill-drop-test"));
+            Value::list(vec![row])
+        };
+        let mut drag = Model::new(desktop_doc.clone());
+        drag.controller.drag(event("move")).unwrap();
+        let dropped = drag.controller.drag(event("drop")).unwrap();
+        let Some(Value::List(rows)) = dropped.get("widgets.write") else {
+            panic!("the drop at {x} commits")
+        };
+        let written = rows[0].clone();
+        let clock = locate(&written, "clock").unwrap();
+        assert_eq!(clock["host"], "status-pill", "the clock joins the pill at {x}");
+        assert!(
+            written["hosts"]["top_bar"]["instances"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .all(|item| item["iid"] != "clock"),
+            "no top-level bar clock beside the pill at {x}"
+        );
+        // And it drags back out to the desktop.
+        let mut back = Model::new(written);
+        assert!(back.drag("clock", "desktop", 900., 500.), "it leaves the pill again");
+        assert_eq!(locate(&back.doc, "clock").unwrap()["host"], "canvas");
+    }
+}

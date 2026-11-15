@@ -222,6 +222,12 @@ local function desktop(props,_settings,_data)
     local vertical_scale=math.min(1,h/math.max(1,2*padding+2*gap+rule_height))
     padding*=vertical_scale
     gap*=vertical_scale
+    -- The face never outgrows its box (a clipped last digit otherwise): the size shrinks until the
+    -- time, or all-zero digits so it does not change with the minute, fits. The measure is the
+    -- regular weight, a hair wider than the 200 drawn.
+    local face_width=math.max(ui.text_width(visible_time,visual.display_font,base_time_size),
+        ui.text_width((string.gsub(visible_time,"%d","0")),visual.display_font,base_time_size))
+    if face_width>w-2*padding then base_time_size*=(w-2*padding)/face_width end
     rule_height=math.min(rule_height,h*.04)
     local date_size=base_date_size
     local date_height=math.max(compact and 12 or 28,(date_size*1.2)+2)

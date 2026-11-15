@@ -21,7 +21,9 @@ use std::{
 static BAR_GEOMETRY: Mutex<BTreeMap<String, Vec<Json>>> = Mutex::new(BTreeMap::new());
 
 pub fn note_bar_geometry(output: &str, rects: Vec<Json>) {
-    if let Ok(mut map) = BAR_GEOMETRY.lock() {
+    if let Ok(mut map) = BAR_GEOMETRY.lock()
+        && map.get(output) != Some(&rects)
+    {
         map.insert(output.to_owned(), rects);
     }
 }

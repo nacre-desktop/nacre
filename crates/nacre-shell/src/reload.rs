@@ -327,6 +327,24 @@ fn apply_widget_floating(
     };
     action(action_to_apply).is_ok()
 }
+/// The rects of the placed widgets in a rendered tree (`widget_instance` markers), as the
+/// drop model's `geometry`.
+fn widget_instance_rects(nodes: &[bead::ui::Node]) -> Vec<serde_json::Value> {
+    nodes
+        .iter()
+        .filter_map(|node| {
+            let Some(bead::core::Value::List(records)) = &node.metadata else {
+                return None;
+            };
+            let marker = records
+                .iter()
+                .find(|record| record["widget_instance"] == true)?;
+            let iid = marker["iid"].as_str()?;
+            let rect = bead::render::tree::rect(&node.draw);
+            Some(serde_json::json!({"iid":iid,"x":rect.x,"y":rect.y,"w":rect.w,"h":rect.h}))
+        })
+        .collect()
+}
 /// B0210: the drag model without the pointer (and, while dragging, without the transient
 /// bar preview the ghost does not draw): what the ghost and zone canvases render from.
 fn widget_drag_content(
@@ -974,20 +992,7 @@ impl Runtime {
                 .cloned(),
             _ => None,
         })?;
-        let geometry = nodes
-            .iter()
-            .filter_map(|node| {
-                let Some(bead::core::Value::List(records)) = &node.metadata else {
-                    return None;
-                };
-                let marker = records
-                    .iter()
-                    .find(|record| record["widget_instance"] == true)?;
-                let iid = marker["iid"].as_str()?;
-                let rect = bead::render::tree::rect(&node.draw);
-                Some(serde_json::json!({"iid":iid,"x":rect.x,"y":rect.y,"w":rect.w,"h":rect.h}))
-            })
-            .collect::<Vec<_>>();
+        let geometry = widget_instance_rects(&nodes);
         if !geometry.is_empty() {
             seed["geometry"] = serde_json::json!(geometry);
         }
@@ -10355,16 +10360,12 @@ impl SceneSource for Runtime {
                     );
                 }
             }
-            if self.bar
-                && self.session.stores.get("widgets.drag.active")
-                    == Some(&bead::core::Value::Bool(true))
-                && let Some(geometry) = self
-                    .widget_seed()
-                    .and_then(|seed| seed["geometry"].as_array().cloned())
-            {
+            // A desktop widget dropped on the bar is placed among these rects. The drag runs in
+            // the canvas session, so the bar's own drag store is not set; publish every commit.
+            if self.bar {
                 crate::widgets::widget_drag::note_bar_geometry(
                     self.output.as_deref().unwrap_or(""),
-                    geometry,
+                    widget_instance_rects(&self.session.view_nodes()),
                 );
             }
             self.announce_widget_app();
