@@ -18,8 +18,10 @@ static OUTFIT_REGISTERED: std::sync::OnceLock<std::result::Result<(), String>> =
 unsafe extern "C" {
     fn FcConfigGetCurrent() -> *mut std::ffi::c_void;
     fn FcConfigAppFontAddFile(config: *mut std::ffi::c_void, file: *const u8) -> i32;
-    fn FcConfigBuildFonts(config: *mut std::ffi::c_void) -> i32;
 }
+/// Every view session selects fonts on its own worker thread, and adding the bundled font changes
+/// the process-wide current config under a concurrent match (SIGSEGV on 2026-11-15).
+static FONTCONFIG: Mutex<()> = Mutex::new(());
 
 fn bundled_outfit_path() -> Result<PathBuf> {
     OUTFIT_PATH
@@ -52,7 +54,6 @@ fn bundled_outfit_path() -> Result<PathBuf> {
                     let config = unsafe { FcConfigGetCurrent() };
                     if config.is_null()
                         || unsafe { FcConfigAppFontAddFile(config, filename.as_ptr().cast()) } == 0
-                        || unsafe { FcConfigBuildFonts(config) } == 0
                     {
                         return Err("Fontconfig rejected bundled Outfit".to_owned());
                     }
@@ -166,6 +167,7 @@ fn select_chars(scene: &Scene, ascii: bool) -> Result<Vec<PathBuf>> {
     if ascii {
         needed.extend(' '..='~');
     }
+    let _fontconfig = FONTCONFIG.lock().unwrap_or_else(|p| p.into_inner());
     let fc = fontconfig::Fontconfig::new().ok_or("native fontconfig unavailable")?;
     let mut paths = BTreeSet::new();
     let mut db = fontdb::Database::new();
