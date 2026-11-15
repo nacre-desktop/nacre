@@ -699,7 +699,9 @@ impl Dashboard {
     pub fn project_with_stores(&self, stores: &bead::core::Stores) -> BTreeMap<String, Value> {
         let mut values = self.project();
         let open = stores.get("panel.open") != Some(&Value::Bool(false));
-        if self.page != Page::Today || !open {
+        // Per-frame work (preview, countdown) needs a panel that is explicitly open.
+        let shown = stores.get("panel.open") == Some(&Value::Bool(true));
+        if self.page != Page::Today || !shown {
             self.stop_video();
         }
         if self.page == Page::Today && !open {
@@ -708,7 +710,7 @@ impl Dashboard {
                 Value::Text("today-wallpaper".into()),
             );
         }
-        if self.page == Page::Today && open {
+        if self.page == Page::Today && shown {
             self.project_wallpaper(stores, &mut values);
         } else if self.page == Page::Today {
             // Preserve the visible poster through the closing reveal. The existing
@@ -726,7 +728,7 @@ impl Dashboard {
         // The countdown redraws once a second only while a session runs in an open panel;
         // the mini player on Today shows no position and needs no wake.
         let live = matches!(values.get("dashboard.state"), Some(Value::Text(t)) if t == "running" || (t == "playing" && self.page == Page::Media))
-            && open;
+            && shown;
         self.tick(live);
         // Keep art stable through the closing reveal: clearing it invalidates
         // Media's prepared blur just before the UI joins the retiring worker.

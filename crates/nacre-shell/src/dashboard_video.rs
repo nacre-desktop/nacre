@@ -3,7 +3,11 @@
 use std::{
     io::{Read, Write},
     process::{Child, Command, Stdio},
-    sync::{Arc, Mutex},
+    sync::{
+        Arc, Mutex,
+        atomic::{AtomicBool, Ordering},
+    },
+    time::{Duration, Instant},
 };
 
 #[derive(Clone, PartialEq)]
@@ -18,6 +22,8 @@ type Frame = (u64, Arc<[u8]>);
 pub(super) struct Preview {
     pub request: Request,
     frame: Arc<Mutex<Option<Frame>>>,
+    /// Set by the reader after it notifies, cleared when the projection takes the frame.
+    unread: Arc<AtomicBool>,
     child: Arc<Mutex<Option<Child>>>,
     reader: Option<std::thread::JoinHandle<()>>,
 }
@@ -26,6 +32,7 @@ impl Preview {
         let mut preview = Self {
             request,
             frame: Default::default(),
+            unread: Default::default(),
             child: Default::default(),
             reader: None,
         };
@@ -57,19 +64,13 @@ impl Preview {
             .write_all(request.to_string().as_bytes())?;
         let mut output = output.ok_or_else(|| std::io::Error::other("preview stdout"))?;
         let frame = self.frame.clone();
+        let unread = self.unread.clone();
         let child = self.child.clone();
         self.reader = Some(
             std::thread::Builder::new()
                 .name("dashboard-video".into())
                 .spawn(move || {
-                    let mut sequence = 0;
-                    while let Ok(bytes) = read_frame(&mut output) {
-                        sequence += 1;
-                        *frame.lock().unwrap() = Some((sequence, bytes));
-                        if let Some(notify) = &notify {
-                            notify(bead::wayland::UiEvent::Model(Default::default()));
-                        }
-                    }
+                    pump(&mut output, &frame, &unread, &notify, FRAME_GAP);
                     stop_child(&child);
                     frame.lock().unwrap().take();
                     if let Some(notify) = &notify {
@@ -80,6 +81,7 @@ impl Preview {
         Ok(())
     }
     pub fn frame(&self) -> Option<Frame> {
+        self.unread.store(false, Ordering::Release);
         self.frame.lock().unwrap().clone()
     }
 }
@@ -89,6 +91,29 @@ impl Drop for Preview {
         if let Some(reader) = self.reader.take() {
             let _ = reader.join();
         }
+    }
+}
+/// The preview is capped at 30 fps (the sleep also back-pressures the decoder) and
+/// wakes the UI only when the previous frame was consumed.
+const FRAME_GAP: Duration = Duration::from_millis(33);
+fn pump(
+    output: &mut impl Read,
+    frame: &Mutex<Option<Frame>>,
+    unread: &AtomicBool,
+    notify: &Option<super::Notify>,
+    gap: Duration,
+) {
+    let mut sequence = 0;
+    while let Ok(bytes) = read_frame(output) {
+        let started = Instant::now();
+        sequence += 1;
+        *frame.lock().unwrap() = Some((sequence, bytes));
+        if let Some(notify) = notify
+            && !unread.swap(true, Ordering::AcqRel)
+        {
+            notify(bead::wayland::UiEvent::Model(Default::default()));
+        }
+        std::thread::sleep(gap.saturating_sub(started.elapsed()));
     }
 }
 fn stop_child(slot: &Mutex<Option<Child>>) {
@@ -149,6 +174,7 @@ mod tests {
                 height: 1,
             },
             frame: Default::default(),
+            unread: Default::default(),
             child: Arc::new(Mutex::new(Some(child))),
             reader: Some(reader),
         });
@@ -161,6 +187,53 @@ mod tests {
         dashboard.project_with_stores(&stores);
         assert!(dashboard.video.borrow().is_none());
         assert!(!std::path::Path::new(&format!("/proc/{pid}")).exists());
+    }
+    #[test]
+    fn missing_panel_open_does_not_keep_a_preview() {
+        let dashboard = super::super::Dashboard::new(
+            super::super::Page::Today,
+            Arc::new(
+                bead_test::source::FakeSource::new(super::super::tests::fixture("calendar"))
+                    .unwrap(),
+            ),
+            None,
+            true,
+        );
+        *dashboard.video.borrow_mut() = Some(Preview {
+            request: Request {
+                motion: nacre_protocol::wallpaper::WallpaperMotion {
+                    kind: nacre_protocol::wallpaper::MotionKind::Video,
+                    file_identity: nacre_protocol::wallpaper::WallpaperFileIdentity::from_metadata(
+                        &std::fs::metadata(std::env::current_exe().unwrap()).unwrap(),
+                    ),
+                    path: String::new(),
+                },
+                width: 1,
+                height: 1,
+            },
+            frame: Default::default(),
+            unread: Default::default(),
+            child: Default::default(),
+            reader: None,
+        });
+        dashboard.project_with_stores(&bead::core::Stores::default());
+        assert!(dashboard.video.borrow().is_none());
+    }
+    #[test]
+    fn unconsumed_frames_notify_once() {
+        let wakes = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let counter = wakes.clone();
+        let notify: Option<super::super::Notify> = Some(Arc::new(move |_| {
+            counter.fetch_add(1, Ordering::Relaxed);
+        }));
+        let (frame, unread) = (Mutex::default(), AtomicBool::new(false));
+        let bytes = [[1, 0, 0, 0, 7], [1, 0, 0, 0, 8]].concat();
+        pump(&mut &bytes[..], &frame, &unread, &notify, Duration::ZERO);
+        assert_eq!(wakes.load(Ordering::Relaxed), 1);
+        assert_eq!(frame.lock().unwrap().as_ref().unwrap().0, 2);
+        unread.store(false, Ordering::Release);
+        pump(&mut &bytes[..], &frame, &unread, &notify, Duration::ZERO);
+        assert_eq!(wakes.load(Ordering::Relaxed), 2);
     }
     #[test]
     fn frame_reader_bounds_and_truncation() {
