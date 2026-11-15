@@ -1251,7 +1251,8 @@ mod tests {
             let mut command = String::new();
             socket.read_to_string(&mut command)?;
             assert_eq!(command, "j/binds");
-            socket.write_all(br#"[{"modmask":64,"key":"space","description":"Nacre:launcher"}]"#)?;
+            socket
+                .write_all(br#"[{"modmask":64,"key":"space","description":"Nacre:launcher"}]"#)?;
             Ok(())
         });
         let paths = Paths::new(home.path());
@@ -1259,12 +1260,16 @@ mod tests {
             paths.clone(),
             BTreeMap::from([
                 ("NACRE_COMPOSITOR".into(), "hyprland".into()),
-                ("XDG_RUNTIME_DIR".into(), home.path().to_string_lossy().into_owned()),
+                (
+                    "XDG_RUNTIME_DIR".into(),
+                    home.path().to_string_lossy().into_owned(),
+                ),
                 ("HYPRLAND_INSTANCE_SIGNATURE".into(), "fixture".into()),
             ]),
         )?;
         let rows = bindings_from(&mut backend, &paths)?;
-        peer.join().map_err(|_| "Hyprland socket fixture panicked")??;
+        peer.join()
+            .map_err(|_| "Hyprland socket fixture panicked")??;
         assert_eq!(rows[0]["description"], "Open launcher");
         assert_eq!(rows[0]["action"], "launcher");
         Ok(())
