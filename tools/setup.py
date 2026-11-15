@@ -2,6 +2,7 @@
 """Review and deploy private Nacre configuration from prebuilt system packages."""
 
 import argparse
+import contextlib
 import copy
 import importlib.util
 import json
@@ -277,7 +278,34 @@ def missing_packages(root, profile, compositor="hyprland"):
     )
 
 
-def main(argv=None):
+DAEMON_UNITS = ("nacre-daemon.socket", "nacre-daemon.service")
+
+
+@contextlib.contextmanager
+def daemon_stopped():
+    """Release the daemon's writer lease for an apply, then restore what was active."""
+
+    def systemctl(*words, check=False):
+        try:
+            return subprocess.run(["systemctl", "--user", *words], check=check)
+        except FileNotFoundError:
+            return subprocess.CompletedProcess(words, 1)
+
+    active = [
+        u for u in DAEMON_UNITS if systemctl("is-active", "--quiet", u).returncode == 0
+    ]
+    try:
+        # Socket first, or the shell's reconnect would re-activate the service.
+        for unit in active:
+            systemctl("stop", unit, check=True)
+        yield
+    finally:
+        failed = [u for u in active if systemctl("start", u).returncode != 0]
+        if failed:
+            raise RuntimeError("Could not restart " + ", ".join(failed))
+
+
+def main(argv=None, quiesced=False):
     parser = argparse.ArgumentParser(
         description=tr(
             "setup.description",
@@ -348,6 +376,9 @@ def main(argv=None):
                 {"plan": "--plan", "yes": "--yes"},
             )
         )
+    if not args.plan and not quiesced:
+        with daemon_stopped():
+            return main(argv, True)
     if args.plan:
         profile, keyboard, compositor = selection(
             args, ROOT, Path.home(), interactive and not args.review_selected

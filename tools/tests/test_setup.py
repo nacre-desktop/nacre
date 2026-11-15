@@ -1561,6 +1561,98 @@ path.write_text(json.dumps(events))
             self.assertIn("brain", profile["components"])
 
 
+class DaemonStoppedTests(unittest.TestCase):
+    def run_with(self, active, body=lambda: None):
+        calls = []
+
+        def run(command, check=False, **_):
+            verb, unit = command[2], command[-1]
+            calls.append((verb, unit))
+            code = 0 if verb != "is-active" or unit in active else 3
+            return subprocess.CompletedProcess(command, code)
+
+        with patch.object(setup.subprocess, "run", side_effect=run):
+            with setup.daemon_stopped():
+                calls.append("apply")
+                body()
+        return calls
+
+    def test_stop_apply_start_order(self):
+        both = ("nacre-daemon.socket", "nacre-daemon.service")
+        calls = self.run_with(both)
+        self.assertEqual(
+            [c for c in calls if c[0] != "is-active"],
+            [
+                ("stop", both[0]),
+                ("stop", both[1]),
+                "apply",
+                ("start", both[0]),
+                ("start", both[1]),
+            ],
+        )
+
+    def test_inactive_units_are_left_alone(self):
+        calls = self.run_with(())
+        self.assertEqual([c for c in calls if c[0] != "is-active"], ["apply"])
+
+    def test_failed_apply_still_restarts(self):
+        def fail():
+            raise ValueError("apply")
+
+        seen = []
+
+        def run(command, **_):
+            seen.append(command[2])
+            return subprocess.CompletedProcess(command, 0)
+
+        with patch.object(setup.subprocess, "run", side_effect=run):
+            with self.assertRaises(ValueError), setup.daemon_stopped():
+                fail()
+        self.assertEqual(seen[-2:], ["start", "start"])
+
+    def test_failed_stop_still_restarts_the_stopped_socket(self):
+        seen = []
+
+        def run(command, check=False, **_):
+            seen.append((command[2], command[-1]))
+            if command[2] == "stop" and command[-1] == "nacre-daemon.service":
+                raise subprocess.CalledProcessError(1, command)
+            return subprocess.CompletedProcess(command, 0)
+
+        with patch.object(setup.subprocess, "run", side_effect=run):
+            with self.assertRaises(subprocess.CalledProcessError):
+                with setup.daemon_stopped():
+                    self.fail("apply ran without a stopped daemon")
+        self.assertIn(("start", "nacre-daemon.socket"), seen)
+
+    def test_restart_failure_is_reported(self):
+        def run(command, **_):
+            return subprocess.CompletedProcess(
+                command, 1 if command[2] == "start" else 0
+            )
+
+        with patch.object(setup.subprocess, "run", side_effect=run):
+            with self.assertRaisesRegex(RuntimeError, "nacre-daemon.socket"):
+                with setup.daemon_stopped():
+                    pass
+
+    def test_plan_stops_nothing_and_apply_does(self):
+        with tempfile.TemporaryDirectory() as root:
+            (Path(root) / "package.json.installed").write_text("{}")
+            with (
+                patch.object(setup, "daemon_stopped") as stopped,
+                patch.object(setup.os, "geteuid", return_value=1000),
+                patch.object(setup, "ROOT", Path(root)),
+                patch.object(setup, "selection", side_effect=RuntimeError("stop")),
+            ):
+                with self.assertRaisesRegex(RuntimeError, "stop"):
+                    setup.main(["--plan"])
+                stopped.assert_not_called()
+                with self.assertRaisesRegex(RuntimeError, "stop"):
+                    setup.main(["--yes"])
+                stopped.assert_called_once()
+
+
 class ArchPackageLayoutTests(unittest.TestCase):
     def test_native_palette_recipe_declares_runtime_and_embedded_licenses(self):
         recipe = load(TOOLS.parent / "packaging/arch/recipe.py", "native_arch_recipe")
