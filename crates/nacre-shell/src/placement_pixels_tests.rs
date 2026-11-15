@@ -341,6 +341,7 @@ fn compose(
             secondary,
             surface,
             false,
+            lip.edge == Edge::Top,
         ) {
             tile(&mut pixels, rect, svg.as_bytes(), SCALE)?;
         }
@@ -371,6 +372,11 @@ fn configurable_frame_variants_match_their_goldens() -> Result<()> {
     };
     let left = lip_at(Edge::Left, 10.);
     let right = lip_at(Edge::Right, 10.);
+    // The top handle spans the bar and the frame strip (208 x 50), as the shell configures it.
+    let top = bead::wayland::intent::Lip {
+        length: 208.,
+        ..lip_at(Edge::Top, 50.)
+    };
     let cases: Vec<(&str, Frame, bool, Vec<(_, LipState)>)> = vec![
         ("default", frame_with(|_| {}), false, vec![]),
         // The frame off: no bar, no top edge, no sides.
@@ -503,6 +509,28 @@ fn configurable_frame_variants_match_their_goldens() -> Result<()> {
                     },
                 ),
             ],
+        ),
+        // The opt-in top handle: the pill under the bar title at rest, then a tab docked on the
+        // dashboard's bottom edge (drawn at the screen edge here, like the side tabs above).
+        (
+            "lips-top",
+            frame_with(|_| {}),
+            false,
+            vec![(top.clone(), idle)],
+        ),
+        (
+            "lips-top-docked",
+            frame_with(|_| {}),
+            false,
+            vec![(
+                top.clone(),
+                LipState {
+                    active: true,
+                    attach: 1.,
+                    hovered: true,
+                    ..Default::default()
+                },
+            )],
         ),
     ];
     for (name, frame, panel, lips) in cases {

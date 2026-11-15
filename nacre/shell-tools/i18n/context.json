@@ -1739,6 +1739,8 @@
   "settings.registry.panels.lips.rightHandle.label": "Settings registry/prototype; portable schema label or description.",
   "settings.registry.panels.lips.topHandle.description": "Settings registry/prototype; portable schema label or description.",
   "settings.registry.panels.lips.topHandle.label": "Settings registry/prototype; portable schema label or description.",
+  "settings.registry.panels.lips.topHandleVisible.description": "Settings registry/prototype; portable schema label or description.",
+  "settings.registry.panels.lips.topHandleVisible.label": "Settings registry/prototype; portable schema label or description.",
   "settings.registry.ui.unavailable": "Settings registry/prototype; portable schema label or description.",
   "settings.registry.panels.top-bar.modules.battery": "Settings registry/prototype; portable schema label or description.",
   "settings.registry.panels.top-bar.modules.bluetooth": "Settings registry/prototype; portable schema label or description.",

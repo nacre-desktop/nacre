@@ -528,6 +528,8 @@
  "settings.registry.panels.lips.rightHandle.label": "Right edge",
  "settings.registry.panels.lips.topHandle.description": "The dashboard’s handle. Off, the top bar shows a button instead.",
  "settings.registry.panels.lips.topHandle.label": "Top edge",
+ "settings.registry.panels.lips.topHandleVisible.description": "A pill under the bar title that rides down with the dashboard.",
+ "settings.registry.panels.lips.topHandleVisible.label": "Show top handle",
  "settings.registry.ui.unavailable": "This feature is unavailable on this machine.",
  "settings.registry.panels.top-bar.modules.battery": "Battery",
  "settings.registry.panels.top-bar.modules.bluetooth": "Bluetooth",

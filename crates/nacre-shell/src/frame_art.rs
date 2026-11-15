@@ -11,7 +11,10 @@ use std::sync::atomic::{AtomicBool, Ordering::SeqCst};
 /// pearl grabber. Set by the shell gate when the preference changes.
 pub static ARROWS: AtomicBool = AtomicBool::new(false);
 
-/// The handle for a side lip in the configured style; other edges draw nothing.
+/// `desktop.edgeHandleTopVisible` (opt-in): the top lip draws its handle under the bar title.
+pub static TOP_TAB: AtomicBool = AtomicBool::new(false);
+
+/// The handle for a side lip (and the top lip with `top_tab`) in the configured style.
 pub fn handle(
     lip: &Lip,
     size: (f32, f32),
@@ -20,11 +23,12 @@ pub fn handle(
     secondary: [u8; 4],
     surface: [u8; 4],
     arrows: bool,
+    top_tab: bool,
 ) -> Option<String> {
     if arrows {
         edge_tab(lip, size, state, accent, secondary)
     } else {
-        grabber(lip, size, state, accent, surface)
+        grabber(lip, size, state, accent, surface, top_tab)
     }
 }
 /// The pearl grabber (design review D6): a rounded bar in primary centred on the lip, 6 x 56 at
@@ -38,20 +42,29 @@ pub fn handle(
 /// (`attach` 0 free, 1 docked) the plate shrinks into a tab on the panel's inner edge, rounded on
 /// the free side and filleted into the panel; the pill rides in the middle and the glow also
 /// answers `hovered` on the docked tab. The left (chat) lip never attaches and keeps its look.
+///
+/// With `top_tab` the top lip draws the same picture rotated (join side up, `TOP_TAB`): at rest only
+/// the pill and its glow, in the frame strip under the bar title (the lip spans the bar, so no plate
+/// may cover it); with `attach` the plate fades in as a tab in the 32 px band on the join side and
+/// the pill slides to its middle.
 pub fn grabber(
     lip: &Lip,
     (width, height): (f32, f32),
     state: LipState,
     accent: [u8; 4],
     surface: [u8; 4],
+    top_tab: bool,
 ) -> Option<String> {
-    if !matches!(lip.edge, Edge::Left | Edge::Right) {
+    let top = lip.edge == Edge::Top;
+    if !(top && top_tab || matches!(lip.edge, Edge::Left | Edge::Right)) {
         return None;
     }
-    let attach = if lip.edge == Edge::Right {
-        state.attach.clamp(0., 1.)
-    } else {
+    // Side art as drawn (join side x = w); the top art is that picture rotated, w = thickness.
+    let (w, h) = if top { (height, width) } else { (width, height) };
+    let attach = if lip.edge == Edge::Left {
         0.
+    } else {
+        state.attach.clamp(0., 1.)
     };
     let charging = !state.active && state.progress > 0. && state.progress < 1.;
     // The tab keeps its swollen pill for the whole ride, even when `active` lags the close.
@@ -65,9 +78,26 @@ pub fn grabber(
         state.progress
     };
     let (thick, long) = (6. + 2. * charge, 56. + 16. * charge);
-    let thick = thick.min((width - 2.).max(2.));
-    let (x, y) = ((width - thick) / 2., (height - long) / 2.);
-    let mut body = plate(width, height, attach, surface);
+    let thick = thick.min((w - 2.).max(2.));
+    let band = if top { w.min(32.) } else { w };
+    // shortcut: 5 is the middle of the default 10 px frame strip; follow the frame width if it grows.
+    let cx = if top {
+        5. + (w - band / 2. - 5.) * attach
+    } else {
+        w / 2.
+    };
+    let (x, y) = (cx - thick / 2., (h - long) / 2.);
+    let mut body = if !top {
+        plate(w, h, attach, surface)
+    } else if attach > 0. {
+        format!(
+            r#"<g transform="translate({},0)" opacity="{attach}">{}</g>"#,
+            w - band,
+            plate(band, h, 1., surface)
+        )
+    } else {
+        String::new()
+    };
     // Hover lights the docked tab only: on the free bar the dwell fill stays the visible cue.
     let glow = if charging {
         charge
@@ -77,11 +107,13 @@ pub fn grabber(
         0.
     };
     if glow > 0. {
+        let gw = if top { 10. } else { w };
         body.push_str(&format!(
-            r#"<rect x="0" y="{}" width="{width}" height="{}" rx="{}" fill="{}" opacity="{}"/>"#,
+            r#"<rect x="{}" y="{}" width="{gw}" height="{}" rx="{}" fill="{}" opacity="{}"/>"#,
+            cx - gw / 2.,
             y - 4.,
             long + 8.,
-            width / 2.,
+            gw / 2.,
             rgb(accent),
             0.3 * glow
         ));
@@ -92,6 +124,9 @@ pub fn grabber(
         rgb(accent),
         0.9 + 0.1 * charge
     ));
+    if top {
+        body = format!(r#"<g transform="translate(0,{w}) rotate(-90)">{body}</g>"#);
+    }
     Some(format!(
         r#"<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">{body}</svg>"#
     ))
@@ -191,7 +226,7 @@ pub fn art(colors: &Palette) -> Result<EdgeArt, Box<dyn std::error::Error>> {
         // palette the shell started with.
         let [surface, accent, secondary] = crate::placement::live_colors().unwrap_or(startup);
         let arrows = ARROWS.load(SeqCst);
-        handle(lip, size, state, accent, secondary, surface, arrows).map(|svg| {
+        handle(lip, size, state, accent, secondary, surface, arrows, TOP_TAB.load(SeqCst)).map(|svg| {
             if !arrows {
                 return Arc::from(svg.into_bytes());
             }
@@ -243,11 +278,12 @@ mod tests {
                 docked(attach, hovered),
                 A,
                 S,
+                false,
             )
             .unwrap()
         };
         // Free: the plate is the whole lip, exactly as before.
-        let free = grabber(&lip(Edge::Right), (10., 144.), idle(), A, S).unwrap();
+        let free = grabber(&lip(Edge::Right), (10., 144.), idle(), A, S, false).unwrap();
         assert!(free.contains(r#"<rect width="10" height="144" fill="rgb(40,50,60)"/>"#));
         // Half way: the plate is a path 116 tall (lerp of 144 and 88) with its two fillets.
         let half = at(0.5, false);
@@ -278,9 +314,9 @@ mod tests {
             hovered: true,
             ..idle()
         };
-        let hovered = grabber(&lip(Edge::Right), (10., 144.), free_hover, A, S).unwrap();
+        let hovered = grabber(&lip(Edge::Right), (10., 144.), free_hover, A, S, false).unwrap();
         assert_eq!(hovered, free);
-        let left = grabber(&lip(Edge::Left), (10., 144.), docked(1., true), A, S).unwrap();
+        let left = grabber(&lip(Edge::Left), (10., 144.), docked(1., true), A, S, false).unwrap();
         assert!(
             left.contains(r#"<rect width="10" height="144""#) && !left.contains("<path"),
             "{left}"
@@ -315,6 +351,51 @@ mod tests {
         );
     }
     #[test]
+    fn the_top_handle_is_a_pill_under_the_bar_title_that_becomes_a_tab_when_docked() {
+        use bead::render::{PixelFormat, ShmTarget, svg_into};
+        let top = |state| grabber(&lip(Edge::Top), (208., 50.), state, A, S, true).unwrap();
+        let raster = |svg: &str| {
+            let mut bytes = vec![0; 208 * 50 * 4];
+            let target = ShmTarget {
+                bytes: &mut bytes,
+                width: 208,
+                height: 50,
+                scale: 1.,
+                format: PixelFormat::Rgba,
+            };
+            svg_into(svg.as_bytes(), target).unwrap();
+            bytes
+        };
+        let alpha = |bytes: &[u8], x: usize, y: usize| bytes[(y * 208 + x) * 4 + 3];
+        // Rest: only the pill (56 x 6 at y 42, in the frame strip); the bar area is untouched.
+        let rest = raster(&top(idle()));
+        for y in 0..50 {
+            for x in 0..208 {
+                let pill = (76..132).contains(&x) && (42..48).contains(&y);
+                assert!(pill || alpha(&rest, x, y) == 0, "stray pixel {x},{y}");
+            }
+        }
+        assert!(alpha(&rest, 104, 45) > 200);
+        // Dwell: the glow stays inside the 10 px strip, never over the title.
+        let half = LipState { progress: 0.5, ..idle() };
+        let dwell = raster(&top(half));
+        assert!(alpha(&dwell, 104, 40) > 0 && alpha(&dwell, 104, 38) == 0);
+        assert!((0..40).all(|y| (0..208).all(|x| alpha(&dwell, x, y) == 0)));
+        // Opening: the plate fades in under the join (y 0) and the pill rides to its middle.
+        let tab = top(docked(1., false));
+        assert!(tab.contains(r#"opacity="1""#) && tab.matches("<path").count() == 2, "{tab}");
+        let docked_px = raster(&tab);
+        assert_eq!(alpha(&docked_px, 104, 0), 255, "flush with the panel edge");
+        assert_eq!(alpha(&docked_px, 104, 31), 255, "plate to the 32 px band");
+        assert_eq!(alpha(&docked_px, 104, 40), 0, "nothing below the band");
+        assert_eq!(alpha(&docked_px, 20, 10), 0, "the tab is 88 wide");
+        let half_open = top(docked(0.5, false));
+        assert!(half_open.contains(r#"opacity="0.5""#), "{half_open}");
+        // Hover lights the docked tab: a glow rect around the pill, inside the plate band.
+        assert!(top(docked(1., true)).contains(r#"width="10" height="80" rx="5" fill="rgb(10,20,30)" opacity="0.3""#));
+        assert!(!tab.contains(r#"opacity="0.3""#));
+    }
+    #[test]
     fn lip_material_remains_opaque_when_the_popup_film_is_cut_out() {
         use bead::render::{PixelFormat, ShmTarget, svg_into};
         let surface = [21, 18, 23, 255];
@@ -343,8 +424,9 @@ mod tests {
     }
     #[test]
     fn the_grabber_is_a_centred_bar_that_swells_and_glows_with_the_dwell() {
-        assert!(grabber(&lip(Edge::Top), (208., 50.), idle(), A, S).is_none());
-        let rest = grabber(&lip(Edge::Left), (10., 144.), idle(), A, S).unwrap();
+        assert!(grabber(&lip(Edge::Top), (208., 50.), idle(), A, S, false).is_none());
+        assert!(grabber(&lip(Edge::Bottom), (208., 10.), idle(), A, S, true).is_none());
+        let rest = grabber(&lip(Edge::Left), (10., 144.), idle(), A, S, false).unwrap();
         assert!(
             rest.contains(r#"<rect x="2" y="44" width="6" height="56" rx="3""#),
             "{rest}"
@@ -359,7 +441,7 @@ mod tests {
             active: false,
             ..Default::default()
         };
-        let charging = grabber(&lip(Edge::Right), (10., 144.), half, A, S).unwrap();
+        let charging = grabber(&lip(Edge::Right), (10., 144.), half, A, S, false).unwrap();
         // Half way: the bar is 7 x 64 from the centre and the lip-wide glow sits behind it.
         assert!(
             charging.contains(r#"<rect x="1.5" y="40" width="7" height="64" rx="3.5""#),
@@ -376,7 +458,7 @@ mod tests {
             active: true,
             ..Default::default()
         };
-        let opened = grabber(&lip(Edge::Right), (10., 144.), open, A, S).unwrap();
+        let opened = grabber(&lip(Edge::Right), (10., 144.), open, A, S, false).unwrap();
         assert!(
             opened.contains(r#"<rect x="1" y="36" width="8" height="72" rx="4" fill="rgb(10,20,30)" opacity="1""#),
             "{opened}"
@@ -388,7 +470,7 @@ mod tests {
             ..Default::default()
         };
         assert_eq!(
-            grabber(&lip(Edge::Right), (10., 144.), done, A, S)
+            grabber(&lip(Edge::Right), (10., 144.), done, A, S, false)
                 .unwrap()
                 .matches("<rect")
                 .count(),
@@ -396,12 +478,12 @@ mod tests {
             "a completed dwell draws no glow"
         );
         assert!(
-            handle(&lip(Edge::Left), (10., 144.), idle(), A, S, S, true)
+            handle(&lip(Edge::Left), (10., 144.), idle(), A, S, S, true, false)
                 .unwrap()
                 .contains("<path")
         );
         assert!(
-            !handle(&lip(Edge::Left), (10., 144.), idle(), A, S, S, false)
+            !handle(&lip(Edge::Left), (10., 144.), idle(), A, S, S, false, false)
                 .unwrap()
                 .contains("<path")
         );

@@ -70,6 +70,8 @@ pub struct Prefs {
     pub click_edge_menus: bool,
     /// D6 (spec 0237): `edgeHandleStyle` `"arrows"` keeps the chevrons; anything else is the pearl grabber.
     pub edge_arrows: bool,
+    /// `edgeHandleTopVisible` (`=== true`, opt-in): the top lip draws its handle under the bar title.
+    pub top_tab: bool,
     /// `edgeHandleLeft` / `edgeHandleRight` / `edgeHandleTop` (`!== false`): an edge whose handle is
     /// off shows no lip (the bar offers a button instead, N0247).
     pub edge_handles: EdgeHandles,
@@ -229,6 +231,7 @@ impl Prefs {
                 .map_or(350, |v| v.clamp(0., 800.) as u32),
             click_edge_menus: flag("clickEdgeMenus") == Some(true),
             edge_arrows: desktop.get("edgeHandleStyle").and_then(Json::as_str) == Some("arrows"),
+            top_tab: flag("edgeHandleTopVisible") == Some(true),
             edge_handles: EdgeHandles {
                 left: on("edgeHandleLeft"),
                 right: on("edgeHandleRight"),

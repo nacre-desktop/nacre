@@ -742,6 +742,26 @@
       "advanced": false
     },
     {
+      "id": "panels.lips.topHandleVisible",
+      "page": "panels",
+      "section": "panels.lips",
+      "key": "topHandleVisible",
+      "labelId": "settings.registry.panels.lips.topHandleVisible.label",
+      "descriptionId": "settings.registry.panels.lips.topHandleVisible.description",
+      "type": "boolean",
+      "store": {
+        "id": "desktop",
+        "key": [
+          "edgeHandleTopVisible"
+        ]
+      },
+      "default": false,
+      "apply": "instant",
+      "synonyms": [],
+      "advanced": false,
+      "dependsOn": "panels.lips.topHandle"
+    },
+    {
       "id": "panels.lips.hoverDelay",
       "page": "panels",
       "section": "panels.lips",

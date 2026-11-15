@@ -440,6 +440,7 @@ impl Gate {
             frame.handles = p.edge_handles;
             frame.arrows = p.edge_arrows;
             crate::frame_art::ARROWS.store(p.edge_arrows, SeqCst);
+            crate::frame_art::TOP_TAB.store(p.top_tab, SeqCst);
             changed |= lips;
             moved
         };
