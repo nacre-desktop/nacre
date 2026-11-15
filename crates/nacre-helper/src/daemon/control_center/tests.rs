@@ -1262,6 +1262,8 @@ fn recorder_follows_the_user_manager_without_polling() {
             "the stop arrives as a signal"
         );
         task.abort();
+        // Drop the watcher inside the runtime: zbus spawns its match removal on drop.
+        let _ = task.await;
     });
     let _ = bus.kill();
     let _ = bus.wait();
