@@ -20,7 +20,7 @@ features. Some shared features use a fallback or have reduced behavior.
 | **Panels** | | | |
 | Open and close motion | Yes | Partly: uses client-owned motion fallback | Partly: uses client-owned motion fallback |
 | Detach panels | Yes | Partly: uses prepared-window fallback path | Partly: native detach needs confirmation |
-| Panel drag setting | Yes (built in, no setting needed) | No (hidden) | Yes |
+| Panel drag setting | Not yet: Super-drag stays on | Not yet: Super-drag stays on | Not yet: Super-drag stays on |
 | Edge cues | Yes | No (hidden) | No (hidden) |
 | **Overview** | | | |
 | Window and workspace focus | Yes | Yes (not yet checked in a session) | Yes (not yet checked in a session) |

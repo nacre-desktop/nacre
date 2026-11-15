@@ -191,7 +191,7 @@ See [Niri's border configuration](https://niri-wm.github.io/niri/Configuration%3
 
 [Optional AI and Brain](optional-apps.md) need separate setup. Supported panels
 can [open as ordinary windows](detachable-panels.md): Super+Ctrl+D detaches the
-open panel. Hyprland also supports holding Super and dragging it away from the edge.
+open panel; holding Super and dragging it away from the edge also works.
 
 ## Widgets
 
