@@ -86,7 +86,18 @@ on this branch and on main run alone after `cargo build --examples`, so it is or
 dependent, not this change. Orient `orient-decoder`: fmt, clippy `-D warnings`, unit tests (3,
 with the new one) and its integration tests pass.
 
-Desktop re-check of B3/B5 not run: the TEST host failed the swap gate (2.5 GiB zram swap used,
-MemAvailable 9.4 GiB, owner session active). The N0318 harness and scenario (a per-click pointer
-round, then a round with one held pointer, Settings/Colors/Widgets/Welcome sizes, the overview)
-are kept with the N0316 evidence (`n0318/harness/`) for a re-run once the gate passes.
+Desktop re-check (2026-11-15, TEST host, passed the swap gate: 3.4 and 4.5 MiB swap used, MemAvailable 9.5 GiB):
+Nacre `662df10fd` release build (rustc 1.99.1, `cargo build --release --locked -j4` in
+`nacre-ci/arch-nacre:current`), Hyprland 0.56.2 nested in headless labwc, `run.sh ... --compositor hyprland
+--components configs,shell` with `scenario-n0318-hypr.jsonl` (chunk 1) and a bell-only follow-up (chunk 2).
+- B5 PASS: Settings 1100x800, Colors 1100x760, Widgets 1344x810, Welcome 1100x800 (hyprctl clients, 1920x1080), all
+  floating and centred; screenshots show full windows, no minimum-size squeeze. Thunar is not installed on the host
+  (never pacman there), so its rule was not run.
+- B3 confirmed as a harness artifact. Per-click pointer: 0 of 5 bar clicks opened a panel (logo, title, bell,
+  Wi-Fi/audio, calendar), `hyprctl devices` had no mouse. One held pointer (`virtual-pointer ... hover`): logo opens the
+  launcher, title the dashboard, audio the control centre (Wi-Fi page), calendar the calendar; the bell opened the
+  notifications drawer in the follow-up (in chunk 1 the dashboard was still open, so the bell click only closed it).
+  The -1,-1 enter is not observable from the logs; the outcome is: clicks land on the right bar items.
+- Overview PASS: Super+Tab shows the Windows overview with the live kitty tile as an app icon (no capture), per B1.
+Evidence (gate logs, hyprctl/clients output, shell/compositor logs, screenshots, not committed):
+`~/.local/share/nacre/ai/lead/platform/n0316-tier2-smoke/n0318/desktop-recheck-20261115/`.
