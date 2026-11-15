@@ -84,3 +84,32 @@ Other gaps:
   B4). It ran on a 60 Hz nested parent, so it is not a 120 Hz measurement.
 - The item stays **active** until the three fixes above land and a re-run of the benchmark
   shows every panel at 12 ms or less, and the lead's live laptop audit agrees.
+
+## Live baseline and plan (2026-11-15, owner: every v0.1 feature stays in)
+
+Live `PANEL_SLIDE` data on the laptop since the 19:30 deploy (nacre e353b2064, Bead fa3e4e68):
+notifications and OSD already pass (8.7–9.1 ms max gap, 25–26 frames per ~200 ms). The big panels
+drop one or two frames per slide: control centre open 7/7 over the gate (16.5–24.2 ms), close 5/7
+(12.5–20.1 ms); dashboard open 4/4 (16.8–21.9 ms), close 4/4 (14.1–28.6 ms); launcher open 3/3
+(13.4–17.6 ms), close 3/3 (15.0–23.3 ms). At 120 Hz the gate means no dropped frame. The first open
+of each panel after a shell start waited about 1 s for niri's frame-callback fallback; Bead B0294
+(285aede6, pinned in 1a4d17df6) fixes that.
+
+What counts: open, close and retarget slides of every panel listed under Acceptance, including the
+cold first open after a shell start and the docked tab's morph (part of its panel's slide). Not
+counted: pearl drags, wallpaper transitions, compositor window animations.
+
+Metric: `PANEL_SLIDE … max_gap_ms` now; once Bead adds `max_presented_gap_ms` (wp_presentation),
+that is the gate and `max_gap_ms` stays the client-side diagnostic.
+
+Pass rule: (a) a dedicated live run on the laptop with a quiet host, at least 10 opens and 10 closes
+per panel including one cold first open each, with every slide at 12 ms or less; and (b) over two
+evenings of normal use, at least 99 % of slides at 12 ms or less and none over 17 ms.
+
+Plan: phase 0, Bead B0295 adds each slide's worst-gap breakdown to the end of `PANEL_SLIDE`
+(`gap_at`, `gap_wait_ms` compositor callback, `gap_queue_ms` main loop behind other work,
+`gap_render_ms` draw to commit, and `max_presented_gap_ms` if cheap); one evening of owner use with it
+deployed sorts every miss into a bucket. Phase 1 fixes by bucket: render and queue in Bead (static
+body cache, partial damage, no relayout during motion, the animating panel's frame first); callback
+wait in Platform (niri timing, as NN0045); view and content work during motion in Shell (data
+updates, projections and font selection in the control centre, dashboard and launcher).
