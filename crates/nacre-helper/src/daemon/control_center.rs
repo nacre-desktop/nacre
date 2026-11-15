@@ -1237,7 +1237,12 @@ fn collect(
             .filter(|(name, _)| probe.outputs.contains(name))
             .map(|(name, level)| (name.clone(), *level))
             .collect(),
-        keyboard: None,
+        // A skipped scan (`None`: one is still running) keeps the prior light, as brightness does.
+        keyboard: if lights.is_none() {
+            prior.keyboard.clone()
+        } else {
+            None
+        },
         airplane: None,
         night_light: prior.night_light.clone(),
         stay_awake: None,

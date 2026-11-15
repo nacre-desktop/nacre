@@ -993,6 +993,10 @@ fn state_reads_every_backend_and_omits_the_missing_ones() {
     let slow = collect_now(&f, &probe(true), &next);
     assert!(slow.night_light.unwrap().enabled);
     assert_eq!(slow.recorder, Some(Recorder { recording: true }));
+    // A skipped light scan keeps the prior lights.
+    let skipped = collect(&f.env(), &probe(false), &state, None);
+    assert_eq!(skipped.keyboard, state.keyboard);
+    assert_eq!(skipped.brightness, state.brightness);
 
     // Two internal panels cannot be mapped to the one backlight.
     let two = Probe {
