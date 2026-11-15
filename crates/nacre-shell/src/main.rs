@@ -1192,6 +1192,8 @@ fn start(
             None
         };
         let make_source = move |output: Option<String>| {
+            // Names this worker on Bead's WORKER_BUSY lines.
+            let label = format!("primary:{}", output.as_deref().unwrap_or("-"));
             let prefs_source = prefs_source.clone();
             let brightness_client = brightness_client.clone();
             let bar_routes = bar_routes.clone();
@@ -1320,7 +1322,7 @@ fn start(
                 })();
                 result.map_err(|e| e.to_string())
             });
-            Box::new(bead::wayland::worker::Source::new(factory, worker_fallback))
+            Box::new(bead::wayland::worker::Source::new(factory, worker_fallback).with_label(label))
                 as Box<dyn bead::wayland::SceneSource>
         };
         let renderer = bead::render::renderer(options.renderer)?;
