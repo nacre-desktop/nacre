@@ -1529,7 +1529,7 @@
   "software.catalog.extensions.import.description": "Import a Nacre extension from an HTTPS Git repository",
   "software.catalog.extensions.import.label": "Add an extension",
   "software.catalog.extensions.label": "Extensions",
-  "software.catalog.themes.create.description": "Fine-tune and save a palette in Nacre Colors",
+  "software.catalog.themes.create.description": "Fine-tune and save a palette in Settings → Colors",
   "software.catalog.themes.create.label": "Create a theme",
   "software.catalog.themes.description": "Preview and apply desktop palettes",
   "software.catalog.themes.import.description": "Add a Nacre theme manifest from a local file",

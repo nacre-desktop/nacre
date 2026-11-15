@@ -1539,7 +1539,7 @@
       "kind": "action",
       "label": "Create a theme",
       "icon": "palette",
-      "description": "Fine-tune and save a palette in Nacre Colors",
+      "description": "Fine-tune and save a palette in Settings → Colors",
       "operation": "settings",
       "value": "colors",
       "labelId": "software.catalog.themes.create.label",
