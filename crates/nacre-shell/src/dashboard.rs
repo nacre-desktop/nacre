@@ -1647,7 +1647,7 @@ fn credit_url(url: &str) -> Option<&str> {
 fn text(out: &mut BTreeMap<String, Value>, key: &str, value: &str, limit: usize) {
     out.insert(format!("dashboard.{key}"), Value::Text(line(value, limit)));
 }
-fn line(value: &str, limit: usize) -> String {
+pub(crate) fn line(value: &str, limit: usize) -> String {
     let mut chars = value.chars().map(|c| if c.is_control() { ' ' } else { c });
     let mut out: String = chars.by_ref().take(limit).collect();
     if chars.next().is_some() {

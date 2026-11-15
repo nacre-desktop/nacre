@@ -248,6 +248,25 @@
           "dynamic": false
         }
       ],
+      "method": "ai",
+      "parameters": [
+        {
+          "name": "page",
+          "type": "string",
+          "optional": true
+        }
+      ],
+      "returns": "void",
+      "source": "Nacre N0248"
+    },
+    {
+      "target_expression": "\"nacre\"",
+      "patterns": [
+        {
+          "prefix": "nacre",
+          "dynamic": false
+        }
+      ],
       "method": "left",
       "parameters": [],
       "returns": "void",

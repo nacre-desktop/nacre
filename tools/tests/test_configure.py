@@ -98,19 +98,12 @@ class ConfigurationTests(unittest.TestCase):
             entry.read(target)
             app = entry["Desktop Entry"]
             self.assertEqual(app["Name"], "Nacre AI")
-            self.assertEqual(app["TryExec"], "nacre-ai")
+            # N0248: the entry opens the Nacre AI window; the terminal UI stays `nacre-ai`.
+            self.assertEqual(app["TryExec"], "nacrectl")
             self.assertEqual(app["Icon"], "nacre-ai")
+            self.assertEqual(app["StartupWMClass"], "nacre-ai")
             self.assertEqual(
-                shlex.split(app["Exec"]),
-                [
-                    "kitty",
-                    "--class",
-                    "nacre-ai-dashboard",
-                    "--title",
-                    "Nacre AI",
-                    "--",
-                    "nacre-ai",
-                ],
+                shlex.split(app["Exec"]), ["nacrectl", "ui", "nacre", "ai"]
             )
             self.assertEqual(module.plan(home, root)[0], [])
 

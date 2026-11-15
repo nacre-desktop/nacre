@@ -693,6 +693,7 @@ pub struct Runtime {
     settings: Option<std::rc::Rc<crate::settings::Settings>>,
     colors: Option<std::rc::Rc<crate::colors::Colors>>,
     brain: Option<std::rc::Rc<crate::brain::Brain>>,
+    ai_app: Option<std::rc::Rc<crate::ai_app::AiApp>>,
     welcome: Option<std::rc::Rc<crate::welcome::Welcome>>,
     control: Option<std::rc::Rc<crate::control_center::ControlCenter>>,
     control_subscription: Vec<bead::core::source::Subscription>,
@@ -2668,6 +2669,7 @@ impl Runtime {
             settings: None,
             colors: None,
             brain: None,
+            ai_app: None,
             welcome: None,
             control: None,
             control_subscription: Vec::new(),
@@ -3683,6 +3685,20 @@ impl Runtime {
         self.actions.register("brain.do", "brain.control")?;
         self.actions.grant("brain.control");
         self.brain = Some(brain);
+        Ok(self)
+    }
+    /// N0248 Nacre AI window: the N0319 topics and chat list over the rail view.
+    pub fn with_ai_app(mut self, app: crate::ai_app::AiApp) -> Result<Self, Box<dyn Error>> {
+        if self.ai_app.is_some() {
+            return Err("one data projector per panel".into());
+        }
+        let app = std::rc::Rc::new(app);
+        let projector = app.clone();
+        self.session
+            .set_projector(Box::new(move |stores| Ok(projector.project(stores))));
+        self.actions.register("ai.do", "ai.control")?;
+        self.actions.grant("ai.control");
+        self.ai_app = Some(app);
         Ok(self)
     }
     /// B0059 Welcome window: app availability, shortcut rows and the window size over the tour view.
@@ -5905,6 +5921,12 @@ impl SceneSource for Runtime {
                 wakeup(bead::wayland::UiEvent::Model(BTreeMap::new()));
             }));
         }
+        if let Some(app) = &self.ai_app {
+            let wakeup = wakeup.clone();
+            app.subscribe(std::sync::Arc::new(move || {
+                wakeup(bead::wayland::UiEvent::Model(BTreeMap::new()));
+            }));
+        }
         if let Some(welcome) = &self.welcome {
             let wakeup = wakeup.clone();
             welcome.subscribe(std::sync::Arc::new(move || {
@@ -6100,6 +6122,9 @@ impl SceneSource for Runtime {
         }
         if let Some(brain) = &self.brain {
             brain.set_viewport(width);
+        }
+        if let Some(app) = &self.ai_app {
+            app.set_viewport(width, height);
         }
         if let Some(welcome) = &self.welcome {
             welcome.set_viewport(width, height);
@@ -8085,6 +8110,17 @@ impl SceneSource for Runtime {
             let scene = self.session.update(changes)?;
             return self.finish_scene(scene);
         }
+        if let (Some(app), Some((_, name, bead::core::Value::Text(arg)))) =
+            (&self.ai_app, &host_action)
+            && name == "ai.do"
+            && (matches!(&event, UiEvent::Click { .. } | UiEvent::Release)
+                || matches!(&event, UiEvent::Command { command, .. } if command == "enter"))
+        {
+            self.actions.authorize(name)?;
+            app.act(arg, &self.session.stores);
+            let scene = self.session.update(BTreeMap::new())?;
+            return self.finish_scene(scene);
+        }
         if let (Some(welcome), Some((_, name, bead::core::Value::Text(arg)))) =
             (&self.welcome, &host_action)
             && name == "welcome.do"
@@ -9676,6 +9712,8 @@ impl SceneSource for Runtime {
             UiEvent::Relayout if self.colors.is_some() => self.session.update(BTreeMap::new())?,
             // So does the Brain window (rail, page and reader widths).
             UiEvent::Relayout if self.brain.is_some() => self.session.update(BTreeMap::new())?,
+            // The Nacre AI window sizes its rail page from the window width.
+            UiEvent::Relayout if self.ai_app.is_some() => self.session.update(BTreeMap::new())?,
             // The Welcome layout reads the window size: a resize projects it again.
             UiEvent::Relayout if self.welcome.is_some() => self.session.update(BTreeMap::new())?,
             UiEvent::Relayout => self.session.relayout()?,

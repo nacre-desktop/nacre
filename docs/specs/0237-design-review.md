@@ -603,3 +603,62 @@ Kit asks: `kit.KeyCap{keys}` (the local `keycap` stand-in), gradient fill on `ui
 opacity for page crossfades.
 
 Status: implemented; evidence and checks in the unit report.
+
+## D8 Nacre AI app (N0248)
+
+**Status:** first version (Shell half of D8, option A). Platform half: N0319
+(`docs/specs/0319-ai-helper-api.md`).
+
+- **Window.** `nacre-shell --app ai` is a Bead window app packaged exactly like the Brain app:
+  `shell/ai/{main,behavior}.luau` + `bundle.json`, `crates/nacre-shell/src/ai_app.rs` (adapter and
+  `window_spec`, size restored from `ai-window.json`), one `app::APPS` entry and the window branch in
+  `app::run`, the five Brain-style `Runtime` hooks (`with_ai_app`, subscribe, viewport, `ai.do`,
+  relayout). `nacre ai [chats|projects|accounts|usage]` opens or deep-links it (command catalog
+  route). `nacre/desktop/nacre-ai.desktop` runs `nacrectl ui nacre ai`, so the launcher's app row and
+  the desktop menu land in the window. The terminal UI is unchanged as `nacre-ai` (the launcher's
+  `tasks` action still opens it in kitty).
+- **Rail.** 200 px `surfaceContainer` rail: the Nacre AI mark and name, Chats, Projects, Accounts,
+  Usage, Brain, and Settings at the foot (36 px rows, 10 px radius, 18 px icons; the current page
+  `surfaceContainerHigh` with a `primary` icon). Brain opens the Brain app; Settings is the sidebar's
+  `ai.launcher.action settings`.
+- **Provider abstraction.** No provider is named in the view or adapter: the Chats header is a
+  `kit.Segment` over `ai.providers` (chat-capable entries), the new chat card says
+  "New {provider} chat", and chat chips, account groups and usage ring tones all come from the
+  registry. A local model later is one more N0319 `Provider` with no Shell change.
+- **Pages.** Chats: the new chat card (`ai.chats.start` with the chosen provider and project) and the
+  `ai.chats.list` rows in the D7 row style, grouped Running / Today / Earlier; a row resumes through
+  `ai.chats.resume` when the helper marks it resumable. Projects: settings rows from `ai.projects`
+  (remote ones show `host:path`), the chosen one ticked; it is the new chat's project. Accounts: rows
+  from `ai.accounts` grouped by provider with the sign-in status and an "active" chip; "Check sign-in"
+  calls `ai.accounts.refresh` (checks run only on request). Usage: one ring per reported quota window
+  (`primary` for the chosen provider, `secondary` for others), text lines otherwise. The row model is
+  `ai_app::usage_rows`, now shared with the dashboard's AI usage page (the dashboard loop was moved,
+  not copied).
+- **Tests.** `ai_app_tests.rs`: each page's model over `protocol/fixtures/ai-app.jsonl` and
+  `dashboard-ai-usage.jsonl`, the projection with stored choices and without a daemon, the guarded
+  actions; goldens `ai-app-chats-1` and `ai-app-usage-1` (1120x760, 1x, dark).
+
+- **Checks (dev-2, nacre-ci/arch-nacre:current).** rustfmt 1.10 applied; clippy `-p nacre-shell
+  --all-targets -D warnings` clean; whole `nacre-shell` binary 944 passed, 1 failed (the route-count
+  constant, fixed to 125; the focused re-run passed clippy, `ai_app` + `commands::` 19/19 and
+  `cargo fmt --check`); Luau analyzer 185 modules OK;
+  `nacre-shell --check shell/ai/main.luau` OK; i18n coverage passed; ruff clean on the touched test.
+- **Renders.** The two goldens are the evidence (looked at next to the mockup): rail, chosen page,
+  provider segment, new chat card, Running/Today groups with the running halo and "Open", usage ring
+  with the reset caption and text lines for a provider without windows.
+
+Known gaps (next units):
+
+1. Chats hosts D7's row look, not the sidebar view itself: shell/chat/main.luau is one panel file.
+   Hook for the chat owner: expose the launcher list and composer as a function module
+   (`require("../chat/launcher")(ui, kit, geometry)`), then the Chats page calls it and the local row
+   code here is deleted (expiry: the unit after that hook lands).
+2. The composer of the mockup needs a prompt on `ai.chats.start` (Platform ask) or the hosted
+   `ai.chat` adapter in the window; tonight the card starts a terminal chat with no prompt.
+3. The usage ring markup is still drawn twice (here and `shell/dashboard/ai-usage/page.luau`):
+   extract one `shell/ui/components/usage-ring.luau` when the dashboard is not in flight
+   (expiry 2026-11-28).
+4. Wordmark in Manrope (the shell bundles only IBM Plex here); the running dot does not pulse yet
+   (kit attention pulse, N0237 kit ask 3); no light golden (D17, N0249).
+5. Motion: the window opens as a compositor window (no panel growth applies); page switches are
+   instant. `nacre-ai --tui` is not a helper flag yet (Platform ask: alias it to `dashboard`).

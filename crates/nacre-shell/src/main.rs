@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+mod ai_app;
 mod app;
 mod backends;
 mod bar_recording;

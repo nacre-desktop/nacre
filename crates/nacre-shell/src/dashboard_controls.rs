@@ -903,36 +903,8 @@ impl Dashboard {
                     48,
                 );
                 // A provider with structured windows (N0319) gets one ring row per window and no
-                // text lines; one without keeps its lines. Nothing is estimated.
-                let now = (self.now)();
-                for id in &s.providers.order {
-                    let Some(p) = s.providers.items.get(id) else {
-                        continue;
-                    };
-                    let windows = &p.windows;
-                    let name = line(&p.name, 32);
-                    if windows.is_empty() {
-                        rows.push(json!({"id":id.0,"label":name,"value":"","detail":"","provider":name,"head":true}));
-                        for (n, l) in p.lines.iter().enumerate() {
-                            rows.push(json!({"id":format!("{}-{n}", id.0),"label":line(l,96),"value":"","detail":"","provider":name}));
-                        }
-                    }
-                    for (n, w) in windows.iter().enumerate() {
-                        let resets = w
-                            .resets_ms
-                            .filter(|t| *t > now)
-                            .map(|t| {
-                                tr(
-                                    "bead.dashboard.ai-usage-resets",
-                                    &[("value", &crate::notice_service::time_str(t - now))],
-                                )
-                            })
-                            .unwrap_or_default();
-                        rows.push(json!({"id":format!("{}-w{n}", id.0),"label":format!("{name} · {}", line(&w.label,24)),
-                            "value":format!("{:.0}%", w.used_percent),"detail":resets,"provider":name,"percent":w.used_percent}));
-                    }
-                }
-                rows.truncate(14);
+                // text lines; one without keeps its lines (shared with the Nacre AI app).
+                rows = crate::ai_app::usage_rows(&s, (self.now)());
             }
             Extra::BrainRecent(s) => {
                 text(out, "heading", &tr("bead.dashboard.brain-heading", &[]), 48);

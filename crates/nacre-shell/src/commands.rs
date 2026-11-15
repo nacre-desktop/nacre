@@ -379,6 +379,14 @@ pub fn map_views(mut call: Call) -> Result<Call, Reply> {
     {
         return Err(crate::app::route(call.id, "brain", "open", &call.args));
     }
+    // N0248: `nacre ai [page]` opens the Nacre AI app (deep link by rail page).
+    if call.target == "nacre"
+        && call.method == "ai"
+        && call.args.len() <= 1
+        && call.args.iter().all(Value::is_string)
+    {
+        return Err(crate::app::route(call.id, "ai", "open", &call.args));
+    }
     // B0060: `colorsApp open [image]` (what `nacre-colors` calls) opens the Colors app; an empty
     // image means "no image". Opening never applies a palette.
     if call.target == "colorsApp"
@@ -801,7 +809,7 @@ mod tests {
     #[test]
     fn every_audited_route_and_selector_is_typed_and_dispatchable() {
         let c = catalog().unwrap();
-        assert_eq!(c.routes.len(), 124);
+        assert_eq!(c.routes.len(), 125);
         for route in &c.routes {
             for p in &route.patterns {
                 let args = route
