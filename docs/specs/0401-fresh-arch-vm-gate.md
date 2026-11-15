@@ -135,10 +135,12 @@ Fresh overlays on dev-1 with KVM/virgl; the upgrade run starts from the `b94eba5
 | niri | fresh | all PASS | r3079 | 2m09s | 86433e4a |
 | hyprland | fresh | all PASS | r3079 | 1m55s | 86433e4a |
 | nacre-niri | upgrade from b94eba50 | prepare → session PASS; upgrade FAIL: `nacre update` exits 0 without updating, nacre stays r3292 | r3079 | 2m01s | 86433e4a |
+| nacre-niri | upgrade, fixed CLI both sides (86433e4a+5abe472c pkgrel 1 → 2) | prepare → session PASS; upgrade unfinished: `nacre update` reached `sudo pacman -Syu` on a loaded host and was stopped after 6 min at the night's hard stop | r3110 | — | 86433e4a+5abe472c |
 
 An upgrade runs the old package's `nacre update`, so the N0428 fix cannot reach installs that
 predate it; they need one manual `sudo pacman -Syu`, then `nacre setup`. The other two tiers
 run the same old command and were not repeated. The real upgrade proof needs the fix on both
 sides: dev-1 keeps `86433e4a4+5abe472c` (pkgrel 1) and the same build repackaged as pkgrel 2 for
-that run, plus nacre-niri r3110 (`f405f1a9`) for a fresh nacre-niri rerun; neither VM run got a
-build-host slot before the night's cut-off.
+that run, plus nacre-niri r3110 (`f405f1a9`). With the fix, `nacre update` runs `updates.sh`
+(seen in the guest), so the fresh update stage now drives it on a pty too. The fresh
+nacre-niri rerun on that set did not run before the hard stop.
