@@ -500,6 +500,17 @@ def _run(apply, plan_only, yes, done):
     return 0
 
 
+def _stopped(apply):
+    """Run a lease-taking apply with the daemon stopped (it holds the writer lease)."""
+    import setup
+
+    def run():
+        with setup.daemon_stopped():
+            apply()
+
+    return run
+
+
 def _profile_module(home, root, name, on, plan_only, yes):
     """AI and Brain are profile components: switch the profile and redeploy."""
     if not (root / "package.json.installed").is_file():
@@ -521,7 +532,12 @@ def _profile_module(home, root, name, on, plan_only, yes):
         name,
         [p for p in planned if module_of(Path(p).relative_to(home)) == name],
     )
-    apply = partial(releases.deploy_package, root, profile, keyboard, compositors)
+    # locked: nacre module already holds release.lock.
+    apply = _stopped(
+        partial(
+            releases.deploy_package, root, profile, keyboard, compositors, locked=True
+        )
+    )
     return _run(apply, plan_only, yes, f"{'Enabled' if on else 'Disabled'} {name}.")
 
 
@@ -546,7 +562,9 @@ def _enable(home, root, name, plan_only, yes):
             compositors,
             modules=wanted,
             adopt={name},
+            locked=True,  # nacre module already holds release.lock.
         )
+        apply = _stopped(apply)
     else:
         changed, _links, _ = configure.plan(home, root, modules=wanted, adopt={name})
         paths = [home / path for path, _ in changed if module_of(path) == name]

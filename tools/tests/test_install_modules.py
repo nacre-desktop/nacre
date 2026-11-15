@@ -5,15 +5,18 @@ import io
 import json
 import os
 from pathlib import Path
+import subprocess
 import sys
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 TOOLS = Path(__file__).parents[1]
 sys.path.insert(0, str(TOOLS))
 import configure  # noqa: E402
 import nacre_modules  # noqa: E402
+import releases  # noqa: E402
+import setup  # noqa: E402
 
 PROFILE = {"id": "default", "components": ["configs", "shell"]}
 # Package-only files (deployment/core) so every extra has something to manage.
@@ -398,6 +401,100 @@ class InstallModuleTests(unittest.TestCase):
         self.assertIn(
             "hypr-config", nacre_modules.resolve(self.home, (), ("hyprland",))
         )
+
+
+REPRO = """
+import contextlib, sys
+from pathlib import Path
+from unittest.mock import Mock, patch
+sys.path.insert(0, sys.argv[1])
+import nacre_modules, releases, setup
+home = Path(sys.argv[2])
+root = home / "root"
+(root).mkdir()
+(root / "package.json.installed").write_text("{}")
+releases.STATE = home / "state"
+real_main = nacre_modules.main
+sys.argv = ["nacre", "module", "enable", "xdg-open", "--yes"]
+with (
+    patch.object(releases, "package_plan", return_value=[]),
+    patch.object(releases, "_deploy_package_locked"),
+    patch.object(releases._writer, "writer_lease", lambda _p: contextlib.nullcontext(Mock())),
+    patch.object(setup, "daemon_stopped", contextlib.nullcontext),
+    patch.object(nacre_modules, "_package_context", lambda h, r: (releases, {}, "us", ["niri"])),
+    patch.object(nacre_modules, "main", lambda argv, h, r: real_main(argv, h, root)),
+):
+    releases.main()
+"""
+
+
+class PackageApplyTests(unittest.TestCase):
+    def test_module_enable_does_not_deadlock_on_release_lock(self):
+        with tempfile.TemporaryDirectory() as home:
+            run = subprocess.run(
+                [sys.executable, "-I", "-c", REPRO, str(TOOLS), home],
+                env={"HOME": home},
+                timeout=30,
+            )
+        self.assertEqual(run.returncode, 0)
+
+    def _apply(self, **kwargs):
+        calls = []
+
+        @contextlib.contextmanager
+        def stopped():
+            calls.append("stop")
+            yield
+            calls.append("start")
+
+        deploy = Mock(side_effect=lambda *a, **k: calls.append("deploy"))
+        context = (releases, {"components": []}, "us", ["niri"])
+        with (
+            patch.object(setup, "daemon_stopped", stopped),
+            patch.object(releases, "deploy_package", deploy),
+            patch.object(releases, "package_plan", return_value=[]),
+            patch.object(nacre_modules, "_package_context", lambda h, r: context),
+            tempfile.TemporaryDirectory() as home,
+        ):
+            root = Path(home) / "root"
+            root.mkdir()
+            (root / "package.json.installed").write_text("{}")
+            (root / "deployment" / "ai").mkdir(parents=True)
+            with contextlib.redirect_stdout(io.StringIO()):
+                nacre_modules._enable(Path(home), root, kwargs.pop("name"), **kwargs)
+        return calls, deploy
+
+    def test_enable_applies_under_daemon_stopped_with_held_lock(self):
+        for name in ("xdg-open", "ai"):
+            calls, deploy = self._apply(name=name, plan_only=False, yes=True)
+            self.assertEqual(calls, ["stop", "deploy", "start"])
+            self.assertTrue(deploy.call_args.kwargs["locked"])
+
+    def test_plan_only_and_declined_do_not_stop_the_daemon(self):
+        calls, _ = self._apply(name="xdg-open", plan_only=True, yes=True)
+        self.assertEqual(calls, [])
+        with (
+            patch.object(sys.stdin, "isatty", return_value=True),
+            patch("builtins.input", return_value="no"),
+        ):
+            calls, _ = self._apply(name="xdg-open", plan_only=False, yes=False)
+        self.assertEqual(calls, [])
+
+    def test_deploy_package_takes_release_lock_unless_held(self):
+        for locked, flocks in ((False, 1), (True, 0)):
+            with (
+                tempfile.TemporaryDirectory() as state,
+                patch.object(releases, "STATE", Path(state)),
+                patch.object(releases.fcntl, "flock") as flock,
+                patch.object(releases, "_deploy_package_locked"),
+                patch.object(
+                    releases._writer,
+                    "writer_lease",
+                    lambda _p: contextlib.nullcontext(Mock()),
+                ),
+            ):
+                releases.deploy_package(Path(state), {}, "us", ["niri"], locked=locked)
+            self.assertEqual(flock.call_count, flocks)
 
 
 if __name__ == "__main__":

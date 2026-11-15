@@ -2,6 +2,7 @@
 """Versioned desktop releases: snapshot, stage, exercise, promote, or restore."""
 
 import argparse
+import contextlib
 from contextlib import contextmanager
 import datetime as dt
 import errno
@@ -766,11 +767,17 @@ def package_plan(
         return sorted(set(result), key=str)
 
 
-def deploy_package(repo, profile, keyboard, compositor, modules=None, adopt=()):
-    """Apply prebuilt files without a running desktop; use the same rollback owner."""
+def deploy_package(
+    repo, profile, keyboard, compositor, modules=None, adopt=(), locked=False
+):
+    """Apply prebuilt files without a running desktop; use the same rollback owner.
+
+    locked=True: the caller already holds STATE/release.lock."""
     STATE.mkdir(parents=True, exist_ok=True, mode=0o700)
-    with (STATE / "release.lock").open("a") as lock:
-        fcntl.flock(lock, fcntl.LOCK_EX)
+    with contextlib.ExitStack() as stack:
+        if not locked:
+            lock = stack.enter_context((STATE / "release.lock").open("a"))
+            fcntl.flock(lock, fcntl.LOCK_EX)
         with _writer.writer_lease(HOME / ".config/nacre") as lease:
             lease.ensure_valid()
             return _deploy_package_locked(
