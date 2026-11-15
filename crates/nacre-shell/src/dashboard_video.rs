@@ -220,6 +220,43 @@ mod tests {
         assert!(dashboard.video.borrow().is_none());
     }
     #[test]
+    fn detached_pearl_does_not_keep_a_preview() {
+        let dashboard = super::super::Dashboard::new(
+            super::super::Page::Today,
+            Arc::new(
+                bead_test::source::FakeSource::new(super::super::tests::fixture("calendar"))
+                    .unwrap(),
+            ),
+            None,
+            true,
+        );
+        *dashboard.video.borrow_mut() = Some(Preview {
+            request: Request {
+                motion: nacre_protocol::wallpaper::WallpaperMotion {
+                    kind: nacre_protocol::wallpaper::MotionKind::Video,
+                    file_identity: nacre_protocol::wallpaper::WallpaperFileIdentity::from_metadata(
+                        &std::fs::metadata(std::env::current_exe().unwrap()).unwrap(),
+                    ),
+                    path: String::new(),
+                },
+                width: 1,
+                height: 1,
+            },
+            frame: Default::default(),
+            unread: Default::default(),
+            child: Default::default(),
+            reader: None,
+        });
+        let stores = bead::core::Stores::default()
+            .reconcile(&std::collections::BTreeMap::from([
+                ("panel.open".into(), bead::core::Value::Bool(true)),
+                ("view.detached".into(), bead::core::Value::Bool(true)),
+            ]))
+            .unwrap();
+        dashboard.project_with_stores(&stores);
+        assert!(dashboard.video.borrow().is_none());
+    }
+    #[test]
     fn unconsumed_frames_notify_once() {
         let wakes = Arc::new(std::sync::atomic::AtomicUsize::new(0));
         let counter = wakes.clone();

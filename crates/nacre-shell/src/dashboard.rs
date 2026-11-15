@@ -1459,7 +1459,10 @@ impl Dashboard {
             dimension("dashboard.hero.width"),
             dimension("dashboard.hero.height"),
         );
-        let request = pair.as_ref().and_then(|pair| {
+        // No live preview in a detached pearl: it has no covered signal, and video under other
+        // windows cost about 1.8 cores on battery. The poster still shows.
+        let detached = stores.get("view.detached") == Some(&Value::Bool(true));
+        let request = pair.as_ref().filter(|_| !detached).and_then(|pair| {
             let settings = self.wallpaper_settings.as_ref()?.snapshot();
             let services = self.desktop.as_ref()?.snapshot();
             let reduced = self.prefs().is_none_or(|p| p.reduce_motion);
