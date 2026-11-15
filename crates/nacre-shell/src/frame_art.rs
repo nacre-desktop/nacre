@@ -83,9 +83,11 @@ pub fn grabber(
     let (thick, long) = (6. + 2. * charge, 56. + 16. * charge);
     let thick = thick.min((w - 2.).max(2.));
     let band = if top { w.min(32.) } else { w };
-    // shortcut: 5 is the middle of the default 10 px frame strip; follow the frame width if it grows.
+    // At rest the pill sits mid-strip: the lip's thickness past the bar (all of it without a bar).
+    let bar = crate::placement::BAR_HEIGHT;
+    let strip = if w > bar { (w - bar) / 2. } else { w / 2. };
     let cx = if top {
-        5. + (w - band / 2. - 5.) * attach
+        strip + (w - band / 2. - strip) * attach
     } else {
         w / 2.
     };
