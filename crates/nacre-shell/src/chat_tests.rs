@@ -13,8 +13,22 @@ use tokio::{io::BufReader, net::UnixListener, sync::mpsc};
 pub(crate) static SERIAL: Mutex<()> = Mutex::new(());
 const FRAME_WIDTH: u32 = 534;
 const FRAME_HEIGHT: u32 = 714;
+/// A guard held by a stuck test fails the waiting tests instead of hanging the run.
 pub(crate) fn serial() -> std::sync::MutexGuard<'static, ()> {
-    SERIAL.lock().unwrap_or_else(|p| p.into_inner())
+    let deadline = std::time::Instant::now() + Duration::from_secs(120);
+    loop {
+        match SERIAL.try_lock() {
+            Ok(guard) => return guard,
+            Err(std::sync::TryLockError::Poisoned(p)) => return p.into_inner(),
+            Err(std::sync::TryLockError::WouldBlock) => {
+                assert!(
+                    std::time::Instant::now() < deadline,
+                    "chat tests' serial guard held for over 120 s by a stuck test"
+                );
+                std::thread::sleep(Duration::from_millis(10));
+            }
+        }
+    }
 }
 #[test]
 fn running_indicator_ticker_starts_stops_and_uses_fast_period_only_while_working() {
@@ -767,7 +781,7 @@ async fn a_dropped_daemon_link_reopens_the_worker_and_resyncs() {
     let chat = chat_for(&lab).await;
     let none = stores(&[]);
     until(&chat, &none, "history", |o| num(o, "chat.extent") > 0.).await;
-    assert_eq!(lab.calls.recv().await.unwrap().0, "ai.chat.open");
+    assert_eq!(call_with_timeout(&mut lab).await.0, "ai.chat.open");
     let (resume, disconnected) = tokio::sync::oneshot::channel();
     lab.push.send(Frame::Drop(disconnected)).unwrap();
     until(&chat, &none, "disconnect", |o| {
@@ -786,7 +800,7 @@ async fn a_dropped_daemon_link_reopens_the_worker_and_resyncs() {
         num(&out, "chat.extent") > 0.,
         "transcript survives the reconnect"
     );
-    assert_eq!(lab.calls.recv().await.unwrap().0, "ai.chat.open");
+    assert_eq!(call_with_timeout(&mut lab).await.0, "ai.chat.open");
 }
 
 #[tokio::test(flavor = "current_thread")]
