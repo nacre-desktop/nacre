@@ -1133,10 +1133,6 @@ fn start(
     if let Some(desktop) = &shared_desktop {
         let _ = desktop_owner.set(desktop.clone());
     }
-    let _session_resume = session_state
-        .as_deref()
-        .zip(shared_desktop.clone())
-        .and_then(|(session, desktop)| desktop::watch_resume(session, desktop));
     if let (Some(power), Some(battery)) = (&power_settings, &battery_status) {
         motion_policy.bind(power.clone(), battery.clone());
     }
