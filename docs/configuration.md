@@ -71,7 +71,7 @@ are disabled because another monitor has no fixed numbered destination set.
 
 Monitor order for these controls follows layout position: left to right, then top
 to bottom, with connector name breaking ties and wrapping at either end. They work
-in Bird's Eye with the keyboard-selected tile/workspace. Sending keeps the current
+in the overview with the keyboard-selected tile/workspace. Sending keeps the current
 view; exchanges retain windows/layout and save the new home assignments. All
 connected monitors must have a complete set before an operation starts. A failed
 exchange attempts to restore owners, order and views.
@@ -131,7 +131,7 @@ The [shortcut tables](usage.md#hyprland-shortcuts) describe generated defaults.
 Hyprland's shortcut list reads session bindings; niri cannot inspect private
 binding overrides.
 
-On Niri, Super+Tab opens Bird’s Eye. Super+Shift+1–9 (0 for workspace 10)
+On Niri, Super+Tab opens the overview. Super+Shift+1–9 (0 for workspace 10)
 moves the selected tile to that workspace on the current output, keeping the
 overview open and focus on the source workspace. The keyboard-selected tile
 is used; pointing at a different preview does not change the keyboard selection.

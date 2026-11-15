@@ -42,7 +42,7 @@ More in [Theming from a wallpaper](theming.md).
 
 - Super+1 to Super+9 (and Super+0 for 10) switch workspaces. Super+Shift+number
   moves the focused window there.
-- Super+Tab opens the overview (Bird's Eye on niri): every workspace and window
+- Super+Tab opens the overview: every workspace and window
   on one screen.
 - Super+Left/Right/Up/Down moves focus; add Shift to move the window instead.
 - Super+Q closes a window. Super+F toggles fullscreen. Super+T floats it.
