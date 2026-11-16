@@ -1244,6 +1244,51 @@ fn bar_status_states_render_every_attention_state() -> Result<()> {
     Ok(())
 }
 
+/// A full battery on AC is an ordinary status icon (the stale-yellow bolt is gone), and its
+/// percentage shows beside it only when Settings turns "Show battery percentage" on.
+#[test]
+fn full_battery_pill_keeps_the_status_tone_and_shows_percent_only_when_asked() -> Result<()> {
+    let render = |percent: bool| -> Result<Vec<(String, bead::render::Rect)>> {
+        let mut values = super::initial_models()?;
+        values.extend(parity_models());
+        values.extend(BTreeMap::from([
+            ("bead.desktop.network".into(), Value::Text("lan".into())),
+            (
+                "bead.desktop.battery".into(),
+                Value::Text("battery_full".into()),
+            ),
+            (
+                "bead.desktop.battery.value".into(),
+                Value::Text("100".into()),
+            ),
+            ("bead.desktop.battery.plugged".into(), Value::Bool(false)),
+            ("bar.battery.percent".into(), Value::Bool(percent)),
+        ]));
+        let mut h = Harness::load(
+            &root(),
+            Path::new("bar/main.luau"),
+            &root().join("palette.json"),
+            values,
+            Config {
+                width: 1920,
+                height: 50,
+                scale: 1.,
+            },
+        )?;
+        settle_harness_animations(&mut h)?;
+        Ok(bar_texts(&h))
+    };
+    let off = render(false)?;
+    assert!(off.iter().any(|(t, _)| t == "battery_full"));
+    assert!(
+        !off.iter().any(|(t, _)| t == "100 %" || t == "bolt"),
+        "{off:?}"
+    );
+    let on = render(true)?;
+    assert!(on.iter().any(|(t, _)| t == "100 %"), "{on:?}");
+    Ok(())
+}
+
 /// B0192: workspace motion schedules advancing frames and reaches both targets at 120 Hz.
 /// NACRE_TEST_PERF=1 additionally checks real-time cadence on an idle host.
 #[test]

@@ -908,6 +908,28 @@
       "advanced": false
     },
     {
+      "id": "panels/top-bar.status.battery-percent",
+      "page": "panels/top-bar",
+      "section": "panels/top-bar.status",
+      "key": "battery-percent",
+      "labelId": "settings.registry.panels.top-bar.status.battery-percent.label",
+      "descriptionId": "settings.registry.panels.top-bar.status.battery-percent.description",
+      "type": "boolean",
+      "store": {
+        "id": "desktop",
+        "key": [
+          "batteryPercent"
+        ]
+      },
+      "default": false,
+      "apply": "instant",
+      "synonyms": [
+        "battery",
+        "percentage"
+      ],
+      "advanced": false
+    },
+    {
       "id": "panels/dashboard.panel.enabled",
       "page": "panels/dashboard",
       "section": "panels/dashboard.panel",

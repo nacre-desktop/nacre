@@ -275,9 +275,7 @@ fn audio_reading(data: &Json, default: &str) -> Option<Reading> {
         icon: match (default, muted) {
             ("default_input", true) => "mic_off",
             ("default_input", false) => "mic",
-            (_, true) => "volume_off",
-            _ if percent < 35. => "volume_down",
-            _ => "volume_up",
+            (_, muted) => crate::desktop::volume_icon(percent / 100., muted),
         },
         node: Some(id.to_owned()),
         label: node["name"].as_str().unwrap_or_default().to_owned(),

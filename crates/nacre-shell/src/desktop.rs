@@ -16,6 +16,20 @@ pub fn start_services() -> std::sync::Arc<bead::services::Desktop> {
     bead::services::Desktop::start_config(config)
 }
 
+/// The one speaker glyph rule: muted, silent, low, else full. The OSD keeps its Luau twin
+/// (`shell/osd/kinds.luau`, `volume.glyph`) because its level only exists there.
+pub fn volume_icon(level: f64, muted: bool) -> &'static str {
+    if muted {
+        "volume_off"
+    } else if level < 0.010001 {
+        "volume_mute"
+    } else if level < 0.5 {
+        "volume_down"
+    } else {
+        "volume_up"
+    }
+}
+
 /// The daemon's `session.state`; unlocked and awake until the topic publishes.
 pub fn session_state(data: &serde_json::Value) -> SessionState {
     serde_json::from_value(data.clone()).unwrap_or_default()
@@ -23,8 +37,8 @@ pub fn session_state(data: &serde_json::Value) -> SessionState {
 
 pub fn values(s: &Snapshot, menu_item: &str) -> BTreeMap<String, Value> {
     let audio = match (s.audio.volume, s.audio.muted) {
-        (_, Some(true)) => "volume_off",
-        (Some(_), Some(false)) => "volume_up",
+        (_, Some(true)) => volume_icon(0., true),
+        (Some(level), Some(false)) => volume_icon(level, false),
         _ => "volume_mute",
     };
     let mut menu = Vec::new();

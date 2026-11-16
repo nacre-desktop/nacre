@@ -12,13 +12,14 @@ local function bar(props,settings,_data)
     local glyph=ui.resolve_for_check(ui.bind("bead.desktop.battery")) or "battery_unknown"
     local value=ui.resolve_for_check(ui.bind("bead.desktop.battery.value")) or ""
     -- D1 colour rule while on battery: warn (peach stands in for the Orient warn role, kit ask 6) at <= 20 %,
-    -- error at <= 8 %; the percent appears only in those two states (and the value styles).
+    -- error at <= 8 %; the percent appears in those two states, the value styles and when Settings turns "Show battery percentage" on.
     local level=tonumber(value)
     local plugged=ui.resolve_for_check(ui.bind("bead.desktop.battery.plugged"))==true
     local draining=level and not plugged
     local tone=draining and (level<=8 and "error" or level<=20 and "peach") or nil
+    local shown=ui.resolve_for_check(ui.bind("bar.battery.percent"))==true
     local box=t.icon_font*t.line_height
-    local content=(tone or style=="icon+value") and value~="" and value.." %" or style=="icon+text" and "Battery" or nil
+    local content=(tone or shown or style=="icon+value") and value~="" and value.." %" or style=="icon+text" and "Battery" or nil
     local width=content and math.ceil(ui.text_width(content,"IBM Plex Sans",t.detail_font)) or 0
     return (popouts and kit.StatusIcon or ui.Row){id="battery",direction="row",height=t.status_height,radius=t.status_radius,gap=content and t.item_gap or 0,padding=0,padding_left=t.status_padding,padding_right=t.status_count_padding,fill="transparent",hover_fill=ui.alpha("onSurface",t.status_hover),align="center",justify="center",
         aria_label=ui.tr("bead.bar.open-battery"),on_activate=popouts and ui.action("status.pill.open","battery") or nil,

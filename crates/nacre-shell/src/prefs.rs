@@ -77,6 +77,8 @@ pub struct Prefs {
     pub edge_handles: EdgeHandles,
     /// `statusBadges` (`!== false`): counts on the bar's status icons.
     pub status_badges: bool,
+    /// `batteryPercent` (`=== true`, off by default): the battery's percentage beside its icon.
+    pub battery_percent: bool,
     /// N0213 `modules`: the default top-bar instances to show; empty shows them all.
     pub bar_modules: Vec<String>,
     /// `interfaceFont` / `monoFont`: empty means Nacre's default family.
@@ -238,6 +240,7 @@ impl Prefs {
                 top: on("edgeHandleTop"),
             },
             status_badges: on("statusBadges"),
+            battery_percent: flag("batteryPercent") == Some(true),
             bar_modules: strings(desktop.get("modules"), false),
             interface_font: family("interfaceFont"),
             mono_font: family("monoFont"),
@@ -327,6 +330,7 @@ impl Prefs {
             ("bar.updates.enabled".into(), Bool(self.bar_updates_enabled)),
             ("bar.tray.visible".into(), Bool(self.tray_visible)),
             ("bar.status.badges".into(), Bool(self.status_badges)),
+            ("bar.battery.percent".into(), Bool(self.battery_percent)),
             // The header: the bar's own height plus the top frame edge (`NacreFrame`).
             (
                 "bar.height".into(),
@@ -661,7 +665,7 @@ mod tests {
         assert!(d.frame_left && d.frame_right && d.frame_bottom && d.frame_top);
         assert!(d.ai_sidebar_enabled && !d.click_edge_menus);
         assert_eq!(d.lip_hover_delay, 350);
-        assert!(!d.edge_arrows && d.status_badges);
+        assert!(!d.edge_arrows && d.status_badges && !d.battery_percent);
         assert_eq!(d.edge_handles, EdgeHandles::default());
         assert_eq!(d.frame_settings().width, 10.);
         // Wrong types and non-integer delays mean unset; toggles are `!== false`.
@@ -683,10 +687,15 @@ mod tests {
         assert_eq!(set.lip_hover_delay, 0);
         assert!(set.click_edge_menus && !set.ai_sidebar_enabled);
         let handles = Prefs::decode(
-            &json!({"edgeHandleStyle": "arrows", "edgeHandleRight": false, "edgeHandleTop": 0, "statusBadges": false}),
+            &json!({"edgeHandleStyle": "arrows", "edgeHandleRight": false, "edgeHandleTop": 0, "statusBadges": false, "batteryPercent": true}),
             &Json::Null,
         );
-        assert!(handles.edge_arrows && !handles.status_badges);
+        assert!(handles.edge_arrows && !handles.status_badges && handles.battery_percent);
+        assert_eq!(
+            handles.bar_stores()["bar.battery.percent"],
+            bead::core::Value::Bool(true)
+        );
+        assert!(!Prefs::decode(&json!({"batteryPercent": 1}), &Json::Null).battery_percent);
         assert!(
             handles.edge_handles.left && !handles.edge_handles.right && handles.edge_handles.top
         );

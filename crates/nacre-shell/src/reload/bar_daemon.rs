@@ -151,7 +151,11 @@ fn battery(snapshot: &Snapshot) -> BTreeMap<String, Value> {
             KEYS[2].into(),
             Value::Text(battery_glyph(state.percentage).into()),
         ),
-        (KEYS[12].into(), Value::Bool(plugged)),
+        // A full battery on AC is plain full, not "charging": the bolt is for a battery still filling.
+        (
+            KEYS[12].into(),
+            Value::Bool(plugged && state.percentage.is_none_or(|p| p < 99.5)),
+        ),
         (KEYS[3].into(), Value::Text(value.clone())),
         (
             KEYS[4].into(),
@@ -237,14 +241,11 @@ fn audio(snapshot: &Snapshot) -> BTreeMap<String, Value> {
                 text.contains("headphone") || text.contains("headset")
             })
     });
-    let icon = if muted == Some(true) {
-        "volume_off"
-    } else if level.is_none() {
-        "volume_mute"
-    } else if headset {
-        "headphones"
-    } else {
-        "volume_up"
+    let icon = match level {
+        _ if muted == Some(true) => "volume_off",
+        None => "volume_mute",
+        Some(_) if headset => "headphones",
+        Some(level) => crate::desktop::volume_icon(level, false),
     };
     BTreeMap::from([
         (KEYS[5].into(), Value::Text(icon.into())),
@@ -366,6 +367,18 @@ mod tests {
             (&held[KEYS[2]], &held[KEYS[12]]),
             (&Value::Text("battery_5_bar".into()), &Value::Bool(true))
         );
+        // Full on AC (or still "charging" at 100 %): the plain full glyph, no bolt.
+        for (charging, state) in [(false, 4), (true, 1)] {
+            let mut full = battery_data.clone();
+            full["percentage"] = 100.0.into();
+            full["charging"] = charging.into();
+            full["state"] = state.into();
+            let full = battery(&snapshot(full, true));
+            assert_eq!(
+                (&full[KEYS[2]], &full[KEYS[12]]),
+                (&Value::Text("battery_full".into()), &Value::Bool(false))
+            );
+        }
         let mut draining = battery_data.clone();
         draining["charging"] = false.into();
         draining["state"] = 2.into();
@@ -518,6 +531,26 @@ mod tests {
             audio(&snapshot(headset, true))[KEYS[5]],
             Value::Text("headphones".into())
         );
+        // The speaker glyph follows the level and mute, and a new band republishes the icon.
+        for (perceptual, muted, icon) in [
+            (0.0, false, "volume_mute"),
+            (0.3, false, "volume_down"),
+            (0.8, false, "volume_up"),
+            (0.8, true, "volume_off"),
+        ] {
+            let mut node = audio_data.clone();
+            let out = &mut node["nodes"]["items"]["out"];
+            out["volume"] = (perceptual * perceptual * perceptual).into();
+            out["readback"]["linear_volume"] = out["volume"].clone();
+            out["readback"]["perceptual_volume"] = perceptual.into();
+            out["readback"]["muted"] = muted.into();
+            out["muted"] = muted.into();
+            assert_eq!(
+                audio(&snapshot(node, true))[KEYS[5]],
+                Value::Text(icon.into()),
+                "{perceptual} muted={muted}"
+            );
+        }
         let down = audio(&snapshot(audio_data, false));
         assert_eq!(down[KEYS[5]], Value::Text("volume_mute".into()));
         assert_eq!(down[KEYS[8]], Value::Text("Unavailable".into()));
