@@ -533,6 +533,15 @@ impl ShellControl for Gate {
             );
         }
     }
+    fn lip_tab_docked(&self, lip: &str, output: &str, docked: bool) {
+        // Only the chat child (given its parent's lips) reports; the shell's own tabs need no relay.
+        if self.frame_lock().parent_lips.is_some() {
+            crate::app::notify_tab_docked(lip, output, docked);
+        }
+    }
+    fn external_tab_docked(&self, lip: &str, output: &str) -> bool {
+        crate::placement::tab_docked(lip, output)
+    }
     fn edge_chrome(&self) -> EdgeChrome {
         crate::placement::set_frame_lips(&self.visible_frame_lips());
         let frame = self.frame_lock();

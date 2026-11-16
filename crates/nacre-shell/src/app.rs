@@ -382,6 +382,7 @@ pub fn panel_request(name: &'static str, method: &'static str, output: &str) {
 enum PanelRequest {
     Panel(&'static str, &'static str, String),
     Visibility(&'static str, bool),
+    TabDocked(String, String, bool),
     Describe(&'static str),
 }
 /// Queue a child panel visibility observation for its parent shell. The UI event path never waits
@@ -398,6 +399,19 @@ pub fn notify_panel_visibility(open: bool) {
         return;
     }
     enqueue_panel_request(PanelRequest::Visibility(name, open));
+}
+/// Queue a docked-tab change of this chat child for its parent shell (B0309), on the same ordered
+/// lane as visibility, so the parent's free pill returns only after the tab is gone.
+pub fn notify_tab_docked(lip: &str, output: &str, docked: bool) {
+    let Some(host) = HOST.get() else { return };
+    if host.parent.is_none() || host.app_name.as_deref() != Some("chat") {
+        return;
+    }
+    enqueue_panel_request(PanelRequest::TabDocked(
+        lip.to_owned(),
+        output.to_owned(),
+        docked,
+    ));
 }
 /// Ask the shell worker to refresh geometry without delaying its private IPC reply.
 pub fn refresh_panel_description(name: &'static str) {
@@ -433,21 +447,33 @@ fn panel_requests(host: &Host, receiver: std::sync::mpsc::Receiver<PanelRequest>
             }
             PanelRequest::Visibility(name, open) => {
                 let Some(parent) = &host.parent else { continue };
-                if let Err(error) = send_panel_visibility(parent, name, open) {
+                if let Err(error) =
+                    send_parent(parent, "panel-visibility", vec![json!(name), json!(open)])
+                {
                     eprintln!("EXTERNAL_PANEL_ERROR visibility IPC failed: {error}");
+                }
+            }
+            PanelRequest::TabDocked(lip, output, docked) => {
+                let Some(parent) = &host.parent else { continue };
+                if let Err(error) = send_parent(
+                    parent,
+                    "tab-docked",
+                    vec![json!(lip), json!(output), json!(docked)],
+                ) {
+                    eprintln!("EXTERNAL_PANEL_ERROR tab IPC failed: {error}");
                 }
             }
             PanelRequest::Describe(name) => describe_panel_state(name, &host.socket(name)),
         }
     }
 }
-fn send_panel_visibility(parent: &Path, name: &str, open: bool) -> Result<Reply, String> {
+fn send_parent(parent: &Path, method: &str, args: Vec<Value>) -> Result<Reply, String> {
     let call = Call {
         version: 1,
         id: 1,
         target: "bead.apps".into(),
-        method: "panel-visibility".into(),
-        args: vec![json!(name), json!(open)],
+        method: method.into(),
+        args,
         output: None,
     };
     ipc::call(parent, &call, Duration::from_millis(800))

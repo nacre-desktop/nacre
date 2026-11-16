@@ -214,6 +214,26 @@ pub fn map_views(mut call: Call) -> Result<Call, Reply> {
         }
         return Err(Reply::ok(call.id, Value::Null));
     }
+    // The chat child's assistant tab docked on (or left) its panel (B0309): while docked the
+    // shell's free lip keeps no pill, so a closing panel never shows two.
+    if call.target == "bead.apps" && call.method == "tab-docked" {
+        let output = call.args.get(1).and_then(Value::as_str).unwrap_or_default();
+        if call.args.len() != 3
+            || call.args[0].as_str() != Some("assistant")
+            || output.is_empty()
+            || output.len() > 64
+            || call.args[2].as_bool().is_none()
+        {
+            return Err(Reply::error(
+                call.id,
+                "invalid-route",
+                "expected assistant, an output and a docked boolean",
+            ));
+        }
+        let docked = call.args[2].as_bool().expect("validated");
+        crate::placement::set_tab_docked("assistant", output, docked);
+        return Err(Reply::ok(call.id, Value::Null));
+    }
     if call.target == "pearls"
         && call.method == "open"
         && call.args.first().and_then(Value::as_str) == Some("ai")

@@ -169,16 +169,19 @@ type Notify = Box<dyn Fn() + Send + Sync>;
 static EXTERNAL_NOTIFY: std::sync::Mutex<Option<Notify>> = std::sync::Mutex::new(None);
 /// Describe (Some) or drop (None) an external panel; the frame tiles rebuild.
 pub fn set_external(name: &str, panel: Option<External>) {
+    // A child's docked tabs go with its process (exit or crash), or the shell's pill never returns.
+    let tabs = panel.is_none() && {
+        let mut tabs = TAB_DOCKED.lock().unwrap_or_else(|p| p.into_inner());
+        let had = !tabs.is_empty();
+        tabs.clear();
+        had
+    };
     let changed = {
         let mut all = EXTERNAL.lock().unwrap_or_else(|p| p.into_inner());
         all.set_geometry(name, panel)
     };
-    if !changed {
-        return;
-    }
-    EXTERNAL_REV.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-    if let Some(notify) = &*EXTERNAL_NOTIFY.lock().unwrap_or_else(|p| p.into_inner()) {
-        notify();
+    if changed || tabs {
+        external_changed();
     }
 }
 /// Update an external panel's live visibility while retaining its last geometry for a warm reopen.
@@ -187,9 +190,41 @@ pub fn set_external_visible(name: &str, visible: bool) {
         let mut all = EXTERNAL.lock().unwrap_or_else(|p| p.into_inner());
         all.set_visible(name, visible)
     };
-    if !changed {
-        return;
+    if changed {
+        external_changed();
     }
+}
+/// Lips (id, output) whose tab a child app has docked on its own panel (B0309): the shell's free
+/// lip stays at rest, without its pill, until the child reports that tab gone.
+static TAB_DOCKED: std::sync::Mutex<Vec<(String, String)>> = std::sync::Mutex::new(Vec::new());
+pub fn set_tab_docked(lip: &str, output: &str, docked: bool) {
+    let changed = {
+        let mut tabs = TAB_DOCKED.lock().unwrap_or_else(|p| p.into_inner());
+        let at = tabs.iter().position(|(l, o)| l == lip && o == output);
+        match (docked, at) {
+            (true, None) => {
+                tabs.push((lip.to_owned(), output.to_owned()));
+                true
+            }
+            (false, Some(at)) => {
+                tabs.remove(at);
+                true
+            }
+            _ => false,
+        }
+    };
+    if changed {
+        external_changed();
+    }
+}
+pub fn tab_docked(lip: &str, output: &str) -> bool {
+    TAB_DOCKED
+        .lock()
+        .unwrap_or_else(|p| p.into_inner())
+        .iter()
+        .any(|(l, o)| l == lip && o == output)
+}
+fn external_changed() {
     EXTERNAL_REV.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
     if let Some(notify) = &*EXTERNAL_NOTIFY.lock().unwrap_or_else(|p| p.into_inner()) {
         notify();
@@ -1018,6 +1053,17 @@ mod pixels;
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn a_child_docked_tab_holds_until_reported_gone_or_its_process_ends() {
+        set_tab_docked("assistant", "TEST-1", true);
+        assert!(tab_docked("assistant", "TEST-1") && !tab_docked("assistant", "TEST-2"));
+        set_tab_docked("assistant", "TEST-1", false);
+        assert!(!tab_docked("assistant", "TEST-1"));
+        // The child exits (or crashes) while its tab is docked: the shell's pill comes back.
+        set_tab_docked("assistant", "TEST-1", true);
+        set_external("tab-test-child", None);
+        assert!(!tab_docked("assistant", "TEST-1"));
+    }
     #[test]
     fn warm_external_visibility_retains_geometry_without_reopening_the_frame() {
         let mut panels = ExternalPanels::default();
