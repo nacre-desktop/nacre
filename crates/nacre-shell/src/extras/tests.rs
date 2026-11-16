@@ -294,6 +294,7 @@ async fn lab_with_activation_behavior(
                                     && ids.iter().any(|id| id.as_str() == entry["id"].as_str())
                                 {
                                     entry["thumbnail"] = fixture_image.clone().into();
+                                    entry["palette"] = json!({"mode":"dark","colours":{"background":"#102030","onSurface":"#f0f0f0","primary":"#22aa88"}});
                                     if entry["id"] != "/fixture/next.jpg" && entry["id"] != "/fixture/next.mp4" {
                                         entry["preview"] = fixture_image.clone().into();
                                     }
@@ -893,6 +894,125 @@ async fn wallpaper_hydrates_only_visible_image_ids_and_suppresses_missing_previe
     assert!(
         wallpaper.content_ready(),
         "same-boot hydrated content remains ready during refresh"
+    );
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn wallpaper_cached_thumbnails_without_pick_data_fetch_it_once() {
+    use bead::render::{ImageFit, Primitive, Rect, Scene};
+    let mut lab = lab_with_topics(vec!["wallpaper.active".into()]).await;
+    let wallpaper = Extras::new(Kind::Wallpaper, lab.client.clone()).unwrap();
+    start_with_empty_wallpaper_catalogue(&wallpaper);
+    let open = Stores::default()
+        .reconcile(&BTreeMap::from([
+            ("panel.open".into(), Value::Bool(true)),
+            ("extras.kind".into(), Value::Text("wallpaper".into())),
+        ]))
+        .unwrap();
+    let wake: CallWake = Arc::new(|| {});
+    let settle = |wallpaper: &Extras| wallpaper.state.borrow().catalogue.is_none();
+    wallpaper.project(&open, Some(wake.clone()));
+    assert_eq!(
+        lab.calls.recv().await.unwrap(),
+        ("wallpaper.catalogue".into(), json!({"ids":[]}))
+    );
+    for _ in 0..200 {
+        wallpaper.project(&open, Some(wake.clone()));
+        if settle(&wallpaper) {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(5)).await;
+    }
+    let scene = |handle: &str| Scene {
+        opacity: 1.,
+        motion: None,
+        resource_revision: 0,
+        asset_data: Default::default(),
+        clips: Default::default(),
+        layers: Vec::new(),
+        prepared: Default::default(),
+        font_files: Vec::new(),
+        width: 8.,
+        slide: None,
+        primitives: vec![Primitive::Image {
+            blur: 0.,
+            fit: ImageFit::Fill,
+            clip_polygon: None,
+            radius: 0.,
+            tint: None,
+            rect: Rect::new(0., 0., 8., 6.),
+            path: std::path::PathBuf::from(handle),
+        }],
+        offset: (0., 0.),
+        bounds: Rect::new(0., 0., 8., 6.),
+    };
+    // First sight hydrates the thumbnail, palette and the video's poster descriptor.
+    wallpaper.attach_images(
+        &mut scene("@icon:wallpaper:thumbnail:/fixture/next.mp4"),
+        Some(wake.clone()),
+    );
+    assert_eq!(
+        lab.calls.recv().await.unwrap(),
+        (
+            "wallpaper.catalogue".into(),
+            json!({"ids":["/fixture/next.mp4"]})
+        )
+    );
+    for _ in 0..200 {
+        wallpaper.project(&open, Some(wake.clone()));
+        if settle(&wallpaper) {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(5)).await;
+    }
+    // A persisted catalogue keeps the thumbnails but not the pick data: the next open asks again.
+    {
+        let mut state = wallpaper.state.borrow_mut();
+        state.catalogue_settled_handles.clear();
+        let entry = state
+            .catalogue_result
+            .iter_mut()
+            .find(|entry| entry["id"] == "/fixture/next.mp4")
+            .unwrap()
+            .as_object_mut()
+            .unwrap();
+        entry.remove("palette");
+        entry.remove("video_predecode");
+    }
+    wallpaper.attach_images(
+        &mut scene("@icon:wallpaper:thumbnail:/fixture/next.mp4"),
+        Some(wake.clone()),
+    );
+    assert_eq!(
+        lab.calls.recv().await.unwrap(),
+        (
+            "wallpaper.catalogue".into(),
+            json!({"ids":["/fixture/next.mp4"]})
+        )
+    );
+    for _ in 0..200 {
+        wallpaper.project(&open, Some(wake.clone()));
+        if settle(&wallpaper) {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(5)).await;
+    }
+    {
+        let state = wallpaper.state.borrow();
+        let entry = state
+            .catalogue_result
+            .iter()
+            .find(|entry| entry["id"] == "/fixture/next.mp4")
+            .unwrap();
+        assert!(!entry["palette"].is_null() && !entry["video_predecode"].is_null());
+    }
+    wallpaper.attach_images(
+        &mut scene("@icon:wallpaper:thumbnail:/fixture/next.mp4"),
+        Some(wake),
+    );
+    assert!(
+        lab.calls.try_recv().is_err(),
+        "an entry with its pick data starts no helper child"
     );
 }
 

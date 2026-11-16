@@ -1364,6 +1364,10 @@ impl Extras {
                 continue;
             };
             let logical = format!("{field}:{id}");
+            // A pick applies at once only when its palette (and a video's poster descriptor) are
+            // known; a persisted catalogue with warm thumbnails has neither, so fetch them once.
+            let needs_pick_data = entry["palette"].is_null()
+                || (entry["kind"] == "video" && entry["video_predecode"].is_null());
             let primary_file = entry[field]
                 .as_str()
                 .filter(|path| !path.is_empty())
@@ -1380,7 +1384,9 @@ impl Extras {
             let primary_image = primary_file
                 .as_ref()
                 .and_then(|file| cached_wallpaper_image(&mut state, file, LIMIT));
-            if primary_image.is_none() && !state.catalogue_settled_handles.contains(&logical) {
+            if (primary_image.is_none() || needs_pick_data)
+                && !state.catalogue_settled_handles.contains(&logical)
+            {
                 visible_handles.insert(logical.clone());
             }
             let loaded = primary_image.zip(primary_file).or_else(|| {
@@ -1418,7 +1424,7 @@ impl Extras {
         }
         // Persisted visible thumbnails are already usable content. Request
         // catalogue/palette work only for visible assets that missed the local
-        // cache, so a normal cache-hit open does not start helper children.
+        // cache or lack pick data; a fully cached open starts no helper child.
         let request_handles: std::collections::BTreeSet<String> = visible_handles
             .difference(&state.catalogue_settled_handles)
             .cloned()
