@@ -73,10 +73,10 @@ pub fn grabber(
     };
     let attach = state.attach.clamp(0., 1.);
     let charging = !state.active && state.progress > 0. && state.progress < 1.;
-    // The tab keeps its swollen pill for the whole ride, even when `active` lags the close.
-    let charge = if state.active || attach > 0. {
-        1.
-    } else if HOLD_COMPLETED_DWELL && state.progress >= 1. {
+    // The tab keeps its swollen pill for the whole ride, even when `active` lags the close; so does a
+    // completed dwell while its open is pending (HOLD_COMPLETED_DWELL).
+    let held = HOLD_COMPLETED_DWELL && state.progress >= 1.;
+    let charge = if state.active || attach > 0. || held {
         1.
     } else if !charging {
         0.
