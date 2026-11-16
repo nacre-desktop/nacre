@@ -34,8 +34,9 @@ class NativeTerminalBrandingTests(unittest.TestCase):
                 if case["prepare"]:
                     command.append("--prepare")
                 result = subprocess.run(
-                    command, capture_output=True, text=True, check=True, timeout=10
+                    command, capture_output=True, text=True, timeout=10
                 )
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                 self.assertEqual(result.stderr, "")
                 observed = json.loads(result.stdout)
                 record = observed["record"]

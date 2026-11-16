@@ -19,6 +19,9 @@ def probe(binary, prepare):
         art = home / ".local/share/nacre/branding"
         art.mkdir(parents=True)
         (art / "nacre.png").write_bytes(b"fixture-image")
+        # This process holds the PTY master as kitty does, so the helper's ancestor
+        # walk stops here, not at whatever runs the suite (root sudo in a chroot).
+        Path("/proc/self/comm").write_text("kitty")
         pid, master = pty.fork()
         if pid == 0:
             environment = {
