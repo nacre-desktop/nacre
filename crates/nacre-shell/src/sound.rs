@@ -13,6 +13,7 @@ pub fn fallback(fill: [u8; 4]) -> Scene {
             duration: 0.2,
             return_duration: None,
             return_curve: None,
+            auto_open: false,
             spring: false,
             curve: None,
             edge: Edge::Right,

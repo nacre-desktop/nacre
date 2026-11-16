@@ -420,6 +420,7 @@ fn start(
             duration: 0.2,
             return_duration: None,
             return_curve: None,
+            auto_open: false,
             spring: false,
             curve: None,
             edge: panel_edge,
