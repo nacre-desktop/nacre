@@ -24,6 +24,8 @@ fn palette() -> Value {
     serde_json::from_slice::<Value>(&raw).unwrap()["colours"].clone()
 }
 fn home() -> (tempfile::TempDir, Paths, PathBuf) {
+    // A failed prepare is only a tracing warning; show it in the failing test's output.
+    let _ = tracing_subscriber::fmt().with_test_writer().try_init();
     let home = tempfile::tempdir().unwrap();
     let paths = Paths::new(home.path());
     let image = home.path().join("poster.png");
@@ -81,14 +83,14 @@ fn leaked(root: &Path) -> bool {
         fs::read(file).is_ok_and(|bytes| String::from_utf8_lossy(&bytes).contains(SECRET))
     })
 }
-async fn eventually(mut check: impl FnMut() -> bool) {
+async fn eventually(what: &str, mut check: impl FnMut() -> bool) {
     for _ in 0..1500 {
         if check() {
             return;
         }
         tokio::time::sleep(Duration::from_millis(20)).await;
     }
-    panic!("condition not reached");
+    panic!("condition not reached: {what}");
 }
 /// The dashboard pointers Hyprlock's `reload_cmd` reads (`cat`) every 2 s while it runs.
 fn pointers(paths: &Paths) -> Vec<PathBuf> {
@@ -119,7 +121,7 @@ fn pointer_inode(paths: &Paths) -> Option<u64> {
 /// The snapshot is written before the dashboard image; wait for the whole run, then for
 /// the reader watch the run arms.
 async fn prepared(paths: &Paths, title: &str) {
-    eventually(|| {
+    eventually("first snapshot and dashboard pointer", || {
         snapshot_title(paths).as_deref() == Some(title) && pointer_inode(paths).is_some()
     })
     .await;
@@ -268,7 +270,10 @@ async fn changes_are_debounced_and_followed() {
                 publish_all(&hub, &image, title, false);
                 tokio::time::sleep(Duration::from_millis(40)).await;
             }
-            eventually(|| snapshot_title(&paths).as_deref() == Some("burst-4")).await;
+            eventually("burst-4 snapshot", || {
+                snapshot_title(&paths).as_deref() == Some("burst-4")
+            })
+            .await;
             watcher.abort();
             let seen = seen.borrow().clone();
             assert!(
@@ -300,7 +305,10 @@ async fn a_stale_dashboard_is_prepared_when_hyprlock_reads_it() {
             let before = pointer_inode(&paths);
             let read = std::time::Instant::now();
             hyprlock_reads(&paths);
-            eventually(|| pointer_inode(&paths) != before).await;
+            eventually("fresh dashboard after the read", || {
+                pointer_inode(&paths) != before
+            })
+            .await;
             eprintln!(
                 "N0321 hyprlock read to fresh dashboard: {:?}",
                 read.elapsed()
@@ -331,13 +339,16 @@ async fn logind_lock_or_suspend_and_settings_prepare_without_a_reader() {
             hub.borrow_mut()
                 .publish(STATE_TOPIC, state(true, 1))
                 .unwrap();
-            eventually(|| snapshot_title(&paths).as_deref() == Some("second")).await;
+            eventually("second snapshot", || {
+                snapshot_title(&paths).as_deref() == Some("second")
+            })
+            .await;
             hub.borrow_mut()
                 .publish(STATE_TOPIC, state(false, 2))
                 .unwrap();
             assert!(!leaked(&paths.cache));
             publish_all(&hub, &image, "second", true);
-            eventually(|| leaked(&paths.cache)).await;
+            eventually("notice body written", || leaked(&paths.cache)).await;
             task.abort();
         })
         .await;
