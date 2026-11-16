@@ -561,13 +561,19 @@ impl ShellControl for Gate {
         } else {
             Default::default()
         };
-        EdgeChrome {
-            reserved: [
+        // A child app's parent shell already reserves the frame: a second strip doubles it.
+        let reserved = if frame.parent_lips.is_some() {
+            [0; 4]
+        } else {
+            [
                 top as u32,
                 geometry.right as u32,
                 geometry.bottom as u32,
                 geometry.left as u32,
-            ],
+            ]
+        };
+        EdgeChrome {
+            reserved,
             lips,
             hover_delay_ms: frame.delay,
             click_to_open: frame.click,
@@ -795,6 +801,8 @@ mod tests {
             &serde_json::json!({"aiSidebarEnabled":false}),
             &serde_json::Value::Null,
         ));
+        // The parent's strips hold the frame; the chat app reserving it again shrank windows.
+        assert_eq!(gate.edge_chrome().reserved, [0; 4]);
         assert!(
             gate.visible_frame_lips()
                 .iter()
