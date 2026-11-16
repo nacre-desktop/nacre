@@ -3406,6 +3406,11 @@ async fn a_closed_dock_reopens_on_the_overview_after_a_status_click() -> bead_te
     );
     runtime.stage(UiEvent::PanelVisibility(false))?;
     runtime.commit();
+    // Owner 2026-11-16: the close slides out the section it shows, not the overview.
+    assert_eq!(
+        runtime.session.stores.get("cc.detail"),
+        Some(&Value::Text("network".into()))
+    );
     runtime.stage(UiEvent::PanelVisibility(true))?;
     runtime.commit();
     assert_eq!(
@@ -3419,6 +3424,18 @@ async fn a_closed_dock_reopens_on_the_overview_after_a_status_click() -> bead_te
                 .iter()
                 .any(|node| node.id.contains("detail.header.back")),
         "the lip reopened the overview"
+    );
+    // A status click whose model lands before the open keeps its section.
+    runtime.stage(UiEvent::PanelVisibility(false))?;
+    runtime.stage(UiEvent::Model(BTreeMap::from([
+        ("cc.page".into(), Value::Text("detail".into())),
+        ("cc.detail".into(), Value::Text("network".into())),
+    ])))?;
+    runtime.stage(UiEvent::PanelVisibility(true))?;
+    runtime.commit();
+    assert_eq!(
+        runtime.session.stores.get("cc.detail"),
+        Some(&Value::Text("network".into()))
     );
     drop(lab);
     Ok(())

@@ -830,6 +830,9 @@ pub struct Runtime {
     tray_anchor: Option<f32>,
     tray_close: bool,
     tray_requested_close: bool,
+    /// The dock closed since its last open: the next open shows the overview unless a status
+    /// click's model has picked a section first.
+    cc_home_on_open: bool,
     tray_enabled: bool,
     tray_hover: String,
     tray_selection: Option<crate::tray::Selection>,
@@ -2783,6 +2786,7 @@ impl Runtime {
             tray_anchor: None,
             tray_close: false,
             tray_requested_close: false,
+            cc_home_on_open: false,
             tray_enabled: true,
             tray_hover: String::new(),
             tray_selection: None,
@@ -8781,6 +8785,7 @@ impl SceneSource for Runtime {
                 if !self.dock_status.is_empty()
                     && (values.contains_key("cc.page") || values.contains_key("cc.detail"))
                 {
+                    self.cc_home_on_open = false;
                     self.leave_docked_flow();
                     values.extend(Self::cleared_docked_secrets());
                     // 0280: the status icon of the section already on screen closes the panel
@@ -9036,19 +9041,22 @@ impl SceneSource for Runtime {
                     self.tray_requested_close = false;
                 }
                 let mut values = panel_visibility_changes(open, self.launcher.is_some());
+                // Owner 2026-11-14: a closed dock forgets its page, so the lip (hover, push or
+                // key) always reopens the overview; only a status click's model picks a section.
+                // Owner 2026-11-16: forgotten on the next open, not at the close, which slides
+                // out the page it shows.
+                if open && std::mem::take(&mut self.cc_home_on_open) && !self.dock_status.is_empty()
+                {
+                    values.insert("cc.page".into(), bead::core::Value::Text("home".into()));
+                    values.insert("cc.detail".into(), bead::core::Value::Text(String::new()));
+                    values.insert("cc.scroll".into(), bead::core::Value::Number(0.));
+                }
                 if !open {
+                    self.cc_home_on_open = true;
                     for key in ["panel.hover_opened", "panel.anchor_hovered"] {
                         if self.session.stores.get(key).is_some() {
                             values.insert(key.into(), bead::core::Value::Bool(false));
                         }
-                    }
-                    // Owner 2026-11-14: a closed dock forgets its page, so the lip (hover, push or
-                    // key) always reopens the overview; only a status click (CompanionModel after
-                    // the open) picks a section.
-                    if !self.dock_status.is_empty() {
-                        values.insert("cc.page".into(), bead::core::Value::Text("home".into()));
-                        values.insert("cc.detail".into(), bead::core::Value::Text(String::new()));
-                        values.insert("cc.scroll".into(), bead::core::Value::Number(0.));
                     }
                 }
                 if !open && self.chat.is_some() {
