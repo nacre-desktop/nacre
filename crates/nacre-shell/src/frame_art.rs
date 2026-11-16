@@ -125,7 +125,10 @@ pub fn grabber(
     } else {
         0.
     };
-    if glow > 0. {
+    // The left (chat) lip never docks: while its panel is open only the plate stays, so the pill
+    // leaves with the panel instead of sitting beside it (owner 2026-11-16).
+    let pill = !(lip.edge == Edge::Left && state.active);
+    if pill && glow > 0. {
         let gw = if top { 10. } else { w };
         body.push_str(&format!(
             r#"<rect x="{}" y="{}" width="{gw}" height="{}" rx="{}" fill="{}" opacity="{}"/>"#,
@@ -137,12 +140,14 @@ pub fn grabber(
             0.3 * glow
         ));
     }
-    body.push_str(&format!(
-        r#"<rect x="{x}" y="{y}" width="{thick}" height="{long}" rx="{}" fill="{}" opacity="{}"/>"#,
-        thick / 2.,
-        rgb(accent),
-        0.9 + 0.1 * charge
-    ));
+    if pill {
+        body.push_str(&format!(
+            r#"<rect x="{x}" y="{y}" width="{thick}" height="{long}" rx="{}" fill="{}" opacity="{}"/>"#,
+            thick / 2.,
+            rgb(accent),
+            0.9 + 0.1 * charge
+        ));
+    }
     if top {
         body = format!(r#"<g transform="translate(0,{w}) rotate(-90)">{body}</g>"#);
     }
@@ -335,10 +340,17 @@ mod tests {
         };
         let hovered = grabber(&lip(Edge::Right), (10., 144.), free_hover, A, S, false).unwrap();
         assert_eq!(hovered, free);
+        // While its panel is open the left lip keeps only its plate: the pill left with the panel.
         let left = grabber(&lip(Edge::Left), (10., 144.), docked(1., true), A, S, false).unwrap();
         assert!(
             left.contains(r#"<rect width="10" height="144""#) && !left.contains("<path"),
             "{left}"
+        );
+        assert!(!left.contains("fill=\"rgb(10,20,30)\""), "{left}");
+        let left_idle = grabber(&lip(Edge::Left), (10., 144.), idle(), A, S, false).unwrap();
+        assert!(
+            left_idle.contains(r#"width="6" height="56""#),
+            "{left_idle}"
         );
     }
     #[test]
