@@ -107,6 +107,7 @@ export type Props = {
     graph:any?,
     style:any?,
     highlight:any?,
+    fit:any?,
     on_hover:any?,
     on_select:any?,
 }
