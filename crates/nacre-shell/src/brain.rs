@@ -10,7 +10,7 @@ use std::{
     collections::{BTreeMap, BTreeSet},
     io::{BufRead, BufReader, Read, Write},
     os::unix::{net::UnixStream, process::CommandExt},
-    path::PathBuf,
+    path::{Path, PathBuf},
     sync::{Arc, Mutex},
     time::Duration,
 };
@@ -56,7 +56,7 @@ struct GraphView {
 }
 
 impl GraphView {
-    fn from_reply(body: &Json) -> Self {
+    fn from_reply(body: &Json, key: &str) -> Self {
         let mut view = Self {
             state: text(&body["state"]).into(),
             ..Self::default()
@@ -69,8 +69,17 @@ impl GraphView {
             }
             let kind = text(&n["kind"]);
             let note = ["note", "wiki"].contains(&kind);
+            // The node's world by name (a world is its own; areas without one take the scope's);
+            // `project` turns it into the `group` index, which needs the world list.
+            let world = match kind {
+                "world" => text(&n["label"]),
+                _ => n["worlds"]
+                    .as_array()
+                    .and_then(|w| w.first())
+                    .map_or_else(|| key.strip_prefix("world:").unwrap_or_default(), text),
+            };
             position.insert(id.to_owned(), position.len());
-            nodes.push(json!({"id":position.len()-1,"label":text(&n["label"])}));
+            nodes.push(json!({"id":position.len()-1,"label":text(&n["label"]),"world":world}));
             let scope = match kind {
                 "world" | "area" => format!("{kind}:{}", text(&n["label"])),
                 _ => String::new(),
@@ -120,6 +129,9 @@ pub struct Brain {
     width: Cell<u32>,
     seen_open: RefCell<String>,
     seen_query: RefCell<String>,
+    seen_scope: RefCell<String>,
+    /// Bumps when the graph scope changes, so the canvas re-frames each scope.
+    fit: Cell<u32>,
 }
 
 fn text(value: &Json) -> &str {
@@ -273,6 +285,8 @@ impl Brain {
             width: Cell::new(1280),
             seen_open: Default::default(),
             seen_query: Default::default(),
+            seen_scope: Default::default(),
+            fit: Cell::new(0),
         }
     }
     pub fn set_viewport(&self, width: u32) {
@@ -287,8 +301,9 @@ impl Brain {
         }
     }
 
-    /// Connect once (starting the worker when its socket is absent) and read replies and
-    /// pushed events until the worker goes away.
+    /// Connect (starting the worker when its socket is absent), read replies and pushed events,
+    /// and reconnect with a bounded backoff whenever the worker goes away. The first call
+    /// starts the one socket thread; a Retry press only clears the caches.
     fn start(&self) {
         if self.started.replace(true) {
             return;
@@ -304,84 +319,100 @@ impl Brain {
         let _ = std::thread::Builder::new()
             .name("nacre-brain-socket".into())
             .spawn(move || {
-                let mut stream = None;
-                for attempt in 0..100 {
-                    match UnixStream::connect(&socket) {
-                        Ok(s) => {
-                            stream = Some(s);
-                            break;
-                        }
-                        // The same on-demand worker `ensure_server` starts; it idles out by itself.
-                        Err(_) if attempt == 0 => {
-                            if let Ok(mut child) = bead::services::process::command(&helper)
-                                .args(["brain-control", "serve"])
-                                .stdin(std::process::Stdio::null())
-                                .stdout(std::process::Stdio::null())
-                                .process_group(0)
-                                .spawn()
-                            {
-                                std::thread::spawn(move || child.wait());
-                            }
-                        }
-                        Err(_) => {}
+                let mut failures = 0u32;
+                // The window's `Brain` holds the other `state` handle: stop once it is dropped.
+                while Arc::strong_count(&state) > 1 {
+                    if failures > 0 {
+                        std::thread::sleep(Duration::from_secs(1 << failures.min(4)));
                     }
-                    std::thread::sleep(Duration::from_millis(100));
-                }
-                let Some(stream) = stream else {
-                    let mut st = state.lock().unwrap_or_else(|e| e.into_inner());
-                    st.status = "error".into();
-                    st.error = crate::i18n::tr("bead.brain.error-start", &[]);
-                    drop(st);
-                    Self::wake(&wake);
-                    return;
-                };
-                let reader = match stream.try_clone() {
-                    Ok(reader) => reader,
-                    Err(_) => return,
-                };
-                *link.lock().unwrap_or_else(|e| e.into_inner()) = Some(Link {
-                    writer: stream,
-                    next: 1,
-                });
-                state.lock().unwrap_or_else(|e| e.into_inner()).status = "ready".into();
-                Self::wake(&wake);
-                let mut lines = BufReader::new(reader).take(8 << 20);
-                let mut line = String::new();
-                loop {
-                    line.clear();
-                    match lines.read_line(&mut line) {
-                        Ok(n) if n > 0 && line.ends_with('\n') => lines.set_limit(8 << 20),
-                        _ => break,
-                    }
-                    let Ok(message) = serde_json::from_str::<Json>(&line) else {
+                    let Some((stream, reader)) = Self::connect(&socket, &helper) else {
+                        failures += 1;
+                        let mut st = state.lock().unwrap_or_else(|e| e.into_inner());
+                        st.status = "error".into();
+                        st.error = crate::i18n::tr("bead.brain.error-start", &[]);
+                        drop(st);
+                        Self::wake(&wake);
                         continue;
                     };
-                    let mut st = state.lock().unwrap_or_else(|e| e.into_inner());
-                    if message["event"] == "revision" {
-                        st.fetched.clear();
-                    } else if let Some(id) = message["id"].as_u64()
-                        && let Some(key) = st.pending.remove(&id)
+                    failures = 0;
+                    *link.lock().unwrap_or_else(|e| e.into_inner()) = Some(Link {
+                        writer: stream,
+                        next: 1,
+                    });
                     {
-                        Self::store(&mut st, &key, &message);
-                        if key.starts_with("search:") {
-                            st.search_inflight = false;
-                            if let Some((key, params)) = st.search_wanted.take() {
-                                let mut link = link.lock().unwrap_or_else(|e| e.into_inner());
-                                Self::send_locked(&mut link, &mut st, "search", params, &key);
+                        // A new worker knows none of the old requests: refetch everything.
+                        let mut st = state.lock().unwrap_or_else(|e| e.into_inner());
+                        st.fetched.clear();
+                        st.pending.clear();
+                        st.search_inflight = false;
+                        st.search_wanted = None;
+                        st.status = "ready".into();
+                        st.error.clear();
+                    }
+                    Self::wake(&wake);
+                    let mut lines = BufReader::new(reader).take(8 << 20);
+                    let mut line = String::new();
+                    loop {
+                        line.clear();
+                        match lines.read_line(&mut line) {
+                            Ok(n) if n > 0 && line.ends_with('\n') => lines.set_limit(8 << 20),
+                            _ => break,
+                        }
+                        let Ok(message) = serde_json::from_str::<Json>(&line) else {
+                            continue;
+                        };
+                        let mut st = state.lock().unwrap_or_else(|e| e.into_inner());
+                        if message["event"] == "revision" {
+                            st.fetched.clear();
+                        } else if let Some(id) = message["id"].as_u64()
+                            && let Some(key) = st.pending.remove(&id)
+                        {
+                            Self::store(&mut st, &key, &message);
+                            if key.starts_with("search:") {
+                                st.search_inflight = false;
+                                if let Some((key, params)) = st.search_wanted.take() {
+                                    let mut link = link.lock().unwrap_or_else(|e| e.into_inner());
+                                    Self::send_locked(&mut link, &mut st, "search", params, &key);
+                                }
                             }
                         }
+                        drop(st);
+                        Self::wake(&wake);
                     }
-                    drop(st);
+                    // Keep showing the last data while reconnecting; only a failed reconnect errors.
+                    *link.lock().unwrap_or_else(|e| e.into_inner()) = None;
+                    state
+                        .lock()
+                        .unwrap_or_else(|e| e.into_inner())
+                        .pending
+                        .clear();
                     Self::wake(&wake);
                 }
-                let mut st = state.lock().unwrap_or_else(|e| e.into_inner());
-                st.status = "error".into();
-                st.error = crate::i18n::tr("bead.brain.error-closed", &[]);
-                st.pending.clear();
-                *link.lock().unwrap_or_else(|e| e.into_inner()) = None;
-                drop(st);
-                Self::wake(&wake);
             });
+    }
+
+    /// One connection attempt run: up to ten seconds, starting the on-demand worker (the same
+    /// one `ensure_server` starts; it idles out by itself) when the first try finds no socket.
+    fn connect(socket: &Path, helper: &Path) -> Option<(UnixStream, UnixStream)> {
+        for attempt in 0..100 {
+            match UnixStream::connect(socket) {
+                Ok(s) => return s.try_clone().ok().map(|r| (s, r)),
+                Err(_) if attempt == 0 => {
+                    if let Ok(mut child) = bead::services::process::command(helper)
+                        .args(["brain-control", "serve"])
+                        .stdin(std::process::Stdio::null())
+                        .stdout(std::process::Stdio::null())
+                        .process_group(0)
+                        .spawn()
+                    {
+                        std::thread::spawn(move || child.wait());
+                    }
+                }
+                Err(_) => {}
+            }
+            std::thread::sleep(Duration::from_millis(100));
+        }
+        None
     }
 
     fn store(st: &mut State, key: &str, message: &Json) {
@@ -398,7 +429,8 @@ impl Brain {
                     .iter()
                     .any(|k| key.starts_with(k)) =>
             {
-                st.graphs.insert(key.into(), GraphView::from_reply(&body));
+                st.graphs
+                    .insert(key.into(), GraphView::from_reply(&body, key));
             }
             "graph" => st.near = Some((key.into(), body)),
             "search" => st.search = Some((key.into(), body)),
@@ -517,6 +549,10 @@ impl Brain {
         if !SCREENS.contains(&screen.as_str()) {
             screen = "overview".into();
             changes.insert("brain.screen".into(), Value::Text(screen.clone()));
+        }
+        if scope != *self.seen_scope.borrow() {
+            self.seen_scope.replace(scope.clone());
+            self.fit.set(self.fit.get() + 1);
         }
         let (query, world) = (get("brain.query"), get("brain.world"));
         if query != *self.seen_query.borrow() {
@@ -776,12 +812,32 @@ impl Brain {
             // Only the Graph screen carries the (large) graph.
             ("brain.graph_scope".into(), Value::Text(scope.clone())),
             (
+                "brain.graph_fit".into(),
+                Value::Number(f64::from(self.fit.get())),
+            ),
+            (
                 "brain.graph_state".into(),
                 Value::Text(graph.map(|g| g.state.clone()).unwrap_or_default()),
             ),
             (
                 "brain.graph_nodes".into(),
-                Value::list(graph.map(|g| g.nodes.clone()).unwrap_or_default()),
+                Value::list(
+                    graph
+                        .map(|g| {
+                            let mut chunks = g.nodes.clone();
+                            for node in chunks
+                                .iter_mut()
+                                .flat_map(|c| c["rows"].as_array_mut())
+                                .flatten()
+                            {
+                                let group = world_index(text(&node["world"]));
+                                node["group"] = json!(group);
+                                node.as_object_mut().map(|o| o.remove("world"));
+                            }
+                            chunks
+                        })
+                        .unwrap_or_default(),
+                ),
             ),
             (
                 "brain.graph_edges".into(),
@@ -841,12 +897,8 @@ impl Brain {
                 }
             }
             "world" => {
-                let next = if get("brain.world") == payload {
-                    ""
-                } else {
-                    payload
-                };
-                changes.insert("brain.world".into(), Value::Text(next.into()));
+                // Activating the selected world keeps it; only "All worlds" (empty payload) clears.
+                changes.insert("brain.world".into(), Value::Text(payload.into()));
                 changes.insert("brain.screen".into(), Value::Text("search".into()));
             }
             "ask" => {
@@ -879,8 +931,7 @@ impl Brain {
             }
             "refresh" => {
                 // `summary?retry=1` reschedules the graph build; the next frame refetches.
-                // After a lost or failed connection, the next frame reconnects (and restarts
-                // the worker when its socket is gone).
+                // A lost connection is retried by the socket thread; Retry just shows "connecting".
                 st.fetched.clear();
                 if self
                     .link
@@ -888,9 +939,10 @@ impl Brain {
                     .unwrap_or_else(|e| e.into_inner())
                     .is_none()
                 {
-                    st.status = "connecting".into();
-                    st.error.clear();
-                    self.started.set(false);
+                    if self.socket.is_some() {
+                        st.status = "connecting".into();
+                        st.error.clear();
+                    }
                 } else {
                     self.fetch(&mut st, "summary", json!({"retry":1}), "");
                 }

@@ -991,7 +991,6 @@
   "bead.brain.connecting": "Connecting to the Brain…",
   "bead.brain.did-you-mean": "Did you mean “{query}”?",
   "bead.brain.empty-note": "This note has no readable text yet.",
-  "bead.brain.error-closed": "The Brain worker closed the connection.",
   "bead.brain.error-runtime": "No session runtime directory, so the Brain worker cannot be reached.",
   "bead.brain.error-start": "The Brain worker did not start.",
   "bead.brain.facts": "Facts",

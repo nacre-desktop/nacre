@@ -318,7 +318,7 @@ local function graph()
         body=empty("none",msg,CW-2*sp.xxl)
     else
         body=kit.GraphCanvas{id="canvas",width="fill",grow=1,graph=ui.graph(nodes,edges),on_select=ui.action("pick"),
-            style={node_radius=1.5,label_size=px(tx.caption),far_edge_alpha=170,edge="outline"}}
+            fit=get("brain.graph_fit"),style={node_radius=1.5,groups=WORLD_ROLES,label_size=px(tx.caption),far_edge_alpha=170,edge="outline"}}
     end
     return ui.Column{id="graph",width=CW,grow=1,padding=sp.xl,gap=sp.md,ui.Row(head),body}
 end

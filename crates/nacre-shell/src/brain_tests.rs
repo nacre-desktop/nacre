@@ -217,9 +217,17 @@ fn the_graph_screen_projects_packed_nodes_and_edges_and_picks_open_notes() {
     assert_eq!(nodes[0]["rows"].as_array().unwrap().len(), 5);
     assert_eq!(
         nodes[0]["rows"][0],
-        json!({"id":0,"label":"Cooking","weight":4}),
-        "worlds keep a minimum weight"
+        json!({"id":0,"label":"Cooking","weight":4,"group":1}),
+        "worlds keep a minimum weight and take their own world's colour group"
     );
+    let groups = nodes[0]["rows"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|n| n["group"].as_u64().unwrap())
+        .collect::<Vec<_>>();
+    assert_eq!(groups, [1, 1, 2, 3, 1], "notes carry their world's index");
+    assert_eq!(model["brain.graph_fit"], Value::Number(0.));
     assert_eq!(nodes[0]["rows"][1]["weight"], 4, "a note weighs its degree");
     assert_eq!(nodes[0]["rows"][2]["weight"], 1);
     // Membership stays an edge; the unknown end and nothing else is dropped.
@@ -270,6 +278,26 @@ fn a_world_node_drills_in_all_worlds_returns_and_back_keeps_the_scope() {
     // Picking the world node (position 0) switches to its scope; the next projection shows its notes.
     let drilled = brain.project(&on("", &[("brain.pick", t("0"))]));
     assert_eq!(text(&drilled, "brain.graph_scope"), "world:Cooking");
+    assert_eq!(
+        drilled["brain.graph_fit"],
+        Value::Number(1.),
+        "a new scope re-frames"
+    );
+    // The area takes the scope's world; the same scope keeps `fit`, leaving it bumps again.
+    let in_world = brain.project(&on("world:Cooking", &[]));
+    assert_eq!(in_world["brain.graph_fit"], Value::Number(1.));
+    assert_eq!(
+        list(&in_world, "brain.graph_nodes")[0]["rows"][1]["group"],
+        1
+    );
+    assert_eq!(
+        brain.project(&on("world:Cooking", &[]))["brain.graph_fit"],
+        Value::Number(1.)
+    );
+    assert_eq!(
+        brain.project(&on("", &[]))["brain.graph_fit"],
+        Value::Number(2.)
+    );
     assert_eq!(
         list(&drilled, "brain.graph_nodes")[0]["rows"]
             .as_array()
@@ -472,13 +500,23 @@ fn open_and_back_keep_a_history() {
 }
 
 #[test]
-fn world_filter_toggles_and_screens_are_validated() {
+fn the_selected_world_chip_stays_selected_and_all_worlds_clears() {
     let brain = brain();
     let on = brain.act("world:Health", &stores(&[]));
     assert_eq!(text(&on, "brain.world"), "Health");
     assert_eq!(text(&on, "brain.screen"), "search");
-    let off = brain.act("world:Health", &stores(&[("brain.world", t("Health"))]));
-    assert_eq!(text(&off, "brain.world"), "");
+    let again = brain.act("world:Health", &stores(&[("brain.world", t("Health"))]));
+    assert_eq!(
+        text(&again, "brain.world"),
+        "Health",
+        "a second click keeps it"
+    );
+    let all = brain.act("world:", &stores(&[("brain.world", t("Health"))]));
+    assert_eq!(
+        text(&all, "brain.world"),
+        "",
+        "All worlds clears the filter"
+    );
     assert_eq!(
         text(&brain.act("screen:loops", &stores(&[])), "brain.screen"),
         "loops"
@@ -652,6 +690,54 @@ fn the_adapter_talks_json_lines_over_the_worker_socket() {
         seen.iter()
             .any(|c| c["op"] == "graph" && c["params"]["scope"] == format!("note:{}", note_id(0)))
     );
+}
+
+/// A worker that answers the filter-only search empty and then closes (an old server), followed
+/// by a second connection that answers it properly.
+#[test]
+fn a_closed_link_reconnects_clears_the_caches_and_refetches() {
+    let socket = private_dir("reconnect").join("brain.sock");
+    let listener = std::os::unix::net::UnixListener::bind(&socket).unwrap();
+    std::thread::spawn(move || {
+        for connection in 0..2 {
+            let (stream, _) = listener.accept().unwrap();
+            let mut writer = stream.try_clone().unwrap();
+            for line in std::io::BufReader::new(stream).lines() {
+                let call: Json = serde_json::from_str(&line.unwrap()).unwrap();
+                let body = match call["op"].as_str().unwrap() {
+                    "brain" => brain_summary(),
+                    "search" if connection == 0 => json!({"count":0,"results":[]}),
+                    "search" => search(""),
+                    _ => json!({}),
+                };
+                writeln!(
+                    writer,
+                    "{}",
+                    json!({"id":call["id"],"status":200,"body":body})
+                )
+                .unwrap();
+                if call["op"] == "search" && connection == 0 {
+                    break;
+                }
+            }
+        }
+    });
+    let brain = Brain::new(Some(socket), PathBuf::from("/bin/false"));
+    let (wake_tx, wake_rx) = std::sync::mpsc::channel();
+    brain.subscribe(Arc::new(move || {
+        let _ = wake_tx.send(());
+    }));
+    let filtered = stores(&[("brain.screen", t("search")), ("brain.world", t("Cooking"))]);
+    for _ in 0..200 {
+        let model = brain.project(&filtered);
+        if !list(&model, "brain.results").is_empty() {
+            assert_eq!(text(&model, "brain.status"), "ready");
+            assert_eq!(list(&model, "brain.worlds").len(), 3, "data stays shown");
+            return;
+        }
+        let _ = wake_rx.recv_timeout(Duration::from_millis(100));
+    }
+    panic!("the search was never refetched after the reconnect");
 }
 
 #[test]

@@ -963,7 +963,6 @@
   "bead.brain.connecting": "Brain app rail status line while the worker connection is being established.",
   "bead.brain.did-you-mean": "Brain app search: spelling suggestion under the results heading; {query} is the corrected query.",
   "bead.brain.empty-note": "Brain app note reader: shown when a note has neither facts nor body text.",
-  "bead.brain.error-closed": "Brain app: error shown when the background Brain worker stopped while the window was open.",
   "bead.brain.error-runtime": "Brain app: error shown when XDG_RUNTIME_DIR is missing, so the private worker socket has no place.",
   "bead.brain.error-start": "Brain app: error shown when the background Brain worker could not be started or reached.",
   "bead.brain.facts": "Brain app note reader: heading of the current facts card of a wiki page.",
