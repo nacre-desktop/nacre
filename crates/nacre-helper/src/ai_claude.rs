@@ -18,6 +18,11 @@ const MAX_LINE: usize = 4 * 1024 * 1024;
 /// prompt) plus a tail window (recent messages, titles, last prompt).
 const HEAD_WINDOW: u64 = 4 * 1024 * 1024;
 const TAIL_WINDOW: u64 = 32 * 1024 * 1024;
+/// The launcher list needs only the start (folder, first prompt) and the newest
+/// records (titles are re-appended near the end, plus working state), so it reads
+/// small windows: whole transcripts cost seconds on a multi-GB corpus.
+const LIST_HEAD_WINDOW: u64 = 512 * 1024;
+const LIST_TAIL_WINDOW: u64 = 1024 * 1024;
 const MAX_SESSIONS: usize = 500;
 const MAX_OUTPUT: usize = 1024 * 1024;
 const MAX_ROSTER: u64 = 1024 * 1024;
@@ -174,30 +179,35 @@ fn read_file_limited(path: &Path, limit: u64) -> Result<Option<Vec<u8>>> {
     }
     Ok(Some(bytes))
 }
-/// Whole transcript up to MAX_FILE; above it, the head and tail windows joined on
+/// Whole transcript up to `whole`; above it, the head and tail windows joined on
 /// line boundaries, so long-running chats stay listed and loadable.
-fn read_transcript(path: &Path) -> Result<Option<Vec<u8>>> {
+fn read_transcript(
+    path: &Path,
+    whole: u64,
+    head_window: u64,
+    tail_window: u64,
+) -> Result<Option<Vec<u8>>> {
     let Some((mut file, len)) = open_private(path)? else {
         return Ok(None);
     };
     let read_error = |_| err("Could not read Claude session data");
-    if len <= MAX_FILE {
+    if len <= whole {
         let mut bytes = Vec::with_capacity(len as usize);
-        file.take(MAX_FILE)
+        file.take(whole)
             .read_to_end(&mut bytes)
             .map_err(read_error)?;
         return Ok(Some(bytes));
     }
     let mut head = Vec::new();
     (&mut file)
-        .take(HEAD_WINDOW)
+        .take(head_window)
         .read_to_end(&mut head)
         .map_err(read_error)?;
     head.truncate(head.iter().rposition(|b| *b == b'\n').map_or(0, |i| i + 1));
-    file.seek(SeekFrom::Start(len.saturating_sub(TAIL_WINDOW)))
+    file.seek(SeekFrom::Start(len.saturating_sub(tail_window)))
         .map_err(read_error)?;
     let mut tail = Vec::new();
-    file.take(TAIL_WINDOW)
+    file.take(tail_window)
         .read_to_end(&mut tail)
         .map_err(read_error)?;
     let start = tail
@@ -219,7 +229,10 @@ fn valid_schema_marker(value: &Value) -> bool {
     true
 }
 fn jsonl(path: &Path) -> Vec<Value> {
-    let Ok(Some(bytes)) = read_transcript(path) else {
+    jsonl_windows(path, MAX_FILE, HEAD_WINDOW, TAIL_WINDOW)
+}
+fn jsonl_windows(path: &Path, whole: u64, head_window: u64, tail_window: u64) -> Vec<Value> {
+    let Ok(Some(bytes)) = read_transcript(path, whole, head_window, tail_window) else {
         return Vec::new();
     };
     let mut records = Vec::new();
@@ -899,11 +912,22 @@ fn history(
     chat_directory: bool,
     running: &std::collections::BTreeMap<String, String>,
 ) -> Result<Vec<Value>> {
+    history_limited(config, root, chat_directory, running, MAX_SESSIONS)
+}
+/// At most `limit` of the newest transcripts across all roots are read.
+fn history_limited(
+    config: &Path,
+    root: &Path,
+    chat_directory: bool,
+    running: &std::collections::BTreeMap<String, String>,
+    limit: usize,
+) -> Result<Vec<Value>> {
     if !config.join("projects").is_dir() {
         return Ok(Vec::new());
     }
     let roots = project_directories(root, chat_directory);
     let mut output = std::collections::BTreeMap::<String, Value>::new();
+    let mut candidates = Vec::new();
     for directory in &roots {
         let project = project_directory(config, directory);
         let ids = match session_ids(&project) {
@@ -917,53 +941,55 @@ fn history(
             }
             Err(_) => continue,
         };
-        let mut candidates: Vec<_> = ids
-            .into_iter()
-            .filter_map(|id| {
-                let path = project.join(format!("{id}.jsonl"));
-                let meta = fs::symlink_metadata(&path).ok()?;
-                (meta.is_file() && !meta.file_type().is_symlink() && meta.nlink() == 1)
-                    .then_some((id, path, meta))
-            })
-            .collect();
-        candidates.sort_by_key(|(_, _, meta)| std::cmp::Reverse(meta.modified().ok()));
-        let mut accepted = 0;
-        for (id, path, meta) in candidates {
-            if accepted >= MAX_SESSIONS {
-                break;
+        candidates.extend(ids.into_iter().filter_map(|id| {
+            let path = project.join(format!("{id}.jsonl"));
+            let meta = fs::symlink_metadata(&path).ok()?;
+            (meta.is_file() && !meta.file_type().is_symlink() && meta.nlink() == 1)
+                .then_some((directory, id, path, meta))
+        }));
+    }
+    candidates.sort_by_key(|(_, _, _, meta)| std::cmp::Reverse(meta.modified().ok()));
+    let mut accepted = 0;
+    for (directory, id, path, meta) in candidates {
+        if accepted >= limit {
+            break;
+        }
+        let records = jsonl_windows(
+            &path,
+            LIST_HEAD_WINDOW + LIST_TAIL_WINDOW,
+            LIST_HEAD_WINDOW,
+            LIST_TAIL_WINDOW,
+        );
+        if !valid_session_records(&records, &id) {
+            continue;
+        }
+        if !started_in(&records, directory) {
+            continue;
+        }
+        let title = title_from(&records);
+        let mut cwd = None;
+        for record in &records {
+            if cwd.is_none() {
+                cwd = record.get("cwd").and_then(Value::as_str).map(str::to_owned);
             }
-            let records = jsonl(&path);
-            if !valid_session_records(&records, &id) {
-                continue;
-            }
-            if !started_in(&records, directory) {
-                continue;
-            }
-            let title = title_from(&records);
-            let mut cwd = None;
-            for record in &records {
-                if cwd.is_none() {
-                    cwd = record.get("cwd").and_then(Value::as_str).map(str::to_owned);
-                }
-            }
-            let Some(title) = title else { continue };
-            let modified = meta
-                .modified()
-                .ok()
-                .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
-                .map(|d| d.as_millis() as f64 / 1000.0)
-                .unwrap_or(0.0);
-            let working = transcript_working(&records, meta.modified().ok());
-            let cwd = cwd.unwrap_or_else(|| directory.to_string_lossy().into_owned());
-            accepted += 1;
-            let row = json!({"id":id,"title":title,"updated_at":modified,"cwd":cwd,"state":"saved","session":null,"agent":"claude","_working":working});
-            if output
-                .get(&id)
-                .and_then(|old| old["updated_at"].as_f64())
-                .is_none_or(|old| modified > old)
-            {
-                output.insert(id, row);
-            }
+        }
+        let Some(title) = title else { continue };
+        let modified = meta
+            .modified()
+            .ok()
+            .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+            .map(|d| d.as_millis() as f64 / 1000.0)
+            .unwrap_or(0.0);
+        let working = transcript_working(&records, meta.modified().ok());
+        let cwd = cwd.unwrap_or_else(|| directory.to_string_lossy().into_owned());
+        accepted += 1;
+        let row = json!({"id":id,"title":title,"updated_at":modified,"cwd":cwd,"state":"saved","session":null,"agent":"claude","_working":working});
+        if output
+            .get(&id)
+            .and_then(|old| old["updated_at"].as_f64())
+            .is_none_or(|old| modified > old)
+        {
+            output.insert(id, row);
         }
     }
     let mut rows: Vec<_> = output.into_values().collect();
@@ -1231,6 +1257,7 @@ fn run_inner(args: &[String]) -> Result<i32> {
     let mut thread = None;
     let mut chat_directory = false;
     let mut tmux = false;
+    let mut limit = MAX_SESSIONS;
     let mut i = 0;
     while i < args.len() {
         let value = |offset: usize, label: &str| {
@@ -1261,6 +1288,13 @@ fn run_inner(args: &[String]) -> Result<i32> {
                 thread = Some(value(i, "--thread-id")?.clone());
             }
             "--chat-directory" => chat_directory = true,
+            "--limit" => {
+                i += 1;
+                limit = value(i, "--limit")?
+                    .parse::<usize>()
+                    .map_err(|_| err("--limit requires a number"))?
+                    .min(MAX_SESSIONS);
+            }
             "--tmux" => tmux = true,
             "-h" | "--help" => {
                 print!("{}", help());
@@ -1298,7 +1332,8 @@ fn run_inner(args: &[String]) -> Result<i32> {
     }
     if command == "list" {
         let running = running_sessions(&project, &account);
-        let chats = history(&config, &path, chat_directory, &running).unwrap_or_default();
+        let chats =
+            history_limited(&config, &path, chat_directory, &running, limit).unwrap_or_default();
         println!("{}", serde_json::to_string(&chats)?);
         return Ok(0);
     }
@@ -1589,6 +1624,75 @@ mod tests {
         let rows = history(&config, &chat, true, &BTreeMap::new()).unwrap();
         assert!(rows.iter().any(|row| row["id"] == CURRENT_ID), "{rows:?}");
         assert!(!messages(&config, CURRENT_ID, &chat).unwrap().is_empty());
+    }
+
+    #[test]
+    fn list_reads_only_head_and_tail_windows_of_a_large_chat() {
+        let temp = tempdir().unwrap();
+        let config = temp.path().join("claude");
+        let chat = temp.path().join("chat");
+        fs::create_dir_all(&chat).unwrap();
+        let project = put_fixture(&config, &chat, "current", CURRENT_ID);
+        let transcript = project.join(format!("{CURRENT_ID}.jsonl"));
+        let mut file = fs::OpenOptions::new()
+            .append(true)
+            .open(&transcript)
+            .unwrap();
+        // A record between two window-sized gaps is never read (a whole read would
+        // reject the transcript for this schema marker), while the tail title is.
+        let padding = format!("{}\n", json!({"type":"progress","pad":"x".repeat(1000)}));
+        let gap = (LIST_HEAD_WINDOW.max(LIST_TAIL_WINDOW) / 1000 + 500) as usize;
+        for _ in 0..gap {
+            file.write_all(padding.as_bytes()).unwrap();
+        }
+        writeln!(file, r#"{{"schemaVersion":2}}"#).unwrap();
+        for _ in 0..gap {
+            file.write_all(padding.as_bytes()).unwrap();
+        }
+        writeln!(
+            file,
+            r#"{{"type":"custom-title","customTitle":"Tail title"}}"#
+        )
+        .unwrap();
+        drop(file);
+        let rows = history(&config, &chat, true, &BTreeMap::new()).unwrap();
+        assert_eq!(rows[0]["title"], "Tail title", "{rows:?}");
+    }
+
+    #[test]
+    fn launcher_limit_reads_only_the_newest_transcripts_across_chat_folders() {
+        let temp = tempdir().unwrap();
+        let config = temp.path().join("claude");
+        let root = temp.path().join("chats");
+        let (first, second) = (root.join("0".repeat(32)), root.join("a".repeat(32)));
+        for dir in [&first, &second] {
+            fs::create_dir_all(dir).unwrap();
+        }
+        put_fixture(&config, &first, "current", CURRENT_ID);
+        let newer = put_fixture(&config, &second, "previous", PREVIOUS_ID);
+        let old = std::time::SystemTime::now() - Duration::from_secs(3600);
+        fs::File::options()
+            .write(true)
+            .open(
+                newer
+                    .parent()
+                    .unwrap()
+                    .join(sanitized(&first.to_string_lossy()))
+                    .join(format!("{CURRENT_ID}.jsonl")),
+            )
+            .unwrap()
+            .set_modified(old)
+            .unwrap();
+        let none = BTreeMap::new();
+        assert_eq!(
+            history_limited(&config, &root, true, &none, 2)
+                .unwrap()
+                .len(),
+            2
+        );
+        let rows = history_limited(&config, &root, true, &none, 1).unwrap();
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0]["id"], PREVIOUS_ID);
     }
 
     #[test]
