@@ -32,6 +32,8 @@ build() {
 
 check() {
   cd "$srcdir/nacre"
+  # As Source checks: more parallel tests starve the timing-sensitive ones on CI runners.
+  export RUST_TEST_THREADS=2
   cargo fmt --all --check
   cargo clippy --workspace --all-targets --locked -j2 -- -D warnings
   cargo test --workspace --locked -j2
