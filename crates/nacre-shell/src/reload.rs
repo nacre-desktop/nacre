@@ -5532,6 +5532,11 @@ impl SceneSource for Runtime {
     fn services(&mut self, wakeup: Box<dyn Fn(UiEvent) + Send + Sync>) {
         let wakeup: std::sync::Arc<dyn Fn(UiEvent) + Send + Sync> = std::sync::Arc::from(wakeup);
         self.wakeup = Some(wakeup.clone());
+        // Live graph canvases wake the host when a layout snapshot is ready.
+        let graph_wake = wakeup.clone();
+        self.session.set_wakeup(std::sync::Arc::new(move || {
+            graph_wake(UiEvent::Model(BTreeMap::new()))
+        }));
         if let Some(source) = &self.widget_displays_topic {
             let wakeup = wakeup.clone();
             match source.subscribe(std::sync::Arc::new(move |snapshot| {
@@ -10996,3 +11001,77 @@ mod widget_layout_property_tests;
 mod widget_startup_tests;
 #[cfg(test)]
 mod wifi_runtime_tests;
+
+#[cfg(test)]
+mod graph_wakeup_tests {
+    use super::*;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    fn positions(scene: &Scene) -> Vec<[f32; 2]> {
+        scene
+            .primitives
+            .iter()
+            .find_map(|p| match p {
+                bead::render::Primitive::Graph { geometry, .. } => {
+                    Some(geometry.positions.to_vec())
+                }
+                _ => None,
+            })
+            .expect("scene has a graph")
+    }
+
+    #[test]
+    fn graph_layout_snapshot_wakes_the_runtime_and_reaches_the_scene() -> Result<(), Box<dyn Error>>
+    {
+        let root = std::env::temp_dir().join(format!("nacre-graph-wakeup-{}", std::process::id()));
+        std::fs::create_dir_all(&root)?;
+        std::fs::write(
+            root.join("main.luau"),
+            r#"local ui=require("bead.ui")
+local kit=require("bead.kit")
+return ui.Column{id="root",width=400,height=300,
+ kit.GraphCanvas{id="canvas",width=400,height=300,
+  graph=ui.graph({{id="a",label="A",weight=5},{id="b"},{id="c"},{id="d"}},
+   {{from="a",to="b"},{from="b",to="c"},{from="c",to="d"}})}}"#,
+        )?;
+        std::fs::write(
+            root.join("behavior.luau"),
+            "return {stores={},actions={},computed={}}",
+        )?;
+        let palette_path =
+            std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../shell/palette.json");
+        let palette = bead::render::Palette::read(&palette_path)?;
+        let session = bead::ui::Session::new(
+            root.clone(),
+            "main.luau".into(),
+            palette_path,
+            palette.clone(),
+            bead::ui::recovery::safe_bar(&palette),
+        );
+        let wakes = std::sync::Arc::new(AtomicUsize::new(0));
+        let mut runtime = Runtime::new(session);
+        let counter = wakes.clone();
+        runtime.services(Box::new(move |event| {
+            if matches!(&event, UiEvent::Model(values) if values.is_empty()) {
+                counter.fetch_add(1, Ordering::SeqCst);
+            }
+        }));
+        runtime.viewport(400, 300);
+        let first = positions(&runtime.stage(UiEvent::Reload)?.expect("view loads"));
+        runtime.commit();
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
+        while wakes.load(Ordering::SeqCst) == 0 && std::time::Instant::now() < deadline {
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
+        let _ = std::fs::remove_dir_all(&root);
+        assert!(
+            wakes.load(Ordering::SeqCst) > 0,
+            "layout worker never woke the host"
+        );
+        let scene = runtime
+            .stage(UiEvent::Model(BTreeMap::new()))?
+            .expect("the empty wake stages the layout snapshot");
+        assert_ne!(positions(&scene), first, "layout never advanced");
+        Ok(())
+    }
+}
