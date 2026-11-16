@@ -125,9 +125,10 @@ pub fn grabber(
     } else {
         0.
     };
-    // The left (chat) lip never docks: while its panel is open only the plate stays, so the pill
-    // leaves with the panel instead of sitting beside it (owner 2026-11-16).
-    let pill = !(lip.edge == Edge::Left && state.active);
+    // While its panel is open the lip at its rest box keeps only the plate, filling the frame's
+    // hole there: the pill rides the docked tab, or (the left chat lip, which never docks) leaves
+    // with the panel (owner 2026-11-16).
+    let pill = !(state.active && attach <= 0.);
     if pill && glow > 0. {
         let gw = if top { 10. } else { w };
         body.push_str(&format!(
@@ -340,7 +341,22 @@ mod tests {
         };
         let hovered = grabber(&lip(Edge::Right), (10., 144.), free_hover, A, S, false).unwrap();
         assert_eq!(hovered, free);
-        // While its panel is open the left lip keeps only its plate: the pill left with the panel.
+        // While its panel is open a lip's rest box keeps only its plate: the right lip's pill rides
+        // the tab, the left lip's leaves with the panel.
+        let rest = grabber(
+            &lip(Edge::Right),
+            (10., 144.),
+            docked(0., false),
+            A,
+            S,
+            false,
+        )
+        .unwrap();
+        assert!(
+            rest.contains(r#"<rect width="10" height="144" fill="rgb(40,50,60)"/>"#)
+                && !rest.contains("fill=\"rgb(10,20,30)\""),
+            "{rest}"
+        );
         let left = grabber(&lip(Edge::Left), (10., 144.), docked(1., true), A, S, false).unwrap();
         assert!(
             left.contains(r#"<rect width="10" height="144""#) && !left.contains("<path"),
@@ -495,10 +511,12 @@ mod tests {
             "{charging}"
         );
         assert!(!charging.contains("clip-path"), "{charging}");
-        // Open: the swollen bar stays, only the glow goes, so the hand-over never draws a dark frame.
+        // Open: the tab (Bead floors its attach above 0) keeps the swollen bar and only the glow
+        // goes, so the hand-over never draws a dark frame; the rest box (attach 0) is plate only.
         let open = LipState {
             progress: 0.,
             active: true,
+            attach: 0.001,
             ..Default::default()
         };
         let opened = grabber(&lip(Edge::Right), (10., 144.), open, A, S, false).unwrap();
@@ -507,6 +525,15 @@ mod tests {
             "{opened}"
         );
         assert_eq!(opened.matches("<rect").count(), 2, "{opened}");
+        let rest_box = LipState { attach: 0., ..open };
+        assert_eq!(
+            grabber(&lip(Edge::Right), (10., 144.), rest_box, A, S, false)
+                .unwrap()
+                .matches("<rect")
+                .count(),
+            1,
+            "the rest box of an open lip is its plate alone"
+        );
         let done = LipState {
             progress: 1.,
             active: false,
