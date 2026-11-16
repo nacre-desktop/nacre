@@ -36,6 +36,10 @@ containing `{"phase":"nacre","backendReady":true,"unlockVerified":true}`. It
 takes effect at your next login, or at once after
 `systemctl --user restart nacre-niri-lock.service`.
 
-The fresh-Arch VM gate checks install, session startup, rendered output and
-purge for each tier. It last ran on 2026-11-14 (main b94eba50) and passed every
-stage, including purge, on all three tiers.
+The fresh-Arch VM gate checks install, session startup, rendered output,
+`nacre update` and purge for each tier, plus an upgrade from an earlier package
+set. It last ran on 2026-11-16 (main 7e12fa0e9) and passed every stage on all
+three tiers. On CachyOS (generic, x86-64-v3 and x86-64-v4 repositories), a
+container check of install, setup and purge passed on all three tiers the same
+day; there, most dependencies, including niri and Hyprland, come from CachyOS's
+rebuilt packages.
