@@ -16,6 +16,10 @@ pub static TOP_TAB: AtomicBool = AtomicBool::new(false);
 /// The docked top tab's input depth inside its 50 px lip (Bead's `docked_input_depth`): the frame
 /// strip's depth, like a side tab's thickness, so the tab never covers windows under the dashboard.
 pub const TOP_TAB_DEPTH: f32 = 10.;
+/// Owner experiment 2026-11-16: a completed dwell keeps the swollen pill until the panel takes it as
+/// its tab, so the pill grows once and flings open at that size (it used to drop back to rest size
+/// for the frames between the dwell's end and the open). `false` restores the old look.
+const HOLD_COMPLETED_DWELL: bool = true;
 
 /// The handle for a side lip (and the top lip with `top_tab`) in the configured style.
 pub fn handle(
@@ -71,6 +75,8 @@ pub fn grabber(
     let charging = !state.active && state.progress > 0. && state.progress < 1.;
     // The tab keeps its swollen pill for the whole ride, even when `active` lags the close.
     let charge = if state.active || attach > 0. {
+        1.
+    } else if HOLD_COMPLETED_DWELL && state.progress >= 1. {
         1.
     } else if !charging {
         0.
@@ -576,6 +582,39 @@ mod tests {
                 .count(),
             2,
             "a completed dwell draws no glow"
+        );
+        // The pill only grows from the dwell to the docked tab: no dip back to rest size between
+        // the dwell's end (open pending) and the panel taking it (HOLD_COMPLETED_DWELL).
+        let long = |state: LipState| {
+            let svg = grabber(&lip(Edge::Right), (10., 144.), state, A, S, false).unwrap();
+            [56, 60, 64, 68, 72]
+                .into_iter()
+                .find(|l| svg.contains(&format!(r#"height="{l}" rx="#)))
+                .unwrap_or(0)
+        };
+        let steps = [
+            LipState {
+                progress: 0.25,
+                ..idle()
+            },
+            LipState {
+                progress: 0.5,
+                ..idle()
+            },
+            LipState {
+                progress: 1.,
+                ..idle()
+            },
+            LipState {
+                active: true,
+                attach: 0.001,
+                ..Default::default()
+            },
+        ];
+        let sizes: Vec<_> = steps.into_iter().map(long).collect();
+        assert!(
+            sizes.windows(2).all(|w| w[0] <= w[1]) && sizes.last() == Some(&72),
+            "{sizes:?}"
         );
         assert!(
             handle(
