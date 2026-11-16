@@ -701,21 +701,19 @@ fn matching_running_session(
     if candidates.is_empty() {
         return Ok(None);
     }
-    let rows = history(config, path, chat_directory, &running).unwrap_or_default();
-    // A session identified as another saved chat is not a legacy candidate.
+    // Launchers name sessions ...-<thread uuid>, so a UUID-suffixed name that is not the exact match is another chat.
     let candidates = candidates
         .into_iter()
         .filter(|name| {
-            !rows.iter().any(|row| {
-                row["id"]
-                    .as_str()
-                    .is_some_and(|known| name.ends_with(&format!("-{known}")))
-            })
+            !name
+                .get(name.len().saturating_sub(36)..)
+                .is_some_and(valid_id)
         })
         .collect::<Vec<_>>();
     if candidates.is_empty() {
         return Ok(None);
     }
+    let rows = history(config, path, chat_directory, &running).unwrap_or_default();
     let matching_rows = rows
         .iter()
         .filter(|row| {

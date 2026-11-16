@@ -447,6 +447,32 @@ fn claude_resume_attaches_exact_and_unique_legacy_tmux_sessions_and_rejects_ambi
     );
     ok(&distinct);
     assert!(home.join(".local/bin/claude.called").exists());
+
+    // UUID-named sessions of chats saved elsewhere (stale pane path) are not legacy candidates.
+    fs::remove_file(home.join(".local/bin/claude.called")).unwrap();
+    let stale_tmux = format!(
+        "#!/usr/bin/python3\nimport json,sys\nif sys.argv[1]=='list-panes': print({:?})\nelse: print(json.dumps(sys.argv[1:]))\n",
+        format!(
+            "ai-fixture-claude-default-44444444-4444-4444-8444-444444444444\t{0}\nai-fixture-claude-default-55555555-5555-4555-8555-555555555555\t{0}",
+            cwd.display()
+        )
+    );
+    script(&home.join(".local/bin/tmux"), &stale_tmux);
+    let stale = run(
+        home,
+        &[
+            "nacre-ai-claude",
+            "resume",
+            "--project",
+            "fixture",
+            "--path",
+            cwd.to_str().unwrap(),
+            "--thread-id",
+            id,
+        ],
+    );
+    ok(&stale);
+    assert!(home.join(".local/bin/claude.called").exists());
 }
 
 #[test]
