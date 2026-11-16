@@ -1829,7 +1829,9 @@ mod tests {
         // A fast follow-up pick still carries the revision the previous pick had not yet bumped.
         assert!(activation_state(&hub, pick(revision + 7)).is_ok());
         assert_eq!(
-            activation_state(&hub, json!({"revision":revision + 7})).unwrap_err().code,
+            activation_state(&hub, json!({"revision":revision + 7}))
+                .unwrap_err()
+                .code,
             ErrorCode::StaleRevision
         );
         Ok(())
