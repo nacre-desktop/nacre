@@ -1198,7 +1198,9 @@ fn activation_state(
             true,
         ));
     }
-    if request.revision != state.revision {
+    // A catalogue pick names its target; a fast follow-up pick races the previous pick's
+    // revision bump, and rejecting it would end on the older pick (latest must win).
+    if !selecting && request.revision != state.revision {
         return Err(failure(
             ErrorCode::StaleRevision,
             "Wallpaper changed; refresh active state",
@@ -1309,21 +1311,6 @@ pub async fn activate_request(hub: Shared, params: Value) -> std::result::Result
                 ErrorCode::Validation,
                 "Unknown wallpaper catalogue id",
                 false,
-            ));
-        }
-        let latest: WallpaperActive = hub
-            .borrow()
-            .snapshot(TOPIC)
-            .and_then(|value| serde_json::from_value(value).ok())
-            .ok_or_else(|| failure(ErrorCode::Unavailable, "Wallpaper is unavailable", true))?;
-        if latest.stale
-            || (!latest.available && latest.current.is_some())
-            || latest.revision != request.revision
-        {
-            return Err(failure(
-                ErrorCode::StaleRevision,
-                "Wallpaper changed; refresh active state",
-                true,
             ));
         }
         let engine = crate::process::current_exe()
@@ -1828,6 +1815,23 @@ mod tests {
         Producer::default().refresh(&hub, &paths)?;
         assert_eq!(hub.borrow().snapshot(TOPIC).unwrap()["revision"], 3);
         assert_eq!(hub.borrow().snapshot(TOPIC).unwrap()["stale"], false);
+        Ok(())
+    }
+
+    #[test]
+    fn a_catalogue_pick_is_not_rejected_for_a_stale_revision() -> Result<()> {
+        let (_home, paths, hub) = fixture()?;
+        Producer::default().refresh(&hub, &paths)?;
+        let revision = hub.borrow().snapshot(TOPIC).unwrap()["revision"]
+            .as_u64()
+            .unwrap();
+        let pick = |revision| json!({"revision":revision,"id":"/wall/a.png"});
+        // A fast follow-up pick still carries the revision the previous pick had not yet bumped.
+        assert!(activation_state(&hub, pick(revision + 7)).is_ok());
+        assert_eq!(
+            activation_state(&hub, json!({"revision":revision + 7})).unwrap_err().code,
+            ErrorCode::StaleRevision
+        );
         Ok(())
     }
 
