@@ -1774,9 +1774,17 @@ fn collection_switcher_badge_and_bounded_rename_menu_render() -> Result<()> {
                 let active_rect = bounds("active-capsule")?;
                 let bright = bounds("stack-pearl-1")?;
                 assert!(
-                    (bright.1 - 11.).abs() < 0.01 && active_rect.0 > bright.0 + bright.1,
+                    (bright.1 - 12.5).abs() <= 1. && active_rect.0 > bright.0 + bright.1,
                     "the current pearl follows the strand: {scale}: {active_rect:?} after {bright:?}"
                 );
+                if !single {
+                    // The second pearl peeks out of the current one by its 9 px minus the 4 px overlap.
+                    let dim = bounds("stack-pearl-2")?;
+                    assert!(
+                        dim.0 + dim.1 - (bright.0 + bright.1) >= 4. && (dim.1 - 10.5).abs() <= 1.,
+                        "second pearl visible at {scale}: {dim:?} after {bright:?}"
+                    );
+                }
                 let pearls = (1..=3)
                     .filter(|i| bounds(&format!("stack-pearl-{i}")).is_ok())
                     .count();

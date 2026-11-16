@@ -22,6 +22,11 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
             -- named 28 px cap (Settings > Panels > Top bar > Stack style). Tier 2 advertises no
             -- collections, so neither appears and the pill starts at the current pearl.
             local show_collections=#collections>0
+            -- This output's current stack leads the strand (its bright pearl); the rest follow in switcher order.
+            local ordered={}
+            for _,collection in ipairs(collections) do if collection.id==collection_current then ordered[1]=collection end end
+            for _,collection in ipairs(collections) do if collection~=ordered[1] then ordered[#ordered+1]=collection end end
+            collections=ordered
             local cap_style=ui.resolve_for_check(ui.bind("bar.stack.style"))=="name"
             local current_collection_name=""
             for i,collection in ipairs(collections) do
@@ -72,14 +77,17 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
             local pearls={}
             -- The bright pearl is the current stack and leads the strand; the dim ones follow,
             -- overlapping it, and it paints last so it stays whole.
+            -- Bead strokes straddle the box edge, so each box grows by the ring to keep the fill at 9/11 px.
             for i=strand_count,1,-1 do
                 local on=i==1
                 local size=on and t.strand_current or t.strand_other
-                pearls[#pearls+1]=ui.Box{id="stack-pearl-"..i,position="absolute",left=(i-1)*(t.strand_other-t.strand_overlap)+(on and 0 or (t.strand_current-t.strand_other)/2),top=(t.workspace_height-size)/2,width=size,height=size,radius=size/2,
-                    fill=on and ui.tint(pearl_accent(0),t.pearl_cream,.4) or "outlineVariant",border_width=t.strand_border,border_color="surfaceContainer"}
+                local box=size+t.strand_border
+                local left=on and 0 or (t.strand_current-t.strand_overlap)+(i-2)*(t.strand_other-t.strand_overlap)
+                pearls[#pearls+1]=ui.Box{id="stack-pearl-"..i,position="absolute",left=left-t.strand_border/2,top=(t.workspace_height-box)/2,width=box,height=box,radius=box/2,
+                    fill=on and ui.tint(pearl_accent(0),t.pearl_cream,.4) or "outline",border_width=t.strand_border,border_color="surfaceContainer"}
             end
             local collection_control=show_collections and kit.Button{id="collection-badge",width=stack_control_width,height=cap_style and t.cap_height or t.workspace_height,padding=0,radius=cap_style and t.cap_radius or t.workspace_radius,shrink=0,
-                    fill=cap_style and "surfaceContainerHighest" or "transparent",hover_fill=pressed and "surfaceBright" or cap_style and "surfaceBright" or ui.alpha("onSurface",.08),aria_label=current_collection_label,on_activate=c.popouts and ui.action("collection.switcher.open") or nil,
+                    fill=cap_style and "surfaceContainerHighest" or "transparent",hover_fill=cap_style and "surfaceBright" or "transparent",aria_label=current_collection_label,on_activate=c.popouts and ui.action("collection.switcher.open") or nil,
                     cap_style and ui.Row{id="collection-content",width=stack_control_width,height=t.cap_height,padding_left=t.cap_pad_left,padding_right=t.cap_pad_right,gap=t.cap_gap,align="center",
                         ui.Text{id="collection-icon",text="stacks",width=t.cap_icon,height=t.cap_icon,shrink=0,family=kit.tokens.fonts.icon,font_size=t.cap_icon,color="onSurfaceVariant",text_align="center"},
                         ui.Text{id="collection-name",text=cap_name,width=cap_name_width,height=math.ceil(ui.text_line_height(stack_family,t.cap_font)),shrink=0,font_size=t.cap_font,family=stack_family,color="onSurface"}}

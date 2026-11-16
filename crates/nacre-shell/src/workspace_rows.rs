@@ -646,6 +646,37 @@ mod tests {
     }
 
     #[test]
+    fn each_output_shows_only_its_own_workspaces_and_stack() {
+        let on = |i, output: &str, active| {
+            let mut ws = workspace(i, &i.to_string(), false, active);
+            ws.output = Some(Id(output.into()));
+            ws
+        };
+        let mut two = snapshot(
+            vec![on(1, "out", true), on(2, "out", false), on(3, "ext", true)],
+            vec![],
+            true,
+        );
+        let mut ext = two.outputs[0].clone();
+        (ext.id, ext.name, ext.focused) = (Id("ext".into()), "ext".into(), false);
+        two.outputs.push(ext);
+        let rows = Rows::default();
+        assert_eq!(
+            labels(&rows.rows_with(&two, Some("out"), &no_dirs)),
+            ["1", "2"]
+        );
+        assert_eq!(labels(&rows.rows_with(&two, Some("ext"), &no_dirs)), ["3"]);
+        let topic = json!({"collections":[
+            {"id":"niri-collection:1","index":1,"name":"work","output":"out","active":true},
+            {"id":"niri-collection:2","index":2,"name":"play","output":"ext","active":false}
+        ]});
+        let current =
+            |output| collection_stores(&topic, Some(output))["bar.collection.current"].clone();
+        assert_eq!(current("out"), Value::Text("niri-collection:1".into()));
+        assert_eq!(current("ext"), Value::Text("niri-collection:2".into()));
+    }
+
+    #[test]
     fn visitors_follow_local_rows_only_while_occupied() {
         let mut visitor = workspace(9, "9", false, false);
         visitor.visiting = true;
