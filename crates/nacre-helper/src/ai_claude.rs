@@ -243,9 +243,34 @@ fn jsonl(path: &Path) -> Vec<Value> {
 fn transcript_working(records: &[Value], modified: Option<std::time::SystemTime>) -> bool {
     let (mut awaiting_reply, mut terminal_seen, mut post_turn_ephemeral, mut tools_in_flight) =
         (false, false, false, BTreeSet::<String>::new());
+    // Newest conversational record's time; metadata writes never refresh it.
+    let mut activity = None::<std::time::SystemTime>;
     for record in records {
-        match record.get("type").and_then(Value::as_str) {
+        let kind = record.get("type").and_then(Value::as_str);
+        // Compaction summaries and meta notes are not prompts awaiting a reply.
+        let skipped = ["isMeta", "isCompactSummary", "isVisibleInTranscriptOnly"]
+            .iter()
+            .any(|flag| record[*flag] == true);
+        if skipped
+            || !matches!(
+                kind,
+                Some("user" | "assistant" | "progress" | "hook_progress" | "hook" | "ephemeral")
+            )
+        {
+            continue;
+        }
+        if let Some(time) = record["timestamp"]
+            .as_str()
+            .and_then(|text| chrono::DateTime::parse_from_rfc3339(text).ok())
+            .map(std::time::SystemTime::from)
+        {
+            activity = activity.max(Some(time));
+        }
+        match kind {
             Some("user") => {
+                let interrupted = content_text(&record["message"])
+                    .trim_start()
+                    .starts_with("[Request interrupted by user");
                 let blocks = record["message"]["content"].as_array();
                 let mut tool_result = false;
                 if let Some(blocks) = blocks {
@@ -275,6 +300,11 @@ fn transcript_working(records: &[Value], modified: Option<std::time::SystemTime>
                 }
                 if tool_result {
                     awaiting_reply = true;
+                }
+                if interrupted {
+                    // The turn was cancelled: nothing is pending or in flight.
+                    awaiting_reply = false;
+                    tools_in_flight.clear();
                 }
             }
             Some("assistant") => {
@@ -317,13 +347,15 @@ fn transcript_working(records: &[Value], modified: Option<std::time::SystemTime>
     if !tools_in_flight.is_empty() {
         return true;
     }
+    // File mtime only when no conversational record carries a timestamp.
+    let activity = activity.or(modified);
     if !awaiting_reply {
         return post_turn_ephemeral
-            && modified
+            && activity
                 .and_then(|time| time.elapsed().ok())
                 .is_some_and(|age| age <= EPHEMERAL_WORKING_STALE_AFTER);
     }
-    modified
+    activity
         .and_then(|time| time.elapsed().ok())
         .is_some_and(|age| age <= WORKING_STALE_AFTER)
 }
@@ -1760,13 +1792,13 @@ mod tests {
             ),
             recent
         ));
+        let now = chrono::Utc::now().to_rfc3339();
         assert!(transcript_working(
-            &records(
-                r#"{"type":"assistant","message":{"content":[{"type":"text","text":"synthetic answer"}],"stop_reason":"end_turn"}}
-{"type":"ephemeral","timestamp":"2026-11-13T01:00:00.000Z"}
-{"type":"ephemeral","timestamp":"2026-11-13T01:00:10.000Z"}"#
-            ),
-            recent
+            &records(&format!(
+                r#"{{"type":"assistant","message":{{"content":[{{"type":"text","text":"synthetic answer"}}],"stop_reason":"end_turn"}}}}
+{{"type":"ephemeral","timestamp":"{now}"}}"#
+            )),
+            None
         ));
         assert!(!transcript_working(
             &records(
@@ -1806,6 +1838,71 @@ mod tests {
                 r#"{"type":"assistant","message":{"content":[{"type":"tool_use","id":"tool-1"}],"stop_reason":"tool_use"}}"#
             ),
             Some(std::time::SystemTime::now() - WORKING_STALE_AFTER - Duration::from_secs(1))
+        ));
+    }
+
+    #[test]
+    fn working_state_follows_record_timestamps_not_metadata_writes() {
+        let records = |jsonl: &str| {
+            jsonl
+                .lines()
+                .map(|line| serde_json::from_str::<Value>(line).unwrap())
+                .collect::<Vec<_>>()
+        };
+        let at = |age: Duration| {
+            (chrono::Utc::now() - chrono::Duration::from_std(age).unwrap()).to_rfc3339()
+        };
+        let (now, old) = (
+            at(Duration::ZERO),
+            at(WORKING_STALE_AFTER + Duration::from_secs(60)),
+        );
+        let metadata = format!(
+            r#"{{"type":"custom-title","customTitle":"t"}}
+{{"type":"ai-title","aiTitle":"t"}}
+{{"type":"mode","mode":"normal"}}
+{{"type":"bridge-session","timestamp":"{now}"}}
+{{"type":"system","subtype":"informational","timestamp":"{now}"}}"#
+        );
+        let fresh_file = Some(std::time::SystemTime::now());
+        // 1: a compaction summary is not a pending prompt, whatever is written after it.
+        assert!(!transcript_working(
+            &records(&format!(
+                r#"{{"type":"system","subtype":"compact_boundary","timestamp":"{old}"}}
+{{"type":"user","message":{{"content":"summary"}},"isCompactSummary":true,"isVisibleInTranscriptOnly":true,"timestamp":"{now}"}}
+{metadata}"#
+            )),
+            fresh_file
+        ));
+        // 2: a genuine pending prompt stamped now is working.
+        assert!(transcript_working(
+            &records(&format!(
+                r#"{{"type":"user","message":{{"content":"prompt"}},"timestamp":"{now}"}}"#
+            )),
+            fresh_file
+        ));
+        // 3: an old pending prompt stays stale despite a fresh file and fresh metadata.
+        assert!(!transcript_working(
+            &records(&format!(
+                r#"{{"type":"user","message":{{"content":"prompt"}},"timestamp":"{old}"}}
+{metadata}"#
+            )),
+            fresh_file
+        ));
+        // 4: a tool in flight is working whatever the age.
+        assert!(transcript_working(
+            &records(&format!(
+                r#"{{"type":"assistant","message":{{"content":[{{"type":"tool_use","id":"tool-1"}}],"stop_reason":"tool_use"}},"timestamp":"{old}"}}"#
+            )),
+            fresh_file
+        ));
+        // An interrupted turn is idle, even with a tool in flight and a fresh timestamp.
+        assert!(!transcript_working(
+            &records(&format!(
+                r#"{{"type":"assistant","message":{{"content":[{{"type":"tool_use","id":"tool-1"}}],"stop_reason":"tool_use"}},"timestamp":"{now}"}}
+{{"type":"user","message":{{"content":[{{"type":"tool_result","tool_use_id":"tool-1","content":"x"}},{{"type":"text","text":"[Request interrupted by user for tool use]"}}]}},"timestamp":"{now}"}}
+{metadata}"#
+            )),
+            fresh_file
         ));
     }
 
