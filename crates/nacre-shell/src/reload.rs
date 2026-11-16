@@ -4002,6 +4002,10 @@ impl Runtime {
         Ok(self)
     }
     #[cfg(test)]
+    pub(crate) fn test_open_started(&self) -> Option<std::time::Instant> {
+        self.smooth_open_started
+    }
+    #[cfg(test)]
     pub(crate) fn test_reload_events(&self) -> usize {
         self.reload_events
     }
@@ -6227,6 +6231,8 @@ impl SceneSource for Runtime {
             UiEvent::PanelVisibility(true) if self.smooth_open_started.is_none() => {
                 self.smooth_open_started = Some(now);
             }
+            // A stamp no frame consumed before the hide must not time the next open.
+            UiEvent::PanelVisibility(false) => self.smooth_open_started = None,
             UiEvent::Key { .. } if self.launcher.is_some() || self.chat.is_some() => {
                 if self.smooth_key_starts.len() == 32 {
                     self.smooth_key_starts.pop_front();
