@@ -19,6 +19,14 @@ repository = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(repository)
 
 
+def commit_all(root):
+    git = ["git", "-C", str(root), "-c", "user.name=t", "-c", "user.email=t@t"]
+    subprocess.run(git[:3] + ["init", "-q"], check=True)
+    subprocess.run(git + ["add", "-A"], check=True)
+    subprocess.run(git + ["commit", "-qm", "x"], check=True)
+    return subprocess.check_output(git + ["rev-parse", "HEAD"], text=True).strip()
+
+
 @unittest.skipUnless(
     all(shutil.which(tool) for tool in ("gpg", "repo-add", "bsdtar", "vercmp")),
     "Arch repository tools unavailable",
@@ -62,6 +70,7 @@ class RepositoryTests(unittest.TestCase):
         (self.root / "packaging/keys").mkdir(parents=True)
         (self.root / "packaging/arch").mkdir()
         (self.root / "packaging/arch/bootstrap.sh").write_text("#!/bin/sh\nexit 0\n")
+        self.revision = commit_all(self.root)
         (self.root / "packaging/sessions.json").write_text(
             json.dumps(
                 {
@@ -77,7 +86,7 @@ class RepositoryTests(unittest.TestCase):
             (self.artifacts / name).mkdir(parents=True)
         (self.artifacts / "nacre/PKGBUILD").write_text(
             "source=('nacre::git+https://github.com/nacre-desktop/nacre.git#commit="
-            + "a" * 40
+            + self.revision
             + "')\n"
         )
         (self.artifacts / "nacre/.SRCINFO").write_text("pkgbase = nacre\n")
@@ -187,7 +196,7 @@ class RepositoryTests(unittest.TestCase):
 
     def test_orient_stays_separate_and_its_tested_version_is_required(self):
         paths, records, source = repository.verify_artifacts(self.root, self.artifacts)
-        self.assertEqual(source, "a" * 40)
+        self.assertEqual(source, self.revision)
         self.assertIn("orient", paths)
         self.assertIn("orient=0.1.0dev7", records["nacre"]["dependencies"])
         (self.root / "dependencies.lock.json").write_text(
@@ -272,6 +281,20 @@ class RepositoryTests(unittest.TestCase):
             finally:
                 subprocess.run(["gpgconf", "--kill", "gpg-agent"], capture_output=True)
 
+    def test_bootstrap_renders_from_the_tested_revision(self):
+        script = self.root / "packaging/arch/bootstrap.sh"
+        script.write_text("frontend=@NACRE_PACMAN_FRONTEND@\n")
+        (self.root / "tools").mkdir()
+        (self.root / "tools/package_transaction.py").write_text("old = 1\n")
+        tested = commit_all(self.root)
+        script.write_text("changed\n")
+        (self.root / "tools/package_transaction.py").write_text("new = 1\n")
+        self.assertEqual(
+            repository.render_bootstrap(self.root, tested),
+            "frontend='old = 1\n\nmain()\n'\n",
+        )
+        self.assertEqual(repository.render_bootstrap(self.root), "changed\n")
+
     def test_fork_recipe_must_keep_the_reviewed_pin(self):
         (self.artifacts / "niri/PKGBUILD").write_text("_commit=" + "b" * 40 + "\n")
         with self.assertRaisesRegex(ValueError, "reviewed source"):
@@ -312,7 +335,7 @@ class RepositoryTests(unittest.TestCase):
                 )
                 first = self.base / "first"
                 record = repository.build(
-                    self.root, self.artifacts, first, fingerprint, "a" * 40, "123"
+                    self.root, self.artifacts, first, fingerprint, self.revision, "123"
                 )
                 previous = first / "arch/dev/x86_64"
                 self.assertFalse(any(path.is_symlink() for path in first.rglob("*")))
@@ -340,7 +363,7 @@ class RepositoryTests(unittest.TestCase):
                     self.artifacts,
                     second,
                     fingerprint,
-                    "a" * 40,
+                    self.revision,
                     "124",
                     previous,
                 )
@@ -374,7 +397,7 @@ class RepositoryTests(unittest.TestCase):
                     self.artifacts,
                     self.base / "public",
                     fingerprint,
-                    "a" * 40,
+                    self.revision,
                     "126",
                 )
                 self.assertIn(
@@ -389,7 +412,7 @@ class RepositoryTests(unittest.TestCase):
                         self.artifacts,
                         self.base / "bad",
                         fingerprint,
-                        "a" * 40,
+                        self.revision,
                         "125",
                         previous,
                     )

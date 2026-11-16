@@ -267,10 +267,18 @@ def fetch_previous(destination):
     return True
 
 
-def render_bootstrap(root):
-    bootstrap = (root / "packaging/arch/bootstrap.sh").read_text()
+def render_bootstrap(root, revision=None):
+    def read(path):  # a revision reads the tested source, not the checkout
+        if revision is None:
+            return (root / path).read_text()
+        # stdout only: run() merges stderr, which must never reach the signed script.
+        return subprocess.check_output(
+            ["git", "-C", str(root), "show", revision + ":" + path], text=True
+        )
+
+    bootstrap = read("packaging/arch/bootstrap.sh")
     if "@NACRE_PACMAN_FRONTEND@" in bootstrap:
-        frontend = (root / "tools/package_transaction.py").read_text() + "\nmain()\n"
+        frontend = read("tools/package_transaction.py") + "\nmain()\n"
         bootstrap = bootstrap.replace("@NACRE_PACMAN_FRONTEND@", shlex.quote(frontend))
     return bootstrap
 
@@ -378,7 +386,7 @@ def build(root, artifacts, output, fingerprint, revision, run_id, previous=None)
     )
     sign(checksums, fingerprint)
     shutil.copy2(root / "packaging/keys/nacre-repo.asc", output / "nacre-repo.asc")
-    (output / "install-arch.sh").write_text(render_bootstrap(root))
+    (output / "install-arch.sh").write_text(render_bootstrap(root, revision))
     sign(output / "install-arch.sh", fingerprint)
     links = "\n".join(
         '<li><a href="arch/dev/x86_64/'
