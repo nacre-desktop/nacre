@@ -743,23 +743,10 @@ pub fn record_stop() -> Result<String> {
     record_stop_with(&Paths::environment()?, &mut NativeUnits)
 }
 pub fn record_start() -> Result<String> {
-    record_start_with(
-        &Paths::environment()?,
-        &mut NativeUnits,
-        &mut process::run_bytes,
-        || chrono::Local::now().format("%Y%m%d_%H%M%S_%6f").to_string(),
-        None,
-    )
+    record_configured(false, &[])
 }
 pub fn record_screen() -> Result<String> {
-    let output = Compositor::connect()?.focused_output_name()?;
-    record_start_with(
-        &Paths::environment()?,
-        &mut NativeUnits,
-        &mut process::run_bytes,
-        || chrono::Local::now().format("%Y%m%d_%H%M%S_%6f").to_string(),
-        Some(&output),
-    )
+    record_configured(true, &[])
 }
 pub fn record_configured(screen: bool, extra: &[String]) -> Result<String> {
     let output = if screen {
@@ -774,7 +761,52 @@ pub fn record_configured(screen: bool, extra: &[String]) -> Result<String> {
         || chrono::Local::now().format("%Y%m%d_%H%M%S_%6f").to_string(),
         output.as_deref(),
         extra,
+        Path::new(RENDER_NODE),
     )
+}
+const RENDER_NODE: &str = "/dev/dri/renderD128";
+/// Hardware H.264 (VAAPI) at a constant 60 fps when the render node exists and a one-frame ffmpeg encode works;
+/// otherwise wf-recorder's software x264 default.
+fn encoder_args(
+    node: &Path,
+    run: &mut impl FnMut(&str, &[String], Option<&[u8]>, Duration) -> Result<Output>,
+) -> Vec<String> {
+    let probe = [
+        "-v",
+        "error",
+        "-init_hw_device",
+        &format!("vaapi=va:{}", node.display()),
+        "-f",
+        "lavfi",
+        "-i",
+        "color=s=256x256:d=0.1",
+        "-vf",
+        "format=nv12,hwupload",
+        "-frames:v",
+        "1",
+        "-c:v",
+        "h264_vaapi",
+        "-f",
+        "null",
+        "-",
+    ]
+    .map(String::from);
+    let works = node.exists()
+        && run("ffmpeg", &probe, None, Duration::from_secs(5))
+            .is_ok_and(|out| out.status.success());
+    if !works {
+        return vec![];
+    }
+    [
+        "-c",
+        "h264_vaapi",
+        "-d",
+        &node.to_string_lossy(),
+        "-r",
+        "60",
+    ]
+    .map(String::from)
+    .to_vec()
 }
 pub fn read_qr_sensitive() -> Result<String> {
     screen_with(
@@ -795,6 +827,7 @@ pub fn read_qr_sensitive() -> Result<String> {
         },
     )
 }
+#[cfg(test)]
 fn record_start_with(
     paths: &Paths,
     units: &mut impl Units,
@@ -802,7 +835,7 @@ fn record_start_with(
     stamp: impl FnOnce() -> String,
     output: Option<&str>,
 ) -> Result<String> {
-    record_start_options_with(paths, units, run, stamp, output, &[])
+    record_start_options_with(paths, units, run, stamp, output, &[], Path::new(""))
 }
 fn record_start_options_with(
     paths: &Paths,
@@ -811,6 +844,7 @@ fn record_start_options_with(
     stamp: impl FnOnce() -> String,
     output: Option<&str>,
     extra: &[String],
+    node: &Path,
 ) -> Result<String> {
     let _guard = crate::menu_registry::registry_lock(paths, "recording")?;
     if units.active("nacre-screen-recording.service")? {
@@ -837,6 +871,7 @@ fn record_start_options_with(
     let path = folder.join(format!("recording_{}.mp4", stamp()));
     let mut command = vec!["wf-recorder".to_string()];
     command.extend(selector);
+    command.extend(encoder_args(node, run));
     command.extend(extra.iter().cloned());
     command.extend([
         "-f".into(),
@@ -1110,6 +1145,74 @@ mod tests {
                 }
             }
         }
+        Ok(())
+    }
+    #[test]
+    fn recorder_encoder_is_vaapi_only_when_the_node_exists_and_the_probe_works() -> Result<()> {
+        let node = tempfile::NamedTempFile::new()?;
+        let probe = |code: i32| {
+            move |program: &str, args: &[String], _: Option<&[u8]>, _: Duration| -> Result<Output> {
+                assert_eq!(program, "ffmpeg");
+                assert!(args.contains(&"h264_vaapi".to_string()));
+                Ok(Output {
+                    status: std::process::ExitStatus::from_raw(code << 8),
+                    stdout: vec![],
+                    stderr: vec![],
+                })
+            }
+        };
+        let hardware = [
+            "-c",
+            "h264_vaapi",
+            "-d",
+            &node.path().to_string_lossy(),
+            "-r",
+            "60",
+        ]
+        .map(String::from);
+        assert_eq!(encoder_args(node.path(), &mut probe(0)), hardware);
+        assert!(encoder_args(node.path(), &mut probe(1)).is_empty());
+        assert!(encoder_args(node.path(), &mut |_, _, _, _| Err("no ffmpeg".into())).is_empty());
+        let missing = Path::new("/nonexistent/renderD128");
+        assert!(
+            encoder_args(missing, &mut |_, _, _, _| panic!("no probe without a node")).is_empty()
+        );
+        // The full argv: selector, encoder, caller extras, then the file.
+        let home = tempfile::tempdir()?;
+        struct Fake(Vec<String>);
+        impl Units for Fake {
+            fn owner(&mut self, _: &str) -> Result<String> {
+                Ok("1:x".into())
+            }
+            fn active(&mut self, _: &str) -> Result<bool> {
+                Ok(false)
+            }
+            fn start(&mut self, _: &str, args: &[String]) -> Result<()> {
+                self.0 = args.to_vec();
+                Ok(())
+            }
+            fn stop(&mut self, _: &str, _: &str) -> Result<()> {
+                unreachable!()
+            }
+            fn finish_recording(&mut self, _: &str, _: &str) -> Result<()> {
+                unreachable!()
+            }
+        }
+        let mut units = Fake(vec![]);
+        record_start_options_with(
+            &Paths::new(home.path()),
+            &mut units,
+            &mut probe(0),
+            || "t".into(),
+            Some("DP-2"),
+            &["--audio=x".into()],
+            node.path(),
+        )?;
+        let argv = units.0;
+        assert_eq!(argv[..3], ["wf-recorder", "-o", "DP-2"].map(String::from));
+        assert_eq!(argv[3..9], hardware);
+        assert_eq!(argv[9], "--audio=x");
+        assert_eq!(argv[10], "-f");
         Ok(())
     }
     #[test]
