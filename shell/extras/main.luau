@@ -147,7 +147,7 @@ heading[#heading+1] = kit.Button{id="close",aria_label="Close",width=T.panel.clo
 
 
 return kit.Panel{id="extras",edge=T.panel.edge,open=ui.bind("panel.open"),width=width,height=panel_height,
-  duration=T.panel.duration,transition=T.panel.transition,reveal=T.panel.reveal,fade=T.panel.fade,radius=T.panel.radius,fill="surface",border_width=T.panel.border,border_color="outlineVariant",
+  reveal=T.panel.reveal,fade=T.panel.fade,radius=T.panel.radius,fill="surface",border_width=T.panel.border,border_color="outlineVariant",
   padding_left=T.panel.horizontal_inset,padding_right=T.panel.horizontal_inset,
   padding_top=T.panel.heading_top,padding_bottom=T.panel.bottom_inset,gap=T.panel.search_gap,
   ui.Row{id="heading",width="fill",height=T.panel.heading_height,gap=T.panel.heading_gap,align="center",table.unpack(heading)},

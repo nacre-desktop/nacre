@@ -1696,6 +1696,7 @@ pub fn panel(
     let mut cold = crate::sound::fallback(colors.get("surface")?);
     if let Some(motion) = &mut cold.motion {
         motion.edge = bead::core::Edge::Bottom;
+        motion.duration = bead::core::animation::panel_open_duration(690.);
     }
     Ok(bead::wayland::PanelSpec {
         position: Some(crate::placement::Frame::default().positioner(

@@ -92,7 +92,7 @@ local input_height=HEAD+T.spacing.xs+devices_height(input_count)+ROW+T.spacing.x
 local stream_height=#streams==0 and 36 or #streams*64+(#streams-1)*T.spacing.xs
 local apps_height=HEAD+T.spacing.xs+stream_height
 local height=padding*2+output_height+input_height+apps_height+T.spacing.md*2
-return panel(embedded,{id="sound",edge="top",open=ui.bind("panel.open"),duration=ui.bind("view.duration"),width=width,height=height,padding=padding,gap=T.spacing.md,
+return panel(embedded,{id="sound",edge="top",open=ui.bind("panel.open"),width=width,height=height,padding=padding,gap=T.spacing.md,
  ui.Column{id="output",width=content_width,height=output_height,gap=T.spacing.xs,
   ui.Text{id="output-heading",text=ui.tr("bead.dashboard.audio-output"),width=content_width,height=HEAD,font_size=T.text.body*4/3,font_weight=500,color="onSurface"},
   output_devices,

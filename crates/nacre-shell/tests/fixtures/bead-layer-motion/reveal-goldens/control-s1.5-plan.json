@@ -34,7 +34,7 @@
     "surface_position_is_applied_by_layer_surface": true
   },
   "curve": "EaseOut",
-  "duration_ms": 280.000001,
+  "duration_ms": 265.0,
   "planes": [
     {
       "from": {

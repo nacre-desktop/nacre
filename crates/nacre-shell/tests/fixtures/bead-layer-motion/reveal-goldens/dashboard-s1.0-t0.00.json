@@ -6,8 +6,8 @@
     "x": -32.0,
     "y": -2.0
   },
-  "curve": "EaseInOut",
-  "duration_ms": 360.00001399999996,
+  "curve": "EaseOut",
+  "duration_ms": 320.0,
   "eased_progress": 0.0,
   "format": "RGBA8",
   "height": 714,

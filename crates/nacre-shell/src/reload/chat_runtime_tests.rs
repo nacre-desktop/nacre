@@ -450,7 +450,12 @@ fn reattaching_under_the_pointer_cancels_transition_close_and_restores_normal_de
         .session
         .hover_close_deadline()
         .expect("later real leave closes normally");
-    assert!(deadline <= std::time::Instant::now() + Duration::from_millis(140));
+    // chat authors no leave_delay: the shared panel profile's 150 ms applies.
+    let remaining = deadline.saturating_duration_since(std::time::Instant::now());
+    assert!(
+        remaining > Duration::from_millis(135) && remaining <= Duration::from_millis(150),
+        "{remaining:?}"
+    );
 }
 
 #[test]

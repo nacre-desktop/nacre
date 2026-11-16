@@ -265,5 +265,5 @@ end
 if cued("header.terminal") then tooltip("header-tooltip",terminal_label,terminal_right,header_bottom) end
 -- Motion (design review "Timings for 120 Hz", edge slide): open 240 ms ease-out, close 160 ms
 -- (Bead closes with its accelerate curve, at most return_duration). D16: out-quint once the kit has it.
-return kit.Panel{id="chat",edge=get("view.edge"),open=ui.bind("panel.open"),duration=.24,return_duration=.16,return_transition="ease",transition="ease",fade=false,reveal=not ui.resolve_for_check(ui.bind("view.detached")),
+return kit.Panel{id="chat",edge=get("view.edge"),open=ui.bind("panel.open"),fade=false,reveal=not ui.resolve_for_check(ui.bind("view.detached")),
     width=W,height=H,padding=0,radius=T.radii.medium+T.spacing.hairline,fill="surface",table.unpack(kids)}

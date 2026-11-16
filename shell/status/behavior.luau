@@ -1,6 +1,6 @@
 -- SPDX-License-Identifier: GPL-3.0-only
 return {stores={
-    ["panel.open"]=true,["view.edge"]="top",["view.width"]=310,["view.height"]=222,["view.duration"]=0.2,
+    ["panel.open"]=true,["view.edge"]="top",["view.width"]=310,["view.height"]=222,
     ["status.ready"]=false,["status.active"]=false,
     ["status.heading"]=tr("bead.panel.status-heading"),["status.icon"]="info",["status.primary"]=tr("bead.panel.status-none"),
     ["status.kind"]="network",

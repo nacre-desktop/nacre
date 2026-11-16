@@ -768,7 +768,7 @@ fn real_shell_panel_routes_open_and_close_with_prepared_scenes() {
             "sound-core" => runtime
                 .with_view_edge("top")
                 .expect("sound edge")
-                .with_panel_geometry(382., 286., 0.23)
+                .with_panel_geometry(382., 286.)
                 .expect("sound geometry")
                 .with_frame(crate::placement::Attachment::Popout, &colors)
                 .expect("sound frame")

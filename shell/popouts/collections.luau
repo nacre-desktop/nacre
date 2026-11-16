@@ -40,7 +40,7 @@ body[#body+1]=kit.CollectionSwitcherMenu{
     actions=not editing and actions or {},
 }
 return kit.Panel{id="collection-switcher",edge=ui.resolve_for_check(ui.bind("view.edge")),
-    open=ui.bind("panel.open"),duration=.23,transition="ease-in-out",fade=false,reveal=true,
+    open=ui.bind("panel.open"),fade=false,reveal=true,
     width=300,height=panel_height,
     padding=14,radius=kit.tokens.radii.medium,fill="surface",
     table.unpack(body),

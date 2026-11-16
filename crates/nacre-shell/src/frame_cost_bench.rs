@@ -79,7 +79,7 @@ fn scenes() -> Vec<(&'static str, Scene)> {
                 )
             })
             .expect("dashboard runtime")
-            .with_panel_geometry(1920., 1200., 0.36)
+            .with_panel_geometry(1920., 1200.)
             .expect("dashboard geometry");
     let launcher = crate::reload::Runtime::new(harness("ui/main.luau", BTreeMap::new()).session)
         .with_frame(
@@ -123,7 +123,7 @@ fn scenes() -> Vec<(&'static str, Scene)> {
     .expect("control runtime")
     .with_view_edge("right")
     .expect("control edge")
-    .with_panel_geometry(1920., 1200., 0.28)
+    .with_panel_geometry(1920., 1200.)
     .expect("control geometry");
     let calendar =
         crate::reload::Runtime::new(harness("popouts/main.luau", BTreeMap::new()).session)

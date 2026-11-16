@@ -56,7 +56,7 @@ end
 if more_height>0 then
     table.insert(content,ui.Text{id="more-devices",text=more_text,width=280,height=16,font_size=T.text.caption*4/3,color="onSurfaceVariant"})
 end
-return kit.Panel{id="status-peek",edge="top",open=ui.bind("panel.open"),duration=0.23,transition="ease-in-out",fade=false,reveal=true,
+return kit.Panel{id="status-peek",edge="top",open=ui.bind("panel.open"),fade=false,reveal=true,
     width=310,height=body_height+30,padding=15,gap=6,
     radius=kit.tokens.radii.medium,fill="surfaceContainerHigh",table.unpack(content),
 }

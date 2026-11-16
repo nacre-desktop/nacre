@@ -25,5 +25,4 @@ return {stores={
     ["chat.menu.close"]=function(s) s["chat.menu.open"]=false end,
 },computed={
     ["panel.close_on_leave"]=function(s) return s["panel.hover_opened"] and not s["chat.pinned"] and not s["view.detached"] end,
-    ["panel.leave_delay"]=function(_) return .130 end,
 }}

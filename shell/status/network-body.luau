@@ -15,7 +15,6 @@ local view=get("network.view")
 local padding=embedded and 0 or T.spacing.panel
 local gap=T.spacing.compact
 local width=embedded and options.width or get("view.width")
-local duration=get("view.duration")
 local BODY,CAPTION,TITLE=T.text.body*4/3,T.text.caption*4/3,T.text.title*4/3
 local FIELD,BUTTON=40,36
 local rows=get("network.rows")
@@ -36,7 +35,7 @@ local function Page()
     local total=2*padding+gap*(#heights-1)
     for _,h in heights do total=total+h end
     return panel(embedded,{id="status-popout",edge=get("view.edge"),
-        open=ui.bind("panel.open"),duration=duration,width=width,height=total,padding=padding,
+        open=ui.bind("panel.open"),width=width,height=total,padding=padding,
         gap=gap,radius=T.radii.medium,fill="surface",table.unpack(kids)})
 end
 local function button(id,label,action,primary,h)
@@ -187,6 +186,6 @@ for _,node in ipairs(footer) do put(node,32) end
 local total=2*padding+gap*(#out_heights-1)
 for _,h in ipairs(out_heights) do total=total+h end
 return panel(embedded,{id="status-popout",edge=get("view.edge"),
-    open=ui.bind("panel.open"),duration=duration,width=width,height=total,padding=padding,
+    open=ui.bind("panel.open"),width=width,height=total,padding=padding,
     gap=gap,radius=T.radii.medium,fill="surface",table.unpack(out_kids)})
 end

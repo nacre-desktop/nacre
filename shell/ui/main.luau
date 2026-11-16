@@ -65,7 +65,7 @@ if has_detail then
     }
 end
 local panel={edge="bottom",id="launcher",width=1100,height=590,max_width="90%",max_height="90%",
-    open=ui.bind("panel.open"),transition="ease",duration=.3,return_duration=.18,return_transition="ease",fade=false,reveal=not ui.resolve_for_check(ui.bind("view.detached")),slide_distance=590,
+    open=ui.bind("panel.open"),fade=false,reveal=not ui.resolve_for_check(ui.bind("view.detached")),slide_distance=590,
     radius=12,fill="surface",border_width=1,border_color="outlineVariant",
     padding_left=12,padding_right=20,padding_top=16,padding_bottom=18,gap=15}
 -- An inline form (reminder, TUI/web app, imports, recording sound, confirmations) covers the whole launcher, as in QML.

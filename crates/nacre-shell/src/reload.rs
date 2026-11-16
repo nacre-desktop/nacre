@@ -4927,19 +4927,13 @@ impl Runtime {
             .map_err(|error| error.to_string())?;
         Ok(self)
     }
-    pub fn with_panel_geometry(
-        mut self,
-        width: f64,
-        height: f64,
-        duration: f64,
-    ) -> Result<Self, String> {
+    pub fn with_panel_geometry(mut self, width: f64, height: f64) -> Result<Self, String> {
         self.session.stores = self
             .session
             .stores
             .reconcile(&BTreeMap::from([
                 ("view.width".into(), bead::core::Value::Number(width)),
                 ("view.height".into(), bead::core::Value::Number(height)),
-                ("view.duration".into(), bead::core::Value::Number(duration)),
             ]))
             .map_err(|error| error.to_string())?;
         Ok(self)

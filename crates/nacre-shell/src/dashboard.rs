@@ -233,8 +233,7 @@ pub fn spec(
         motion.id = "dashboard".into();
         motion.edge = bead::core::Edge::Top;
         // QML: the panel grows out of the bar over 360 ms, in-out cubic, opaque throughout.
-        motion.duration = 0.36;
-        motion.curve = Some(bead::core::animation::Curve::EaseInOut);
+        motion.duration = bead::core::animation::panel_open_duration(650.);
         motion.fade = false;
         motion.reveal = true;
     }

@@ -475,7 +475,7 @@ fn clicked_status_factories_use_top_popout_geometry_and_peeks_stay_small() -> Re
             .motion
             .as_ref()
             .map(|motion| motion.duration),
-        Some(0.23)
+        Some(0.18)
     );
     let position = status
         .position
@@ -494,7 +494,7 @@ fn clicked_status_factories_use_top_popout_geometry_and_peeks_stay_small() -> Re
     ));
     assert_eq!(
         peek.fallback.motion.as_ref().map(|motion| motion.duration),
-        Some(0.23)
+        Some(0.18)
     );
     assert!(!peek.passive, "pointer may cross into the quick-info panel");
     assert!(
@@ -1610,7 +1610,6 @@ fn core_sound_without_client_has_visible_read_only_factory() -> Result<()> {
 
     let initial = BTreeMap::from([
         ("panel.open".into(), Value::Bool(true)),
-        ("view.duration".into(), Value::Number(0.23)),
         ("status.ready".into(), Value::Bool(false)),
         ("status.active".into(), Value::Bool(false)),
         (
@@ -2092,7 +2091,6 @@ fn sound_streams_and_network_scan_have_goldens_at_both_scales() -> Result<()> {
     ]);
     let sound = BTreeMap::from([
         ("panel.open".into(), Value::Bool(true)),
-        ("view.duration".into(), Value::Number(0.23)),
         ("status.device".into(), Value::Text("Speakers".into())),
         (
             "audio.input_device".into(),

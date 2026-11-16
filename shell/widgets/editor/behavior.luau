@@ -244,7 +244,7 @@ return {
         ["session.message"]="",
         ["widgets.group"]="",
         ["widgets.select"]="",["widgets.scroll"]=0,["widgets.editing"]=true,["panel.open"]=true,
-        ["view.width"]=0,["view.height"]=0,["view.duration"]=0,
+        ["view.width"]=0,["view.height"]=0,
         -- Bar defaults needed by widgets/context during catalogue live previews.
         ["bar.height"]=50,["bar.launcher"]=false,["bar.popouts"]=false,["bar.reconnecting"]=false,
         ["bar.workspace.enabled"]=true,["bar.tray.enabled"]=true,["bar.window.focus.enabled"]=true,

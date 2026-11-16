@@ -55,7 +55,7 @@ local behavior={stores={
 
 -- Bindings used by the shared detail builders; service flows live in the adapters.
 for key,value in pairs({
-    ["view.width"]=0,["view.height"]=0,["view.duration"]=0,
+    ["view.width"]=0,["view.height"]=0,
     ["network.health_message"]="",["network.secret"]="",["network.hidden_ssid"]="",["network.hidden_security"]="wpa_psk",["network.reveal"]=false,
     ["bluetooth.secret"]="",["bluetooth.reveal"]=false,["battery.level"]=0,
     ["status.primary"]="",["status.secondary"]="",["status.detail"]="",["cc.audio_devices"]={},["cc.streams"]={},

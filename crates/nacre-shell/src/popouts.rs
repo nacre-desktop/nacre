@@ -27,8 +27,7 @@ pub fn calendar(
     if let Some(motion) = &mut fallback.motion {
         motion.id = "popout".into();
         motion.edge = bead::core::Edge::Top;
-        motion.duration = 0.23;
-        motion.curve = Some(bead::core::animation::Curve::EaseInOut);
+        motion.duration = bead::core::animation::panel_open_duration(312.);
         motion.fade = false;
         motion.reveal = true;
     }
@@ -88,8 +87,7 @@ pub fn collection_switcher(
     if let Some(motion) = &mut fallback.motion {
         motion.id = "collection-switcher".into();
         motion.edge = bead::core::Edge::Top;
-        motion.duration = 0.23;
-        motion.curve = Some(bead::core::animation::Curve::EaseInOut);
+        motion.duration = bead::core::animation::panel_open_duration(390.);
         motion.fade = false;
         motion.reveal = true;
     }
@@ -189,9 +187,8 @@ pub(crate) fn core_sound_with_root(
     }];
     if let Some(motion) = &mut fallback.motion {
         motion.id = "sound-output".into();
-        motion.curve = Some(bead::core::animation::Curve::EaseInOut);
         motion.edge = bead::core::Edge::Top;
-        motion.duration = 0.23;
+        motion.duration = bead::core::animation::panel_open_duration(286.);
         motion.fade = false;
         motion.reveal = true;
     }
@@ -225,7 +222,7 @@ pub(crate) fn core_sound_with_root(
             crate::reload::Runtime::panel_session(session, open)
                 .with_trace(trace)
                 .with_view_edge("top")?
-                .with_panel_geometry(382., 286., 0.23)
+                .with_panel_geometry(382., 286.)
                 .map_err(|error| error.to_string())?
                 .with_frame(crate::placement::Attachment::Popout, &colors)
                 .and_then(|runtime| runtime.with_core_audio_status(source.clone(), client.clone()))
@@ -259,8 +256,7 @@ pub fn session(
     if let Some(motion) = &mut fallback.motion {
         motion.id = "session".into();
         motion.edge = bead::core::Edge::Top;
-        motion.duration = 0.23;
-        motion.curve = Some(bead::core::animation::Curve::EaseInOut);
+        motion.duration = bead::core::animation::panel_open_duration(height);
         motion.fade = false;
         motion.reveal = true;
     }
@@ -290,7 +286,7 @@ pub fn session(
             crate::reload::Runtime::panel_session(session, open)
                 .with_trace(trace)
                 .with_view_edge("top")?
-                .with_panel_geometry(width as f64, height as f64, 0.23)
+                .with_panel_geometry(width as f64, height as f64)
                 .map_err(|error| error.to_string())?
                 .with_frame(crate::placement::Attachment::Popout, &colors)
                 .and_then(|runtime| runtime.with_session_menu(client.clone()))
@@ -393,9 +389,8 @@ fn status_at_root_mode(
     }];
     if let Some(motion) = &mut fallback.motion {
         motion.id = "status-popout".into();
-        motion.curve = Some(bead::core::animation::Curve::EaseInOut);
         motion.edge = bead::core::Edge::Top;
-        motion.duration = 0.23;
+        motion.duration = bead::core::animation::panel_open_duration(panel_height);
         motion.fade = false;
         motion.reveal = true;
     }
@@ -460,7 +455,7 @@ fn status_at_root_mode(
             crate::reload::Runtime::panel_session(session, open)
                 .with_trace(trace)
                 .with_view_edge("top")?
-                .with_panel_geometry(panel_width as f64, panel_height as f64, 0.23)
+                .with_panel_geometry(panel_width as f64, panel_height as f64)
                 .map_err(|error| error.to_string())?
                 .with_frame(crate::placement::Attachment::Popout, &colors)
                 .and_then(|runtime| match typed_topic {
@@ -540,9 +535,8 @@ pub fn chat(
     if let Some(motion) = &mut fallback.motion {
         motion.id = "chat".into();
         motion.edge = bead::core::Edge::Left;
-        // The view's own motion (chat/main.luau .24 ease): Bead opens with this fallback, so a
-        // stale 0.4 ease-in-out made every chat open 400 ms (owner: "the ai one is slower").
-        motion.duration = 0.24;
+        // Bead opens with this fallback, so it must carry the profile open time like the view.
+        motion.duration = bead::core::animation::panel_open_duration(width);
         motion.reveal = true;
         motion.fade = false;
     }
@@ -614,7 +608,7 @@ pub fn control_center(
     if let Some(motion) = &mut fallback.motion {
         motion.id = "control".into();
         motion.edge = bead::core::Edge::Right;
-        motion.duration = 0.28;
+        motion.duration = bead::core::animation::panel_open_duration(width);
         motion.slide_distance = Some(width);
         motion.fade = false;
         motion.reveal = true;
@@ -710,8 +704,7 @@ fn notification_panel(
     if let Some(motion) = &mut fallback.motion {
         motion.id = "notification-peek".into();
         motion.edge = bead::core::Edge::Top;
-        motion.duration = 0.23;
-        motion.curve = Some(bead::core::animation::Curve::EaseInOut);
+        motion.duration = bead::core::animation::panel_open_duration(height);
         motion.fade = false;
         motion.reveal = true;
     }
@@ -770,6 +763,45 @@ fn notification_panel(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::path::Path;
+
+    /// The shared panel profile owns every panel's motion: only the two toast exceptions author one.
+    #[test]
+    fn panel_views_author_no_motion_timing() {
+        fn walk(dir: &Path, found: &mut Vec<String>) {
+            for entry in std::fs::read_dir(dir).unwrap().flatten() {
+                let path = entry.path();
+                let name = path.to_string_lossy().replace('\\', "/");
+                if path.is_dir() {
+                    if !name.ends_with("/types")
+                        && !name.ends_with("/notifications")
+                        && !name.ends_with("/osd")
+                    {
+                        walk(&path, found);
+                    }
+                } else if name.ends_with(".luau")
+                    && let Ok(text) = std::fs::read_to_string(&path)
+                    && (text.contains("kit.Panel")
+                        || text.contains("ui.Panel")
+                        || text.contains("panel(embedded"))
+                    && ["duration=", "transition=", "view.duration", "leave_delay"]
+                        .iter()
+                        .any(|key| text.contains(key))
+                {
+                    found.push(name);
+                }
+            }
+        }
+        let mut found = Vec::new();
+        walk(
+            &Path::new(env!("CARGO_MANIFEST_DIR")).join("../../shell"),
+            &mut found,
+        );
+        assert!(
+            found.is_empty(),
+            "panel views author motion timing: {found:?}"
+        );
+    }
 
     #[test]
     fn bar_popouts_keep_escape_keyboard_interactivity() {

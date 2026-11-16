@@ -71,5 +71,5 @@ else
 end
 
 return kit.Panel{id="prompt",edge=P.edge,open=ui.bind("panel.open"),width=P.width,height=P.height,max_width="90%",max_height="90%",
-  transition=P.transition,duration=P.duration,radius=P.radius,fill="surface",border_width=P.border,border_color="outlineVariant",padding=0,
+  radius=P.radius,fill="surface",border_width=P.border,border_color="outlineVariant",padding=0,
   table.unpack(kids)}

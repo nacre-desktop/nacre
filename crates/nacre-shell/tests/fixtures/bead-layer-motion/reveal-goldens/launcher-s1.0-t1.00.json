@@ -7,7 +7,7 @@
     "y": -32.0
   },
   "curve": "EaseOut",
-  "duration_ms": 300.00001199999997,
+  "duration_ms": 320.0,
   "eased_progress": 1.0,
   "format": "RGBA8",
   "height": 654,
@@ -15,7 +15,7 @@
   "logical_width": 1164.0,
   "plan_metadata": "launcher-s1.0-plan.json",
   "route": "launcher",
-  "sample_time_ms": 300.00001199999997,
+  "sample_time_ms": 320.0,
   "scale": 1.0,
   "scene_bounds": {
     "h": 654.0,

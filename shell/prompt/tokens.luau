@@ -2,7 +2,7 @@
 -- Geometry of the selector prompt, ported from QML NacreAppBrowser (picker mode) and NacreMenuForm.
 -- Font sizes are px (QML point size * 4/3). The panel is the launcher's size and look.
 return {
-  panel = { edge = "bottom", width = 1100, height = 590, radius = 12, border = 1, duration = .2, transition = "ease" },
+  panel = { edge = "bottom", width = 1100, height = 590, radius = 12, border = 1 },
   title = { left = 20, top = 16, height = 28, font = 20 },
   list = {
     left = 20, top = 54, width = 1060, height = 436, row_height = 55, row_gap = 3, row_pitch = 58, row_radius = 10,

@@ -3,14 +3,14 @@
 -- Keybindings. Settings-ready layout values are grouped by view.
 return {
   panel = {
-    edge = "bottom", reveal = true, transition = "ease", fade = false,
+    edge = "bottom", reveal = true, fade = false,
     overview_width = 1020, search_width = 860, max_width_fraction = .94,
     default_screen_height = 900, overview_body_max = 690, overview_body_reserve = 230,
     body_min = 0, search_body_height = 450, body_internal_loss = 26, search_chrome = 112,
     horizontal_inset = 16, heading_top = 16, bottom_inset = 16, search_gap = 16,
     heading_height = 30, heading_gap = 12, heading_font = 22.667,
     search_height = 44, search_padding = 15, search_vertical=8, search_radius = 22, search_font = 16,
-    radius = 12, border = 1, duration = .3,
+    radius = 12, border = 1,
     refresh_size = 30, close_width = 97, close_height = 34, close_font=16, close_radius=9999, close_icon=20, close_gap=8, close_label_width=40, close_content_height=24,
     empty_top = 122, empty_height = 24, empty_font = 16,
   },

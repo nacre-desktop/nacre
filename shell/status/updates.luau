@@ -58,6 +58,6 @@ add(ui.Row{id="actions",width=content,height=button_height,gap=T.spacing.sm,
     kit.ActionButton{id="refresh",label=ui.tr("bead.panel.updates-check"),
         on_activate=get("status.updates_can_refresh") and ui.action("updates.refresh") or nil,height=button_height},
 },button_height)
-return kit.Panel{id="updates-popout",edge="top",open=ui.bind("panel.open"),duration=ui.bind("view.duration"),
+return kit.Panel{id="updates-popout",edge="top",open=ui.bind("panel.open"),
     fade=false,reveal=true,width=width,height=height,padding=padding,gap=gap,
     radius=T.radii.medium,fill="surface",table.unpack(kids)}

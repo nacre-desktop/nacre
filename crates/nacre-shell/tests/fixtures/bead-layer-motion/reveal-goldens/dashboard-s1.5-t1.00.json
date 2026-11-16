@@ -6,8 +6,8 @@
     "x": -32.0,
     "y": -2.0
   },
-  "curve": "EaseInOut",
-  "duration_ms": 360.00001399999996,
+  "curve": "EaseOut",
+  "duration_ms": 320.0,
   "eased_progress": 1.0,
   "format": "RGBA8",
   "height": 1071,
@@ -15,7 +15,7 @@
   "logical_width": 1048.0,
   "plan_metadata": "dashboard-s1.5-plan.json",
   "route": "dashboard",
-  "sample_time_ms": 360.00001399999996,
+  "sample_time_ms": 320.0,
   "scale": 1.5,
   "scene_bounds": {
     "h": 714.0,

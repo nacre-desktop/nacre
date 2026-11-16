@@ -113,7 +113,7 @@ async fn the_meter_holds_the_peak_lease_only_while_the_input_is_live()
     .await?;
     let mut runtime = Runtime::panel_session(session, true)
         .with_view_edge("top")?
-        .with_panel_geometry(382., 286., 0.23)?
+        .with_panel_geometry(382., 286.)?
         .with_core_audio_status(source.clone(), Some(client.clone()))?
         .with_status_controls(Some(client.clone()), vec![("audio", source)])?;
     isolate_runtime(&mut runtime, &lab.0.join("recovery"));

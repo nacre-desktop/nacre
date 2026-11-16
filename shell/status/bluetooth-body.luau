@@ -15,7 +15,6 @@ local view=get("bluetooth.view")
 local padding=embedded and 0 or T.spacing.panel
 local gap=T.spacing.compact
 local width=embedded and options.width or get("view.width")
-local duration=get("view.duration")
 local BODY,CAPTION,TITLE=(T.text.caption+1)*4/3,T.text.caption*4/3,T.text.title*4/3
 local FIELD,ROW=40,68
 if view=="pair" then
@@ -67,7 +66,7 @@ if view=="pair" then
     local total=2*padding+gap*(#heights-1)
     for _,h in heights do total=total+h end
     return panel(embedded,{id="status-popout",edge=get("view.edge"),
-        open=ui.bind("panel.open"),duration=duration,width=width,height=total,padding=padding,
+        open=ui.bind("panel.open"),width=width,height=total,padding=padding,
         gap=gap,radius=T.radii.medium,fill="surface",table.unpack(kids)})
 end
 -- List page, as the QML popup: heading with Find devices and the power switch, one card per
@@ -142,6 +141,6 @@ end
 local total=2*padding+gap*(#heights-1)
 for _,h in heights do total=total+h end
 return panel(embedded,{id="status-popout",edge=get("view.edge"),
-    open=ui.bind("panel.open"),duration=duration,width=width,height=total,padding=padding,
+    open=ui.bind("panel.open"),width=width,height=total,padding=padding,
     gap=gap,radius=T.radii.medium,fill="surface",table.unpack(kids)})
 end

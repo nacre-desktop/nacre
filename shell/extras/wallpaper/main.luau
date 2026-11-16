@@ -259,13 +259,13 @@ local children={
 if backdrop then table.insert(children,1,scrim);table.insert(children,1,backdrop) end
 if spotlight then
   return kit.Panel{id="extras",edge="bottom",open=ui.bind("panel.open"),width=viewport_w,height=viewport_h,shadow=false,
-    duration=T.panel.duration,transition=T.panel.transition,reveal=false,slide_distance=T.wallpaper.spotlight_open_slide_distance,fade=false,radius=0,
+    reveal=false,slide_distance=T.wallpaper.spotlight_open_slide_distance,fade=false,radius=0,
     fill=ui.alpha("shadow",T.wallpaper.spotlight_scrim_alpha),padding=0,gap=0,
     on_activate=ui.action("close"),aria_label="Close wallpaper picker",
     table.unpack(children)}
 end
 return kit.Panel{id="extras",edge="bottom",open=ui.bind("panel.open"),width=width,height=height,
-  duration=T.panel.duration,transition=T.panel.transition,reveal=false,slide_distance=height,fade=false,radius=T.panel.radius,
+  reveal=false,slide_distance=height,fade=false,radius=T.panel.radius,
   fill="surface",border_width=carousel and T.panel.border or 0,
   border_color="outlineVariant",padding=0,gap=0,
   on_activate=ui.action("close"),aria_label="Close wallpaper picker",table.unpack(children)}

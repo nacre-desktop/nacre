@@ -28,7 +28,7 @@ pub fn spec(
     if let Some(motion) = &mut fallback.motion {
         motion.id = "launcher".into();
         motion.edge = Edge::Bottom;
-        motion.duration = 0.3;
+        motion.duration = bead::core::animation::panel_open_duration(590.);
         motion.fade = false;
         motion.reveal = true;
         motion.slide_distance = Some(590.);

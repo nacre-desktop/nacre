@@ -20,7 +20,7 @@ end
 local padding=embedded and 0 or T.spacing.panel
 local inner=width-padding*2
 return panel(embedded,{id="status-popout",edge="top",open=ui.bind("panel.open"),
-    duration=ui.bind("view.duration"),width=width,height=embedded and (72+20+T.spacing.sm) or ui.bind("view.height"),
+    width=width,height=embedded and (72+20+T.spacing.sm) or ui.bind("view.height"),
     padding=padding,gap=T.spacing.sm,radius=T.radii.medium,fill="surface",
     ui.Text{id="percent",visible=not embedded,text=known and ui.bind("status.primary") or "—",width=inner,height=40,
         family="JetBrainsMono Nerd Font",font_size=T.text.headline*4/3,text_align="center",color="onSurface"},

@@ -52,5 +52,5 @@ if question~="" and asking~="" then
     y=y+104+T.spacing.lg
 end
 children[#children+1]=ui.Text{id="message",position="absolute",left=PAD,top=y,width=INNER,height=CAPTION*3,font_size=CAPTION,color="error",text=ui.bind("session.message")}
-return kit.Panel{id="session-popout",edge=get("view.edge"),open=ui.bind("panel.open"),duration=get("view.duration"),transition="ease-in-out",fade=false,reveal=true,
+return kit.Panel{id="session-popout",edge=get("view.edge"),open=ui.bind("panel.open"),fade=false,reveal=true,
     width=W,height=y+(get("session.message")~="" and CAPTION*3 or 0)+PAD,padding=0,radius=T.radii.medium,fill="surface",table.unpack(children)}
