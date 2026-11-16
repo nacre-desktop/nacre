@@ -540,8 +540,9 @@ pub fn chat(
     if let Some(motion) = &mut fallback.motion {
         motion.id = "chat".into();
         motion.edge = bead::core::Edge::Left;
-        motion.duration = 0.4;
-        motion.curve = Some(bead::core::animation::Curve::EaseInOut);
+        // The view's own motion (chat/main.luau .24 ease): Bead opens with this fallback, so a
+        // stale 0.4 ease-in-out made every chat open 400 ms (owner: "the ai one is slower").
+        motion.duration = 0.24;
         motion.reveal = true;
         motion.fade = false;
     }

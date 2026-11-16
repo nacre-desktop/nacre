@@ -81,15 +81,18 @@ pub fn grabber(
     };
     let (thick, long) = (6. + 2. * charge, 56. + 16. * charge);
     let thick = thick.min((w - 2.).max(2.));
-    // At rest the pill sits mid-strip: the lip's thickness past the bar (all of it without a bar);
-    // docked it sits as far from the join, mid a strip's depth under the dashboard.
+    // At rest the pill sits mid-strip: the lip's thickness past the bar (all of it without a bar).
+    // Docked it slides onto the join so it meets the panel with no gap (owner 2026-11-16): x = w
+    // for the right and top lips; x = 0 for the left lip, whose panel opens from the left.
     let bar = crate::placement::BAR_HEIGHT;
     let strip = if w > bar { (w - bar) / 2. } else { w / 2. };
-    let cx = if top {
-        strip + (w - 2. * strip) * attach
+    let rest = if top { strip } else { w / 2. };
+    let docked = if lip.edge == Edge::Left {
+        thick / 2.
     } else {
-        w / 2.
+        w - thick / 2.
     };
+    let cx = rest + (docked - rest) * attach;
     let (x, y) = (cx - thick / 2., (h - long) / 2.);
     // Owner 2026-11-16: beside the panel's sheen rim a docked side plate read as a black block, so it
     // fades out as the panel opens and the docked side tab is the pill alone.
@@ -318,6 +321,10 @@ mod tests {
             tab.contains(r#"width="8" height="72" rx="4" fill="rgb(10,20,30)" opacity="1""#),
             "{tab}"
         );
+        assert!(
+            tab.contains(r#"<rect x="2" y="36" width="8""#),
+            "meets the join: {tab}"
+        );
         assert!(!tab.contains(r#"opacity="0.3""#), "{tab}");
         let lit = at(1., true);
         assert!(
@@ -352,7 +359,10 @@ mod tests {
             !left.contains(r#"<rect width="10" height="144""#) && !left.contains("<path"),
             "{left}"
         );
-        assert!(left.contains(r#"width="8" height="72""#), "{left}");
+        assert!(
+            left.contains(r#"<rect x="0" y="36" width="8" height="72""#),
+            "{left}"
+        );
         let left_rest = grabber(
             &lip(Edge::Left),
             (10., 144.),
@@ -397,8 +407,21 @@ mod tests {
             "top-left corner is transparent while docked"
         );
         assert_eq!(alpha(5, 72), 255, "the pill is opaque");
-        assert_eq!(alpha(9, 72), 0, "no plate at the join");
+        assert_eq!(alpha(9, 72), 255, "the pill meets the join");
+        assert_eq!(alpha(0, 72), 0, "the free side stays clear");
         assert_eq!(alpha(5, 30), 0, "no plate above the pill");
+        // At 1.5 the join column is still fully covered: no gap to the panel (owner 2026-11-16).
+        let mut bytes = vec![0; 15 * 216 * 4];
+        let target = ShmTarget {
+            bytes: &mut bytes,
+            width: 15,
+            height: 216,
+            scale: 1.5,
+            format: PixelFormat::Rgba,
+        };
+        svg_into(&svg, target).unwrap();
+        assert_eq!(bytes[(108 * 15 + 14) * 4 + 3], 255, "flush at scale 1.5");
+        assert_eq!(bytes[(108 * 15) * 4 + 3], 0);
     }
     #[test]
     fn the_top_handle_is_a_pill_under_the_bar_title_that_becomes_a_tab_when_docked() {
@@ -434,7 +457,7 @@ mod tests {
         let dwell = raster(&top(half));
         assert!(alpha(&dwell, 104, 40) > 0 && alpha(&dwell, 104, 38) == 0);
         assert!((0..40).all(|y| (0..208).all(|x| alpha(&dwell, x, y) == 0)));
-        // Docked: the pill alone rides up to the join (y 1-9, flush under the dashboard), no plate.
+        // Docked: the pill alone rides up to the join (y 0-8, touching the dashboard), no plate.
         let tab = top(docked(1., false));
         assert!(!tab.contains("<path"), "{tab}");
         let docked_px = raster(&tab);
@@ -443,6 +466,10 @@ mod tests {
             "the pill hugs the panel edge"
         );
         assert_eq!(alpha(&docked_px, 104, 20), 0, "no plate band under it");
+        assert!(
+            alpha(&docked_px, 104, 0) > 200,
+            "touching the dashboard edge"
+        );
         assert_eq!(alpha(&docked_px, 104, 45), 0, "it left the frame strip");
         assert_eq!(alpha(&docked_px, 20, 5), 0, "only the 72 px pill");
         let half_open = top(docked(0.5, false));
@@ -520,8 +547,11 @@ mod tests {
             ..Default::default()
         };
         let opened = grabber(&lip(Edge::Right), (10., 144.), open, A, S, false).unwrap();
+        // (It starts sliding onto the join: x 1.001.)
         assert!(
-            opened.contains(r#"<rect x="1" y="36" width="8" height="72" rx="4" fill="rgb(10,20,30)" opacity="1""#),
+            opened.contains(
+                r#"y="36" width="8" height="72" rx="4" fill="rgb(10,20,30)" opacity="1""#
+            ),
             "{opened}"
         );
         assert_eq!(opened.matches("<rect").count(), 2, "{opened}");
