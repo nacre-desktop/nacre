@@ -315,6 +315,7 @@ function M.bar_layout(layout,render,width)
     end
     local nodes={}
     local room=math.huge
+    local right_edge -- far edge (px from the right) of the placed right-hand widgets, for the status extras' own slot
     local function variant(item)
         local package=registry[item.widget]
         return package and package.variants.bar
@@ -330,6 +331,7 @@ function M.bar_layout(layout,render,width)
                 room=math.min(room,width/2-(offset+w))
             elseif item.slot.region=="right" then
                 box.right=offset
+                right_edge=math.max(right_edge or 0,offset+w)
                 room=math.min(room,width/2-(offset+w))
             else
                 box.left=0; box.width=width; box.justify="center"
@@ -356,7 +358,7 @@ function M.bar_layout(layout,render,width)
     -- Placed neighbours narrow the title (only when they reach its widest band) instead of moving it.
     room=2*(room-gap)
     layout.title_room=room<reserve and math.max(0,room) or nil
-    return flow,nodes
+    return flow,nodes,right_edge and right_edge+gap
 end
 function M.renderer(document)
     M.validate(document)

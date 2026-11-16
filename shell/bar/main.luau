@@ -21,10 +21,16 @@ document=widgets.project(canonical,ui.resolve_for_check(ui.bind("bead.viewport.w
 local render=widgets.renderer(document)
 local layout=document.hosts.top_bar
 local regions=widgets.bar_regions(layout)
-local flow,placed=widgets.bar_layout(layout,render,width)
--- The recording stop button (only while recording) sits before the tray, as QML put it first in the status column.
-regions.right.before=table.clone(require("./recording"))
-for _,node in require("../widgets/tray") do table.insert(regions.right.before,node) end
+local flow,placed,extras_right=widgets.bar_layout(layout,render,width)
+-- The recording stop button (only while recording) and the tray come before the right strip. When the right-hand
+-- widgets are placed (they stand at an offset, so the packed row cannot sit beside them) they get their own slot,
+-- left of the placed widgets with the normal gap, instead of the right edge where they would cover them.
+local extras=table.clone(require("./recording"))
+for _,node in require("../widgets/tray") do table.insert(extras,node) end
+if extras_right then
+    extras.id,extras.position,extras.top,extras.height,extras.align,extras.gap,extras.right="status-extras","absolute",0,"100%","center",c.t.power_gap or 12,extras_right
+    table.insert(placed,ui.Row(extras))
+else regions.right.before=extras end
 -- Placed widgets come after the title's band so they sit above it for input.
 regions.centre.after=placed
 -- B0211: drags draw nothing on the bar (no outline, no insertion slot); the ghost is the preview.

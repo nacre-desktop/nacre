@@ -1247,6 +1247,58 @@ fn bar_status_states_render_every_attention_state() -> Result<()> {
     Ok(())
 }
 
+/// The daemon's `recorder` topic reaches the bar: with the status pill placed at an offset (the owner's layout),
+/// the indicator stands in its own slot left of the pill instead of at the right edge on top of it.
+#[test]
+fn recording_indicator_has_its_own_slot_beside_a_placed_status_pill() -> Result<()> {
+    let topic = bead::core::source::Snapshot {
+        epoch: "test".into(),
+        revision: 1,
+        data: std::sync::Arc::new(serde_json::json!({"recording": true})),
+        connected: true,
+    };
+    assert!(crate::bar_recording::recording(&topic));
+    let mut document: serde_json::Value =
+        serde_json::from_str(include_str!("../tests/widgets-default.json"))?;
+    document["hosts"]["top_bar"]["instances"][3]["slot"]["offset"] = 58.into();
+    let mut values = super::initial_models()?;
+    values.extend(parity_models());
+    values.extend(crate::bar_recording::values(true, 42));
+    values.insert("widgets.layout".into(), Value::list(vec![document]));
+    let mut h = Harness::load(
+        &root(),
+        Path::new("bar/main.luau"),
+        &root().join("palette.json"),
+        values,
+        Config {
+            width: 1920,
+            height: 50,
+            scale: 1.,
+        },
+    )?;
+    let texts = bar_texts(&h);
+    let elapsed = texts
+        .iter()
+        .find(|(t, _)| t == "0:42")
+        .expect("elapsed drawn")
+        .1;
+    let icon = texts
+        .iter()
+        .find(|(t, _)| t == "radio_button_checked")
+        .expect("icon drawn")
+        .1;
+    let pill_left = texts
+        .iter()
+        .filter(|(t, r)| r.x > elapsed.x && t != "0:42" && t != "radio_button_checked")
+        .map(|(_, r)| r.x)
+        .fold(f32::MAX, f32::min);
+    assert!(
+        icon.x < elapsed.x && elapsed.x + elapsed.w < pill_left,
+        "indicator {icon:?} {elapsed:?} must end before the pill at {pill_left}"
+    );
+    bar_golden(&h.pose((0., 0.), 1.)?, "bar-recording-placed-1")
+}
+
 /// One setting ("Show percentages in the bar") shows or hides every number in the status cluster
 /// (battery, the Bluetooth device's battery, volume); the charger bolt shows whenever plugged in,
 /// also at 100 %, in its own accent rather than the battery glyph's colour.
