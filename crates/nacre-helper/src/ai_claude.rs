@@ -912,22 +912,11 @@ fn history(
     chat_directory: bool,
     running: &std::collections::BTreeMap<String, String>,
 ) -> Result<Vec<Value>> {
-    history_limited(config, root, chat_directory, running, MAX_SESSIONS)
-}
-/// At most `limit` of the newest transcripts across all roots are read.
-fn history_limited(
-    config: &Path,
-    root: &Path,
-    chat_directory: bool,
-    running: &std::collections::BTreeMap<String, String>,
-    limit: usize,
-) -> Result<Vec<Value>> {
     if !config.join("projects").is_dir() {
         return Ok(Vec::new());
     }
     let roots = project_directories(root, chat_directory);
     let mut output = std::collections::BTreeMap::<String, Value>::new();
-    let mut candidates = Vec::new();
     for directory in &roots {
         let project = project_directory(config, directory);
         let ids = match session_ids(&project) {
@@ -941,55 +930,58 @@ fn history_limited(
             }
             Err(_) => continue,
         };
-        candidates.extend(ids.into_iter().filter_map(|id| {
-            let path = project.join(format!("{id}.jsonl"));
-            let meta = fs::symlink_metadata(&path).ok()?;
-            (meta.is_file() && !meta.file_type().is_symlink() && meta.nlink() == 1)
-                .then_some((directory, id, path, meta))
-        }));
-    }
-    candidates.sort_by_key(|(_, _, _, meta)| std::cmp::Reverse(meta.modified().ok()));
-    let mut accepted = 0;
-    for (directory, id, path, meta) in candidates {
-        if accepted >= limit {
-            break;
-        }
-        let records = jsonl_windows(
-            &path,
-            LIST_HEAD_WINDOW + LIST_TAIL_WINDOW,
-            LIST_HEAD_WINDOW,
-            LIST_TAIL_WINDOW,
-        );
-        if !valid_session_records(&records, &id) {
-            continue;
-        }
-        if !started_in(&records, directory) {
-            continue;
-        }
-        let title = title_from(&records);
-        let mut cwd = None;
-        for record in &records {
-            if cwd.is_none() {
-                cwd = record.get("cwd").and_then(Value::as_str).map(str::to_owned);
+        let mut candidates: Vec<_> = ids
+            .into_iter()
+            .filter_map(|id| {
+                let path = project.join(format!("{id}.jsonl"));
+                let meta = fs::symlink_metadata(&path).ok()?;
+                (meta.is_file() && !meta.file_type().is_symlink() && meta.nlink() == 1)
+                    .then_some((id, path, meta))
+            })
+            .collect();
+        candidates.sort_by_key(|(_, _, meta)| std::cmp::Reverse(meta.modified().ok()));
+        let mut accepted = 0;
+        for (id, path, meta) in candidates {
+            if accepted >= MAX_SESSIONS {
+                break;
             }
-        }
-        let Some(title) = title else { continue };
-        let modified = meta
-            .modified()
-            .ok()
-            .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
-            .map(|d| d.as_millis() as f64 / 1000.0)
-            .unwrap_or(0.0);
-        let working = transcript_working(&records, meta.modified().ok());
-        let cwd = cwd.unwrap_or_else(|| directory.to_string_lossy().into_owned());
-        accepted += 1;
-        let row = json!({"id":id,"title":title,"updated_at":modified,"cwd":cwd,"state":"saved","session":null,"agent":"claude","_working":working});
-        if output
-            .get(&id)
-            .and_then(|old| old["updated_at"].as_f64())
-            .is_none_or(|old| modified > old)
-        {
-            output.insert(id, row);
+            let records = jsonl_windows(
+                &path,
+                LIST_HEAD_WINDOW + LIST_TAIL_WINDOW,
+                LIST_HEAD_WINDOW,
+                LIST_TAIL_WINDOW,
+            );
+            if !valid_session_records(&records, &id) {
+                continue;
+            }
+            if !started_in(&records, directory) {
+                continue;
+            }
+            let title = title_from(&records);
+            let mut cwd = None;
+            for record in &records {
+                if cwd.is_none() {
+                    cwd = record.get("cwd").and_then(Value::as_str).map(str::to_owned);
+                }
+            }
+            let Some(title) = title else { continue };
+            let modified = meta
+                .modified()
+                .ok()
+                .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+                .map(|d| d.as_millis() as f64 / 1000.0)
+                .unwrap_or(0.0);
+            let working = transcript_working(&records, meta.modified().ok());
+            let cwd = cwd.unwrap_or_else(|| directory.to_string_lossy().into_owned());
+            accepted += 1;
+            let row = json!({"id":id,"title":title,"updated_at":modified,"cwd":cwd,"state":"saved","session":null,"agent":"claude","_working":working});
+            if output
+                .get(&id)
+                .and_then(|old| old["updated_at"].as_f64())
+                .is_none_or(|old| modified > old)
+            {
+                output.insert(id, row);
+            }
         }
     }
     let mut rows: Vec<_> = output.into_values().collect();
@@ -1257,7 +1249,6 @@ fn run_inner(args: &[String]) -> Result<i32> {
     let mut thread = None;
     let mut chat_directory = false;
     let mut tmux = false;
-    let mut limit = MAX_SESSIONS;
     let mut i = 0;
     while i < args.len() {
         let value = |offset: usize, label: &str| {
@@ -1288,13 +1279,6 @@ fn run_inner(args: &[String]) -> Result<i32> {
                 thread = Some(value(i, "--thread-id")?.clone());
             }
             "--chat-directory" => chat_directory = true,
-            "--limit" => {
-                i += 1;
-                limit = value(i, "--limit")?
-                    .parse::<usize>()
-                    .map_err(|_| err("--limit requires a number"))?
-                    .min(MAX_SESSIONS);
-            }
             "--tmux" => tmux = true,
             "-h" | "--help" => {
                 print!("{}", help());
@@ -1332,8 +1316,7 @@ fn run_inner(args: &[String]) -> Result<i32> {
     }
     if command == "list" {
         let running = running_sessions(&project, &account);
-        let chats =
-            history_limited(&config, &path, chat_directory, &running, limit).unwrap_or_default();
+        let chats = history(&config, &path, chat_directory, &running).unwrap_or_default();
         println!("{}", serde_json::to_string(&chats)?);
         return Ok(0);
     }
@@ -1657,42 +1640,6 @@ mod tests {
         drop(file);
         let rows = history(&config, &chat, true, &BTreeMap::new()).unwrap();
         assert_eq!(rows[0]["title"], "Tail title", "{rows:?}");
-    }
-
-    #[test]
-    fn launcher_limit_reads_only_the_newest_transcripts_across_chat_folders() {
-        let temp = tempdir().unwrap();
-        let config = temp.path().join("claude");
-        let root = temp.path().join("chats");
-        let (first, second) = (root.join("0".repeat(32)), root.join("a".repeat(32)));
-        for dir in [&first, &second] {
-            fs::create_dir_all(dir).unwrap();
-        }
-        put_fixture(&config, &first, "current", CURRENT_ID);
-        let newer = put_fixture(&config, &second, "previous", PREVIOUS_ID);
-        let old = std::time::SystemTime::now() - Duration::from_secs(3600);
-        fs::File::options()
-            .write(true)
-            .open(
-                newer
-                    .parent()
-                    .unwrap()
-                    .join(sanitized(&first.to_string_lossy()))
-                    .join(format!("{CURRENT_ID}.jsonl")),
-            )
-            .unwrap()
-            .set_modified(old)
-            .unwrap();
-        let none = BTreeMap::new();
-        assert_eq!(
-            history_limited(&config, &root, true, &none, 2)
-                .unwrap()
-                .len(),
-            2
-        );
-        let rows = history_limited(&config, &root, true, &none, 1).unwrap();
-        assert_eq!(rows.len(), 1);
-        assert_eq!(rows[0]["id"], PREVIOUS_ID);
     }
 
     #[test]

@@ -1042,9 +1042,6 @@ pub(crate) fn provider_list(
     if project["chat_directory"] == true {
         args.push("--chat-directory".into());
     }
-    if let (Some(limit), "claude") = (project["limit"].as_u64(), agent) {
-        args.extend(["--limit".to_owned(), limit.to_string()]);
-    }
     let remote_host = project["host"].as_str();
     let mut output = if let Some(host) = remote_host {
         let remote = args
@@ -1190,9 +1187,8 @@ where
     F: Fn() -> bool,
     L: FnMut(&serde_json::Value, &str) -> Result<Vec<serde_json::Value>>,
 {
-    // The panel shows 30 rows; Claude only reads that many newest transcripts, plus slack.
     let general = serde_json::json!({
-        "id":"general-chat", "label":"General chat", "chat_directory":true, "limit":40,
+        "id":"general-chat", "label":"General chat", "chat_directory":true,
         "path":home().join(".local/share/nacre/ai/chats").display().to_string()
     });
     let mut records = Vec::new();
