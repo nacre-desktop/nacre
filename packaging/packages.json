@@ -103,7 +103,8 @@
       "unzip",
       "sway",
       "swaybg",
-      "mpv"
+      "mpv",
+      "qt6-svg"
     ],
     "ai_optional": [
       "nacre-brain: private knowledge helpers"

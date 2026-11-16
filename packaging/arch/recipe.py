@@ -113,7 +113,7 @@ check() {{
   cargo build -p nacre-shell --no-default-features --locked -j2
   cargo build --locked --examples -j2
   python tools/check_product_shell.py --download-analyzer "$srcdir/luau/luau-analyze"
-  python tools/check_product_shell.py --native-only --analyzer "$srcdir/luau/luau-analyze"
+  python tools/check_product_shell.py --analyzer "$srcdir/luau/luau-analyze"
   npm ci --ignore-scripts --no-audit --no-fund
   python -m venv --system-site-packages "$srcdir/check-env"
   export NACRE_HELPER_BINARY="$PWD/target/release/nacre-helper"
