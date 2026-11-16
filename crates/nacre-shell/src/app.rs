@@ -628,7 +628,8 @@ impl Host {
             .args(app)
             .stdin(Stdio::null())
             .stdout(stdout)
-            .stderr(Stdio::null())
+            // An app's diagnostics (errors, LIP_TAB) join the shell's journal instead of vanishing.
+            .stderr(Stdio::inherit())
             .process_group(0)
             .spawn()
             .map_err(|e| format!("{name}: {e}"))?;
@@ -1001,6 +1002,8 @@ pub fn run(cli: &[String]) -> Result<(), Box<dyn Error>> {
             ));
             if parent_socket.is_some() {
                 panel_gate.parent_lips(crate::frame_config::load(Path::new("shell")));
+                // The assistant lip docks here as this panel's tab (B0304): Bead draws it with our art.
+                options.edge_art = Some(crate::frame_art::art(&colors)?);
             }
             options.control = Some(panel_gate);
             options.panels = Some(Panels::new(

@@ -13,8 +13,9 @@ pub static ARROWS: AtomicBool = AtomicBool::new(false);
 
 /// `desktop.edgeHandleTopVisible` (opt-in): the top lip draws its handle under the bar title.
 pub static TOP_TAB: AtomicBool = AtomicBool::new(false);
-/// The docked top tab's depth inside its 50 px lip; Bead keeps the tab's input to the same band.
-pub const TOP_TAB_DEPTH: f32 = 32.;
+/// The docked top tab's input depth inside its 50 px lip (Bead's `docked_input_depth`): the frame
+/// strip's depth, like a side tab's thickness, so the tab never covers windows under the dashboard.
+pub const TOP_TAB_DEPTH: f32 = 10.;
 
 /// The handle for a side lip (and the top lip with `top_tab`) in the configured style.
 pub fn handle(
@@ -46,8 +47,8 @@ pub fn handle(
 ///
 /// With `top_tab` the top lip draws the same picture rotated (join side up, `TOP_TAB`): at rest only
 /// the pill and its glow, in the frame strip under the bar title (the lip spans the bar, so no plate
-/// may cover it); with `attach` the plate fades in as a tab in the 32 px band on the join side and
-/// the pill slides to its middle.
+/// may cover it); with `attach` the pill slides to the join, flush under the dashboard like a side
+/// tab (owner 2026-11-16: a plate band there read as its own square).
 pub fn grabber(
     lip: &Lip,
     (width, height): (f32, f32),
@@ -80,12 +81,12 @@ pub fn grabber(
     };
     let (thick, long) = (6. + 2. * charge, 56. + 16. * charge);
     let thick = thick.min((w - 2.).max(2.));
-    let band = if top { w.min(TOP_TAB_DEPTH) } else { w };
-    // At rest the pill sits mid-strip: the lip's thickness past the bar (all of it without a bar).
+    // At rest the pill sits mid-strip: the lip's thickness past the bar (all of it without a bar);
+    // docked it sits as far from the join, mid a strip's depth under the dashboard.
     let bar = crate::placement::BAR_HEIGHT;
     let strip = if w > bar { (w - bar) / 2. } else { w / 2. };
     let cx = if top {
-        strip + (w - band / 2. - strip) * attach
+        strip + (w - 2. * strip) * attach
     } else {
         w / 2.
     };
@@ -104,12 +105,6 @@ pub fn grabber(
         } else {
             String::new()
         }
-    } else if attach > 0. {
-        format!(
-            r#"<g transform="translate({},0)" opacity="{attach}">{}</g>"#,
-            w - band,
-            plate(band, h, 1., surface)
-        )
     } else {
         String::new()
     };
@@ -439,20 +434,20 @@ mod tests {
         let dwell = raster(&top(half));
         assert!(alpha(&dwell, 104, 40) > 0 && alpha(&dwell, 104, 38) == 0);
         assert!((0..40).all(|y| (0..208).all(|x| alpha(&dwell, x, y) == 0)));
-        // Opening: the plate fades in under the join (y 0) and the pill rides to its middle.
+        // Docked: the pill alone rides up to the join (y 1-9, flush under the dashboard), no plate.
         let tab = top(docked(1., false));
-        assert!(
-            tab.contains(r#"opacity="1""#) && tab.matches("<path").count() == 2,
-            "{tab}"
-        );
+        assert!(!tab.contains("<path"), "{tab}");
         let docked_px = raster(&tab);
-        assert_eq!(alpha(&docked_px, 104, 0), 255, "flush with the panel edge");
-        assert_eq!(alpha(&docked_px, 104, 31), 255, "plate to the 32 px band");
-        assert_eq!(alpha(&docked_px, 104, 40), 0, "nothing below the band");
-        assert_eq!(alpha(&docked_px, 20, 10), 0, "the tab is 88 wide");
+        assert!(
+            alpha(&docked_px, 104, 5) > 200,
+            "the pill hugs the panel edge"
+        );
+        assert_eq!(alpha(&docked_px, 104, 20), 0, "no plate band under it");
+        assert_eq!(alpha(&docked_px, 104, 45), 0, "it left the frame strip");
+        assert_eq!(alpha(&docked_px, 20, 5), 0, "only the 72 px pill");
         let half_open = top(docked(0.5, false));
-        assert!(half_open.contains(r#"opacity="0.5""#), "{half_open}");
-        // Hover lights the docked tab: a glow rect around the pill, inside the plate band.
+        assert!(!half_open.contains("<path"), "{half_open}");
+        // Hover lights the docked tab: a glow rect around the pill.
         assert!(
             top(docked(1., true))
                 .contains(r#"width="10" height="80" rx="5" fill="rgb(10,20,30)" opacity="0.3""#)
