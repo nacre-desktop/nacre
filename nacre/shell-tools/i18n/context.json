@@ -1766,5 +1766,7 @@
   "settings.registry.panels.top-bar.status.badges.description": "Settings registry/prototype; portable schema label or description.",
   "settings.registry.panels.top-bar.status.badges.label": "Settings registry/prototype; portable schema label or description.",
   "settings.registry.panels.top-bar.status.description": "Settings registry/prototype; portable schema label or description.",
-  "settings.registry.panels.top-bar.status.label": "Settings registry/prototype; portable schema label or description."
+  "settings.registry.panels.top-bar.status.label": "Settings registry/prototype; portable schema label or description.",
+  "settings.registry.panels.top-bar.status.percentages.description": "Settings registry/prototype; portable schema label or description.",
+  "settings.registry.panels.top-bar.status.percentages.label": "Settings registry/prototype; portable schema label or description."
 }
