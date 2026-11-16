@@ -13,7 +13,7 @@ History and the original method: [N0300](noctalia-vs-nacre-benchmark-20261112.md
 | N0300 desktop 2026-11-13 (baseline, prior harness) | 3/3 | 382f36de6 | v5.4.1 | 0.12 / 0.42 | n/a | 7.1 / 15.3 | 1.2 / 23.5 | n/a | host busy +9.9 / +2.9 pp | 119 / 127 | 63 / 68 | n/a | +3.7 / +31.4 | 0.219 / 0.113 | n/a | n/a | -0.05 / -0.25 | +0.58 / +0.45 |
 | desktop smoke 2026-11-13 (`short`, one run each; indicative) | 1/1 | 5cb5e22a2 | v5.4.1 | 0.127 / 0.079 | 0.022 / 0.025 | 8.0 / 15.2 | 1.3 / 17.4 | 3.1 / 18.6 | 2.8 / 0.0 | 119 / 131 | 62 / 71 | 99 / 0 | +2.1 / +49.8 | 0.131 / 0.018 | 18 / 12 | 0 / 0 | +0.08 / -0.27 | +0.93 / +0.73 |
 | dev-2 2026-11-13 (`short`, software rendering) | 2/2 | 26fd8a62e | v5.4.1 | 0.074 / 0.063 | 0.117 / 0.194 | 9.2 / 10.5 | 13.4 / 9.0 | 124.4 / 110.0 | n/a | 190 / 110 | 122 / 58 | n/a | +2.6 / +25.7 | 0.159 / 0.262 | 17 / 13 | 0 / 0 | n/a | n/a |
-| desktop 2026-11-13, 3/3 `chunk` at 26fd8a62e | pending | | | | | | | | | | | | | | | | | |
+| desktop 2026-11-16, 3/3 `chunk` at f3997131c (Bead 285aede6) | 3/3 | f3997131c | v5.4.1 | 0.127 / 0.034 | 0.023 / 0.028 | 6.8 / 4.2 | 1.1 / 5.1 | 2.7 / 6.3 | 2.9 / 0.0 | 133 / 116 | 63 / 57 | 101 / 0 | +1.7 / +42.8 | 0.133 / 0.028 | 19 / 12 | 0 / 0 | -0.23 / -0.13 | +0.13 / -0.02 |
 
 Columns: CPU is % of one core. "Idle", "Interaction", PSS, unreclaimable and
 GPU buffers are shell + daemon (Noctalia has no daemon). "Stack" adds the nested
@@ -45,11 +45,22 @@ Row notes:
   its median launch cell means nothing here. These runs used
   `nacre-ci/arch-nacre` plus in-job packages; the harness now uses
   `nacre-ci/arch-nacre-session`, which carries the same packages.
-- **Desktop 3/3 pending**: the six `chunk` arms are staged at 26fd8a62e on the
-  desktop, but the desktop rule (swap < 64 MiB) blocks them: the owner's
-  session holds 2.6 GiB in zram after a game session. They start with
-  `host.sh desktop chunk nacre,noctalia,noctalia,nacre,nacre,noctalia` once
-  swap is reset.
+- **Desktop 2026-11-16** supersedes the pending 26fd8a62e `chunk` row (those
+  arms never ran; the desktop gate blocked them). Run on the desktop TEST host
+  (AMD iGPU, real power) as `host.sh desktop chunk nacre,noctalia,noctalia,nacre,nacre,noctalia`,
+  staged from a dev-2 build of f3997131c with Bead `285aede6`, in a private
+  nested session; all six arms ran once with no retry, swap 0 B, no host swap-in,
+  and 3/3 arms per shell agree within a few percent. Since 26fd8a62e: Bead's
+  B0254/B0255 hot-path batch and B0294, N0306 (lock-content PNG), N0321, N0325
+  (recorder topic, off-thread fast ticks) and N0332 (daemon-topic diet). Against
+  the desktop smoke (5cb5e22a2): interaction CPU 17.4 to 5.1 %, idle wakeups 15.2
+  to 4.2/s, idle PSS 131 to 116 MiB, growth +49.8 to +42.8 MiB. Nacre now wins
+  idle CPU, idle wakeups, idle memory and launch; it still loses interaction CPU
+  (5.1 against 1.1 %; stack 6.3 against 2.7 %, Noctalia spends 2.9 % GPU, Nacre
+  none) and memory growth. Top Nacre thread in the interaction window: shell
+  `bead-worker` at 2.6 % of a core (about half of Nacre's total); no Nacre thread
+  is above 0.02 % in the idle window. The 90 s after the cycles ("rest") stays
+  above idle: shell 0.43 % and daemon 0.35 % against Noctalia's 0.13 %.
 
 Pins: Noctalia v5.4.1 is `815aebe1cfd79c9a18197441eea92f0b275035fc` (built from
 source in the row's stage); stock niri is the distribution package of the day
@@ -64,9 +75,11 @@ samples). Where Nacre already wins: shell + daemon memory before first use
 GPU buffers on the desktop), idle CPU, launcher open (first frame 12-13 ms
 against 17-18 ms, no late frames) and package power (within noise).
 
-1. **Interaction CPU on real hardware.** Desktop smoke (before N0306): 17.4 %
-   of a core against 1.3 % (Noctalia renders on the GPU: +2.8 % GPU, niri 1.5 % against
-   1.0 %). At 26fd8a62e about a third of it is the daemon re-rendering the
+1. **Interaction CPU on real hardware.** Desktop 2026-11-16 (f3997131c): 5.1 %
+   of a core against 1.1 %, shell `bead-worker` thread 2.6 % (down from 17.4 %
+   at the smoke, before N0306 and Bead's batch; the profile below is the older
+   26fd8a62e one). Noctalia renders on the GPU: +2.9 % GPU, niri 1.4 % against
+   1.0 %. At 26fd8a62e about a third of it is the daemon re-rendering the
    lock-screen dashboard image while notifications arrive, in `nacre-helper`
    `tokio-rt-worker` threads: `image_paint::composite` 15.9 %,
    `orient_decoder::resample::pass_region` 8.8 %, `image_paint::paste`,
@@ -79,7 +92,8 @@ against 17-18 ms, no late frames) and package power (within noise).
    `FrameDamage::update` 0.7 %), which is what Bead's B0254/B0255 batch targets.
    The shell's `nacre-link` thread (daemon link: `serde_json::Value::clone`,
    framing deserialize) is 3.5 % and daemon-side JSON serialization 1.4 %.
-2. **CPU does not return to idle after first use.** In the minute after the
+2. **CPU does not return to idle after first use** (still true at f3997131c:
+   rest 0.43 % shell, 0.35 % daemon against 0.13 %; figures below are 26fd8a62e). In the minute after the
    interaction the shell uses 0.95 % and the daemon 0.31 % (idle before: 0.018
    and 0.046 %): shell main thread 0.54 %, its `nacre-link` thread 0.40 %,
    daemon main thread 0.23 % at 17-18 wakeups/s. N0300 saw the same over 19
@@ -87,7 +101,8 @@ against 17-18 ms, no late frames) and package power (within noise).
 3. **Memory kept after first use.** Shell PSS 59.6 → 84.5 MiB and
    unreclaimable 36 → 60 MiB after the first panel opens, kept to the end
    (dev-2; desktop smoke +49.8 MiB at 5cb5e22a2). Noctalia grows 2-3 MiB.
-4. **Idle wakeups.** 10.5 against 9.2 per second (dev-2; 15.2 against 8.0 on
+4. **Idle wakeups** (no longer a loss on the desktop at f3997131c: 4.2 against
+   6.8 per second). Earlier: 10.5 against 9.2 per second (dev-2; 15.2 against 8.0 on
    the desktop smoke, before N0305): daemon main thread 4.1/s,
    `nacre-offload` 2.1/s, a shell `blocking-1` thread on a 500 ms timer 2.0/s.
    Idle CPU is still lower than Noctalia's.
