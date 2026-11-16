@@ -10,7 +10,7 @@ publish.workspace = true
 nacre-protocol = { path = "../nacre-protocol" }
 nacre-menu = { path = "../nacre-menu" }
 nacre-i18n = { path = "../nacre-i18n" }
-bead-services = { git = "https://github.com/nacre-desktop/bead", rev = "6fdca7b5a8085702c3999add2ae2d55f2a39f633" }
+bead-services = { git = "https://github.com/nacre-desktop/bead", rev = "4deea4a00dcbaaa157ebc8999f947bacf308f9b0" }
 tokio.workspace = true
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
