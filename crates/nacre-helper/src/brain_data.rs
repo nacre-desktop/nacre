@@ -1124,6 +1124,13 @@ fn restore(archive: &Path, destination: &Path) -> Result<()> {
     Ok(())
 }
 
+/// A stale review is a warning; every other finding is an integrity error.
+const STALE_REVIEW: &str = "review older than 30 days; verify time-sensitive claims";
+
+fn check_status(findings: &[String]) -> i32 {
+    i32::from(findings.iter().any(|f| !f.ends_with(STALE_REVIEW)))
+}
+
 fn check(root: &Path) -> Result<Vec<String>> {
     let ns = notes(root)?;
     let mut findings = Vec::new();
@@ -1201,9 +1208,7 @@ fn check(root: &Path) -> Result<Vec<String>> {
         if let Some(date) = reviewed.captures(body) {
             let date = chrono::NaiveDate::parse_from_str(&date[1], "%Y-%m-%d")?;
             if (chrono::Local::now().date_naive() - date).num_days() > 30 {
-                findings.push(format!(
-                    "{name}: review older than 30 days; verify time-sensitive claims"
-                ));
+                findings.push(format!("{name}: {STALE_REVIEW}"));
             }
         }
     }
@@ -1570,7 +1575,7 @@ fn maintain(args: &[String]) -> Result<i32> {
             } else {
                 println!("{}", findings.join("\n"))
             }
-            Ok(if findings.is_empty() { 0 } else { 1 })
+            Ok(check_status(&findings))
         }
         _ => Err(error("invalid choice")),
     }
@@ -1746,6 +1751,18 @@ mod tests {
         assert!(found.iter().any(|x| x.contains("wiki link")));
         assert!(found.iter().any(|x| x.contains("relative link")));
         let _ = fs::remove_dir_all(root);
+    }
+    #[test]
+    fn stale_reviews_warn_but_only_integrity_findings_fail_the_check() {
+        let root = tempfile::tempdir().unwrap();
+        fs::create_dir(root.path().join("wiki")).unwrap();
+        let page = "Source: t\nReviewed: 2020-01-01\nStatus: current\n";
+        fs::write(root.path().join("wiki/p.md"), page).unwrap();
+        let stale = check(root.path()).unwrap();
+        assert_eq!(stale.len(), 1);
+        assert_eq!(check_status(&stale), 0);
+        fs::write(root.path().join("wiki/p.md"), format!("{page}[[missing]]")).unwrap();
+        assert_eq!(check_status(&check(root.path()).unwrap()), 1);
     }
     #[test]
     fn checkpoint_with_evidence_metadata_passes_check() {

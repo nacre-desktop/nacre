@@ -73,6 +73,13 @@ impl Activity {
     }
 }
 
+/// True once the running binary was replaced on disk (a deploy): the kernel marks the
+/// `/proc/self/exe` target " (deleted)". The worker then exits so the next client starts the new one.
+fn replaced(exe_link: &Path) -> bool {
+    std::fs::read_link(exe_link)
+        .is_ok_and(|target| target.to_string_lossy().ends_with(" (deleted)"))
+}
+
 pub fn serve<F>(
     listener: TcpListener,
     state: &Path,
@@ -120,6 +127,9 @@ where
         match listener.accept() {
             Ok((stream, peer)) => {
                 activity.touch();
+                if replaced(Path::new("/proc/self/exe")) {
+                    return Ok(());
+                }
                 if !peer.ip().is_loopback() {
                     drop(stream);
                     continue;
@@ -171,7 +181,7 @@ where
                 });
             }
             Err(error) if error.kind() == io::ErrorKind::WouldBlock => {
-                if activity.idle(idle_timeout) {
+                if activity.idle(idle_timeout) || replaced(Path::new("/proc/self/exe")) {
                     return Ok(());
                 }
                 std::thread::sleep(Duration::from_millis(20));
@@ -530,6 +540,21 @@ fn write_response(stream: &mut TcpStream, mut response: Response) -> io::Result<
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_replaced_executable_is_detected() {
+        assert!(!replaced(Path::new("/proc/self/exe")));
+        let dir = tempfile::tempdir().unwrap();
+        let copy = dir.path().join("sleeper");
+        std::fs::copy("/bin/sleep", &copy).unwrap();
+        let mut child = std::process::Command::new(&copy).arg("30").spawn().unwrap();
+        let link = format!("/proc/{}/exe", child.id());
+        assert!(!replaced(Path::new(&link)));
+        std::fs::remove_file(&copy).unwrap();
+        assert!(replaced(Path::new(&link)));
+        child.kill().unwrap();
+        child.wait().unwrap();
+    }
 
     fn launch_order_bootstrap_and_authorize(state: &Path, port: u16, auth: &mut BrowserAuth) {
         let url = crate::brain_auth::refresh_bootstrap(state, port, false).unwrap();

@@ -1015,7 +1015,13 @@ pub fn run(cli: &[String]) -> Result<(), Box<dyn Error>> {
             )?);
         }
     }
-    bead::wayland::run(options, crate::sound::fallback(fill))
+    // The window or panel is closed: end the process now. Waiting on the daemon client's and
+    // settings services' destructors could leave a windowless app running.
+    let result = bead::wayland::run(options, crate::sound::fallback(fill));
+    if let Err(error) = &result {
+        eprintln!("Error: {error}");
+    }
+    std::process::exit(i32::from(result.is_err()))
 }
 
 #[cfg(test)]
