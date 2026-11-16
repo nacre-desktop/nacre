@@ -1591,7 +1591,7 @@ pub(crate) fn decode_pair(
 fn decode_in_worker(pair: &ActiveWallpaper, width: u32, height: u32) -> Result<Vec<u8>, String> {
     use std::{
         io::{Read, Write},
-        process::{Command, Stdio},
+        process::Stdio,
     };
     let expected = (width as usize)
         .checked_mul(height as usize)
@@ -1604,7 +1604,7 @@ fn decode_in_worker(pair: &ActiveWallpaper, width: u32, height: u32) -> Result<V
     let executable = std::env::current_exe()
         .map_err(|_| "wallpaper worker unavailable")?
         .with_file_name("nacre-wallpaper-decode");
-    let mut child = Command::new(executable)
+    let mut child = bead::services::process::command(executable)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(if bead::core::profile::enabled() {

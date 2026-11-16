@@ -214,7 +214,7 @@ impl Controller {
             return None;
         }
         Self::start_with(deps, move || {
-            let mut command = std::process::Command::new(&renderer);
+            let mut command = bead::services::process::command(&renderer);
             command.arg("--hwdec=vaapi");
             command
         })

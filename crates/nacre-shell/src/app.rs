@@ -649,7 +649,7 @@ impl Host {
                     .ok()
             })
             .map_or_else(Stdio::null, Stdio::from);
-        let mut child = std::process::Command::new(&self.launcher)
+        let mut child = bead::services::process::command(&self.launcher)
             .arg("launch-app")
             .args(app)
             .stdin(Stdio::null())

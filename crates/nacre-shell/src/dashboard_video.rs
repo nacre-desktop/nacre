@@ -2,7 +2,7 @@
 //! A visible dashboard owns one bounded video child; the UI never loads libmpv.
 use std::{
     io::{Read, Write},
-    process::{Child, Command, Stdio},
+    process::{Child, Stdio},
     sync::{
         Arc, Mutex,
         atomic::{AtomicBool, Ordering},
@@ -44,13 +44,14 @@ impl Preview {
         preview
     }
     fn spawn(&mut self, notify: Option<super::Notify>) -> std::io::Result<()> {
-        let mut child =
-            Command::new(std::env::current_exe()?.with_file_name("bead-wallpaper-video"))
-                .arg("--preview")
-                .stdin(Stdio::piped())
-                .stdout(Stdio::piped())
-                .stderr(Stdio::null())
-                .spawn()?;
+        let mut child = bead::services::process::command(
+            std::env::current_exe()?.with_file_name("bead-wallpaper-video"),
+        )
+        .arg("--preview")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .spawn()?;
         let request = serde_json::json!({
             "path": self.request.motion.path,
             "file_identity": self.request.motion.file_identity,
@@ -138,6 +139,7 @@ fn read_frame(reader: &mut impl Read) -> std::io::Result<Arc<[u8]>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::process::Command;
     #[test]
     fn closing_dashboard_reaps_its_preview_even_with_a_blocked_reader() {
         let mut child = Command::new("sleep")
