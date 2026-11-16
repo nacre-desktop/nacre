@@ -16,7 +16,7 @@ use std::{
 };
 
 pub type Wake = Arc<dyn Fn() + Send + Sync>;
-pub const SCREENS: [&str; 4] = ["overview", "search", "note", "loops"];
+pub const SCREENS: [&str; 5] = ["overview", "graph", "search", "note", "loops"];
 const SEARCH_LIMIT: u32 = 100;
 const RECENT: usize = 8;
 
@@ -30,6 +30,7 @@ struct State {
     page: Option<(String, Json)>,
     note: Option<(String, Json)>,
     near: Option<(String, Json)>,
+    graph: GraphView,
     search: Option<(String, Json)>,
     /// Request id -> `op:key`, answered by the reader thread.
     pending: BTreeMap<u64, String>,
@@ -38,6 +39,53 @@ struct State {
     /// A search typed while one is in flight: sent when the reply arrives.
     search_wanted: Option<(String, Json)>,
     search_inflight: bool,
+}
+
+/// The whole-vault graph for the Graph screen, packed to fit the store limits (a list holds at
+/// most 2,048 records and 1 MiB): nodes and edges travel in chunk records `{rows:[..]}` and
+/// refer to each other by position, so `ui.graph` ids stay short.
+#[derive(Default)]
+struct GraphView {
+    state: String,
+    nodes: Vec<Json>,
+    edges: Vec<Json>,
+    /// Per node position: note id, path, and whether it opens in the reader.
+    meta: Vec<(String, String, bool)>,
+}
+
+impl GraphView {
+    fn from_reply(body: &Json) -> Self {
+        let mut view = Self {
+            state: text(&body["state"]).into(),
+            ..Self::default()
+        };
+        let (mut nodes, mut position) = (Vec::new(), BTreeMap::new());
+        for n in body["nodes"].as_array().into_iter().flatten() {
+            let id = text(&n["id"]);
+            if position.contains_key(id) {
+                continue;
+            }
+            let note = ["note", "wiki"].contains(&text(&n["kind"]));
+            position.insert(id.to_owned(), position.len());
+            // Worlds and hubs weigh more, so their labels show first.
+            nodes.push(json!({"id":position.len()-1,"label":text(&n["label"]),"weight":if note {1} else {4}}));
+            view.meta
+                .push((id.to_owned(), text(&n["path"]).to_owned(), note));
+        }
+        let edges = body["links"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(|e| {
+                let (from, to) = edge_ends(e);
+                let (from, to) = (position.get(&from)?, position.get(&to)?);
+                (from != to).then(|| json!({"from":from,"to":to}))
+            })
+            .collect::<Vec<_>>();
+        view.nodes = nodes.chunks(512).map(|c| json!({"rows":c})).collect();
+        view.edges = edges.chunks(1024).map(|c| json!({"rows":c})).collect();
+        view
+    }
 }
 
 struct Link {
@@ -166,6 +214,26 @@ fn inline(text: &str) -> String {
         out.replace_range(open..start + close + 1, &label);
     }
     out
+}
+
+/// Store changes that open a note in the reader, remembering where to go back to.
+fn open_changes(stores: &Stores, id: &str, path: &str) -> BTreeMap<String, Value> {
+    let get = |name: &str| match stores.get(name) {
+        Some(Value::Text(t)) => t.clone(),
+        _ => String::new(),
+    };
+    let mut history = match stores.get("brain.history") {
+        Some(Value::List(items)) => items.to_vec(),
+        _ => Vec::new(),
+    };
+    history.push(json!({"screen":get("brain.screen"),"note":get("brain.note"),"path":get("brain.note_path")}));
+    history.truncate(64);
+    BTreeMap::from([
+        ("brain.history".into(), Value::list(history)),
+        ("brain.screen".into(), Value::Text("note".into())),
+        ("brain.note".into(), Value::Text(id.into())),
+        ("brain.note_path".into(), Value::Text(path.into())),
+    ])
 }
 
 impl Brain {
@@ -303,6 +371,7 @@ impl Brain {
             "loops" => st.loops = body,
             "wiki.page" => st.page = Some((key.into(), body)),
             "note" => st.note = Some((key.into(), body)),
+            "graph" if key == "all" => st.graph = GraphView::from_reply(&body),
             "graph" => st.near = Some((key.into(), body)),
             "search" => st.search = Some((key.into(), body)),
             "ask.settings" => st.ask["enabled"] = body["enabled"].clone(),
@@ -382,6 +451,20 @@ impl Brain {
             get("brain.note"),
             get("brain.note_path"),
         );
+        let pick = get("brain.pick");
+        if !pick.is_empty() {
+            // A graph node was selected: open its note (worlds and hubs stay put).
+            changes.insert("brain.pick".into(), Value::Text(String::new()));
+            let target = pick.parse::<usize>().ok().and_then(|i| {
+                let st = self.state.lock().unwrap_or_else(|e| e.into_inner());
+                st.graph.meta.get(i).filter(|m| m.2).cloned()
+            });
+            if let Some((id, p, _)) = target {
+                changes.extend(open_changes(stores, &id, &p));
+                changes.insert("brain.scroll".into(), Value::Number(0.));
+                (screen, note, path) = ("note".into(), id, p);
+            }
+        }
         if !open.is_empty() && open != *self.seen_open.borrow() {
             // A deep link (`nacrectl ui nacre brain <id-or-path>`) opens the reader.
             self.seen_open.replace(open.clone());
@@ -413,6 +496,9 @@ impl Brain {
             self.fetch(&mut st, "brain", json!({}), "");
             self.fetch(&mut st, "loops", json!({}), "");
             self.fetch(&mut st, "ask", json!({}), "");
+            if screen == "graph" {
+                self.fetch(&mut st, "graph", json!({"scope":"all"}), "all");
+            }
             if screen == "note" {
                 if !note.is_empty() {
                     self.fetch(&mut st, "wiki.page", json!({"id":note}), &note);
@@ -473,11 +559,17 @@ impl Brain {
             "review": st.brain["reviewCount"].as_u64().unwrap_or(0),
             "loops": loops.len(),
         });
+        // Each world's share of the notes filed in a world, so the Overview bars add up to 100%.
+        let filed: u64 = worlds
+            .iter()
+            .map(|w| w["count"].as_u64().unwrap_or(0))
+            .sum();
         let world_rows = worlds
             .iter()
             .enumerate()
             .map(|(i, w)| {
                 json!({"id":text(&w["id"]),"label":text(&w["label"]),"count":w["count"].as_u64().unwrap_or(0),"index":i+1,
+                    "share":w["count"].as_u64().unwrap_or(0) as f64 / filed.max(1) as f64,
                     "selected":world == text(&w["label"]),
                     "areas":w["areas"].as_array().into_iter().flatten()
                         .map(|a| json!({"id":text(&a["id"]),"label":text(&a["label"]),"count":a["count"].as_u64().unwrap_or(0)})).collect::<Vec<_>>()})
@@ -491,7 +583,12 @@ impl Brain {
                     .and_then(|w| w.first())
                     .map(|w| text(w).to_owned())
                     .unwrap_or_default();
-                json!({"id":text(&l["id"]),"text":text(&l["text"]),"date":text(&l["date"]),"source":text(&l["source"]),"path":text(&l["path"]),
+                let path = text(&l["path"]);
+                // Older workers send no title: fall back to the file stem.
+                let title = Some(text(&l["title"]))
+                    .filter(|t| !t.is_empty())
+                    .unwrap_or_else(|| path.rsplit('/').next().unwrap_or_default().trim_end_matches(".md"));
+                json!({"id":text(&l["id"]),"title":title,"text":text(&l["text"]),"date":text(&l["date"]),"source":text(&l["source"]),"path":text(&l["path"]),
                     "world":world,"world_index":world_index(&world)})
             })
             .collect::<Vec<_>>();
@@ -630,8 +727,31 @@ impl Brain {
                         .collect(),
                 ),
             ),
-            // The graph screen needs Bead's kit.GraphCanvas (N0236); hidden until it lands.
-            ("brain.graph_available".into(), Value::Bool(false)),
+            // Only the Graph screen carries the (large) graph.
+            (
+                "brain.graph_state".into(),
+                Value::Text(if screen == "graph" {
+                    st.graph.state.clone()
+                } else {
+                    String::new()
+                }),
+            ),
+            (
+                "brain.graph_nodes".into(),
+                Value::list(if screen == "graph" {
+                    st.graph.nodes.clone()
+                } else {
+                    Vec::new()
+                }),
+            ),
+            (
+                "brain.graph_edges".into(),
+                Value::list(if screen == "graph" {
+                    st.graph.edges.clone()
+                } else {
+                    Vec::new()
+                }),
+            ),
             (
                 "brain.win_w".into(),
                 Value::Number(f64::from(self.width.get())),
@@ -661,13 +781,7 @@ impl Brain {
             }
             "open" => {
                 let (id, path) = payload.split_once('|').unwrap_or((payload, ""));
-                let mut history = history();
-                history.push(json!({"screen":get("brain.screen"),"note":get("brain.note"),"path":get("brain.note_path")}));
-                history.truncate(64);
-                changes.insert("brain.history".into(), Value::list(history));
-                changes.insert("brain.screen".into(), Value::Text("note".into()));
-                changes.insert("brain.note".into(), Value::Text(id.into()));
-                changes.insert("brain.note_path".into(), Value::Text(path.into()));
+                changes.extend(open_changes(stores, id, path));
             }
             "back" => {
                 let mut history = history();
@@ -721,14 +835,6 @@ impl Brain {
                     payload,
                 );
             }
-            // Phase 1: the graph stays in the web Brain until kit.GraphCanvas lands (N0236).
-            "web" => {
-                let _ = crate::launcher_actions::launch_app(&[
-                    "nacre-brain".into(),
-                    "open".into(),
-                    "--web".into(),
-                ]);
-            }
             "refresh" => {
                 // `summary?retry=1` reschedules the graph build; the next frame refetches.
                 // After a lost or failed connection, the next frame reconnects (and restarts
@@ -755,44 +861,6 @@ impl Brain {
         }
         changes
     }
-}
-
-// ---- graph layout store (spec section 3: `~/.local/state/nacre/brain/graph-layout.json`) --------
-// shortcut: no caller until the phase 2 graph screen (kit.GraphCanvas, N0236) feeds getLayout/setLayout.
-
-/// The saved layout, or `None` when it is unreadable or its node set differs from `ids` by more
-/// than a quarter (then the graph is relaid).
-#[allow(dead_code)]
-pub fn load_layout(path: &std::path::Path, ids: &BTreeSet<String>) -> Option<Json> {
-    let layout: Json = serde_json::from_slice(&std::fs::read(path).ok()?).ok()?;
-    let saved: BTreeSet<&str> = layout["nodes"]
-        .as_object()?
-        .keys()
-        .map(String::as_str)
-        .collect();
-    let common = ids.iter().filter(|id| saved.contains(id.as_str())).count();
-    let span = ids.len().max(saved.len());
-    (span == 0 || (span - common) * 4 <= span).then_some(layout)
-}
-
-/// Temp file + rename, mode 0600; the app is the file's only writer.
-#[allow(dead_code)]
-pub fn save_layout(path: &std::path::Path, layout: &Json) -> std::io::Result<()> {
-    use std::os::unix::fs::OpenOptionsExt;
-    let parent = path
-        .parent()
-        .ok_or_else(|| std::io::Error::other("layout needs a parent"))?;
-    std::fs::create_dir_all(parent)?;
-    let temp = parent.join(".graph-layout.json.tmp");
-    let mut file = std::fs::OpenOptions::new()
-        .write(true)
-        .create(true)
-        .truncate(true)
-        .mode(0o600)
-        .open(&temp)?;
-    file.write_all(&serde_json::to_vec(layout)?)?;
-    file.sync_all()?;
-    std::fs::rename(&temp, path)
 }
 
 // ---- window --------------------------------------------------------------------------------------

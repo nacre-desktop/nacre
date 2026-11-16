@@ -1,9 +1,8 @@
 -- SPDX-License-Identifier: GPL-3.0-only
 -- Brain app (N0217, phase 1): a side rail (screens, worlds, index status), a toolbar (search,
 -- Ask, Capture, New) and plain pages: Overview, Search with the Ask card, the note reader with
--- its backlinks, and Loops. All data is the `brain.rs` projection of the worker's replies; sizes
--- and colours come from the kit tokens and palette roles. The Graph screen waits for
--- kit.GraphCanvas (N0236) and stays hidden until `brain.graph_available`.
+-- its backlinks, Loops and the Graph (kit.GraphCanvas). All data is the `brain.rs` projection of
+-- the worker's replies; sizes and colours come from the kit tokens and palette roles.
 local ui=require("bead.ui")
 local kit=require("bead.kit")
 local T=kit.tokens
@@ -62,6 +61,13 @@ local function note_row(id,n,w,trailing)
         ui.Row{id="r",height=30,width=w-2*sp.xs,gap=sp.sm,align="center",dot("d",role(n.world_index),8),
             para("t",n.label,tx.body,w-2*sp.xs-8-2*sp.sm-100,1),text("s",trailing or "",tx.caption,"onSurfaceVariant",100,16,{text_align="right"})}}
 end
+-- A loop row: world dot, the note's title above the loop text; activates the note.
+local function loop_row(id,l,w,h,lines)
+    local tw=w-2*sp.sm-8-sp.md
+    return kit.Button{id=id,width=w,height=h,shrink=0,padding=sp.sm,radius=rd.small,fill="transparent",hover_fill="surfaceContainerHigh",aria_label=l.title..": "..l.text,on_activate=act(open_arg({id=l.source,path=l.path})),
+        ui.Row{id="r",width=w-2*sp.sm,gap=sp.md,align="center",dot("d",role(l.world_index),8),
+            ui.Column{id="c",width=tw,gap=2,text("t",l.title,tx.body,"onSurface",tw,20,{font_weight=600}),para("x",l.text,tx.caption,tw,lines,"onSurfaceVariant")}}}
+end
 local function empty(id,s,w) return text(id,s,tx.body,"onSurfaceVariant",w,20) end
 
 -- ---------- status ----------
@@ -80,9 +86,7 @@ local function rail()
             ui.Text{id="g",text="psychology",family=T.fonts.icon,width=20,height=20,font_size=px(T.icons.medium),color="onPrimary",text_align="center",position="absolute",left=4,top=4}},
         text("n",ui.tr("bead.brain.title"),tx.title,"onSurface",RAIL-36-2*sp.lg,24,{font_weight=600})},
         ui.Box{id="gap0",height=sp.md,width=1}}
-    local nav={{"overview",ui.tr("bead.brain.overview")}}
-    -- Until kit.GraphCanvas lands (N0236) the entry opens the web Brain's graph (spec phase 1).
-    if get("brain.graph_available") then table.insert(nav,{"graph",ui.tr("bead.brain.graph")}) else table.insert(nav,{"web",ui.tr("bead.brain.graph-web")}) end
+    local nav={{"overview",ui.tr("bead.brain.overview")},{"graph",ui.tr("bead.brain.graph")}}
     if get("brain.note")~="" or get("brain.note_path")~="" then table.insert(nav,{"note",ui.tr("bead.brain.reader")}) end
     table.insert(nav,{"search",ui.tr("bead.brain.search")})
     table.insert(nav,{"loops",ui.tr("bead.brain.loops")})
@@ -90,7 +94,7 @@ local function rail()
         local active=SCREEN==n[1]
         table.insert(kids,kit.Button{id="nav-"..n[1],height=34,width=RAIL-2*sp.lg,shrink=0,radius=rd.small,padding=0,padding_left=sp.md,padding_top=(34-px(tx.body)*1.3)/2,
             fill=active and "primaryContainer" or "transparent",hover_fill=active and "primaryContainer" or "surfaceContainerHigh",
-            text=n[2],color=active and "onPrimaryContainer" or "onSurface",font_size=px(tx.body),aria_label=n[2],on_activate=act(n[1]=="web" and "web" or "screen:"..n[1])})
+            text=n[2],color=active and "onPrimaryContainer" or "onSurface",font_size=px(tx.body),aria_label=n[2],on_activate=act("screen:"..n[1])})
     end
     table.insert(kids,ui.Box{id="gap1",height=sp.lg,width=1})
     table.insert(kids,caption("wl",ui.tr("bead.brain.worlds"),RAIL-2*sp.lg))
@@ -134,8 +138,6 @@ end
 local function world_cards(w,cols,hgt)
     local worlds=get("brain.worlds")
     local cw=(w-(cols-1)*sp.md)/cols
-    local most=1
-    for _,wd in ipairs(worlds) do most=math.max(most,wd.count or 0) end
     local rows={}
     for i,wd in ipairs(worlds) do
         local ar={}
@@ -149,8 +151,8 @@ local function world_cards(w,cols,hgt)
         ar.id="areas";ar.gap=6;ar.height=26;ar.width=cw-2*sp.lg;ar.shrink=0
         local c=kit.Button{id="w"..i,width=cw,height=hgt,shrink=0,padding=sp.lg,radius=rd.medium,fill="surfaceContainer",hover_fill="surfaceContainerHigh",aria_label=wd.label,on_activate=act("world:"..wd.label),
             ui.Column{id="c",width=cw-2*sp.lg,gap=sp.sm,
-                ui.Row{id="h",height=22,width=cw-2*sp.lg,gap=sp.sm,align="center",dot("d",role(wd.index),10),text("n",wd.label,tx.title,"onSurface",cw-2*sp.lg-70,22),text("c",tostring(wd.count),tx.body,"onSurfaceVariant",50,20,{text_align="right"})},
-                ui.Box{id="bar",width=math.max(4,(cw-2*sp.lg)*(wd.count or 0)/most),height=4,radius=2,fill=ui.alpha(role(wd.index),.7),shrink=0},
+                ui.Row{id="h",height=22,width=cw-2*sp.lg,gap=sp.sm,align="center",dot("d",role(wd.index),10),text("n",wd.label,tx.title,"onSurface",cw-2*sp.lg-110,22),text("c",wd.count.." · "..math.floor(wd.share*100+.5).."%",tx.body,"onSurfaceVariant",90,20,{text_align="right"})},
+                ui.Box{id="bar",width=math.max(4,(cw-2*sp.lg)*wd.share),height=4,radius=2,fill=ui.alpha(role(wd.index),.7),shrink=0},
                 ui.Row(ar)}}
         local r=math.ceil(i/cols)
         rows[r]=rows[r] or {id="r"..r,gap=sp.md,height=hgt,shrink=0}
@@ -165,7 +167,7 @@ local function overview()
     local iw=CW-2*sp.xxl
     local recent,loops={},{}
     for i,n in ipairs(get("brain.recent")) do if i<=5 then recent[i]=note_row("r"..i,n,(iw-sp.md)*.58-2*sp.lg,n.date) end end
-    for i,l in ipairs(get("brain.loops")) do if i<=5 then loops[i]=note_row("l"..i,{id=l.source,path=l.path,label=l.text,world_index=l.world_index},(iw-sp.md)*.42-2*sp.lg,l.date) end end
+    for i,l in ipairs(get("brain.loops")) do if i<=5 then loops[i]=loop_row("l"..i,l,(iw-sp.md)*.42-2*sp.lg,52,1) end end
     if #recent==0 then recent[1]=empty("none",ui.tr("bead.brain.no-notes"),(iw-sp.md)*.58-2*sp.lg) end
     if #loops==0 then loops[1]=empty("none",ui.tr("bead.brain.no-loops"),(iw-sp.md)*.42-2*sp.lg) end
     recent.id="rl";recent.gap=2;recent.shrink=0;loops.id="ll";loops.gap=2;loops.shrink=0
@@ -177,8 +179,8 @@ local function overview()
             heading("wh",ui.tr("bead.brain.worlds"),iw),
             world_cards(iw,4,100),
             ui.Row{id="bottom",width=iw,gap=sp.md,shrink=0,
-                card("recent",(iw-sp.md)*.58,210,{heading("t",ui.tr("bead.brain.recent")),ui.Column(recent)}),
-                card("loops",(iw-sp.md)*.42,210,{heading("t",ui.tr("bead.brain.loops")),ui.Column(loops)})}}}
+                card("recent",(iw-sp.md)*.58,330,{heading("t",ui.tr("bead.brain.recent")),ui.Column(recent)}),
+                card("loops",(iw-sp.md)*.42,330,{heading("t",ui.tr("bead.brain.loops")),ui.Column(loops)})}}}
 end
 
 -- ---------- search + ask ----------
@@ -289,10 +291,7 @@ local function loops()
     local iw=CW-2*sp.xxl
     local kids={}
     for i,l in ipairs(get("brain.loops")) do
-        kids[i]=kit.Button{id="l"..i,width=iw,height=56,shrink=0,padding=sp.sm,radius=rd.small,fill="transparent",hover_fill="surfaceContainerHigh",aria_label=l.text,on_activate=act("open:"..tostring(l.source).."|"..tostring(l.path or "")),
-            ui.Row{id="r",width=iw-2*sp.sm,height=40,gap=sp.md,align="center",dot("d",role(l.world_index),8),
-                para("t",l.text,tx.body,iw-2*sp.sm-8-sp.md-120-sp.md,2),
-                ui.Column{id="m",width=120,gap=2,shrink=0,text("w",l.world or "",tx.caption,"onSurfaceVariant",120,16,{text_align="right"}),text("d",l.date or "",tx.caption,"onSurfaceVariant",120,16,{text_align="right"})}}}
+        kids[i]=loop_row("l"..i,l,iw,76,2)
     end
     if #kids==0 then kids[1]=empty("none",ui.tr("bead.brain.no-loops"),iw) end
     kids.id="rows";kids.width=iw;kids.gap=2;kids.shrink=0
@@ -301,6 +300,19 @@ local function loops()
             text("h1",ui.tr("bead.brain.open-loops"),22,"onSurface",iw,40,{font_weight=600}),
             text("sub",ui.tr("bead.brain.loops-tagline"),tx.body,"onSurfaceVariant",iw,20),
             ui.Column(kids)}}
+end
+
+-- ---------- graph ----------
+local function graph()
+    local state=get("brain.graph_state")
+    local nodes,edges={},{}
+    for _,c in ipairs(get("brain.graph_nodes")) do for _,n in ipairs(c.rows) do nodes[#nodes+1]=n end end
+    for _,c in ipairs(get("brain.graph_edges")) do for _,e in ipairs(c.rows) do edges[#edges+1]=e end end
+    if #nodes==0 then
+        local msg=(state=="" or state=="building") and ui.tr("bead.brain.graph-building") or state=="error" and ui.tr("bead.brain.graph-error") or ui.tr("bead.brain.no-notes")
+        return ui.Column{id="graph",width=CW,grow=1,padding=sp.xxl,empty("none",msg,CW-2*sp.xxl)}
+    end
+    return kit.GraphCanvas{id="graph",width=CW,grow=1,graph=ui.graph(nodes,edges),on_select=ui.action("pick")}
 end
 
 local function content()
@@ -312,6 +324,7 @@ local function content()
     if SCREEN=="note" then return note() end
     if SCREEN=="search" then return search() end
     if SCREEN=="loops" then return loops() end
+    if SCREEN=="graph" then return graph() end
     return overview()
 end
 

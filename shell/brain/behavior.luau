@@ -9,8 +9,10 @@ return {stores={
     ["brain.status"]="connecting",["brain.error"]="",["brain.counts"]={},["brain.worlds"]={},["brain.recent"]={},
     ["brain.loops"]={},["brain.results"]={},["brain.result_count"]=0,["brain.did_you_mean"]="",["brain.page"]={},
     ["brain.ask.enabled"]=false,["brain.ask.busy"]=false,["brain.ask.answer"]="",["brain.ask.error"]="",["brain.ask.citations"]={},
-    ["brain.graph_available"]=false,["brain.win_w"]=1280,
+    ["brain.graph_state"]="",["brain.graph_nodes"]={},["brain.graph_edges"]={},["brain.pick"]="",["brain.win_w"]=1280,
 },actions={
     -- The Brain adapter authorizes and handles this host action (screen, open, back, world, ask, action...).
     ["brain.do"]=function(_) end,
+    -- A graph node was selected; the adapter opens its note on the next projection.
+    pick=function(s,id) s["brain.pick"]=id end,
 },computed={}}

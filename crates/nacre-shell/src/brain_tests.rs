@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 //! N0217 Brain app: view models per screen over a synthetic fixture (never the owner's vault),
-//! the adapter over a fake worker socket, the reader's markdown-lite, the layout store and
-//! the screen goldens.
+//! the adapter over a fake worker socket, the reader's markdown-lite and the screen goldens.
 use super::*;
 use crate::settings_tests::golden;
 use bead_test::{Config as HarnessConfig, Harness};
@@ -65,7 +64,7 @@ fn brain_summary() -> Json {
 }
 fn loops() -> Json {
     json!({"loops":[
-        {"id":"loop-1","text":"Try a 78% hydration bake and compare the crumb","date":"2026-11-10","source":note_id(0),"path":note_node(0)["path"],"worlds":["Cooking"]},
+        {"id":"loop-1","title":TITLES[0],"text":"Try a 78% hydration bake and compare the crumb","date":"2026-11-10","source":note_id(0),"path":note_node(0)["path"],"worlds":["Cooking"]},
         {"id":"loop-2","text":"Waiting for the sleep tracker export","date":"2026-11-08","source":note_id(3),"path":note_node(3)["path"],"worlds":["Health"]},
         {"id":"loop-3","text":"Which crate owns the shell startup order?","date":"2026-11-07","source":note_id(5),"path":note_node(5)["path"],"worlds":["Tools"]},
     ],"timeline":[]})
@@ -84,6 +83,16 @@ fn near() -> Json {
     json!({"state":"ready","nodes":[note_node(0),note_node(1),note_node(2),note_node(6)],
         "links":[{"source":note_id(1),"target":note_id(0),"kind":"wiki"},{"source":note_id(6),"target":note_id(0),"kind":"mention"},
                  {"source":note_id(0),"target":note_id(2),"kind":"wiki"},{"source":"cooking","target":note_id(0),"kind":"membership"}]})
+}
+fn graph_all() -> Json {
+    let mut nodes = vec![json!({"id":"cooking","label":"Cooking","kind":"world"})];
+    nodes.extend([0, 1, 2, 6].map(note_node));
+    json!({"state":"ready","nodes":nodes,"links":[
+        {"source":"cooking","target":note_id(0),"kind":"membership"},
+        {"source":note_id(1),"target":note_id(0),"kind":"wiki"},
+        {"source":note_id(6),"target":note_id(0),"kind":"mention"},
+        {"source":note_id(0),"target":note_id(2),"kind":"wiki"},
+        {"source":note_id(2),"target":"gone","kind":"wiki"}]})
 }
 fn search(query: &str) -> Json {
     let results = [0usize, 6, 1]
@@ -107,6 +116,7 @@ fn fixture() -> BTreeMap<&'static str, Json> {
         ("ask:", json!({"enabled":true})),
         ("wiki.page:note:0000000000000000", page()),
         ("graph:note:0000000000000000", near()),
+        ("graph:all", graph_all()),
         ("search:bread\u{1}", search("bread")),
     ])
 }
@@ -164,7 +174,58 @@ fn overview_projects_counts_worlds_and_recent_notes() {
     assert_eq!(recent[1]["world"], "Health");
     assert_eq!(recent[1]["world_index"], 2);
     assert_eq!(list(&model, "brain.loops")[0]["world_index"], 1);
-    assert_eq!(model["brain.graph_available"], Value::Bool(false));
+    let share: f64 = worlds.iter().map(|w| w["share"].as_f64().unwrap()).sum();
+    assert!((share - 1.).abs() < 1e-9, "bars add up to 100%: {share}");
+    assert_eq!(worlds[0]["share"], 0.4);
+}
+
+#[test]
+fn loops_carry_the_note_title_or_the_file_stem() {
+    let model = brain().project(&stores(&[]));
+    let loops = list(&model, "brain.loops");
+    assert_eq!(loops[0]["title"], TITLES[0]);
+    assert_eq!(loops[1]["title"], "sleep-debt-and-caffeine-half-life");
+}
+
+#[test]
+fn the_graph_screen_projects_packed_nodes_and_edges_and_picks_open_notes() {
+    let brain = brain();
+    let on_graph = |extra: &[(&str, Value)]| {
+        let mut v = vec![("brain.screen", t("graph")), ("brain.pick", t(""))];
+        v.extend_from_slice(extra);
+        stores(&v)
+    };
+    let model = brain.project(&on_graph(&[]));
+    assert_eq!(text(&model, "brain.graph_state"), "ready");
+    let nodes = list(&model, "brain.graph_nodes");
+    assert_eq!(nodes[0]["rows"].as_array().unwrap().len(), 5);
+    assert_eq!(
+        nodes[0]["rows"][0],
+        json!({"id":0,"label":"Cooking","weight":4})
+    );
+    // Membership stays an edge; the unknown end and nothing else is dropped.
+    assert_eq!(
+        list(&model, "brain.graph_edges")[0]["rows"]
+            .as_array()
+            .unwrap()
+            .len(),
+        4
+    );
+    assert!(list(&brain.project(&stores(&[])), "brain.graph_nodes").is_empty());
+    // Selecting a note node opens it, with the graph as the way back; a world node does not.
+    let opened = brain.project(&on_graph(&[("brain.pick", t("1"))]));
+    assert_eq!(text(&opened, "brain.screen"), "note");
+    assert_eq!(text(&opened, "brain.note"), note_id(0));
+    assert_eq!(text(&opened, "brain.pick"), "");
+    assert_eq!(
+        list(&opened, "brain.history"),
+        vec![json!({"screen":"graph","note":"","path":""})]
+    );
+    let world = brain.project(&on_graph(&[("brain.pick", t("0"))]));
+    assert!(
+        !world.contains_key("brain.note"),
+        "a world node opens nothing"
+    );
 }
 
 #[test]
@@ -342,9 +403,9 @@ fn world_filter_toggles_and_screens_are_validated() {
         text(&brain.act("screen:loops", &stores(&[])), "brain.screen"),
         "loops"
     );
-    assert!(
-        brain.act("screen:graph", &stores(&[])).is_empty(),
-        "no graph screen yet"
+    assert_eq!(
+        text(&brain.act("screen:graph", &stores(&[])), "brain.screen"),
+        "graph"
     );
     assert!(
         brain.act("action:rm", &stores(&[])).is_empty(),
@@ -533,35 +594,6 @@ fn a_missing_worker_reports_an_error_instead_of_hanging() {
 
 // ---- layout store ----------------------------------------------------------------------------
 
-#[test]
-fn the_layout_store_round_trips_and_discards_a_stale_node_set() {
-    let dir = private_dir("layout");
-    let path = dir.join("brain/graph-layout.json");
-    let layout = json!({"nodes":{"a":{"x":1,"y":2},"b":{"x":3,"y":4},"c":{"x":5,"y":6},"d":{"x":7,"y":8}},"pins":["a"]});
-    save_layout(&path, &layout).unwrap();
-    use std::os::unix::fs::PermissionsExt;
-    assert_eq!(
-        std::fs::metadata(&path).unwrap().permissions().mode() & 0o777,
-        0o600
-    );
-    let ids = |names: &[&str]| names.iter().map(|s| s.to_string()).collect::<BTreeSet<_>>();
-    assert_eq!(
-        load_layout(&path, &ids(&["a", "b", "c", "d"])),
-        Some(layout.clone())
-    );
-    assert_eq!(
-        load_layout(&path, &ids(&["a", "b", "c", "e"])),
-        Some(layout),
-        "one of four differs"
-    );
-    assert_eq!(
-        load_layout(&path, &ids(&["a", "b", "x", "y"])),
-        None,
-        "half differs: relaid"
-    );
-    assert_eq!(load_layout(&dir.join("none.json"), &ids(&["a"])), None);
-}
-
 // ---- goldens ---------------------------------------------------------------------------------
 
 fn harness(model: BTreeMap<String, Value>, width: u32, height: u32, scale: f32) -> Harness {
@@ -599,6 +631,7 @@ fn brain_window_goldens() {
             vec![("brain.screen", t("note")), ("brain.note", t(&note_id(0)))],
         ),
         ("brain-loops-1", vec![("brain.screen", t("loops"))]),
+        ("brain-graph-1", vec![("brain.screen", t("graph"))]),
     ] {
         let stores = stores(&view);
         let mut model = brain.project(&stores);
