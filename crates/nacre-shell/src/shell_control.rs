@@ -572,9 +572,27 @@ impl ShellControl for Gate {
                 geometry.left as u32,
             ]
         };
+        // The chat app (the only child given its parent's lips) docks the assistant lip on its own
+        // "chat" panel; the parent shell keeps drawing that lip at the edge (B0304).
+        let tab_lips = frame
+            .parent_lips
+            .iter()
+            .flatten()
+            .filter(|l| {
+                l.opens == "assistant"
+                    && frame.handles.allows(l.edge)
+                    && self.panel_allowed(&l.opens)
+            })
+            .filter_map(|l| configured_lip(l, geometry))
+            .map(|lip| Lip {
+                opens: "chat".into(),
+                ..lip
+            })
+            .collect();
         EdgeChrome {
             reserved,
             lips,
+            tab_lips,
             hover_delay_ms: frame.delay,
             click_to_open: frame.click,
             external_source: self.native_edge_source.load(SeqCst) && !frame.click,
@@ -706,6 +724,10 @@ mod tests {
         let chrome = gate.edge_chrome();
         // top, right, bottom, left; the bar's own zone is the 50 px header.
         assert_eq!(chrome.reserved, [0, 10, 10, 10]);
+        assert!(
+            chrome.tab_lips.is_empty(),
+            "the shell draws its lips itself"
+        );
         assert_eq!(gate.bar_thickness(), Some(50));
         // The assistant lip is hidden: no such view exists yet.
         assert_eq!(ids(&chrome), [("dashboard", 50.), ("controls", 10.)]);
@@ -789,6 +811,14 @@ mod tests {
             .unwrap(),
         );
         assert!(gate.edge_chrome().lips.is_empty());
+        // ...but it docks the assistant lip as the tab of its own chat panel (B0304).
+        let tabs = gate.edge_chrome().tab_lips;
+        assert_eq!(
+            tabs.iter()
+                .map(|l| (l.id.as_str(), l.opens.as_str(), l.edge))
+                .collect::<Vec<_>>(),
+            [("assistant", "chat", bead::core::Edge::Left)]
+        );
         let regions = gate.edge_input_regions((1920, 1200));
         let covers = |x: f32, y: f32| {
             regions
@@ -803,6 +833,7 @@ mod tests {
         ));
         // The parent's strips hold the frame; the chat app reserving it again shrank windows.
         assert_eq!(gate.edge_chrome().reserved, [0; 4]);
+        assert!(gate.edge_chrome().tab_lips.is_empty(), "AI sidebar off");
         assert!(
             gate.visible_frame_lips()
                 .iter()

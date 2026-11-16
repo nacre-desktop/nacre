@@ -39,10 +39,10 @@ pub fn handle(
 /// the dwell to the open panel changes nothing but the glow. With reduced motion the charging look
 /// is static.
 ///
-/// B0279: the lip's own `surface` plate is part of the art. While the right lip's panel opens
+/// B0279: the lip's own `surface` plate is part of the art. While a side lip's panel opens
 /// (`attach` 0 free, 1 docked) the plate fades out and the pill rides on the panel's inner edge as
-/// its tab, where the glow also answers `hovered`. The left (chat) lip never attaches and keeps its
-/// look.
+/// its tab, where the glow also answers `hovered`. The left (chat) lip's tab is drawn by the chat
+/// app on its own panel (B0304 `tab_lips`).
 ///
 /// With `top_tab` the top lip draws the same picture rotated (join side up, `TOP_TAB`): at rest only
 /// the pill and its glow, in the frame strip under the bar title (the lip spans the bar, so no plate
@@ -66,11 +66,7 @@ pub fn grabber(
     } else {
         (width, height)
     };
-    let attach = if lip.edge == Edge::Left {
-        0.
-    } else {
-        state.attach.clamp(0., 1.)
-    };
+    let attach = state.attach.clamp(0., 1.);
     let charging = !state.active && state.progress > 0. && state.progress < 1.;
     // The tab keeps its swollen pill for the whole ride, even when `active` lags the close.
     let charge = if state.active || attach > 0. {
@@ -126,8 +122,7 @@ pub fn grabber(
         0.
     };
     // While its panel is open the lip at its rest box keeps only the plate, filling the frame's
-    // hole there: the pill rides the docked tab, or (the left chat lip, which never docks) leaves
-    // with the panel (owner 2026-11-16).
+    // hole there: the pill rides the docked tab (owner 2026-11-16).
     let pill = !(state.active && attach <= 0.);
     if pill && glow > 0. {
         let gw = if top { 10. } else { w };
@@ -295,7 +290,7 @@ mod tests {
         }
     }
     #[test]
-    fn the_right_lip_docks_as_its_pill_on_its_panel_and_the_left_never_does() {
+    fn side_lips_dock_as_their_pill_on_their_panel() {
         let at = |attach, hovered| {
             grabber(
                 &lip(Edge::Right),
@@ -334,15 +329,14 @@ mod tests {
             lit.contains(r#"width="10" height="80" rx="5" fill="rgb(10,20,30)" opacity="0.3""#),
             "{lit}"
         );
-        // The free bar ignores hover so the dwell fill stays the cue; the left lip never attaches.
+        // The free bar ignores hover so the dwell fill stays the cue.
         let free_hover = LipState {
             hovered: true,
             ..idle()
         };
         let hovered = grabber(&lip(Edge::Right), (10., 144.), free_hover, A, S, false).unwrap();
         assert_eq!(hovered, free);
-        // While its panel is open a lip's rest box keeps only its plate: the right lip's pill rides
-        // the tab, the left lip's leaves with the panel.
+        // While its panel is open a lip's rest box keeps only its plate: its pill rides the tab.
         let rest = grabber(
             &lip(Edge::Right),
             (10., 144.),
@@ -357,12 +351,23 @@ mod tests {
                 && !rest.contains("fill=\"rgb(10,20,30)\""),
             "{rest}"
         );
+        // The left lip docks like the right one (its tab is the chat app's): pill alone, lit by hover.
         let left = grabber(&lip(Edge::Left), (10., 144.), docked(1., true), A, S, false).unwrap();
         assert!(
-            left.contains(r#"<rect width="10" height="144""#) && !left.contains("<path"),
+            !left.contains(r#"<rect width="10" height="144""#) && !left.contains("<path"),
             "{left}"
         );
-        assert!(!left.contains("fill=\"rgb(10,20,30)\""), "{left}");
+        assert!(left.contains(r#"width="8" height="72""#), "{left}");
+        let left_rest = grabber(
+            &lip(Edge::Left),
+            (10., 144.),
+            docked(0., false),
+            A,
+            S,
+            false,
+        )
+        .unwrap();
+        assert!(!left_rest.contains("fill=\"rgb(10,20,30)\""), "{left_rest}");
         let left_idle = grabber(&lip(Edge::Left), (10., 144.), idle(), A, S, false).unwrap();
         assert!(
             left_idle.contains(r#"width="6" height="56""#),
