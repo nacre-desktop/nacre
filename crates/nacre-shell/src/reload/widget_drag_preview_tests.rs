@@ -224,6 +224,13 @@ fn desktop_clock_dropped_inside_the_pill_joins_it_at_86_and_90_percent() {
                 .unwrap()
                 .is_empty()
         );
+        // The retire step that follows the drop leaves no drag state, so no ghost stays up.
+        let epoch = controller.drag_epoch();
+        let retired = controller
+            .drag(Value::list(vec![json!({"phase":"retire","epoch":epoch})]))
+            .unwrap();
+        assert_eq!(retired["widgets.drag.active"], Value::Bool(false));
+        assert_eq!(retired["widgets.drag.phase"], Value::Text(String::new()));
     }
 }
 fn assert_unique_iids(document: &Json) {
@@ -2147,6 +2154,8 @@ fn widget_surface_source(
     )
     .unwrap();
     assert_eq!(spec.passive, passive_drag_preview);
+    // Every widget surface outlives the drag's retire timer, even when the drop empties it.
+    assert!(spec.retain_when_closed);
     let mut source =
         (spec.factory)(true).expect("the real canvas/ghost factory creates its Runtime");
     let sent = host_events;

@@ -462,8 +462,10 @@ pub(crate) fn canvas_spec_with_root(
         engages_decorations: false,
         overlay: false,
         // The passive preview retains its hidden, prepared scene briefly between
-        // gestures; the host canvas remains lazy when it is empty.
-        retain_when_closed: passive,
+        // gestures. The host canvas is also retained for the bead retention window when a drop
+        // empties it: its session owns the drag's 205 ms retire timer, and releasing it first
+        // orphans the ghost overlay on screen.
+        retain_when_closed: true,
         passive,
         keyboard_focus: false,
         text_focus_only: false,
