@@ -700,7 +700,7 @@ fn panels_windows_date_and_lock_pages_follow_the_registry() {
     assert!(top.iter().any(|r| r["id"] == "panels/top-bar.panel.tray"));
     assert_eq!(row(&top, "panels/top-bar.status.badges")["checked"], true);
     assert_eq!(
-        row(&top, "panels/top-bar.status.battery-percent")["checked"],
+        row(&top, "panels/top-bar.status.percentages")["checked"],
         false
     );
     let win = items(&settings.project(&stores("windows-workspaces", "")));

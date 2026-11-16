@@ -77,8 +77,9 @@ pub struct Prefs {
     pub edge_handles: EdgeHandles,
     /// `statusBadges` (`!== false`): counts on the bar's status icons.
     pub status_badges: bool,
-    /// `batteryPercent` (`=== true`, off by default): the battery's percentage beside its icon.
-    pub battery_percent: bool,
+    /// `statusPercentages` (`=== true`, off by default; the older `batteryPercent` answers when it is unset):
+    /// the numbers beside the bar's status icons (battery, Bluetooth device, volume).
+    pub status_percent: bool,
     /// N0213 `modules`: the default top-bar instances to show; empty shows them all.
     pub bar_modules: Vec<String>,
     /// `interfaceFont` / `monoFont`: empty means Nacre's default family.
@@ -240,7 +241,7 @@ impl Prefs {
                 top: on("edgeHandleTop"),
             },
             status_badges: on("statusBadges"),
-            battery_percent: flag("batteryPercent") == Some(true),
+            status_percent: flag("statusPercentages").or(flag("batteryPercent")) == Some(true),
             bar_modules: strings(desktop.get("modules"), false),
             interface_font: family("interfaceFont"),
             mono_font: family("monoFont"),
@@ -330,7 +331,7 @@ impl Prefs {
             ("bar.updates.enabled".into(), Bool(self.bar_updates_enabled)),
             ("bar.tray.visible".into(), Bool(self.tray_visible)),
             ("bar.status.badges".into(), Bool(self.status_badges)),
-            ("bar.battery.percent".into(), Bool(self.battery_percent)),
+            ("bar.status.percent".into(), Bool(self.status_percent)),
             // The header: the bar's own height plus the top frame edge (`NacreFrame`).
             (
                 "bar.height".into(),
@@ -665,7 +666,7 @@ mod tests {
         assert!(d.frame_left && d.frame_right && d.frame_bottom && d.frame_top);
         assert!(d.ai_sidebar_enabled && !d.click_edge_menus);
         assert_eq!(d.lip_hover_delay, 350);
-        assert!(!d.edge_arrows && d.status_badges && !d.battery_percent);
+        assert!(!d.edge_arrows && d.status_badges && !d.status_percent);
         assert_eq!(d.edge_handles, EdgeHandles::default());
         assert_eq!(d.frame_settings().width, 10.);
         // Wrong types and non-integer delays mean unset; toggles are `!== false`.
@@ -687,15 +688,21 @@ mod tests {
         assert_eq!(set.lip_hover_delay, 0);
         assert!(set.click_edge_menus && !set.ai_sidebar_enabled);
         let handles = Prefs::decode(
-            &json!({"edgeHandleStyle": "arrows", "edgeHandleRight": false, "edgeHandleTop": 0, "statusBadges": false, "batteryPercent": true}),
+            &json!({"edgeHandleStyle": "arrows", "edgeHandleRight": false, "edgeHandleTop": 0, "statusBadges": false, "statusPercentages": true}),
             &Json::Null,
         );
-        assert!(handles.edge_arrows && !handles.status_badges && handles.battery_percent);
+        assert!(handles.edge_arrows && !handles.status_badges && handles.status_percent);
         assert_eq!(
-            handles.bar_stores()["bar.battery.percent"],
+            handles.bar_stores()["bar.status.percent"],
             bead::core::Value::Bool(true)
         );
-        assert!(!Prefs::decode(&json!({"batteryPercent": 1}), &Json::Null).battery_percent);
+        let pct = |v: serde_json::Value| Prefs::decode(&v, &Json::Null).status_percent;
+        assert!(!pct(json!({"statusPercentages": 1})) && !pct(json!({"statusPercentages": "yes"})));
+        // The old battery-only key answers only while the new one is unset.
+        assert!(pct(json!({"batteryPercent": true})) && !pct(json!({"batteryPercent": 1})));
+        assert!(!pct(
+            json!({"statusPercentages": false, "batteryPercent": true})
+        ));
         assert!(
             handles.edge_handles.left && !handles.edge_handles.right && handles.edge_handles.top
         );

@@ -1212,7 +1212,6 @@ fn bar_status_states_render_every_attention_state() -> Result<()> {
             "lan",
             "lock",
             "bluetooth_connected",
-            "72 %",
             "battery_android_alert",
             "18 %",
             "headphones",
@@ -1230,6 +1229,10 @@ fn bar_status_states_render_every_attention_state() -> Result<()> {
             );
         }
         assert!(
+            !texts.iter().any(|t| t == "72 %"),
+            "the Bluetooth device's number is off by default: {texts:?}"
+        );
+        assert!(
             !texts.iter().any(|t| t == "15" || t == "0"),
             "Do Not Disturb hides the count and 0 updates show no badge: {texts:?}"
         );
@@ -1244,11 +1247,12 @@ fn bar_status_states_render_every_attention_state() -> Result<()> {
     Ok(())
 }
 
-/// A full battery is an ordinary status icon (the charger bolt shows only while plugged in), and its
-/// percentage shows beside it only when Settings turns "Show battery percentage" on.
+/// One setting ("Show percentages in the bar") shows or hides every number in the status cluster
+/// (battery, the Bluetooth device's battery, volume); the charger bolt shows whenever plugged in,
+/// also at 100 %, in its own accent rather than the battery glyph's colour.
 #[test]
-fn full_battery_pill_keeps_the_status_tone_and_shows_percent_only_when_asked() -> Result<()> {
-    let render = |percent: bool| -> Result<Vec<(String, bead::render::Rect)>> {
+fn status_percentages_are_one_setting_and_the_bolt_has_its_own_accent() -> Result<()> {
+    let render = |percent: bool, plugged: bool| -> Result<Vec<(String, [u8; 4])>> {
         let mut values = super::initial_models()?;
         values.extend(parity_models());
         values.extend(BTreeMap::from([
@@ -1261,8 +1265,18 @@ fn full_battery_pill_keeps_the_status_tone_and_shows_percent_only_when_asked() -
                 "bead.desktop.battery.value".into(),
                 Value::Text("100".into()),
             ),
-            ("bead.desktop.battery.plugged".into(), Value::Bool(false)),
-            ("bar.battery.percent".into(), Value::Bool(percent)),
+            ("bead.desktop.battery.plugged".into(), Value::Bool(plugged)),
+            (
+                "bead.desktop.bluetooth".into(),
+                Value::Text("bluetooth_connected".into()),
+            ),
+            (
+                "bead.desktop.bluetooth.value".into(),
+                Value::Text("72".into()),
+            ),
+            ("bead.desktop.audio".into(), Value::Text("volume_up".into())),
+            ("bead.desktop.audio.label".into(), Value::Text("45%".into())),
+            ("bar.status.percent".into(), Value::Bool(percent)),
         ]));
         let mut h = Harness::load(
             &root(),
@@ -1276,16 +1290,43 @@ fn full_battery_pill_keeps_the_status_tone_and_shows_percent_only_when_asked() -
             },
         )?;
         settle_harness_animations(&mut h)?;
-        Ok(bar_texts(&h))
+        let mut texts = Vec::new();
+        for layer in &h.scene().layers {
+            for primitive in &h.scene().primitives[layer.own.clone()] {
+                if let bead::render::Primitive::Text { text, color, .. } = primitive {
+                    texts.push((text.clone(), *color));
+                }
+            }
+        }
+        Ok(texts)
     };
-    let off = render(false)?;
+    let off = render(false, false)?;
     assert!(off.iter().any(|(t, _)| t == "battery_full"));
     assert!(
-        !off.iter().any(|(t, _)| t == "100 %" || t == "bolt"),
-        "{off:?}"
+        !off.iter().any(|(t, _)| t.contains('%') || t == "bolt"),
+        "no number and no bolt: {off:?}"
     );
-    let on = render(true)?;
-    assert!(on.iter().any(|(t, _)| t == "100 %"), "{on:?}");
+    let on = render(true, true)?;
+    for number in ["100 %", "72 %", "45%"] {
+        assert!(
+            on.iter().any(|(t, _)| t == number),
+            "{number} missing: {on:?}"
+        );
+    }
+    let colour = |name: &str| on.iter().find(|(t, _)| t == name).map(|(_, c)| *c);
+    let (bolt, glyph) = (
+        colour("bolt").ok_or("bolt missing")?,
+        colour("battery_full"),
+    );
+    assert_ne!(
+        Some(bolt),
+        glyph,
+        "the bolt shares the battery glyph's colour"
+    );
+    assert!(
+        render(false, true)?.iter().any(|(t, _)| t == "bolt"),
+        "bolt shows at 100 % while plugged in"
+    );
     Ok(())
 }
 

@@ -554,8 +554,8 @@
  "settings.registry.panels.top-bar.panel.stackStyle.option.name": "Name",
  "settings.registry.panels.top-bar.status.badges.description": "Counts on the status icons, such as unread notifications and pending updates.",
  "settings.registry.panels.top-bar.status.badges.label": "Badges",
- "settings.registry.panels.top-bar.status.battery-percent.description": "Shows the charge as a percentage beside the battery icon in the top bar.",
- "settings.registry.panels.top-bar.status.battery-percent.label": "Show battery percentage",
  "settings.registry.panels.top-bar.status.description": "The status icons at the right of the top bar. Order them in the modules list above.",
- "settings.registry.panels.top-bar.status.label": "Status"
+ "settings.registry.panels.top-bar.status.label": "Status",
+ "settings.registry.panels.top-bar.status.percentages.description": "Shows numbers beside the status icons in the top bar: the battery charge, the Bluetooth device battery and the volume.",
+ "settings.registry.panels.top-bar.status.percentages.label": "Show percentages in the bar"
 }
