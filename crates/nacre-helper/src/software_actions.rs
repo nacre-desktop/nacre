@@ -493,7 +493,9 @@ pub fn open(paths: &Paths, id: &str) -> Result<Value> {
     {
         return Err("Action is not available".into());
     }
-    let helper = crate::process::current_exe()?.to_string_lossy().into_owned();
+    let helper = crate::process::current_exe()?
+        .to_string_lossy()
+        .into_owned();
     let args = vec![
         "--class".into(),
         "nacre-control".into(),

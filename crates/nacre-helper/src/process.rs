@@ -17,7 +17,10 @@ pub fn current_exe() -> std::io::Result<std::path::PathBuf> {
     std::env::current_exe().map(live_path)
 }
 fn live_path(exe: std::path::PathBuf) -> std::path::PathBuf {
-    match exe.to_str().and_then(|path| path.strip_suffix(" (deleted)")) {
+    match exe
+        .to_str()
+        .and_then(|path| path.strip_suffix(" (deleted)"))
+    {
         Some(path) => path.into(),
         None => exe,
     }
@@ -343,7 +346,10 @@ mod tests {
             live_path(path("/opt/nacre/nacre-helper (deleted)")),
             path("/opt/nacre/nacre-helper")
         );
-        assert_eq!(live_path(path("/opt/nacre/nacre-helper")), path("/opt/nacre/nacre-helper"));
+        assert_eq!(
+            live_path(path("/opt/nacre/nacre-helper")),
+            path("/opt/nacre/nacre-helper")
+        );
     }
 
     #[test]

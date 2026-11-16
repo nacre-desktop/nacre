@@ -519,7 +519,11 @@ fn a_recorder_that_cannot_start_says_so() {
             .await
             .unwrap_err();
         assert_eq!(error.code, ErrorCode::Unavailable);
-        notified(&f, "Recording did not start The capture tool could not start").await;
+        notified(
+            &f,
+            "Recording did not start The capture tool could not start",
+        )
+        .await;
         released().await;
     });
 }

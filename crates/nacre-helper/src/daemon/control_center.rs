@@ -311,11 +311,7 @@ fn recording_failed(env: &Env, reason: &str) {
         .stderr(Stdio::null())
         .spawn();
 }
-async fn control(
-    hub: Shared,
-    method: &str,
-    params: Value,
-) -> std::result::Result<Value, Failure> {
+async fn control(hub: Shared, method: &str, params: Value) -> std::result::Result<Value, Failure> {
     if hub.borrow().safe {
         return Err(failure(
             ErrorCode::PermissionDenied,
