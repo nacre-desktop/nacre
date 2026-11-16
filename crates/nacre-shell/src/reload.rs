@@ -992,7 +992,7 @@ impl Runtime {
                 .cloned(),
             _ => None,
         })?;
-        let geometry = widget_instance_rects(&nodes);
+        let geometry = widget_instance_rects(nodes);
         if !geometry.is_empty() {
             seed["geometry"] = serde_json::json!(geometry);
         }
@@ -10365,7 +10365,7 @@ impl SceneSource for Runtime {
             if self.bar {
                 crate::widgets::widget_drag::note_bar_geometry(
                     self.output.as_deref().unwrap_or(""),
-                    widget_instance_rects(&self.session.view_nodes()),
+                    widget_instance_rects(self.session.view_nodes()),
                 );
             }
             self.announce_widget_app();

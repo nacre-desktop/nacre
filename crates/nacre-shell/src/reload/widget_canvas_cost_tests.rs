@@ -48,10 +48,15 @@ fn clock_canvas_at(style: &str, w: u32, h: u32, time: &str, seconds: &str) -> Ha
 /// (a clipped last digit was seen at 00:24 to 00:30).
 #[test]
 fn the_desktop_clock_face_fits_its_box_at_every_size() {
-    for (style, w, h) in [("digital", 420, 220), ("time", 220, 92), ("seconds", 240, 92)] {
+    for (style, w, h) in [
+        ("digital", 420, 220),
+        ("time", 220, 92),
+        ("seconds", 240, 92),
+    ] {
         for time in ["00:24", "00:30", "08:08", "23:59"] {
             let harness = clock_canvas_at(style, w, h, time, &format!("{time}:30"));
             let mut faces = 0;
+            let mut seen = Vec::new();
             for primitive in &harness.scene().primitives {
                 let Primitive::Text {
                     rect,
@@ -63,7 +68,9 @@ fn the_desktop_clock_face_fits_its_box_at_every_size() {
                 else {
                     continue;
                 };
-                if family != "Outfit" {
+                seen.push(format!("{family}:{text}"));
+                // The face is the digits (the harness may substitute the display font).
+                if !text.starts_with(|c: char| c.is_ascii_digit()) {
                     continue;
                 }
                 faces += 1;
@@ -74,7 +81,7 @@ fn the_desktop_clock_face_fits_its_box_at_every_size() {
                     rect.w
                 );
             }
-            assert!(faces >= 1, "{style} {time}: the face is drawn");
+            assert!(faces >= 1, "{style} {time}: the face is drawn: {:?}", seen);
         }
     }
 }

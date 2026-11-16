@@ -775,7 +775,10 @@ fn a_desktop_clock_dropped_on_the_pill_joins_it_through_the_published_bar_rects(
         };
         let written = rows[0].clone();
         let clock = locate(&written, "clock").unwrap();
-        assert_eq!(clock["host"], "status-pill", "the clock joins the pill at {x}");
+        assert_eq!(
+            clock["host"], "status-pill",
+            "the clock joins the pill at {x}"
+        );
         assert!(
             written["hosts"]["top_bar"]["instances"]
                 .as_array()
@@ -786,7 +789,10 @@ fn a_desktop_clock_dropped_on_the_pill_joins_it_through_the_published_bar_rects(
         );
         // And it drags back out to the desktop.
         let mut back = Model::new(written);
-        assert!(back.drag("clock", "desktop", 900., 500.), "it leaves the pill again");
+        assert!(
+            back.drag("clock", "desktop", 900., 500.),
+            "it leaves the pill again"
+        );
         assert_eq!(locate(&back.doc, "clock").unwrap()["host"], "canvas");
     }
 }
