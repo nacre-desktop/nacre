@@ -305,14 +305,22 @@ end
 -- ---------- graph ----------
 local function graph()
     local state=get("brain.graph_state")
+    local scope=get("brain.graph_scope")
     local nodes,edges={},{}
     for _,c in ipairs(get("brain.graph_nodes")) do for _,n in ipairs(c.rows) do nodes[#nodes+1]=n end end
     for _,c in ipairs(get("brain.graph_edges")) do for _,e in ipairs(c.rows) do edges[#edges+1]=e end end
+    -- "All worlds" is the way back from a drilled-in world or area; the name says where we are.
+    local head={id="head",height=34,shrink=0,gap=sp.md,align="center",btn("all",ui.tr("bead.brain.all-worlds"),scope=="",nil,act("scope:"))}
+    if scope~="" then table.insert(head,text("scope",scope:match("^%a+:(.*)$") or scope,tx.title,"onSurface",CW-2*sp.xxl-140,30,{font_weight=600})) end
+    local body
     if #nodes==0 then
         local msg=(state=="" or state=="building") and ui.tr("bead.brain.graph-building") or state=="error" and ui.tr("bead.brain.graph-error") or ui.tr("bead.brain.no-notes")
-        return ui.Column{id="graph",width=CW,grow=1,padding=sp.xxl,empty("none",msg,CW-2*sp.xxl)}
+        body=empty("none",msg,CW-2*sp.xxl)
+    else
+        body=kit.GraphCanvas{id="canvas",width="fill",grow=1,graph=ui.graph(nodes,edges),on_select=ui.action("pick"),
+            style={node_radius=1.5,label_size=px(tx.caption),far_edge_alpha=170,edge="outline"}}
     end
-    return kit.GraphCanvas{id="graph",width=CW,grow=1,graph=ui.graph(nodes,edges),on_select=ui.action("pick")}
+    return ui.Column{id="graph",width=CW,grow=1,padding=sp.xl,gap=sp.md,ui.Row(head),body}
 end
 
 local function content()

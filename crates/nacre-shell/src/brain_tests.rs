@@ -94,6 +94,18 @@ fn graph_all() -> Json {
         {"source":note_id(0),"target":note_id(2),"kind":"wiki"},
         {"source":note_id(2),"target":"gone","kind":"wiki"}]})
 }
+fn graph_world() -> Json {
+    let mut nodes = vec![
+        json!({"id":"cooking","label":"Cooking","kind":"world"}),
+        json!({"id":"area:bread","label":"Bread","kind":"area"}),
+    ];
+    nodes.extend([0, 1, 6].map(note_node));
+    json!({"state":"ready","nodes":nodes,"links":[
+        {"source":"cooking","target":"area:bread","kind":"membership"},
+        {"source":"area:bread","target":note_id(0),"kind":"membership"},
+        {"source":note_id(1),"target":note_id(0),"kind":"wiki"},
+        {"source":note_id(6),"target":note_id(0),"kind":"mention"}]})
+}
 fn search(query: &str) -> Json {
     let results = [0usize, 6, 1]
         .iter()
@@ -117,6 +129,7 @@ fn fixture() -> BTreeMap<&'static str, Json> {
         ("wiki.page:note:0000000000000000", page()),
         ("graph:note:0000000000000000", near()),
         ("graph:all", graph_all()),
+        ("graph:world:Cooking", graph_world()),
         ("search:bread\u{1}", search("bread")),
     ])
 }
@@ -180,11 +193,14 @@ fn overview_projects_counts_worlds_and_recent_notes() {
 }
 
 #[test]
-fn loops_carry_the_note_title_or_the_file_stem() {
+fn loops_carry_the_helper_title_then_the_notes_title() {
     let model = brain().project(&stores(&[]));
     let loops = list(&model, "brain.loops");
     assert_eq!(loops[0]["title"], TITLES[0]);
-    assert_eq!(loops[1]["title"], "sleep-debt-and-caffeine-half-life");
+    assert_eq!(
+        loops[1]["title"], TITLES[3],
+        "looked up from the brain notes"
+    );
 }
 
 #[test]
@@ -201,8 +217,11 @@ fn the_graph_screen_projects_packed_nodes_and_edges_and_picks_open_notes() {
     assert_eq!(nodes[0]["rows"].as_array().unwrap().len(), 5);
     assert_eq!(
         nodes[0]["rows"][0],
-        json!({"id":0,"label":"Cooking","weight":4})
+        json!({"id":0,"label":"Cooking","weight":4}),
+        "worlds keep a minimum weight"
     );
+    assert_eq!(nodes[0]["rows"][1]["weight"], 4, "a note weighs its degree");
+    assert_eq!(nodes[0]["rows"][2]["weight"], 1);
     // Membership stays an edge; the unknown end and nothing else is dropped.
     assert_eq!(
         list(&model, "brain.graph_edges")[0]["rows"]
@@ -219,12 +238,73 @@ fn the_graph_screen_projects_packed_nodes_and_edges_and_picks_open_notes() {
     assert_eq!(text(&opened, "brain.pick"), "");
     assert_eq!(
         list(&opened, "brain.history"),
-        vec![json!({"screen":"graph","note":"","path":""})]
+        vec![json!({"screen":"graph","note":"","path":"","scope":""})]
     );
     let world = brain.project(&on_graph(&[("brain.pick", t("0"))]));
     assert!(
         !world.contains_key("brain.note"),
         "a world node opens nothing"
+    );
+}
+
+#[test]
+fn a_world_node_drills_in_all_worlds_returns_and_back_keeps_the_scope() {
+    let brain = brain();
+    let on = |scope: &str, extra: &[(&str, Value)]| {
+        let mut v = vec![
+            ("brain.screen", t("graph")),
+            ("brain.pick", t("")),
+            ("brain.graph_scope", t(scope)),
+        ];
+        v.extend_from_slice(extra);
+        stores(&v)
+    };
+    let all = brain.project(&on("", &[]));
+    assert_eq!(
+        list(&all, "brain.graph_nodes")[0]["rows"]
+            .as_array()
+            .unwrap()
+            .len(),
+        5
+    );
+    // Picking the world node (position 0) switches to its scope; the next projection shows its notes.
+    let drilled = brain.project(&on("", &[("brain.pick", t("0"))]));
+    assert_eq!(text(&drilled, "brain.graph_scope"), "world:Cooking");
+    assert_eq!(
+        list(&drilled, "brain.graph_nodes")[0]["rows"]
+            .as_array()
+            .unwrap()
+            .len(),
+        5
+    );
+    assert_eq!(
+        list(&drilled, "brain.graph_nodes")[0]["rows"][1]["label"],
+        "Bread"
+    );
+    // Picking a note inside the world opens it; Back returns to that world's graph.
+    let opened = brain.project(&on("world:Cooking", &[("brain.pick", t("2"))]));
+    assert_eq!(text(&opened, "brain.note"), note_id(0));
+    let history = list(&opened, "brain.history");
+    let back = brain.act(
+        "back",
+        &stores(&[
+            ("brain.screen", t("note")),
+            ("brain.history", Value::list(history)),
+        ]),
+    );
+    assert_eq!(text(&back, "brain.screen"), "graph");
+    assert_eq!(text(&back, "brain.graph_scope"), "world:Cooking");
+    // "All worlds" clears the scope.
+    assert_eq!(
+        text(
+            &brain.act("scope:", &on("world:Cooking", &[])),
+            "brain.graph_scope"
+        ),
+        ""
+    );
+    assert_eq!(
+        list(&brain.project(&on("", &[])), "brain.graph_nodes")[0]["rows"][0]["label"],
+        "Cooking"
     );
 }
 
@@ -374,7 +454,7 @@ fn open_and_back_keep_a_history() {
     let history = list(&opened, "brain.history");
     assert_eq!(
         history,
-        vec![json!({"screen":"search","note":"","path":""})]
+        vec![json!({"screen":"search","note":"","path":"","scope":""})]
     );
     let back = brain.act(
         "back",
@@ -632,6 +712,13 @@ fn brain_window_goldens() {
         ),
         ("brain-loops-1", vec![("brain.screen", t("loops"))]),
         ("brain-graph-1", vec![("brain.screen", t("graph"))]),
+        (
+            "brain-graph-2",
+            vec![
+                ("brain.screen", t("graph")),
+                ("brain.graph_scope", t("world:Cooking")),
+            ],
+        ),
     ] {
         let stores = stores(&view);
         let mut model = brain.project(&stores);

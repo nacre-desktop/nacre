@@ -9,7 +9,7 @@ return {stores={
     ["brain.status"]="connecting",["brain.error"]="",["brain.counts"]={},["brain.worlds"]={},["brain.recent"]={},
     ["brain.loops"]={},["brain.results"]={},["brain.result_count"]=0,["brain.did_you_mean"]="",["brain.page"]={},
     ["brain.ask.enabled"]=false,["brain.ask.busy"]=false,["brain.ask.answer"]="",["brain.ask.error"]="",["brain.ask.citations"]={},
-    ["brain.graph_state"]="",["brain.graph_nodes"]={},["brain.graph_edges"]={},["brain.pick"]="",["brain.win_w"]=1280,
+    ["brain.graph_state"]="",["brain.graph_nodes"]={},["brain.graph_edges"]={},["brain.pick"]="",["brain.graph_scope"]="",["brain.win_w"]=1280,
 },actions={
     -- The Brain adapter authorizes and handles this host action (screen, open, back, world, ask, action...).
     ["brain.do"]=function(_) end,

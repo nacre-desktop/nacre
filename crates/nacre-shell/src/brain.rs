@@ -30,7 +30,8 @@ struct State {
     page: Option<(String, Json)>,
     note: Option<(String, Json)>,
     near: Option<(String, Json)>,
-    graph: GraphView,
+    /// Graph screen replies by scope key: `all`, `world:<name>` or `area:<name>`.
+    graphs: BTreeMap<String, GraphView>,
     search: Option<(String, Json)>,
     /// Request id -> `op:key`, answered by the reader thread.
     pending: BTreeMap<u64, String>,
@@ -49,8 +50,9 @@ struct GraphView {
     state: String,
     nodes: Vec<Json>,
     edges: Vec<Json>,
-    /// Per node position: note id, path, and whether it opens in the reader.
-    meta: Vec<(String, String, bool)>,
+    /// Per node position: note id, path, whether it opens in the reader, and the scope it drills
+    /// into (worlds and areas; empty otherwise).
+    meta: Vec<(String, String, bool, String)>,
 }
 
 impl GraphView {
@@ -65,12 +67,16 @@ impl GraphView {
             if position.contains_key(id) {
                 continue;
             }
-            let note = ["note", "wiki"].contains(&text(&n["kind"]));
+            let kind = text(&n["kind"]);
+            let note = ["note", "wiki"].contains(&kind);
             position.insert(id.to_owned(), position.len());
-            // Worlds and hubs weigh more, so their labels show first.
-            nodes.push(json!({"id":position.len()-1,"label":text(&n["label"]),"weight":if note {1} else {4}}));
+            nodes.push(json!({"id":position.len()-1,"label":text(&n["label"])}));
+            let scope = match kind {
+                "world" | "area" => format!("{kind}:{}", text(&n["label"])),
+                _ => String::new(),
+            };
             view.meta
-                .push((id.to_owned(), text(&n["path"]).to_owned(), note));
+                .push((id.to_owned(), text(&n["path"]).to_owned(), note, scope));
         }
         let edges = body["links"]
             .as_array()
@@ -82,6 +88,17 @@ impl GraphView {
                 (from != to).then(|| json!({"from":from,"to":to}))
             })
             .collect::<Vec<_>>();
+        // Radius follows degree; worlds and hubs keep a bigger minimum, so their labels show first.
+        let mut degree = vec![0u32; nodes.len()];
+        for e in &edges {
+            for end in ["from", "to"] {
+                degree[e[end].as_u64().unwrap_or_default() as usize] += 1;
+            }
+        }
+        for (i, node) in nodes.iter_mut().enumerate() {
+            let floor = if view.meta[i].2 { 1 } else { 4 };
+            node["weight"] = json!(degree[i].max(floor));
+        }
         view.nodes = nodes.chunks(512).map(|c| json!({"rows":c})).collect();
         view.edges = edges.chunks(1024).map(|c| json!({"rows":c})).collect();
         view
@@ -107,6 +124,11 @@ pub struct Brain {
 
 fn text(value: &Json) -> &str {
     value.as_str().unwrap_or_default()
+}
+
+/// The reply key of a graph scope (`""` is the all-worlds map).
+fn graph_key(scope: &str) -> &str {
+    if scope.is_empty() { "all" } else { scope }
 }
 
 fn recency(note: &Json) -> &str {
@@ -226,7 +248,7 @@ fn open_changes(stores: &Stores, id: &str, path: &str) -> BTreeMap<String, Value
         Some(Value::List(items)) => items.to_vec(),
         _ => Vec::new(),
     };
-    history.push(json!({"screen":get("brain.screen"),"note":get("brain.note"),"path":get("brain.note_path")}));
+    history.push(json!({"screen":get("brain.screen"),"note":get("brain.note"),"path":get("brain.note_path"),"scope":get("brain.graph_scope")}));
     history.truncate(64);
     BTreeMap::from([
         ("brain.history".into(), Value::list(history)),
@@ -371,7 +393,13 @@ impl Brain {
             "loops" => st.loops = body,
             "wiki.page" => st.page = Some((key.into(), body)),
             "note" => st.note = Some((key.into(), body)),
-            "graph" if key == "all" => st.graph = GraphView::from_reply(&body),
+            "graph"
+                if ["all", "world:", "area:"]
+                    .iter()
+                    .any(|k| key.starts_with(k)) =>
+            {
+                st.graphs.insert(key.into(), GraphView::from_reply(&body));
+            }
             "graph" => st.near = Some((key.into(), body)),
             "search" => st.search = Some((key.into(), body)),
             "ask.settings" => st.ask["enabled"] = body["enabled"].clone(),
@@ -452,17 +480,25 @@ impl Brain {
             get("brain.note_path"),
         );
         let pick = get("brain.pick");
+        let mut scope = get("brain.graph_scope");
         if !pick.is_empty() {
-            // A graph node was selected: open its note (worlds and hubs stay put).
+            // A graph node was selected: open its note; a world or area drills into its scope.
             changes.insert("brain.pick".into(), Value::Text(String::new()));
             let target = pick.parse::<usize>().ok().and_then(|i| {
                 let st = self.state.lock().unwrap_or_else(|e| e.into_inner());
-                st.graph.meta.get(i).filter(|m| m.2).cloned()
+                st.graphs
+                    .get(graph_key(&scope))
+                    .and_then(|g| g.meta.get(i))
+                    .cloned()
             });
-            if let Some((id, p, _)) = target {
-                changes.extend(open_changes(stores, &id, &p));
-                changes.insert("brain.scroll".into(), Value::Number(0.));
-                (screen, note, path) = ("note".into(), id, p);
+            match target {
+                Some((id, p, true, _)) => {
+                    changes.extend(open_changes(stores, &id, &p));
+                    changes.insert("brain.scroll".into(), Value::Number(0.));
+                    (screen, note, path) = ("note".into(), id, p);
+                }
+                Some((.., drill)) if !drill.is_empty() => scope = drill,
+                _ => {}
             }
         }
         if !open.is_empty() && open != *self.seen_open.borrow() {
@@ -497,7 +533,8 @@ impl Brain {
             self.fetch(&mut st, "loops", json!({}), "");
             self.fetch(&mut st, "ask", json!({}), "");
             if screen == "graph" {
-                self.fetch(&mut st, "graph", json!({"scope":"all"}), "all");
+                let key = graph_key(&scope);
+                self.fetch(&mut st, "graph", json!({"scope":key}), key);
             }
             if screen == "note" {
                 if !note.is_empty() {
@@ -584,9 +621,14 @@ impl Brain {
                     .map(|w| text(w).to_owned())
                     .unwrap_or_default();
                 let path = text(&l["path"]);
-                // Older workers send no title: fall back to the file stem.
+                // Without a helper title use the note's own (as Recent knowledge does), then the file stem.
+                let known = notes
+                    .iter()
+                    .find(|n| text(&n["id"]) == text(&l["source"]) || (!path.is_empty() && text(&n["path"]) == path))
+                    .map(|n| text(&n["label"]));
                 let title = Some(text(&l["title"]))
                     .filter(|t| !t.is_empty())
+                    .or(known.filter(|t| !t.is_empty()))
                     .unwrap_or_else(|| path.rsplit('/').next().unwrap_or_default().trim_end_matches(".md"));
                 json!({"id":text(&l["id"]),"title":title,"text":text(&l["text"]),"date":text(&l["date"]),"source":text(&l["source"]),"path":text(&l["path"]),
                     "world":world,"world_index":world_index(&world)})
@@ -685,6 +727,10 @@ impl Brain {
             "backlinks": backlinks, "links_out": links_out,
             "near_state": text(&near["state"]),
         });
+        let graph = st
+            .graphs
+            .get(graph_key(&scope))
+            .filter(|_| screen == "graph");
         changes.extend(BTreeMap::from([
             ("brain.status".into(), Value::Text(st.status.clone())),
             ("brain.error".into(), Value::Text(st.error.clone())),
@@ -728,29 +774,18 @@ impl Brain {
                 ),
             ),
             // Only the Graph screen carries the (large) graph.
+            ("brain.graph_scope".into(), Value::Text(scope.clone())),
             (
                 "brain.graph_state".into(),
-                Value::Text(if screen == "graph" {
-                    st.graph.state.clone()
-                } else {
-                    String::new()
-                }),
+                Value::Text(graph.map(|g| g.state.clone()).unwrap_or_default()),
             ),
             (
                 "brain.graph_nodes".into(),
-                Value::list(if screen == "graph" {
-                    st.graph.nodes.clone()
-                } else {
-                    Vec::new()
-                }),
+                Value::list(graph.map(|g| g.nodes.clone()).unwrap_or_default()),
             ),
             (
                 "brain.graph_edges".into(),
-                Value::list(if screen == "graph" {
-                    st.graph.edges.clone()
-                } else {
-                    Vec::new()
-                }),
+                Value::list(graph.map(|g| g.edges.clone()).unwrap_or_default()),
             ),
             (
                 "brain.win_w".into(),
@@ -779,6 +814,9 @@ impl Brain {
             "screen" if SCREENS.contains(&payload) => {
                 changes.insert("brain.screen".into(), Value::Text(payload.into()));
             }
+            "scope" => {
+                changes.insert("brain.graph_scope".into(), Value::Text(payload.into()));
+            }
             "open" => {
                 let (id, path) = payload.split_once('|').unwrap_or((payload, ""));
                 changes.extend(open_changes(stores, id, path));
@@ -794,6 +832,10 @@ impl Brain {
                     changes.insert(
                         "brain.note_path".into(),
                         Value::Text(text(&last["path"]).into()),
+                    );
+                    changes.insert(
+                        "brain.graph_scope".into(),
+                        Value::Text(text(&last["scope"]).into()),
                     );
                     changes.insert("brain.history".into(), Value::list(history));
                 }

@@ -949,7 +949,7 @@
   "bead.launcher.form-error-audio": "Launcher form: error when the recording sound choice is not valid.",
   "bead.launcher.form-error-failed": "Launcher form: error when a helper command fails without a message.",
   "bead.bar.stop-recording": "Bead top bar: accessible name of the red button that stops a running screen recording.",
-  "bead.brain.all-worlds": "Brain app search filter chip: show results from every world (no world filter).",
+  "bead.brain.all-worlds": "Brain app: show every world. The search filter chip (no world filter) and the Graph screen button that returns from a drilled-in world to the overview map.",
   "bead.brain.ask": "Brain app: button that sends the typed question to Ask the Brain, and the toolbar button that opens the Ask card.",
   "bead.brain.ask-disabled-note": "Brain app Ask card: explanation shown while the Ask opt-in switch is off.",
   "bead.brain.ask-enable": "Brain app Ask card: accessible name of the switch that enables Ask the Brain (sends note excerpts to Claude).",
