@@ -102,7 +102,8 @@
       "curl",
       "unzip",
       "sway",
-      "swaybg"
+      "swaybg",
+      "mpv"
     ],
     "ai_optional": [
       "nacre-brain: private knowledge helpers"
