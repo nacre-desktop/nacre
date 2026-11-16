@@ -88,7 +88,7 @@ thread_local! {
     static CAPTURE_BUSY: Cell<bool> = const { Cell::new(false) };
 }
 #[cfg(test)]
-fn set_env(env: Option<Env>) {
+pub(crate) fn set_env(env: Option<Env>) {
     OVERRIDE.with(|slot| *slot.borrow_mut() = env);
 }
 fn env() -> std::result::Result<Env, Failure> {

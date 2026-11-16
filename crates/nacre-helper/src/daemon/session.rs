@@ -474,6 +474,15 @@ mod tests {
     use tokio::io::AsyncWriteExt;
     use tokio::net::unix::OwnedWriteHalf;
     fn fixture() -> Shared {
+        // Optional-tool methods (grim, slurp, ...) must not depend on the host's PATH.
+        super::super::control_center::set_env(
+            super::super::control_center::Env::production()
+                .ok()
+                .map(|mut env| {
+                    env.which = std::sync::Arc::new(|_| false);
+                    env
+                }),
+        );
         let mut hub = Hub::new(
             "00000000-0000-4000-8000-000000000001".into(),
             false,
