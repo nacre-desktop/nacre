@@ -130,3 +130,20 @@ y by 2 px.
 
 The item stays **open** until step 5 is fixed and re-run on all three tiers. Raw logs and all shots:
 `~/.local/share/nacre/ai/lead/platform/v01-tier-smoke-20261115/`.
+
+#### Step 5 rerun on `4203fe91d` (Platform, 2026-11-16)
+
+Same host, harness and tiers; Nacre `4203fe91d` (release build); hosted CI pending at test time (run
+43782433668 contains `4203fe91d`). The desktop clock was dragged from its slot onto the pill
+(`niri3`, `hypr3`, `nn3`), then out to the desktop.
+
+| Tier | Drop on the pill | Drag back out | Clock text | Dark panel / undrawn clock |
+| --- | --- | --- | --- | --- |
+| Stock niri | PASS at x 1620 (rev 1 → 2): pill child `clock` (centre), no `top_bar` clock, canvas empty (`niri3-07-after-drop-1620`) | PASS (rev 3): `canvas` clock again (`niri3-09-after-dragout`) | full "02:06" / "02:07" | **Still shows**: oversized dark panel over the top right while the clock sits in the pill, still there 8 s later, gone after the drag out (`niri3-08-bar-after-drop-1620`, `niri3-12-redrop-t8`) |
+| Hyprland 0.56.2 | PASS at x 1520 (rev 1 → 2): pill child `clock` (left), clock drawn in the pill "02:08" (`hypr3-02-after-drop-1520`) | PASS (rev 3) (`hypr3-03-after-dragout`) | full "02:07" / "02:08" | None: no panel, clock drawn |
+| nacre-niri | PASS at x 1520 (rev 1 → 2): pill child `clock` (left) (`nn3-02-after-drop-1520`) | PASS (rev 3) (`nn3-03-after-dragout`) | full "02:08" / "02:09" | **Still shows**: same dark panel (`nn3-02-after-drop-1520`) |
+
+Logscan: shell 0 `UI_ERROR`, 0 "Reload failed", 0 RPC errors on all three. The clipped last digit seen
+at 00:24 to 00:30 did not appear at 02:06 to 02:09; not retested at 00:xx. Step 5 is fixed in the
+store on all three tiers; the dark panel on both niri tiers is the open visual defect. Evidence:
+`~/.local/share/nacre/ai/lead/platform/v01-tier-smoke-20261115/rerun-4203fe91d/`.
