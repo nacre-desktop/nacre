@@ -25,7 +25,7 @@ local function bar(props,settings,_data)
         aria_label=ui.tr("bead.bar.open-battery"),on_activate=popouts and ui.action("status.pill.open","battery") or nil,
         status_glyph("glyph",ui.bind("bead.desktop.battery"),"battery",tone,nil,glyph~="battery_unknown"),
         -- Round 4: the level glyph keeps its fill in every state; the charger is a small bolt over its corner.
-        ui.Text{id="bolt",position="absolute",left=t.status_padding+t.icon_width-10,top=(t.status_height-box)/2+box-13,width=12,height=12,visible=ui.bind("bead.desktop.battery.plugged"),text="bolt",family="Material Symbols Rounded",font_size=11,text_align="center",color="primary"},
+        ui.Text{id="bolt",position="absolute",left=t.status_padding+t.icon_width-10,top=(t.status_height-box)/2+box-13,width=12,height=12,visible=ui.bind("bead.desktop.battery.plugged"),text="bolt",family="Material Symbols Rounded",font_size=11,text_align="center",color=t.status_tone},
         content and status_text{id="battery-value",text=content,width=width,font_size=t.detail_font,color=tone or "onSurface"} or nil,
     }
 end

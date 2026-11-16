@@ -151,11 +151,8 @@ fn battery(snapshot: &Snapshot) -> BTreeMap<String, Value> {
             KEYS[2].into(),
             Value::Text(battery_glyph(state.percentage).into()),
         ),
-        // A full battery on AC is plain full, not "charging": the bolt is for a battery still filling.
-        (
-            KEYS[12].into(),
-            Value::Bool(plugged && state.percentage.is_none_or(|p| p < 99.5)),
-        ),
+        // Owner 2026-11-16: the bolt shows whenever the charger is plugged in, full or not.
+        (KEYS[12].into(), Value::Bool(plugged)),
         (KEYS[3].into(), Value::Text(value.clone())),
         (
             KEYS[4].into(),
@@ -367,7 +364,7 @@ mod tests {
             (&held[KEYS[2]], &held[KEYS[12]]),
             (&Value::Text("battery_5_bar".into()), &Value::Bool(true))
         );
-        // Full on AC (or still "charging" at 100 %): the plain full glyph, no bolt.
+        // Full on AC (or still "charging" at 100 %): the full glyph keeps the bolt while plugged in.
         for (charging, state) in [(false, 4), (true, 1)] {
             let mut full = battery_data.clone();
             full["percentage"] = 100.0.into();
@@ -376,7 +373,7 @@ mod tests {
             let full = battery(&snapshot(full, true));
             assert_eq!(
                 (&full[KEYS[2]], &full[KEYS[12]]),
-                (&Value::Text("battery_full".into()), &Value::Bool(false))
+                (&Value::Text("battery_full".into()), &Value::Bool(true))
             );
         }
         let mut draining = battery_data.clone();

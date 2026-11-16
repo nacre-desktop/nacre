@@ -1244,7 +1244,7 @@ fn bar_status_states_render_every_attention_state() -> Result<()> {
     Ok(())
 }
 
-/// A full battery on AC is an ordinary status icon (the stale-yellow bolt is gone), and its
+/// A full battery is an ordinary status icon (the charger bolt shows only while plugged in), and its
 /// percentage shows beside it only when Settings turns "Show battery percentage" on.
 #[test]
 fn full_battery_pill_keeps_the_status_tone_and_shows_percent_only_when_asked() -> Result<()> {
