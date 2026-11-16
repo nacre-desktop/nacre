@@ -61,6 +61,8 @@ struct Query {
 }
 #[derive(Default)]
 struct State {
+    /// Picker item centres from the last scene, as a pixel offset from the panel centre.
+    pick_offsets: std::collections::BTreeMap<String, (f32, f32)>,
     query: Option<Query>,
     wanted: Option<(String, String, String)>,
     result: Option<(String, MenuQueryResult)>,
@@ -1141,6 +1143,7 @@ impl Extras {
             else {
                 return;
             };
+            let pick_offset = state.pick_offsets.get(id).copied();
             drop(state);
             let Some(boot) = boot else { return };
             let Some(topic) = &self.topic else { return };
@@ -1188,6 +1191,9 @@ impl Extras {
                 .unwrap_or_else(|p| p.into_inner())
                 .preview
                 .clone();
+            if let (Some(preview), Some(offset)) = (&preview, pick_offset) {
+                preview.grow_from(offset);
+            }
             let generation = preview.as_ref().map(|preview| {
                 preview.select_at_with_palette(crate::wallpaper::SelectionRequest {
                     boot: boot.clone(),
@@ -1343,8 +1349,10 @@ impl Extras {
             state.catalogue_settled_handles.clear();
             state.catalogue_visible_handles = scene_handles;
         }
+        let (half_w, half_h) = (state.viewport.0 as f32 / 2., state.viewport.1 as f32 / 2.);
+        state.pick_offsets.clear();
         for primitive in &mut scene.primitives {
-            let bead::render::Primitive::Image { path, .. } = primitive else {
+            let bead::render::Primitive::Image { path, rect, .. } = primitive else {
                 continue;
             };
             let Some(handle) = path
@@ -1356,6 +1364,10 @@ impl Extras {
             let Some((id, field)) = parse_wallpaper_handle(handle) else {
                 continue;
             };
+            state.pick_offsets.insert(
+                id.to_owned(),
+                (rect.x + rect.w / 2. - half_w, rect.y + rect.h / 2. - half_h),
+            );
             let Some(entry) = state
                 .catalogue_result
                 .iter()

@@ -1108,6 +1108,7 @@ fn start(
             Ok(provider) => {
                 wallpaper_consumer = Some(provider.clone());
                 options.wallpaper = Some(provider);
+                options.wallpaper_fade = Some(bead::wayland::WallpaperFade::default());
             }
             Err(_) => eprintln!("WALLPAPER_DISABLED code=contract_unavailable"),
         }

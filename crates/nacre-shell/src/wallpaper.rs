@@ -563,8 +563,33 @@ pub(crate) struct Preview {
     predecode: Mutex<BTreeMap<String, Arc<Predecoder>>>,
     prefetch: crate::wallpaper_prefetch::Prefetch,
     changed: Mutex<Option<Arc<dyn Fn() + Send + Sync>>>,
+    /// Where the next change grows from (pixels from the output centre), and when it was picked.
+    grow: Mutex<Option<((f32, f32), Instant)>>,
 }
+/// A pick's grow origin only applies to the change it caused.
+const GROW_LIFETIME: Duration = Duration::from_secs(3);
 impl Preview {
+    pub(crate) fn grow_from(&self, offset: (f32, f32)) {
+        *self.grow.lock().unwrap_or_else(|p| p.into_inner()) = Some((offset, Instant::now()));
+    }
+
+    /// The fade for the next change on an output of `size`: a grow from the last pick, once;
+    /// `None` is Bead's default fade.
+    fn take_fade(&self, size: (u32, u32)) -> Option<bead::wayland::WallpaperFade> {
+        let (offset, picked) = self.grow.lock().unwrap_or_else(|p| p.into_inner()).take()?;
+        if picked.elapsed() > GROW_LIFETIME || size.0 == 0 || size.1 == 0 {
+            return None;
+        }
+        let origin = (
+            (0.5 + offset.0 / size.0 as f32).clamp(0., 1.),
+            (0.5 + offset.1 / size.1 as f32).clamp(0., 1.),
+        );
+        Some(bead::wayland::WallpaperFade {
+            kind: bead::wayland::WallpaperFadeKind::Grow { origin },
+            ..Default::default()
+        })
+    }
+
     /// B0171: decode the catalogue's still images to every output's display size in the
     /// background. Returns false while no output size is known yet (the caller retries later).
     pub(crate) fn prefetch(&self, ids: &[String], active: Option<usize>) -> bool {
@@ -1303,14 +1328,15 @@ impl bead::wayland::WallpaperProvider for Consumer {
     ) -> Result<Option<bead::wayland::WallpaperFrame>, String> {
         self.prepare_inner(output, width, height, Some(staged))
     }
+    fn fade(&self, output: &str) -> Option<bead::wayland::WallpaperFade> {
+        let target = self.preview.predecoder(output).target()?;
+        self.preview.take_fade((target.width, target.height))
+    }
     fn prepare_transition(&self, output: &str, width: u32, height: u32) -> Option<Vec<u8>> {
         let previous = self.displayed.lock().ok()?.get(output).cloned()?;
         let state = self.state().ok()?;
         let current = state.outputs.get(output)?.clone();
         if previous == current {
-            return None;
-        }
-        if previous.palette != current.palette {
             return None;
         }
         decode_pair(previous, width, height)
@@ -2273,6 +2299,39 @@ mod tests {
             "reconnect repaints"
         );
         drop(subscription);
+    }
+
+    #[test]
+    fn a_pick_grows_from_where_it_was_made_for_the_next_change_only() {
+        use bead::wayland::{WallpaperFade, WallpaperFadeKind};
+        let preview = Preview::default();
+        assert_eq!(
+            preview.take_fade((2880, 1800)),
+            None,
+            "no pick, default fade"
+        );
+        preview.grow_from((288., -180.));
+        assert_eq!(
+            preview.take_fade((2880, 1800)),
+            Some(WallpaperFade {
+                kind: WallpaperFadeKind::Grow { origin: (0.6, 0.4) },
+                ..Default::default()
+            })
+        );
+        assert_eq!(
+            preview.take_fade((2880, 1800)),
+            None,
+            "the change after uses the default"
+        );
+        preview.grow_from((1e6, 1e6));
+        let fade = preview.take_fade((2880, 1800)).unwrap();
+        assert_eq!(fade.kind, WallpaperFadeKind::Grow { origin: (1., 1.) });
+        *preview.grow.lock().unwrap() = Some(((0., 0.), Instant::now() - GROW_LIFETIME * 2));
+        assert_eq!(
+            preview.take_fade((2880, 1800)),
+            None,
+            "a stale pick does not leak"
+        );
     }
 
     #[test]
