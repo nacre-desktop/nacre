@@ -442,7 +442,7 @@ pub fn ensure_server() -> Result<()> {
     if health(&url) {
         return Ok(());
     }
-    let executable = env::current_exe()?;
+    let executable = crate::process::current_exe()?;
     launch(&[
         executable
             .to_str()

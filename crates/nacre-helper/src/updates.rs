@@ -372,7 +372,7 @@ pub fn run(args: &[String]) -> Result<i32> {
         - data["checked"].as_f64().unwrap_or(0.)
         > 1800.
     {
-        let exe = std::env::current_exe()?;
+        let exe = crate::process::current_exe()?;
         let _ = Command::new(exe)
             .arg("updates")
             .arg("--refresh")

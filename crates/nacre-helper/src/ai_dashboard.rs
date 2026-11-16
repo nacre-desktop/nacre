@@ -1314,7 +1314,7 @@ fn launch_niri_worker(args: &[String]) -> Result<Option<std::process::ExitStatus
     }
     runner
         .arg("--")
-        .arg(env::current_exe()?)
+        .arg(crate::process::current_exe()?)
         .arg("nacre-ai")
         .args(args);
     Ok(Some(runner.status()?))
@@ -2515,7 +2515,7 @@ fn worker_window(args: &[String]) -> Result<i32> {
     }
     let status = match launch_niri_worker(&child_args)? {
         Some(status) => status,
-        None => Command::new(env::current_exe()?)
+        None => Command::new(crate::process::current_exe()?)
             .arg("nacre-ai")
             .args(child_args)
             .status()?,
@@ -2734,7 +2734,7 @@ mod tests {
         let mut master = fs::File::from(pair.master);
         let slave = fs::File::from(pair.slave);
         let original = nix::sys::termios::tcgetattr(&slave)?;
-        let mut child = Command::new(env::current_exe()?)
+        let mut child = Command::new(crate::process::current_exe()?)
             .args([
                 "--exact",
                 "ai_dashboard::tests::terminal_panic_child",

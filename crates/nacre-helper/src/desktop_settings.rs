@@ -812,7 +812,7 @@ impl<'a> Native<'a> {
     }
     fn arm(&self, token: &str, environment: &[String]) -> Result<()> {
         use zbus::zvariant::OwnedValue;
-        let executable = std::env::current_exe()?;
+        let executable = crate::process::current_exe()?;
         let executable = executable.to_str().ok_or("Invalid helper executable")?;
         let mut environment = environment.to_vec();
         environment.retain(|value| !value.starts_with("NACRE_COMPOSITOR="));

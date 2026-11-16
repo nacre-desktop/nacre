@@ -343,7 +343,7 @@ pub fn run_health(id: &str) -> Result<i32> {
         }
         return Ok(Command::new("systemd-run")
             .args(["--user", "--wait", "--pty", "--collect", "--quiet", "--"])
-            .arg(std::env::current_exe()?)
+            .arg(crate::process::current_exe()?)
             .args(["software-actions", "run", id])
             .status()?
             .code()
@@ -493,7 +493,7 @@ pub fn open(paths: &Paths, id: &str) -> Result<Value> {
     {
         return Err("Action is not available".into());
     }
-    let helper = std::env::current_exe()?.to_string_lossy().into_owned();
+    let helper = crate::process::current_exe()?.to_string_lossy().into_owned();
     let args = vec![
         "--class".into(),
         "nacre-control".into(),

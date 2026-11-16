@@ -575,7 +575,7 @@ fn start_server(channel: &str) -> Result<()> {
             .status()
             .is_ok_and(|s| s.success());
         if !active {
-            let exe = env::current_exe()?;
+            let exe = crate::process::current_exe()?;
             let unit_arg = format!("--unit={unit}");
             let status = Command::new("systemd-run")
                 .args([

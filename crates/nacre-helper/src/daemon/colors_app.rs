@@ -52,7 +52,7 @@ pub struct Env {
 impl Env {
     fn production() -> Result<Self> {
         Ok(Self {
-            engine: std::env::current_exe()?,
+            engine: crate::process::current_exe()?,
             paths: Paths::environment()?,
             nice: true,
         })

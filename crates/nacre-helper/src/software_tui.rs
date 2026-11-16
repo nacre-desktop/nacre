@@ -119,7 +119,7 @@ fn create(paths: &Paths, input: Value) -> Result<Value> {
     }
     let id = uuid::Uuid::new_v4().simple().to_string();
     let row = json!({"id":id,"name":input["name"].as_str().unwrap().trim(),"command":input["command"],"terminal":input["terminal"],"icon":input["icon"]});
-    let helper = std::env::current_exe()?;
+    let helper = crate::process::current_exe()?;
     let body=format!("[Desktop Entry]\nType=Application\nName={}\nIcon={}\nExec={} software-tui launch {}\nTerminal=false\nCategories=System;TerminalEmulator;\nX-Nacre-Tui-ID={}\n",row["name"].as_str().unwrap().replace('\\',"\\\\"),row["icon"].as_str().unwrap(),desktop_quote(helper.to_str().ok_or("Invalid helper path")?),id,id);
     fs::create_dir_all(paths.applications())?;
     let path = desktop(paths, &id);

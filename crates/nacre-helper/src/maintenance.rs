@@ -24,7 +24,7 @@ fn helper(paths: &Paths) -> PathBuf {
     if installed.is_file() {
         installed
     } else {
-        env::current_exe().unwrap_or(installed)
+        crate::process::current_exe().unwrap_or(installed)
     }
 }
 fn state() -> Result<Value> {

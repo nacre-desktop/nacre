@@ -230,7 +230,7 @@ async fn run_palette_prewarm() {
             state.active.extend(batch.iter().cloned());
             batch
         };
-        if let Ok(engine) = std::env::current_exe() {
+        if let Ok(engine) = crate::process::current_exe() {
             let engine = engine.to_string_lossy().into_owned();
             let mut owned = vec![
                 "-n".to_owned(),
@@ -1326,7 +1326,7 @@ pub async fn activate_request(hub: Shared, params: Value) -> std::result::Result
                 true,
             ));
         }
-        let engine = std::env::current_exe()
+        let engine = crate::process::current_exe()
             .map_err(|_| failure(ErrorCode::Unavailable, "Wallpaper is unavailable", true))?;
         let generation = SELECTION_GENERATION
             .fetch_add(1, Ordering::AcqRel)
@@ -1418,7 +1418,7 @@ pub async fn catalogue(
             true,
         )
     })?;
-    let engine = std::env::current_exe().map_err(|_| {
+    let engine = crate::process::current_exe().map_err(|_| {
         failure(
             ErrorCode::Unavailable,
             "Wallpaper catalogue is unavailable",

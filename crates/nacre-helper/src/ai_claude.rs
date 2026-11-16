@@ -1378,7 +1378,7 @@ fn run_inner(args: &[String]) -> Result<i32> {
         let tag = account_tag(&account);
         let suffix = new_id.clone();
         let name = format!("ai-{project}-claude-{tag}-{suffix}");
-        let exe = env::current_exe()?;
+        let exe = crate::process::current_exe()?;
         let child = tmux_child(
             &exe.to_string_lossy(),
             &command,

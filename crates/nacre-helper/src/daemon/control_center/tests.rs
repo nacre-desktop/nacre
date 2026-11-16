@@ -75,6 +75,10 @@ impl Fixture {
         );
         script(&root.join("ddcutil"), "exit 1\n");
         script(
+            &root.join("notify-send"),
+            &format!("echo \"$@\" >> '{d}/notify.log'\n"),
+        );
+        script(
             &root.join("engine"),
             &format!(
                 r#"d='{d}'
@@ -123,6 +127,7 @@ esac
             systemctl: p("systemctl"),
             brightnessctl: p("brightnessctl"),
             ddcutil: p("ddcutil"),
+            notify_send: p("notify-send"),
             sys: self.path("sys"),
             runtime: Some(self.path("run")),
             system_bus: self.path("system_bus"),
@@ -149,6 +154,16 @@ esac
     }
 }
 
+/// The failure notice is spawned, not awaited: wait for the fake notify-send's log line.
+async fn notified(f: &Fixture, text: &str) {
+    for _ in 0..100 {
+        if f.text("notify.log").contains(text) {
+            return;
+        }
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
+    panic!("no notice {text:?}: {}", f.text("notify.log"));
+}
 async fn released() {
     for _ in 0..200 {
         if !CAPTURE_BUSY.with(Cell::get) {
@@ -481,11 +496,31 @@ fn stay_awake_and_recorder_follow_the_unit_state() {
             .await
             .unwrap_err();
         assert_eq!(error.code, ErrorCode::Busy, "already recording");
+        notified(&f, "A recording is already running").await;
         assert_eq!(
             f.call("recorder.stop", json!({})).await.unwrap()["changed"],
             true
         );
         assert!(!f.path("rec").exists());
+    });
+}
+
+/// Owner 2026-11-16: an update had replaced the daemon's executable, so the recorder could not
+/// start; the failure reaches the user as a notice instead of only the caller's log.
+#[test]
+fn a_recorder_that_cannot_start_says_so() {
+    run(async {
+        let f = Fixture::new();
+        let mut env = f.env();
+        env.engine = f.path("gone");
+        set_env(Some(env));
+        let error = f
+            .call("recorder.start", json!({"mode":"region"}))
+            .await
+            .unwrap_err();
+        assert_eq!(error.code, ErrorCode::Unavailable);
+        notified(&f, "Recording did not start The capture tool could not start").await;
+        released().await;
     });
 }
 

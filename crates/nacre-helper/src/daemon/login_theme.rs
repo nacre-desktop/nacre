@@ -63,7 +63,7 @@ impl Env {
             installer,
             theme,
             user,
-            engine: std::env::current_exe().ok()?,
+            engine: crate::process::current_exe().ok()?,
             timeout: Duration::from_millis(u64::from(PROMPT_TIMEOUT_MS) - 5_000),
         })
     }

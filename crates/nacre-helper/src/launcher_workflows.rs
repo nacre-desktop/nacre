@@ -617,7 +617,7 @@ fn convert_file(
 }
 fn follow_up(path: &Path) -> Result<()> {
     if path.is_file() {
-        let binary = std::env::current_exe()?;
+        let binary = crate::process::current_exe()?;
         launch(
             &[
                 binary.to_str().ok_or("Helper path is not UTF-8")?.into(),

@@ -1562,7 +1562,7 @@ fn route_checked(request: brain_http::Request) -> Result<brain_http::Response> {
         if name == "assign-note" {
             assign_note(&value)?
         } else {
-            let exe = env::current_exe()?;
+            let exe = crate::process::current_exe()?;
             let exe = exe.to_str().ok_or("Invalid helper path")?;
             crate::process::launch_app(
                 &[exe, "brain-control", "action", name, &value].map(str::to_owned),

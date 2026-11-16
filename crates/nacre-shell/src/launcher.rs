@@ -947,7 +947,7 @@ impl Menu {
                             .call(method.into(), params, Duration::from_secs(5))
                             .await
                     {
-                        eprintln!("UI_MENU_ACTION_FAILED {}", error.message);
+                        eprintln!("UI_MENU_ACTION_FAILED method={method} {}", error.message);
                     }
                 });
             }

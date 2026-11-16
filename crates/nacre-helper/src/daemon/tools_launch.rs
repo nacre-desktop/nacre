@@ -33,7 +33,7 @@ impl Env {
             path: std::env::var_os("PATH")
                 .map(|path| std::env::split_paths(&path).collect())
                 .unwrap_or_default(),
-            engine: std::env::current_exe().unwrap_or_default(),
+            engine: crate::process::current_exe().unwrap_or_default(),
             tools: crate::paths::Paths::environment()
                 .map(|paths| paths.tools())
                 .unwrap_or_default(),

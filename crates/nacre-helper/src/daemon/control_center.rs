@@ -47,6 +47,7 @@ pub struct Env {
     pub systemctl: String,
     pub brightnessctl: String,
     pub ddcutil: String,
+    pub notify_send: String,
     /// `/sys`
     pub sys: PathBuf,
     /// `$XDG_RUNTIME_DIR` (the PipeWire socket).
@@ -62,12 +63,13 @@ pub struct Env {
 impl Env {
     pub fn production() -> Result<Self> {
         Ok(Self {
-            engine: std::env::current_exe()?,
+            engine: crate::process::current_exe()?,
             rfkill: "rfkill".into(),
             powerprofilesctl: "powerprofilesctl".into(),
             systemctl: "systemctl".into(),
             brightnessctl: "brightnessctl".into(),
             ddcutil: "ddcutil".into(),
+            notify_send: "notify-send".into(),
             sys: light_devices::sys_root(),
             runtime: std::env::var_os("XDG_RUNTIME_DIR").map(PathBuf::from),
             system_bus: "/run/dbus/system_bus_socket".into(),
@@ -281,6 +283,35 @@ async fn blocking<T: Send + 'static>(
 // ---------------------------------------------------------------- dispatch
 
 pub async fn dispatch(
+    hub: Shared,
+    method: &str,
+    params: Value,
+) -> std::result::Result<Value, Failure> {
+    let reply = control(hub, method, params).await;
+    // Owner 2026-11-16: a recording that did not start said nothing. The launcher, the control
+    // centre and keybinds all start it here, so the failure is shown once, here.
+    if method == "recorder.start" {
+        if let (Err(failure), Ok(env)) = (&reply, env()) {
+            recording_failed(&env, &failure.message);
+        }
+    }
+    reply
+}
+fn recording_failed(env: &Env, reason: &str) {
+    eprintln!("CONTROL_RECORDER_START_FAILED {reason}");
+    let _ = tokio::process::Command::new(&env.notify_send)
+        .args([
+            "--app-name=Nacre Capture",
+            "--icon=nacre-notifications",
+            &crate::i18n::tr("recording.failed.title", "Recording did not start"),
+            reason,
+        ])
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn();
+}
+async fn control(
     hub: Shared,
     method: &str,
     params: Value,
@@ -758,9 +789,13 @@ fn spawn_capture_with(
         .spawn();
     let mut child = match child {
         Ok(child) => child,
-        Err(_) => {
+        Err(error) => {
             CAPTURE_BUSY.with(|busy| busy.set(false));
-            return Err(action_error());
+            eprintln!(
+                "CONTROL_CAPTURE_SPAWN_FAILED engine={} {error}",
+                env.engine.display()
+            );
+            return Err(unavailable("The capture tool could not start"));
         }
     };
     let stdin = child.stdin.take();

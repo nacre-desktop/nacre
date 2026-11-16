@@ -454,7 +454,7 @@ impl Env {
             chrono::Utc::now().timestamp_millis()
         }
         Ok(Self {
-            engine: std::env::current_exe()?,
+            engine: crate::process::current_exe()?,
             now_ms: Rc::new(now),
             sleep: Rc::new(|target| {
                 // One sleep to the deadline; wake-from-suspend re-plans through

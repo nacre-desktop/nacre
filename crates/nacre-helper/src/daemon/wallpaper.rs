@@ -84,7 +84,7 @@ async fn observe(
     // independent counters/deadlines, including when a path is a symlink.
     let mut engines = Vec::new();
     for path in [
-        std::env::current_exe()?,
+        crate::process::current_exe()?,
         paths.tools().join("nacre-helper"),
         paths.share.join("shell/bin/nacre_shell"),
     ] {

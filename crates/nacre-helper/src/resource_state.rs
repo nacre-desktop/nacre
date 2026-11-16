@@ -641,7 +641,7 @@ mod tests {
         let empty = directory.path().join("empty");
         fs::create_dir(&empty)?;
         for mode in ["ok", "fail", "stall", "missing"] {
-            let mut command = std::process::Command::new(std::env::current_exe()?);
+            let mut command = std::process::Command::new(crate::process::current_exe()?);
             command
                 .args([
                     "--exact",

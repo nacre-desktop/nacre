@@ -99,7 +99,7 @@ fn run_command(program: &str, args: &[&str], timeout: Duration) -> Result<String
 }
 fn queue(view: &Value) -> Result<i32> {
     let path = write_snapshot(&runtime()?.join("nacre-display-recovery"), view)?;
-    let executable = std::env::current_exe()?;
+    let executable = crate::process::current_exe()?;
     let unit = format!(
         "--unit=nacre-display-fallback-{}",
         uuid::Uuid::new_v4().simple()

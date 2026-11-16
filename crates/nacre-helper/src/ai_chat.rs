@@ -760,7 +760,7 @@ fn serve(envs: &BTreeMap<String, String>) -> Result<i32> {
         std::io::stdin().lock(),
         std::io::stdout().lock(),
         envs,
-        &env::current_exe()?,
+        &crate::process::current_exe()?,
     )
 }
 fn configure_at(base: &Path, selected: &Path, shared: &Path) -> Result<i32> {

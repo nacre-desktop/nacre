@@ -841,7 +841,7 @@ mod tests {
         if std::env::var_os("NACRE_WIDTHS_XVFB_CHILD").is_none() {
             let output = match std::process::Command::new("xvfb-run")
                 .args(["-a"])
-                .arg(std::env::current_exe()?)
+                .arg(crate::process::current_exe()?)
                 .args([
                     "--exact",
                     "daemon::widths::tests::private_x11_hint_restore_and_one_shot",

@@ -11,6 +11,18 @@ use wait_timeout::ChildExt;
 #[cfg(test)]
 pub(crate) static SCOPE_TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
+/// This executable's path, also after an update replaced the file under a running process:
+/// Linux then names it "<path> (deleted)", and the updated program is at <path>.
+pub fn current_exe() -> std::io::Result<std::path::PathBuf> {
+    std::env::current_exe().map(live_path)
+}
+fn live_path(exe: std::path::PathBuf) -> std::path::PathBuf {
+    match exe.to_str().and_then(|path| path.strip_suffix(" (deleted)")) {
+        Some(path) => path.into(),
+        None => exe,
+    }
+}
+
 /// Configure only the daemon, before its runtime or backend threads start.
 pub(crate) fn configure_daemon_allocator() {
     #[cfg(target_env = "gnu")]
@@ -323,6 +335,16 @@ pub(crate) fn restore_child_signals(command: &mut Command) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn an_updated_executable_keeps_its_path() {
+        let path = |p: &str| std::path::PathBuf::from(p);
+        assert_eq!(
+            live_path(path("/opt/nacre/nacre-helper (deleted)")),
+            path("/opt/nacre/nacre-helper")
+        );
+        assert_eq!(live_path(path("/opt/nacre/nacre-helper")), path("/opt/nacre/nacre-helper"));
+    }
 
     #[test]
     fn deadline_includes_a_child_that_never_reads_stdin() {
