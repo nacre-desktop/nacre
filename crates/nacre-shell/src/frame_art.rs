@@ -40,9 +40,9 @@ pub fn handle(
 /// is static.
 ///
 /// B0279: the lip's own `surface` plate is part of the art. While the right lip's panel opens
-/// (`attach` 0 free, 1 docked) the plate shrinks into a tab on the panel's inner edge, rounded on
-/// the free side and filleted into the panel; the pill rides in the middle and the glow also
-/// answers `hovered` on the docked tab. The left (chat) lip never attaches and keeps its look.
+/// (`attach` 0 free, 1 docked) the plate fades out and the pill rides on the panel's inner edge as
+/// its tab, where the glow also answers `hovered`. The left (chat) lip never attaches and keeps its
+/// look.
 ///
 /// With `top_tab` the top lip draws the same picture rotated (join side up, `TOP_TAB`): at rest only
 /// the pill and its glow, in the frame strip under the bar title (the lip spans the bar, so no plate
@@ -94,8 +94,20 @@ pub fn grabber(
         w / 2.
     };
     let (x, y) = (cx - thick / 2., (h - long) / 2.);
+    // Owner 2026-11-16: beside the panel's sheen rim a docked side plate read as a black block, so it
+    // fades out as the panel opens and the docked side tab is the pill alone.
     let mut body = if !top {
-        plate(w, h, attach, surface)
+        if attach <= 0. {
+            plate(w, h, 0., surface)
+        } else if attach < 1. {
+            format!(
+                r#"<g opacity="{}">{}</g>"#,
+                1. - attach,
+                plate(w, h, 0., surface)
+            )
+        } else {
+            String::new()
+        }
     } else if attach > 0. {
         format!(
             r#"<g transform="translate({},0)" opacity="{attach}">{}</g>"#,
@@ -277,7 +289,7 @@ mod tests {
         }
     }
     #[test]
-    fn the_right_lip_morphs_into_a_tab_on_its_panel_and_the_left_never_does() {
+    fn the_right_lip_docks_as_its_pill_on_its_panel_and_the_left_never_does() {
         let at = |attach, hovered| {
             grabber(
                 &lip(Edge::Right),
@@ -292,28 +304,28 @@ mod tests {
         // Free: the plate is the whole lip, exactly as before.
         let free = grabber(&lip(Edge::Right), (10., 144.), idle(), A, S, false).unwrap();
         assert!(free.contains(r#"<rect width="10" height="144" fill="rgb(40,50,60)"/>"#));
-        // Half way: the plate is a path 116 tall (lerp of 144 and 88) with its two fillets.
+        // Half way: the whole plate at half opacity.
         let half = at(0.5, false);
-        assert!(!half.contains(r#"<rect width="10""#), "{half}");
-        assert!(half.contains("M10 14H2.5A2.5 2.5 0 0 0 0 16.5V"), "{half}");
-        assert!(half.contains("0 0 1 7.5 14Z"), "{half}");
-        // Docked: the 88 px tab at y 28, square on the join side, rounded on the free side.
+        assert!(
+            half.contains(
+                r#"<g opacity="0.5"><rect width="10" height="144" fill="rgb(40,50,60)"/></g>"#
+            ),
+            "{half}"
+        );
+        // Docked: the swollen pill alone, no plate; hover adds the glow around it.
         let tab = at(1., false);
         assert!(
-            tab.contains("M10 28H5A5 5 0 0 0 0 33V111A5 5 0 0 0 5 116H10Z"),
+            !tab.contains(r#"<rect width="10" height="144""#) && !tab.contains("<path"),
             "{tab}"
         );
-        assert!(tab.contains(r#"width="8" height="72""#), "{tab}");
-        assert_eq!(tab.matches("<path").count(), 2, "{tab}");
-        // Hover lights the docked tab (pill already swollen); unhovered has no glow.
+        assert!(
+            tab.contains(r#"width="8" height="72" rx="4" fill="rgb(10,20,30)" opacity="1""#),
+            "{tab}"
+        );
         assert!(!tab.contains(r#"opacity="0.3""#), "{tab}");
         let lit = at(1., true);
         assert!(
             lit.contains(r#"width="10" height="80" rx="5" fill="rgb(10,20,30)" opacity="0.3""#),
-            "{lit}"
-        );
-        assert!(
-            lit.contains(r#"width="8" height="72" rx="4" fill="rgb(10,20,30)" opacity="1""#),
             "{lit}"
         );
         // The free bar ignores hover so the dwell fill stays the cue; the left lip never attaches.
@@ -350,12 +362,15 @@ mod tests {
             format: PixelFormat::Rgba,
         };
         svg_into(&svg, target).unwrap();
-        assert_eq!(bytes[3], 0, "top-left corner is transparent while docked");
+        let alpha = |x: usize, y: usize| bytes[(y * 10 + x) * 4 + 3];
         assert_eq!(
-            bytes[(72 * 10 + 9) * 4 + 3],
-            255,
-            "the tab is opaque at the join"
+            alpha(0, 0),
+            0,
+            "top-left corner is transparent while docked"
         );
+        assert_eq!(alpha(5, 72), 255, "the pill is opaque");
+        assert_eq!(alpha(9, 72), 0, "no plate at the join");
+        assert_eq!(alpha(5, 30), 0, "no plate above the pill");
     }
     #[test]
     fn the_top_handle_is_a_pill_under_the_bar_title_that_becomes_a_tab_when_docked() {
