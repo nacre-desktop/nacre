@@ -1067,6 +1067,15 @@ pub fn search(root: &Path, query: &str, options: &Options) -> Result<Value> {
             entry.1 |= 1 << i;
         }
     }
+    // An empty query with a filter lists the filter's notes (newest first via the tie-break sort).
+    if query.trim().is_empty()
+        && (!options.worlds.is_empty()
+            || !options.areas.is_empty()
+            || options.kind.is_some()
+            || options.since.is_some())
+    {
+        scores.extend((0..index.notes.len() as u32).map(|d| (d, (0.0, 0))));
+    }
     let phrase = casefold(query.trim())
         .split_whitespace()
         .collect::<Vec<_>>()
@@ -1291,6 +1300,20 @@ mod tests {
         };
         assert_eq!(titles(root, "tailscale card", &since).len(), 2);
         assert!(stored_path(root).is_file());
+        // Empty query: filter lists its notes newest first, no filter stays empty.
+        let some = |worlds: &[&str]| Options {
+            worlds: worlds.iter().map(|w| w.to_string()).collect(),
+            ..Options::default()
+        };
+        assert_eq!(
+            titles(root, "  ", &some(&["newbringer"])),
+            ["Smash-Board firmware"]
+        );
+        assert_eq!(
+            titles(root, "", &since),
+            ["Tailscale ACL", "SD card reader"]
+        );
+        assert!(titles(root, "", &Options::default()).is_empty());
     }
     #[test]
     fn reuses_unchanged_notes_and_sees_edits() {

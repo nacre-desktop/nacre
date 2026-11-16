@@ -200,7 +200,7 @@ fn add_loop(out: &mut Vec<Value>, note: &Value, line: &str, kind: &str, line_no:
     let path = note["path"].as_str().unwrap_or("");
     let identity = format!("{source}:{line_no}:{text}");
     let id = format!("loop-{:016x}", fnv1a(identity.as_bytes()));
-    out.push(json!({"id":id,"text":text,"source":source,"path":path,"date":date(note),
+    out.push(json!({"id":id,"title":note["label"].as_str().unwrap_or_default(),"text":text,"source":source,"path":path,"date":date(note),
         "recorded":note["recorded"].as_str().or_else(|| note["meta"]["recorded"].as_str()),
         "unitIds":if ids(text).is_empty() { ids(note["label"].as_str().unwrap_or_default()) } else { ids(text) },
         "worlds":note["worlds"].as_array().cloned().unwrap_or_default(),
@@ -223,8 +223,6 @@ fn prefix_kind(line: &str) -> Option<&'static str> {
         Some("blocked")
     } else if lower.starts_with("open question:") || lower.starts_with("open questions:") {
         Some("question")
-    } else if lower.starts_with("review:") {
-        Some("waiting")
     } else {
         None
     }
@@ -236,12 +234,6 @@ fn extract(note: &Value, out: &mut Vec<Value>) {
         return;
     }
     let wiki = path.starts_with("wiki/");
-    if let Some(review) = note["meta"]["review"]
-        .as_str()
-        .filter(|s| !s.trim().is_empty())
-    {
-        add_loop(out, note, review, "waiting", 0);
-    }
     let mut open_questions = false;
     for (n, raw) in content_lines(note).into_iter().enumerate() {
         let line = raw.as_str();
@@ -526,9 +518,23 @@ mod tests {
         let page = note("wiki/area-a.md", "2026-11-01", "# Area\n\n<!-- brain:curated:start (curated 2026-11-01) -->\nSummary.\n\n### Open questions\n\n- Why keep this?\n<!-- brain:curated:end -->", &["Area A"], &["World A"]);
         let mut body = note("inbox/item.md", "2026-11-02", "- [ ] Implement the migration\nNext: update migration tests\nTODO: confirm compiler behavior\nPending: release review\nBlocked: missing fixture\nWaiting on: owner response\nOpen question: which API?", &["Area A"], &["World A"]);
         body["meta"]["review"] = json!("low-confidence item");
+        body["text"] = json!(format!("# Item\n\nReview: low-confidence\n\n{}\nReview: unsorted\n- Review: low-confidence\n**Review:** low-confidence", body["text"].as_str().unwrap()));
         let review = json!({"items":[{"kind":"stale-fact","path":"inbox/item.md","text":"Recheck compiler fact"}]});
         let result = derive(&[page, body], &review);
         let loops = result["loops"].as_array().unwrap();
+        assert!(!loops.iter().any(|item| item["text"]
+            .as_str()
+            .unwrap()
+            .contains("low-confidence")
+            || item["text"].as_str().unwrap().contains("unsorted")));
+        assert!(loops.iter().all(|item| item.get("title").is_some()));
+        assert_eq!(
+            loops
+                .iter()
+                .find(|i| i["text"] == "Recheck compiler fact")
+                .unwrap()["title"],
+            "inbox/item.md"
+        );
         for kind in ["todo", "question", "waiting", "blocked"] {
             assert!(
                 loops.iter().any(|item| item["kind"] == kind),
