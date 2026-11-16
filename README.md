@@ -4,7 +4,7 @@
 <p align="center"><a href="docs/installation.md">Install</a> · <a href="docs/first-boot.md">First boot</a> · <a href="docs/keybindings.md">Keys</a> · <a href="docs/theming.md">Theming</a> · <a href="docs/troubleshooting.md">Help</a></p>
 
 <!-- media: media/hero.gif — pick a new wallpaper in the picker; bar, frame, launcher and terminal recolor together -->
-<p align="center"><img src="assets/screenshots/desktop.png" alt="Nacre desktop with workspace pearls and wallpaper-shaped colors"></p>
+<p align="center"><img src="assets/screenshots/desktop.png" alt="Nacre's dashboard over an aurora wallpaper: clock, weather, calendar, system and media in the wallpaper's colors"></p>
 
 Pick a wallpaper. The bar, the window frame, the launcher, the terminal and your
 apps follow it. Nacre runs on [nacre-niri](https://github.com/nacre-desktop/nacre-niri),
@@ -65,16 +65,23 @@ More in [First boot](docs/first-boot.md) and the [keybinding cheat sheet](docs/k
 
 <!-- media (Release lead shot list, not captured yet; add each as an image when it exists):
      media/launcher.gif — Super+Space, type "fire", Enter; then "=2*21", then ">wall"
-     media/overview.png — Super+Tab: every workspace and window on one screen, collections to the sides
-     media/dashboard.png — top dashboard open on the Media page with weather beside it
-     media/settings.png — Settings with a search term typed and the matching row highlighted
+     media/overview.png — Super+Tab: every workspace and window on one screen
      media/panel-motion.gif — hover the right edge: the fill line charges, the control center slides in; click Wi-Fi, open the full panel
-     media/nacre-niri-tabbed-column.png — a tabbed column (Super+G) with three windows on nacre-niri
      extra: media/detach.gif — Super-drag the dashboard off the top edge, use it as a window, drag it back -->
 
-| Colors | Docking |
+The same dashboard on two other wallpapers. Each palette comes from its wallpaper, in dark or light mode.
+
+| Warm, dark | Light |
 | --- | --- |
-| ![Wallpaper palettes previewed before applying](assets/screenshots/colors.png) | ![A detached panel docking back to its edge](assets/screenshots/magnetic-docking.png) |
+| ![The dashboard on a canyon sunset, in orange and mauve](assets/screenshots/colors-warm.png) | ![The dashboard in light mode on a coast photo, in blue](assets/screenshots/colors-light.png) |
+
+| Control center | Weather |
+| --- | --- |
+| ![The control center with Wi-Fi, Bluetooth, power mode and notifications](assets/screenshots/control-center.png) | ![The dashboard's weather page with the next 24 hours and a daily outlook](assets/screenshots/weather.png) |
+
+| Settings | Windows |
+| --- | --- |
+| ![Settings searching for "window" across every page](assets/screenshots/settings.png) | ![Kitty, nano and a calendar, with terminal colors from the same palette](assets/screenshots/windows.png) |
 
 ## Coming from Omarchy, Noctalia or caelestia?
 
