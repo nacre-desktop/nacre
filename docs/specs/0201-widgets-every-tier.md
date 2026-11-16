@@ -147,3 +147,19 @@ Logscan: shell 0 `UI_ERROR`, 0 "Reload failed", 0 RPC errors on all three. The c
 at 00:24 to 00:30 did not appear at 02:06 to 02:09; not retested at 00:xx. Step 5 is fixed in the
 store on all three tiers; the dark panel on both niri tiers is the open visual defect. Evidence:
 `~/.local/share/nacre/ai/lead/platform/v01-tier-smoke-20261115/rerun-4203fe91d/`.
+
+#### Step 5 rerun on `a84900b9a`, niri tiers (Platform, 2026-11-16)
+
+Nacre `a84900b9a` (release build; hosted CI pending at test time, run 43786147276 is on `a84900b9a`),
+stock niri 26.04 and nacre-niri r3123, same driver as the `4203fe91d` rerun. Desktop clock dragged
+from (960, 540) onto the pill at (1620, 25), bar shot 1 s and 8 s after the drop, then dragged out.
+
+| Tier | Drop | Bar at +1 s / +8 s | Drag out | Logscan |
+| --- | --- | --- | --- | --- |
+| Stock niri | rev 1 → 2: pill child `clock` (centre), no `top_bar` clock | **No dark panel**, "02:39" drawn in the pill (`x5niri-02-drop-p1s`, `x5niri-03-drop-p8s`) | rev 3, `canvas` clock again | 0 `UI_ERROR`, 0 "Reload failed" |
+| nacre-niri | rev 1 → 2: pill child `clock` (centre) | **No dark panel**, "02:40" in the pill (`x5nn-02-drop-p1s`, `x5nn-03-drop-p8s`) | rev 3, `canvas` clock again | 0 `UI_ERROR`, 0 "Reload failed" |
+
+The oversized panel is gone on both niri tiers. With Hyprland passing at `4203fe91d`, all 8 steps now
+pass on all three tiers (steps 1-4 and 6-8 from the `f3997131c` run). Not retested: the clipped
+last digit seen at 00:24 to 00:30 (the later runs were at 02:xx). Evidence:
+`~/.local/share/nacre/ai/lead/platform/v01-tier-smoke-20261115/rerun-a84900b9a/`.
