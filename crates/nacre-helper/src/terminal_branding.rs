@@ -92,6 +92,11 @@ pub fn register_at(
     }
     let mut candidate = None;
     for _ in 0..12 {
+        // An ancestor owned by another user (sshd's privileged half over ssh, sudo) means no kitty
+        // of ours is above this shell: keep the text logo without an error.
+        if fs::metadata(proc.join(parent.to_string()))?.uid() != terminal.uid {
+            return Ok(None);
+        }
         let info = identity(parent, proc)?;
         let name = fs::read_to_string(proc.join(parent.to_string()).join("comm"))?;
         if name.trim() == "kitty" {

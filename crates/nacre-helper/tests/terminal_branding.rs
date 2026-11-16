@@ -194,6 +194,41 @@ fn frozen_terminal_function_cases_preserve_packets_files_and_stale_cleanup() -> 
 }
 
 #[test]
+fn a_foreign_owned_ancestor_ends_the_walk_quietly() -> Result<()> {
+    // Over ssh from kitty the walk meets root's sshd-session [priv]: text logo, no error.
+    let home = tempfile::tempdir()?;
+    let proc = tempfile::tempdir()?;
+    proc_files(
+        proc.path(),
+        &json!([{"pid":500,"parent":600,"device":34816,"started":"41","name":"fish"}]),
+    )?;
+    let foreign = proc.path().join("600");
+    let uid = nix::unistd::getuid();
+    if uid.is_root() {
+        fs::create_dir(&foreign)?;
+        nix::unistd::chown(&foreign, Some(nix::unistd::Uid::from_raw(65534)), None)?;
+    } else {
+        std::os::unix::fs::symlink("/", &foreign)?;
+    }
+    let meta = terminal::Terminal {
+        uid: uid.as_raw(),
+        character: true,
+        inode: 7,
+        device: 34816,
+    };
+    let record = terminal::register_at(
+        &Paths::new(home.path()),
+        proc.path(),
+        "/dev/pts/3",
+        &meta,
+        500,
+        1,
+    )?;
+    assert_eq!(record, None);
+    Ok(())
+}
+
+#[test]
 fn identity_refuses_foreign_owner_and_refresh_cannot_write_arbitrary_files() -> Result<()> {
     let home = tempfile::tempdir()?;
     let proc = tempfile::tempdir()?;
