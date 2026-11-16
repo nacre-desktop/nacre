@@ -16,6 +16,6 @@ Status: implemented on `release/n0411-precut`. Items come from the cut rehearsal
 | H5 | `tools/nacre_modules.py` | `uninstall --purge` unlinks a symlinked own directory instead of `rmtree` through it (rmtree refused the link and failed after other removals had run). | `test_install_modules.py`: symlinked `~/.config/nacre` is unlinked, its target kept. |
 | H3 | `docs/installation.md` | Optional 3-line verification of `install-arch.sh` against `install-arch.sh.sig` with `gpgv` and the pinned fingerprint. | `gpgv --keyring` flow checked in the container. |
 
-Deferred (owner/CI decisions, not done here): H7 render `install-arch.sh` from the tested `sourceRevision` or record its digest in `release.json`; H8 protected environment / required reviewer for the signing key in `publish-arch.yml`.
+Done later: H7 by N0433 (15dd860fe: install-arch.sh is rendered from the tested revision); H8 by the owner-approved `arch-signing` environment (662df10fd).
 
 Supersedes the N0409 note that a legacy custom profile stays `native`. No temporary duplicates. Net product line delta: see the unit report.
