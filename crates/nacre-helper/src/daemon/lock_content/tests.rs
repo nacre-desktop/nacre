@@ -84,7 +84,8 @@ fn leaked(root: &Path) -> bool {
     })
 }
 async fn eventually(what: &str, mut check: impl FnMut() -> bool) {
-    for _ in 0..1500 {
+    // 120 s: one debug-build render took ~31 s on the loaded package-build runner.
+    for _ in 0..6000 {
         if check() {
             return;
         }
