@@ -3710,3 +3710,49 @@ fn bar_counts_stay_whole_on_every_output_scale_and_after_hotplug() -> Result<()>
     )?;
     Ok(())
 }
+
+/// Stacks belong to an output on nacre-niri: each bar's strand shows only that output's stacks
+/// (owner 2026-11-16: "both still show the same circles"); without outputs it shows them all.
+#[test]
+fn each_output_strand_shows_only_its_own_stacks() -> Result<()> {
+    let pearls = |collections: Value, output: &str, current: &str| -> Result<usize> {
+        let mut values = super::initial_models()?;
+        values.extend(parity_models());
+        values.extend(BTreeMap::from([
+            ("bar.collections".into(), collections),
+            ("bar.collection.current".into(), Value::Text(current.into())),
+            ("bar.collection.output".into(), Value::Text(output.into())),
+        ]));
+        let mut h = Harness::load(
+            &root(),
+            Path::new("bar/main.luau"),
+            &root().join("palette.json"),
+            values,
+            Config {
+                width: 1920,
+                height: 50,
+                scale: 1.,
+            },
+        )?;
+        settle_harness_animations(&mut h)?;
+        Ok(h.scene()
+            .layers
+            .iter()
+            .filter(|layer| layer.id.contains("stack-pearl-"))
+            .count())
+    };
+    let live = Value::list(vec![
+        serde_json::json!({"id":"niri-collection:1","label":"1","index":1,"active":true,"output":"DP-1"}),
+        serde_json::json!({"id":"niri-collection:4","label":"2","index":2,"active":false,"output":"eDP-1"}),
+        serde_json::json!({"id":"niri-collection:5","label":"3","index":3,"active":false}),
+    ]);
+    assert_eq!(pearls(live.clone(), "eDP-1", "niri-collection:4")?, 1);
+    assert_eq!(pearls(live.clone(), "DP-1", "niri-collection:1")?, 1);
+    let global = Value::list(vec![
+        serde_json::json!({"id":"a","label":"1","index":1,"active":true}),
+        serde_json::json!({"id":"b","label":"2","index":2,"active":false}),
+        serde_json::json!({"id":"c","label":"3","index":3,"active":false}),
+    ]);
+    assert_eq!(pearls(global, "eDP-1", "a")?, 3, "no outputs: every stack");
+    Ok(())
+}

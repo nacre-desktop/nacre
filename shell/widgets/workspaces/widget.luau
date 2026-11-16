@@ -17,6 +17,12 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
             if c.popouts then
                 collections=ui.resolve_for_check(ui.bind("bar.collections")) or {}
                 collection_current=ui.resolve_for_check(ui.bind("bar.collection.current")) or ""
+                -- Stacks belong to an output (nacre-niri): this bar's strand shows only its own; the
+                -- switcher still lists every stack, detached ones included. No output: all of them.
+                local here=ui.resolve_for_check(ui.bind("bar.collection.output")) or ""
+                local mine={}
+                for _,collection in ipairs(collections) do if collection.output==here then mine[#mine+1]=collection end end
+                if #mine>0 then collections=mine end
             end
             -- D2 (spec 0237): the stack folds into the pill as a strand of tiny pearls (default) or a
             -- named 28 px cap (Settings > Panels > Top bar > Stack style). Tier 2 advertises no
