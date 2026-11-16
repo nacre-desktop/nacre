@@ -35,7 +35,9 @@ class SoftwareLibraryIntegrationTests(unittest.TestCase):
             launcher.write_text(
                 "#!/usr/bin/python3\n"
                 "import os,time\n"
-                f"open({str(child_pid)!r},'w').write(str(os.getpid()))\n"
+                # Rename into place so the test never reads a created-but-empty file.
+                f"open({str(child_pid)!r}+'.tmp','w').write(str(os.getpid()))\n"
+                f"os.replace({str(child_pid)!r}+'.tmp',{str(child_pid)!r})\n"
                 "time.sleep(30)\n"
             )
             launcher.chmod(0o755)
