@@ -1127,7 +1127,8 @@ async fn wallpaper_refreshes_deleted_cache_paths_and_settles_still_broken_paths(
         .unwrap();
     wallpaper.state.borrow_mut().catalogue_result.push(json!({
         "id":"/fixture/cached.jpg","kind":"image","title":"Cached",
-        "thumbnail":cached.to_string_lossy(),"preview":"","active":false
+        "thumbnail":cached.to_string_lossy(),"preview":"","active":false,
+        "palette":{"mode":"dark","colours":{"background":"#102030"}}
     }));
     let mut cached_scene = scene_for("/fixture/cached.jpg");
     wallpaper.attach_images(&mut cached_scene, Some(wake.clone()));
