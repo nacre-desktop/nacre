@@ -9,7 +9,8 @@ local Entry = ui.component("NavigationEntry", {item={id="string",name="string",i
         selected=p.item.selected, fill="transparent", selected_fill=ui.tint("surface","onSurface",.12),
         hover_fill=ui.tint("surface","onSurface",.04), border_color="transparent",
         on_activate=p.item.id=="widgets" and ui.action("launcher.app","widgets") or ui.action("navigate",p.item.id),
-        ui.Box{position="absolute",left=0,top=8,width=3,height="60%",radius=1.5,fill="primary",visible=p.item.selected},
+        -- Enamel pearl: a rounded tab with a faint pale rim.
+        ui.Box{position="absolute",left=0,top=8,width=5,height="60%",radius=2.5,fill="primary",border_width=.75,border_color=ui.alpha("onPrimary",.45),visible=p.item.selected},
         ui.Row{grow=1,gap=10,align="center",padding_left=11,
             ui.Text{text=p.item.icon,family="Material Symbols Rounded",font_size=T.icons.large,width=T.icons.large,height=28,color=p.item.selected and "primary" or tone()},
             ui.Text{text=p.item.name,font_size=14,font_weight=p.item.selected and 500 or 400,grow=1},

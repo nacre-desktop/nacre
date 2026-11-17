@@ -1484,3 +1484,84 @@ fn launcher_rail_switches_on_click_and_hover_only_highlights() -> Result<()> {
     assert_eq!(route(&runtime), Some(Value::Text("power".into())));
     Ok(())
 }
+
+#[test]
+fn launcher_empty_search_arrows_move_the_rail_ring_and_enter_switches() -> Result<()> {
+    let mut runtime = keyboard_runtime("")?;
+    keyboard_focus(&mut runtime, "launcher.search")?;
+    let route = |runtime: &crate::reload::Runtime| {
+        runtime.session.stores.get("launcher.engine_route").cloned()
+    };
+    let state = |runtime: &crate::reload::Runtime| {
+        (
+            route(runtime),
+            runtime.session.stores.get("launcher.search.text").cloned(),
+            runtime.session.stores.get("launcher.mode").cloned(),
+        )
+    };
+    let before = state(&runtime);
+    keyboard_command(&mut runtime, "down")?;
+    assert_eq!(runtime.session.focused_action().unwrap().1, "navigate");
+    assert_eq!(state(&runtime), before, "the ring moves without switching");
+    keyboard_command(&mut runtime, "enter")?;
+    keyboard_settle(&mut runtime)?;
+    assert_ne!(state(&runtime), before);
+    Ok(())
+}
+
+#[test]
+fn launcher_rail_hover_and_selected_goldens() -> Result<()> {
+    for hover in [false, true] {
+        let mut h = harness("", 0.)?;
+        let entries = |h: &Harness| {
+            h.session
+                .view_nodes()
+                .iter()
+                .filter(|n| n.action.as_deref() == Some("navigate"))
+                .map(|n| bead::ui::rect(&n.draw))
+                .take(4)
+                .collect::<Vec<_>>()
+        };
+        if hover {
+            let rect = entries(&h)[2];
+            h.script([bead_test::Input::Pointer {
+                x: rect.x + rect.w / 2.,
+                y: rect.y + rect.h / 2.,
+            }])?;
+        }
+        let rects = entries(&h);
+        let (first, last) = (rects[0], rects[3]);
+        let source = h.render()?;
+        let (x0, y0) = ((first.x * 1.5) as usize, (first.y * 1.5) as usize);
+        let (w, rows) = (
+            (first.w * 1.5).ceil() as usize,
+            ((last.y + last.h - first.y) * 1.5).ceil() as usize,
+        );
+        let mut pixels = Vec::with_capacity(w * rows * 4);
+        for y in y0..y0 + rows {
+            let at = (y * source.width as usize + x0) * 4;
+            pixels.extend_from_slice(&source.pixels[at..at + w * 4]);
+        }
+        let frame = bead_test::Frame {
+            width: w as u32,
+            height: rows as u32,
+            pixels,
+        };
+        let golden = root().join("tests/goldens").join(format!(
+            "launcher-rail-{}.png",
+            if hover { "hover" } else { "selected" }
+        ));
+        if std::env::var("BEAD_UPDATE_GOLDENS").as_deref() == Ok("1") {
+            frame.save(&golden)?;
+        }
+        frame.compare(
+            &golden,
+            bead_test::Tolerance {
+                channel: 0,
+                changed_fraction: 0.,
+            },
+            &std::env::temp_dir().join("bead-launcher-rail"),
+        )?;
+    }
+    Ok(())
+}

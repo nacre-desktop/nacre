@@ -367,8 +367,14 @@ impl Runtime {
             .iter()
             .position(|(arg, _, _)| arg.as_ref() == self.session.stores.get("launcher.selection"))
             .unwrap_or(0);
-        if key == "left"
-            && (self.session.surrounding_text().is_some() || index.is_multiple_of(columns))
+        let search_empty = self
+            .session
+            .surrounding_text()
+            .is_some_and(|(text, _, _)| text.is_empty());
+        let vertical = search_empty && matches!(key, "up" | "down");
+        if vertical
+            || (key == "left"
+                && (self.session.surrounding_text().is_some() || index.is_multiple_of(columns)))
         {
             let navigation = self.session.resolve("launcher.navigation")?;
             let active = match &navigation {
@@ -378,11 +384,19 @@ impl Runtime {
                     .and_then(|row| row["id"].as_str()),
                 _ => None,
             };
-            if let Some((id, _)) = rails
+            let at = rails
                 .iter()
-                .find(|(_, arg)| active.is_some_and(|active| arg == &Value::Text(active.into())))
-                .or(rails.first())
-            {
+                .position(|(_, arg)| {
+                    active.is_some_and(|active| arg == &Value::Text(active.into()))
+                })
+                .unwrap_or(0);
+            // With the search empty, Up/Down step the rail ring from the active category.
+            let at = match (vertical, key) {
+                (true, "up") => at.saturating_sub(1),
+                (true, _) => (at + 1).min(rails.len().saturating_sub(1)),
+                _ => at,
+            };
+            if let Some((id, _)) = rails.get(at) {
                 return self.launcher_focus(id);
             }
         }
