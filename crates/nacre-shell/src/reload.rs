@@ -4083,8 +4083,9 @@ impl Runtime {
                         .lock()
                         .map_err(|_| "launcher view state unavailable")? = values.clone();
                 }
-                wakeup(UiEvent::CompanionVisibility(true));
+                // Model first: a still-live panel must hold the empty state before its first visible frame.
                 wakeup(UiEvent::CompanionModel(values));
+                wakeup(UiEvent::CompanionVisibility(true));
             }
         }
         Ok(())
@@ -6672,8 +6673,7 @@ impl SceneSource for Runtime {
                 }
             }
             if let UiEvent::Command { command, shift } = &event
-                && (matches!(command.as_str(), "up" | "down" | "left" | "right")
-                    || (command == "enter" && self.launcher_rail_focused()))
+                && matches!(command.as_str(), "up" | "down" | "left" | "right")
             {
                 let scene = self.launcher_key(command, *shift)?;
                 return self.finish_scene(scene);

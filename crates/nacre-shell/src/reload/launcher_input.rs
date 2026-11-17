@@ -162,12 +162,6 @@ pub(super) fn project_focus(stores: &Stores, changes: &mut BTreeMap<String, Valu
 }
 
 impl Runtime {
-    pub(super) fn launcher_rail_focused(&self) -> bool {
-        self.session
-            .focused_action()
-            .is_some_and(|(_, action, _)| action == "navigate")
-    }
-
     fn launcher_focus(&mut self, id: &str) -> Result<Option<Scene>, Box<dyn Error>> {
         let mut changes = BTreeMap::from([
             ("bead.focused".into(), Value::Text(id.into())),
@@ -322,7 +316,7 @@ impl Runtime {
             .iter()
             .position(|(id, _)| focused.as_ref().is_some_and(|(focus, _, _)| focus == id))
         {
-            if matches!(key, "right" | "enter") {
+            if key == "right" {
                 return self.launcher_content_focus(true, BTreeMap::new());
             }
             let next = match key {
@@ -330,12 +324,7 @@ impl Runtime {
                 "down" => (index + 1).min(rails.len() - 1),
                 _ => index,
             };
-            if next != index && rails[next].1 != Value::Text("widgets".into()) {
-                let changes = self
-                    .session
-                    .action_values("navigate", rails[next].1.clone())?;
-                self.session.update(changes)?;
-            }
+            // Up/Down only move the ring; Enter (the focused entry's own action) or a click switches.
             return self.launcher_focus(&rails[next].0);
         }
         if let Some(index) = quick

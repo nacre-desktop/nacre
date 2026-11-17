@@ -439,11 +439,16 @@ fn launcher_keyboard_moves_between_rail_grid_list_and_quick_controls() -> Result
         }
         keyboard_command(&mut runtime, "left")?;
         assert_eq!(runtime.session.focused_action().unwrap().1, "navigate");
+        let route = |runtime: &crate::reload::Runtime| {
+            runtime.session.stores.get("launcher.engine_route").cloned()
+        };
+        // Up/Down only move the ring; the category changes on Enter.
+        let before = route(&runtime);
         keyboard_command(&mut runtime, "up")?;
-        assert_eq!(
-            runtime.session.stores.get("launcher.engine_route"),
-            Some(&Value::Text("home".into()))
-        );
+        assert_eq!(runtime.session.focused_action().unwrap().1, "navigate");
+        assert_eq!(route(&runtime), before);
+        keyboard_command(&mut runtime, "enter")?;
+        assert_eq!(route(&runtime), Some(Value::Text("home".into())));
         keyboard_settle(&mut runtime)?;
         assert!(
             runtime
@@ -453,10 +458,9 @@ fn launcher_keyboard_moves_between_rail_grid_list_and_quick_controls() -> Result
                 .any(|node| node.action_arg == Some(Value::Text("home-first".into())))
         );
         keyboard_command(&mut runtime, "down")?;
-        assert_eq!(
-            runtime.session.stores.get("launcher.engine_route"),
-            Some(&Value::Text(String::new()))
-        );
+        assert_eq!(route(&runtime), Some(Value::Text("home".into())));
+        keyboard_command(&mut runtime, "enter")?;
+        assert_eq!(route(&runtime), Some(Value::Text(String::new())));
         keyboard_settle(&mut runtime)?;
         keyboard_command(&mut runtime, "right")?;
         assert_eq!(runtime.session.focused_action().unwrap().1, "select_app");
@@ -466,7 +470,7 @@ fn launcher_keyboard_moves_between_rail_grid_list_and_quick_controls() -> Result
         );
         keyboard_command(&mut runtime, "left")?;
         assert_eq!(runtime.session.focused_action().unwrap().1, "navigate");
-        keyboard_command(&mut runtime, "enter")?;
+        keyboard_command(&mut runtime, "right")?;
         assert_eq!(runtime.session.focused_action().unwrap().1, "select_app");
         // Horizontal moves stay in content until its rightmost rendered column.
         for _ in 0..12 {
@@ -558,6 +562,7 @@ fn launcher_entering_loading_content_focuses_the_first_result_when_it_arrives() 
             .edit_key(bead::ui::input::EditKey::Home, false)?;
         keyboard_command(&mut runtime, "left")?;
         keyboard_command(&mut runtime, "up")?;
+        keyboard_command(&mut runtime, "enter")?;
         assert_eq!(
             runtime.session.stores.get("launcher.pending"),
             Some(&Value::Bool(true))
@@ -1440,5 +1445,42 @@ fn optional_hint_chips_follow_the_adapter_flags() -> Result<()> {
     h.render()?;
     assert!(!labels(&h).iter().any(|text| text.starts_with("# ")));
     assert!(labels(&h).iter().any(|text| text.starts_with("? ")));
+    Ok(())
+}
+
+#[test]
+fn launcher_rail_switches_on_click_and_hover_only_highlights() -> Result<()> {
+    use bead::wayland::{SceneSource, UiEvent};
+    let mut runtime = keyboard_runtime("")?;
+    let entry = |runtime: &crate::reload::Runtime, arg: &str| {
+        let node = runtime
+            .session
+            .view_nodes()
+            .iter()
+            .find(|node| {
+                node.action.as_deref() == Some("navigate")
+                    && node.action_arg == Some(Value::Text(arg.into()))
+            })
+            .expect("rail entry");
+        let rect = bead::ui::rect(&node.draw);
+        (rect.x + rect.w / 2., rect.y + rect.h / 2.)
+    };
+    let route = |runtime: &crate::reload::Runtime| {
+        runtime.session.stores.get("launcher.engine_route").cloned()
+    };
+    let before = route(&runtime);
+    let (x, y) = entry(&runtime, "power");
+    runtime.stage(UiEvent::Hover { x, y })?;
+    runtime.commit();
+    keyboard_settle(&mut runtime)?;
+    assert_eq!(
+        route(&runtime),
+        before,
+        "hover must not switch the category"
+    );
+    runtime.stage(UiEvent::Click { x, y })?;
+    runtime.commit();
+    keyboard_settle(&mut runtime)?;
+    assert_eq!(route(&runtime), Some(Value::Text("power".into())));
     Ok(())
 }

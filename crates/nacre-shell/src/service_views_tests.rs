@@ -2310,7 +2310,7 @@ fn bar_logo_and_super_space_apply_the_same_home_favorites_request() -> Result<()
         Value::Text(String::new())
     );
     assert!(
-        matches!(events.lock().unwrap().as_slice(), [UiEvent::ShellHidden(Some(false)), UiEvent::CompanionVisibility(true), UiEvent::CompanionModel(model)] if model == &logo_state)
+        matches!(events.lock().unwrap().as_slice(), [UiEvent::ShellHidden(Some(false)), UiEvent::CompanionModel(model), UiEvent::CompanionVisibility(true)] if model == &logo_state)
     );
     events.lock().unwrap().clear();
     let (reply, received) = std::sync::mpsc::sync_channel(1);
@@ -2332,7 +2332,7 @@ fn bar_logo_and_super_space_apply_the_same_home_favorites_request() -> Result<()
     );
     assert_eq!(*memory.lock().unwrap(), logo_state);
     assert!(
-        matches!(events.lock().unwrap().as_slice(), [UiEvent::ShellHidden(Some(false)), UiEvent::CompanionVisibility(true), UiEvent::CompanionModel(model)] if model == &logo_state)
+        matches!(events.lock().unwrap().as_slice(), [UiEvent::ShellHidden(Some(false)), UiEvent::CompanionModel(model), UiEvent::CompanionVisibility(true)] if model == &logo_state)
     );
     Ok(())
 }
@@ -2382,8 +2382,8 @@ fn owner_key_routes_open_the_launcher_with_routes_and_toggle_like_qml() -> Resul
             events.lock().unwrap().as_slice(),
             [
                 UiEvent::ShellHidden(Some(false)),
-                UiEvent::CompanionVisibility(true),
-                UiEvent::CompanionModel(_)
+                UiEvent::CompanionModel(_),
+                UiEvent::CompanionVisibility(true)
             ]
         ));
         assert_eq!(route(&memory), Value::Text("power".into()));
@@ -2413,8 +2413,8 @@ fn owner_key_routes_open_the_launcher_with_routes_and_toggle_like_qml() -> Resul
         events.lock().unwrap().as_slice(),
         [
             UiEvent::ShellHidden(Some(false)),
-            UiEvent::CompanionVisibility(true),
             UiEvent::CompanionModel(_),
+            UiEvent::CompanionVisibility(true),
             UiEvent::CompanionVisibility(false)
         ]
     ));
@@ -2426,8 +2426,8 @@ fn owner_key_routes_open_the_launcher_with_routes_and_toggle_like_qml() -> Resul
         events.lock().unwrap().as_slice(),
         [
             UiEvent::ShellHidden(Some(false)),
-            UiEvent::CompanionVisibility(true),
-            UiEvent::CompanionModel(_)
+            UiEvent::CompanionModel(_),
+            UiEvent::CompanionVisibility(true)
         ]
     ));
     // Refused or unpublished routes fail explicitly and leave the launcher alone.
