@@ -388,6 +388,25 @@ const WALLPAPER_MOVE_MS: u32 = 500;
 const WALLPAPER_RETARGET_CAP: Duration = Duration::from_millis(180);
 const WALLPAPER_GLIDE_FADE_MS: u32 = 180;
 const WALLPAPER_RELEASE: Duration = Duration::from_millis(100);
+/// A held arrow's moves are never queued: one that arrives less than this after the last accepted move is dropped, so
+/// a backlog (slow frames) drained after the key is released collapses to one step instead of a runaway glide. It sits
+/// below the schedule's 62 ms minimum repeat interval, so a real repeat always passes.
+pub(crate) const STRAND_MIN_STEP: Duration = Duration::from_millis(55);
+/// Admits arrow moves at no more than one per `STRAND_MIN_STEP`.
+#[derive(Default)]
+pub(crate) struct StepGate(Option<Instant>);
+impl StepGate {
+    pub(crate) fn admit(&mut self, now: Instant) -> bool {
+        if self
+            .0
+            .is_some_and(|last| now.saturating_duration_since(last) < STRAND_MIN_STEP)
+        {
+            return false;
+        }
+        self.0 = Some(now);
+        true
+    }
+}
 /// The Esc restore is a little quicker than a move.
 const WALLPAPER_RESTORE_MS: u32 = 400;
 pub struct Extras {

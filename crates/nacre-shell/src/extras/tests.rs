@@ -2490,6 +2490,45 @@ async fn an_error_reply_holds_nothing_and_an_empty_desktop_switches_no_workspace
     assert!(lab.calls.try_recv().is_err(), "no workspace was switched");
     let _ = std::fs::remove_file(socket);
 }
+/// A held arrow while frames are slow: the repeats (every 62 ms for 3 s) reach the strand in bursts at each 60 ms
+/// frame, then the key is lost. Backlogged moves collapse, nothing runs on after the last real event, a tap moves once.
+#[test]
+fn a_held_arrow_never_runs_away_when_frames_are_slow() {
+    let t0 = Instant::now();
+    let at = |ms: u64| t0 + Duration::from_millis(ms);
+    // Real repeats are due every 62 ms; a busy loop only processes events at multiples of 120 ms (two frames).
+    let mut gate = StepGate::default();
+    let (mut accepted, mut last_due) = (Vec::new(), 0);
+    let mut due = 0;
+    while due <= 3000 {
+        last_due = due;
+        due += 62;
+    }
+    let mut pending = 0;
+    let mut next_due = 0;
+    for frame in (0..=3000 + 600).step_by(120) {
+        while next_due <= last_due && next_due <= frame {
+            pending += 1;
+            next_due += 62;
+        }
+        for _ in 0..pending {
+            if gate.admit(at(frame)) {
+                accepted.push(frame);
+            }
+        }
+        pending = 0;
+    }
+    // At most one step per processed burst: no catch-up after the last real event.
+    assert!(accepted.len() <= 3600 / 120 + 1, "{accepted:?}");
+    assert!(
+        accepted.iter().all(|f| *f <= last_due + 120),
+        "no step after the release: {accepted:?}"
+    );
+    // A tap long after is not blocked, and two moves inside the window collapse to one.
+    assert!(gate.admit(at(10_000)));
+    assert!(!gate.admit(at(10_000 + 30)));
+    assert!(gate.admit(at(10_000 + 62)));
+}
 #[test]
 fn the_fallback_shows_an_empty_workspace_and_leaves_an_already_empty_one_alone() {
     let busy = json!({"focus":{"outputId":"OUT"},

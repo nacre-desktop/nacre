@@ -701,6 +701,8 @@ pub struct Runtime {
     status_subscription: Option<bead::core::source::Subscription>,
     status_control_subscription: Option<bead::core::source::Subscription>,
     extras: Option<std::rc::Rc<crate::extras::Extras>>,
+    /// Strand's arrow moves, one per `STRAND_MIN_STEP` at most.
+    strand_steps: crate::extras::StepGate,
     prompt: Option<std::rc::Rc<crate::prompt::Prompt>>,
     extras_subscription: Vec<bead::core::source::Subscription>,
     extras_wake: Option<std::sync::Arc<std::sync::Mutex<Option<crate::nacre_source::CallWake>>>>,
@@ -2670,6 +2672,7 @@ impl Runtime {
             status_subscription: None,
             status_control_subscription: None,
             extras: None,
+            strand_steps: Default::default(),
             prompt: None,
             extras_subscription: Vec::new(),
             extras_wake: None,
@@ -6599,6 +6602,17 @@ impl SceneSource for Runtime {
                     .clone()
                     .ok_or("wallpaper picker close event unavailable")?;
                 wakeup(UiEvent::CompanionVisibility(false));
+                return Ok(None);
+            }
+            if matches!(action, Some("extras.next" | "extras.prev"))
+                && matches!(&event, UiEvent::Command { .. })
+                && self
+                    .extras
+                    .as_ref()
+                    .is_some_and(|e| e.kind == crate::extras::Kind::Wallpaper)
+                && !self.strand_steps.admit(std::time::Instant::now())
+            {
+                // A backlogged repeat: never queue moves (a held arrow must not run on after its release).
                 return Ok(None);
             }
             if let Some(action) = action {
