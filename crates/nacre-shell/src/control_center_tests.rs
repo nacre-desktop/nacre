@@ -1203,7 +1203,11 @@ fn base() -> BTreeMap<String, Value> {
 fn harness(mut out: BTreeMap<String, Value>, page: &str, scale: f32) -> bead_test::Result<Harness> {
     out.insert("cc.page".into(), Value::Text(page.into()));
     // The surface carries a 32 px margin each side of the 424 px drawer or the 480 px sheet.
-    let width = if out.get("cc.sheet") == Some(&Value::Bool(true)) { 544 } else { 488 };
+    let width = if out.get("cc.sheet") == Some(&Value::Bool(true)) {
+        544
+    } else {
+        488
+    };
     Harness::load(
         &root(),
         Path::new("control/main.luau"),
@@ -1290,18 +1294,24 @@ fn session_page_matches_goldens() -> bead_test::Result<()> {
             out.insert("cc.detail".into(), Value::Text("session".into()));
             out.insert("session.enabled".into(), Value::Bool(true));
             if !asking.is_empty() {
-                out.insert("session.confirm".into(), Value::Text("Confirm restart".into()));
+                out.insert(
+                    "session.confirm".into(),
+                    Value::Text("Confirm restart".into()),
+                );
                 out.insert("session.confirm_action".into(), Value::Text(asking.into()));
             }
             if sheet {
                 out.insert("cc.sheet".into(), Value::Bool(true));
-        out.insert("view.width".into(), Value::Number(480.));
+                out.insert("view.width".into(), Value::Number(480.));
             }
             let mut h = harness(out, "detail", scale)?;
             let ids = node_ids(&h);
             assert!(ids.iter().any(|i| i.contains("act-lock")), "{ids:?}");
             assert!(ids.iter().any(|i| i.contains("act-shutdown")));
-            assert_eq!(ids.iter().any(|i| i.contains("confirmation")), !asking.is_empty());
+            assert_eq!(
+                ids.iter().any(|i| i.contains("confirmation")),
+                !asking.is_empty()
+            );
             let node = h
                 .session
                 .view_nodes()
@@ -1312,7 +1322,10 @@ fn session_page_matches_goldens() -> bead_test::Result<()> {
             assert_eq!(
                 node,
                 if asking.is_empty() {
-                    (Some("session.select".into()), Some(Value::Text("reboot".into())))
+                    (
+                        Some("session.select".into()),
+                        Some(Value::Text("reboot".into())),
+                    )
                 } else {
                     (Some("session.confirm".into()), None)
                 }
@@ -1341,13 +1354,29 @@ fn sheet_pages_match_goldens() -> bead_test::Result<()> {
                 .find(|n| n.id.ends_with("header.back"))
                 .map(|n| (n.action.clone(), n.action_arg.clone()))
                 .ok_or("no back chip")?;
-            assert_eq!(back, (Some("page".into()), Some(Value::Text("home".into()))));
-            let chip = h.session.view_nodes().iter().find(|n| n.id.ends_with("header.back")).map(|n| bead::ui::rect(&n.draw));
-            assert!(chip.is_some_and(|r| r.w > 80.), "a chip, not the 32 px arrow: {chip:?}");
+            assert_eq!(
+                back,
+                (Some("page".into()), Some(Value::Text("home".into())))
+            );
+            let chip = h
+                .session
+                .view_nodes()
+                .iter()
+                .find(|n| n.id.ends_with("header.back"))
+                .map(|n| bead::ui::rect(&n.draw));
+            assert!(
+                chip.is_some_and(|r| r.w > 80.),
+                "a chip, not the 32 px arrow: {chip:?}"
+            );
         }
         let motion = h.scene().motion.as_ref().ok_or("no panel motion")?;
         assert_eq!(
-            (motion.edge, motion.fade, motion.reveal, motion.slide_distance),
+            (
+                motion.edge,
+                motion.fade,
+                motion.reveal,
+                motion.slide_distance
+            ),
             (bead::core::Edge::Right, true, false, Some(16.)),
             "the sheet enters with a 16 px slide and a fade"
         );
