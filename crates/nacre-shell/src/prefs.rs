@@ -65,7 +65,7 @@ pub struct Prefs {
     pub frame_right: bool,
     pub frame_bottom: bool,
     pub frame_top: bool,
-    /// `screenBorder`: `"frame"` keeps the frame; anything else (the default, stale, missing) is `"none"`.
+    /// `screenBorder`: `"none"` floats the islands; anything else (the default for now, stale, missing) keeps the frame.
     pub frame_border: bool,
     pub ai_sidebar_enabled: bool,
     pub lip_hover_delay: u32,
@@ -228,7 +228,7 @@ impl Prefs {
             frame_right: on("frameRightEnabled"),
             frame_bottom: on("frameBottomEnabled"),
             frame_top: on("frameTopEnabled"),
-            frame_border: desktop.get("screenBorder").and_then(Json::as_str) == Some("frame"),
+            frame_border: desktop.get("screenBorder").and_then(Json::as_str) != Some("none"),
             ai_sidebar_enabled: on("aiSidebarEnabled"),
             lip_hover_delay: desktop
                 .get("lipHoverDelay")
@@ -733,18 +733,22 @@ mod tests {
             Prefs::decode(&json!({"lipHoverDelay": -3}), &Json::Null).lip_hover_delay,
             0
         );
-        // No border is the default: the 44 px bar zone and no frame.
+        // The frame stays the default until the owner switches; "none" is the 44 px bar zone.
         let frame = |desktop: Json| {
             Prefs::decode(
                 &json!({"screenBorder": "frame", "frameTopEnabled": desktop}),
                 &Json::Null,
             )
         };
-        assert_eq!(d.bar_stores()["bar.height"], bead::core::Value::Number(44.));
-        assert_eq!(d.bar_stores()["bar.frame"], bead::core::Value::Bool(false));
+        let none = Prefs::decode(&json!({"screenBorder": "none"}), &Json::Null);
+        assert_eq!(d.bar_stores()["bar.frame"], bead::core::Value::Bool(true));
         assert_eq!(
-            set.bar_stores()["bar.height"],
+            none.bar_stores()["bar.height"],
             bead::core::Value::Number(44.)
+        );
+        assert_eq!(
+            none.bar_stores()["bar.frame"],
+            bead::core::Value::Bool(false)
         );
         assert_eq!(
             frame(json!(false)).bar_stores()["bar.height"],

@@ -2089,7 +2089,7 @@
       "labelId": "settings.registry.appearance.frame.screenBorder.label",
       "descriptionId": "settings.registry.appearance.frame.screenBorder.description",
       "type": "enum",
-      "default": "none",
+      "default": "frame",
       "store": {
         "id": "desktop",
         "key": [

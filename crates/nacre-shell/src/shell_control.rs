@@ -777,10 +777,13 @@ mod tests {
     }
 
     #[test]
-    fn no_border_is_the_default_and_reserves_only_the_44_px_bar() {
+    fn no_border_reserves_only_the_44_px_bar() {
         let gate = Gate::new();
         gate.configure_frame(lips(), ["dashboard-today", "sound"].map(String::from));
-        gate.apply(&Prefs::decode(&json!({}), &json!(null)));
+        gate.apply(&Prefs::decode(
+            &json!({"screenBorder": "none"}),
+            &json!(null),
+        ));
         let chrome = gate.edge_chrome();
         assert_eq!(
             chrome.reserved, [0; 4],
@@ -799,7 +802,11 @@ mod tests {
             &json!({"screenBorder": "bogus"}),
             &json!(null),
         ));
-        assert_eq!(gate.bar_thickness(), Some(44), "a stale value means none");
+        assert_eq!(
+            gate.bar_thickness(),
+            Some(50),
+            "a stale value keeps the frame"
+        );
     }
 
     #[test]
