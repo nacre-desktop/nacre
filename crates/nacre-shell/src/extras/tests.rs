@@ -1968,7 +1968,7 @@ fn strand_rows(count: usize, kind: &str) -> Value {
                 json!({
                     "id":format!("/fixture/wallpaper-{index:02}"),
                     "kind":if kind == "mixed" && index % 3 == 1 {"video"} else {"image"},
-                    "title":if index < NAMES.len() {NAMES[index].to_owned()} else {format!("Wallpaper {index:02}")},
+                    "title":if count == 47 && index == 11 {"Silksong - Battle Flames - 4K".to_owned()} else if index < NAMES.len() {NAMES[index].to_owned()} else {format!("Wallpaper {index:02}")},
                     "thumbnail":format!("wallpaper:thumbnail:0:/fixture/wallpaper-{index:02}"),
                     "preview":"",
                     "active":index == 5,
@@ -2054,16 +2054,19 @@ fn pearl_images(harness: &bead_test::Harness) -> usize {
 fn wallpaper_strand_goldens() -> bead_test::Result<()> {
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../shell");
     let thumbnails = std::env::temp_dir().join(format!("strand-goldens-{}", std::process::id()));
-    // (name, kind, query, strand position, logical size, scale)
-    for (name, kind, query, position, logical, scale) in [
-        ("rest", "mixed", "", 6., (1440, 900), 1.),
-        ("rest", "mixed", "", 6., (1920, 1200), 1.5),
-        ("wide", "mixed", "", 6., (1920, 1080), 1.),
-        ("mid", "mixed", "", 6.5, (1440, 900), 1.),
-        ("empty", "mixed", "zzz", 1., (1440, 900), 1.),
-        ("search", "mixed", "o", 3., (1440, 900), 1.),
+    // (name, kind, query, strand position, logical size, scale, entries)
+    for (name, kind, query, position, logical, scale, count) in [
+        ("rest", "mixed", "", 6., (1440, 900), 1., 12),
+        ("rest", "mixed", "", 6., (1920, 1200), 1.5, 12),
+        ("wide", "mixed", "", 6., (1920, 1080), 1., 12),
+        ("mid", "mixed", "", 6.5, (1440, 900), 1., 12),
+        ("empty", "mixed", "zzz", 1., (1440, 900), 1., 12),
+        ("search", "mixed", "o", 3., (1440, 900), 1., 12),
+        // The owner's library: 47 entries and a long name that must stop at the arrows.
+        ("long", "mixed", "", 12., (1920, 1200), 1.5, 47),
     ] {
-        let mut harness = strand_harness(12, kind, query, position, logical, scale, &thumbnails)?;
+        let mut harness =
+            strand_harness(count, kind, query, position, logical, scale, &thumbnails)?;
         let pearls = pearl_images(&harness);
         if name == "empty" {
             assert_eq!(pearls, 0, "no result, no pearls");

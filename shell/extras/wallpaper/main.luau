@@ -14,8 +14,6 @@ local count=#rows
 local selected
 for _,item in ipairs(rows) do if item.selected then selected=item; break end end
 local selection_index=selected and selected.selection_index or 1
-local can_pause=ui.resolve_for_check(ui.bind("extras.wallpaper.can_pause"))==true
-local paused=ui.resolve_for_check(ui.bind("extras.wallpaper.paused"))==true
 local resolution=ui.resolve_for_check(ui.bind("extras.wallpaper.resolution")) or ""
 local resolution_id=ui.resolve_for_check(ui.bind("extras.wallpaper.resolution_id")) or ""
 local position=ui.resolve_for_check(ui.bind("extras.wallpaper.position")) or 1
@@ -128,11 +126,6 @@ local function pearl_node(pearl)
       text=item.kind=="video" and "movie" or "image",family="Material Symbols Rounded",font_size=W.thumbnail_fallback_icon*s,
       color="onSurfaceVariant",text_align="center"}
   end
-  if item.kind=="video" then
-    local badge=W.badge*s -- the prototype's 18 px disc, 12 % in from the pearl's lower right
-    kids[#kids+1]=ui.Box{id="video-badge",position="absolute",left=size*.88-badge,top=size*.88-badge,width=badge,height=badge,radius=badge/2,fill=fade({10,11,14,184},alpha),
-      ui.Text{text="play_arrow",position="absolute",left=0,top=badge*.1,width=badge,height=badge*.85,family="Material Symbols Rounded",font_size=badge*.6,color=fade(W.ink,alpha),text_align="center"}}
-  end
   -- The prototype's inset bottom shade (inset 0 -14px 26px rgba(0,0,0,.34)), under the rim.
   if math.abs(pearl.offset)<=2.5 then
     kids[#kids+1]=ui.Image{id="shade",position="absolute",left=0,top=0,width=size,height=size,path=W.shade,bake_size={w=bake,h=bake},opacity=alpha}
@@ -225,8 +218,18 @@ children[#children+1]=ui.Box{id="strand",position="absolute",left=0,top=0,width=
 
 if selected then
   local name_top=centre.y+W.name_top*s
-  children[#children+1]=ui.Text{id="selected-title",position="absolute",left=0,top=name_top,width=width,height=W.name_height*s,
-    text=selected.title or "",font_size=W.name_font*s,font_weight=300,text_align="center",color=fade(W.ink,chrome),
+  -- A long name ends in an ellipsis inside the span between the arrows (they sit a fixed gap outside it).
+  local name_max,name_size=2*(W.nav_offset-W.nav_size/2-W.nav_gap)*s,W.name_font*s
+  local title=selected.title or ""
+  if ui.text_width(title,ui.default_font_family,name_size)>name_max then
+    local chars=utf8.len(title) or #title
+    repeat
+      chars=chars-1
+      title=string.sub(selected.title,1,(utf8.offset(selected.title,chars+1) or #selected.title+1)-1).."…"
+    until chars<=1 or ui.text_width(title,ui.default_font_family,name_size)<=name_max
+  end
+  children[#children+1]=ui.Text{id="selected-title",position="absolute",left=(width-name_max)/2,top=name_top,width=name_max,height=W.name_height*s,
+    text=title,font_size=W.name_font*s,font_weight=300,text_align="center",color=fade(W.ink,chrome),
     text_shadow_blur=18,text_shadow_y=2,text_shadow_color={0,0,0,math.floor(115*chrome)}}
   -- The prototype's caption: "3 of 47, 3840 x 2560" for a still, "3 of 47, video, 24 s loop, plays muted" for a video;
   -- "3 of 5 matches" while a search narrows the strand.
@@ -261,7 +264,7 @@ if selected then
 end
 
 ga=footer
--- One pill, centred under the name and meta: search, (pause while a video plays), shuffle.
+-- One pill, centred under the name and meta: search and shuffle (the prototype has no pause).
 local button=W.button_size*s
 local pill_items={
   ui.Box{id="search-field",width=W.search_width*s,height=button,shrink=0,fill="transparent",
@@ -272,12 +275,8 @@ local pill_items={
       border_width=search_focused and 1 or 0,border_color="outline"},
     ui.Text{id="search-icon",position="absolute",left=10*s,top=(button-W.search_icon*s*1.15)/2,width=W.search_icon*s,height=W.search_icon*s*1.15,
       text="search",family="Material Symbols Rounded",font_size=W.search_icon*s,color=fade(W.ink_soft,footer)}}}
-if can_pause then
-  pill_items[#pill_items+1]=glyph_button("pause",ui.tr(paused and "bead.dashboard.wallpaper-resume" or "bead.dashboard.wallpaper-pause"),
-    paused and "play_arrow" or "pause",button,W.button_font*s,"transparent","extras.do","wallpaper:pause")
-end
 pill_items[#pill_items+1]=glyph_button("shuffle",ui.tr("bead.dashboard.wallpaper-shuffle"),"shuffle",button,W.button_font*s,"transparent","extras.shuffle",true)
-local pill_width=W.pill_padding*2*s+W.search_width*s+button*(can_pause and 2 or 1)+W.pill_gap*s*(can_pause and 2 or 1)
+local pill_width=W.pill_padding*2*s+W.search_width*s+button+W.pill_gap*s
 local pill_height=W.pill_height*s
 children[#children+1]=ui.Box{id="wallpaper-controls",position="absolute",left=(width-pill_width)/2,top=centre.y+W.pill_top*s,
   width=pill_width,height=pill_height,radius=pill_height/2,fill=fade(W.pill_fill,footer),
