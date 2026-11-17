@@ -49,7 +49,7 @@ return {
     silk={{244,201,218,110},{216,200,244,225},{185,214,245,245},{191,234,219,225},{242,228,186,110}},
     silk_shadow={0,0,0,70}, knot_fill={235,228,242,255}, pearl_edge={255,255,255,56}, pearl_sheen={255,255,255,255},
     thumbnail_fallback_icon=36, badge=18,
-    name_top=210, name_height=46, name_font=46, meta_top=265, meta_height=16, meta_font=13, meta_gap=14,
+    name_top=205, name_height=56, name_font=46, meta_top=265, meta_height=16, meta_font=13, meta_gap=14,
     dot=12, dot_gap=5, dot_edge={255,255,255,76},
     palette_roles={"primary","secondary","tertiary","primaryContainer","onSurface"},
     nav_size=44, nav_offset=200, nav_font=22, nav_fill={10,11,16,150}, nav_ring={255,255,255,70},

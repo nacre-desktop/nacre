@@ -936,7 +936,13 @@ impl Extras {
                     .or_else(|| current["path"].as_str())
                 {
                     for entry in &mut state.catalogue_result {
-                        entry["active"] = (entry["id"].as_str() == Some(id)).into();
+                        let active = entry["id"].as_str() == Some(id);
+                        entry["active"] = active.into();
+                        // The palette the daemon applied is the caption's palette: it is there for any entry the
+                        // strand has shown, even when the helper's catalogue cache holds none for it.
+                        if active && entry["palette"].is_null() && valid_catalogue_palette(&current["palette"]) {
+                            entry["palette"] = current["palette"].clone();
+                        }
                     }
                 }
             }
@@ -1690,10 +1696,11 @@ impl Extras {
             let primary_image = primary_file
                 .as_ref()
                 .and_then(|file| cached_wallpaper_image(&mut state, file, LIMIT));
-            if field == "thumbnail" && primary_image.is_some() {
+            if field == "thumbnail" && primary_image.is_some() && !needs_pick_data {
                 state.thumb_retries.remove(&logical);
             } else if field == "thumbnail" && state.catalogue_settled_handles.contains(&logical) {
-                // Settled without a usable image: step through the bounded retries.
+                // Settled without a usable image, or without the palette the helper was still computing when
+                // it answered (its prewarm runs after the first request): step through the bounded retries.
                 let now = Instant::now();
                 let slot = state
                     .thumb_retries

@@ -1990,6 +1990,7 @@ fn strand_harness(
     scale: f32,
     thumbnails: &std::path::Path,
 ) -> bead_test::Result<bead_test::Harness> {
+    crate::i18n::init(); // the caption's strings
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../shell");
     let frame = crate::placement::Frame::DEFAULT;
     let selected = format!("/fixture/wallpaper-{:02}", position.floor() as usize - 1);

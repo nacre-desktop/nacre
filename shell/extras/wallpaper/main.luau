@@ -101,7 +101,6 @@ table.sort(placed,function(left,right) return math.abs(left.offset)>math.abs(rig
 local nearest=W.visible_reach
 for _,pearl in ipairs(placed) do nearest=math.min(nearest,math.abs(pearl.offset)) end
 
-local function snap(size,step) return math.max(step*s,math.floor(size/(step*s)+.5)*step*s) end
 local function pearl_node(pearl)
   local item=pearl.item
   -- Drop: from the thread line, scale .15 -> 1 (out-cubic), 120 ms + 35 ms per slot out, 380 ms each.
@@ -116,11 +115,8 @@ local function pearl_node(pearl)
   local path=item.thumbnail
   local kids={}
   if math.abs(pearl.offset)<=2.5 then
-    -- Soft textures: Bead keys an image raster by size and tint, so these keep one tint (the strength rides on
-    -- `opacity`) and a stepped size, centred on the pearl; a fresh raster per animation frame cost ~40 ms (measured).
-    local glow=snap(size*1.24,32)
-    kids[#kids+1]=ui.Image{id="shadow",position="absolute",left=size*.5-glow/2,top=size*.58-glow/2,width=glow,height=glow,
-      path=W.glow,tint={0,0,0,110},opacity=alpha*math.min(1,size/(W.pearl_sizes[1]*s)+.35)}
+    kids[#kids+1]=ui.Image{id="shadow",position="absolute",left=-size*.12,top=-size*.04,width=size*1.24,height=size*1.24,
+      path=W.glow,tint={0,0,0,math.floor(110*alpha*math.min(1,size/(W.pearl_sizes[1]*s)+.35))}}
   end
   if path and path~="" then
     kids[#kids+1]=ui.Image{id="thumbnail",position="absolute",left=0,top=0,width=size,height=size,
@@ -139,9 +135,8 @@ local function pearl_node(pearl)
   kids[#kids+1]=ui.Box{id="edge",position="absolute",left=0,top=0,width=size,height=size,radius=size/2,fill="transparent",
     border_width=edge,border_color=fade(W.pearl_edge,alpha)}
   if near>.3 then
-    local sheen=snap(size,16)
-    kids[#kids+1]=ui.Image{id="sheen",position="absolute",left=(size-sheen)/2,top=(size-sheen)/2,width=sheen,height=sheen,path=W.sheen,
-      tint=W.pearl_sheen,opacity=near*alpha}
+    kids[#kids+1]=ui.Image{id="sheen",position="absolute",left=0,top=0,width=size,height=size,path=W.sheen,
+      tint={W.pearl_sheen[1],W.pearl_sheen[2],W.pearl_sheen[3],math.floor(W.pearl_sheen[4]*near*alpha)}}
   end
   -- The chosen pearl keeps the pick; any other pearl only moves the strand.
   local request=(math.abs(pearl.offset)<.5 and "wallpaper:commit:" or "wallpaper:select:")..tostring(item.id)
