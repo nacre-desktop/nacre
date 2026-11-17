@@ -131,6 +131,12 @@ pub fn collection_stores(topic: &Json, output: Option<&str>) -> BTreeMap<String,
         ),
     ])
 }
+/// While Strand's stock-niri fallback shows an empty workspace, the bar's pill keeps this workspace (a daemon
+/// topic id) active, so it neither empties nor animates away; process-wide, one picker at a time.
+static FROZEN_ACTIVE: std::sync::Mutex<Option<String>> = std::sync::Mutex::new(None);
+pub(crate) fn freeze_active(id: Option<String>) {
+    *FROZEN_ACTIVE.lock().unwrap_or_else(|p| p.into_inner()) = id;
+}
 /// `niri-workspace:<n>`, the daemon's id for a local niri workspace id; other backends have none.
 fn topic_id(id: &bead::backends::Id) -> Option<String> {
     let mut parts = id.0.split(':');
@@ -441,9 +447,12 @@ impl Rows {
             rows
         };
         let icon_mode = view.icons.iter().any(|i| !i.is_empty());
-        let active = shown
-            .iter()
-            .find(|w| w.focused)
+        let frozen = FROZEN_ACTIVE.lock().unwrap_or_else(|p| p.into_inner()).clone();
+        let held = frozen
+            .as_deref()
+            .and_then(|id| shown.iter().find(|w| topic_id(&w.id).as_deref() == Some(id)));
+        let active = held
+            .or_else(|| shown.iter().find(|w| w.focused))
             .or_else(|| shown.iter().find(|w| w.active))
             .map(|w| w.id.clone());
         let width = output_id
@@ -483,6 +492,9 @@ impl Rows {
                 }
                 let fit = if hinted { fit } else { 0 };
                 let mut row = serde_json::to_value(w).unwrap_or(Json::Null);
+                if held.is_some() {
+                    row["active"] = json!(selected);
+                }
                 row["label"] = json!(number.to_string());
                 row["visiting"] = json!(visitor);
                 row["origin"] = json!(home.unwrap_or_default());
@@ -587,6 +599,18 @@ mod tests {
         Vec::new()
     }
 
+    #[test]
+    fn the_fallbacks_empty_workspace_does_not_take_the_pill_from_the_one_the_user_came_from() {
+        let mut came_from = workspace(1, "1", false, false);
+        let mut empty = workspace(2, "2", false, true);
+        (came_from.id, empty.id) = (Id("niri:x:workspace:1".into()), Id("niri:x:workspace:2".into()));
+        let snap = snapshot(vec![came_from, empty], vec![], false);
+        let rows = Rows::default();
+        freeze_active(Some("niri-workspace:1".into()));
+        let held: Vec<_> = rows.rows_with(&snap, Some("out"), &no_dirs).iter().map(|r| r["active"] == true).collect();
+        freeze_active(None);
+        assert_eq!(held, [true, false]);
+    }
     #[test]
     fn follows_the_bar_stores_and_reports_only_real_changes() {
         let mut view = View::default();

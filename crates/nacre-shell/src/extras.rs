@@ -68,8 +68,9 @@ enum Peek {
     Workspace { output: Json, previous: i64 },
 }
 /// The workspace switch that clears the windows away: (output, current index, empty index) of the
-/// focused output, or `None` when its workspace is already empty or no empty one exists.
-fn peek_workspace_plan(data: &Json) -> Option<(Json, i64, i64)> {
+/// focused output plus the current workspace's id (the bar keeps showing it), or `None` when its workspace is
+/// already empty or no empty one exists.
+fn peek_workspace_plan(data: &Json) -> Option<(Json, i64, i64, String)> {
     let output = data["focus"]["outputId"].clone();
     let mut rows = data["workspaces"]
         .as_object()?
@@ -93,6 +94,7 @@ fn peek_workspace_plan(data: &Json) -> Option<(Json, i64, i64)> {
         output,
         current.1["index"].as_i64()?,
         empty.1["index"].as_i64()?,
+        current.0.to_owned(),
     ))
 }
 struct Query {
@@ -146,6 +148,10 @@ struct State {
     /// Keeps the wallpaper fade warm while Strand is open (B0317): the gate to ask and the hold taken from it.
     warm_gate: Option<Arc<crate::shell_control::Gate>>,
     warm: Option<crate::shell_control::WarmHold>,
+    /// When the open storyboard has settled and the warm hold may be taken.
+    warm_due: Option<Instant>,
+    /// Source pixel sizes read once per entry, so a pearl's caption never probes a file twice.
+    wallpaper_sizes: std::collections::BTreeMap<String, (u32, u32)>,
     /// The desktop peek of this visit: the compositor's hold, or the workspace switch to undo.
     peek: Option<Peek>,
     /// Keeps the fallback's workspace call alive until it has been sent.
@@ -409,6 +415,8 @@ impl StepGate {
 }
 /// The Esc restore is a little quicker than a move.
 const WALLPAPER_RESTORE_MS: u32 = 400;
+/// Strand's open storyboard (shell/extras/tokens.luau open_ms): the warm hold waits for it.
+const STRAND_SETTLE: Duration = Duration::from_millis(675);
 pub struct Extras {
     pub kind: Kind,
     client: Client,
@@ -1255,14 +1263,22 @@ impl Extras {
         {
             activate = state.wallpaper_origin.clone();
         }
-        // Warm while open: taken on the open edge, dropped on every close (the same single site as the peek).
+        // Warm while open: taken once the open storyboard has settled (the fade run is not primed under it),
+        // dropped on every close (the same single site as the peek).
         if opening {
+            state.warm_due = Some(Instant::now() + STRAND_SETTLE);
+        } else if closing {
+            (state.warm, state.warm_due) = (None, None);
+        }
+        if open
+            && state.warm.is_none()
+            && state.warm_due.is_some_and(|due| Instant::now() >= due)
+        {
+            state.warm_due = None;
             state.warm = state
                 .warm_gate
                 .as_ref()
                 .map(|gate| gate.hold_wallpaper_warm());
-        } else if closing {
-            state.warm = None;
         }
         drop(state);
         // The one place the desktop peek starts and the one place it ends, whatever closed the picker.
@@ -1299,7 +1315,9 @@ impl Extras {
         else {
             return;
         };
-        let (output, previous, empty) = plan;
+        let (output, previous, empty, current) = plan;
+        // The bar's workspace pill keeps showing the workspace the user came from, not the empty one.
+        crate::workspace_rows::freeze_active(Some(current));
         let call = self.begin(
             "workspace.activate",
             json!({"output":output,"workspace":empty}),
@@ -1311,6 +1329,7 @@ impl Extras {
     }
     fn peek_release(&self, wake: &Option<CallWake>) {
         let peek = self.state.borrow_mut().peek.take();
+        crate::workspace_rows::freeze_active(None);
         if let Some(Peek::Workspace { output, previous }) = peek {
             let call = self.begin(
                 "workspace.activate",
@@ -1460,6 +1479,11 @@ impl Extras {
                 let now = Instant::now();
                 let mut state = self.state.borrow_mut();
                 state.wallpaper_focus = Some(id.into());
+                let size = *state.wallpaper_sizes.entry(id.into()).or_insert_with(|| {
+                    let (_, width, height) = wallpaper_source_metadata(id);
+                    (width, height)
+                });
+                state.wallpaper_resolution = Some((id.into(), size.0, size.1));
                 state.wallpaper_gliding = state
                     .wallpaper_moved_at
                     .is_some_and(|at| now.duration_since(at) < 2 * WALLPAPER_RETARGET_CAP);
@@ -1786,6 +1810,7 @@ impl Extras {
             .filter(|(count, _)| *count <= THUMB_RETRIES)
             .map(|(_, due)| *due)
             .chain(trailing)
+            .chain(state.warm_due)
             .min()
     }
     pub fn content_ready(&self) -> bool {
