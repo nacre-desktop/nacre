@@ -2455,6 +2455,51 @@ async fn the_peek_is_held_while_the_picker_is_open_and_dropped_on_every_close() 
         let _ = std::fs::remove_file(socket);
     }
 }
+/// A busy compositor answers the peek late: opening must not wait for it (it blocked the main thread up to 100 ms).
+#[tokio::test(flavor = "current_thread")]
+async fn a_slow_peek_answer_never_blocks_the_open() {
+    use std::io::{BufRead, Write};
+    let mut lab = lab_with_topics(vec!["wallpaper.active".into()]).await;
+    let socket = std::env::temp_dir().join(format!("extras-peek-slow-{}.sock", std::process::id()));
+    let _ = std::fs::remove_file(&socket);
+    let listener = std::os::unix::net::UnixListener::bind(&socket).unwrap();
+    let server = std::thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap();
+        let mut line = String::new();
+        std::io::BufReader::new(stream.try_clone().unwrap())
+            .read_line(&mut line)
+            .unwrap();
+        std::thread::sleep(Duration::from_millis(90));
+        writeln!(stream, r#"{{"Ok":"Handled"}}"#).unwrap();
+        std::thread::sleep(Duration::from_millis(500)); // keep the hold until the test is done with it
+    });
+    let extras = Extras::new(Kind::Wallpaper, lab.client.clone()).unwrap();
+    extras.state.borrow_mut().niri_socket = Some(socket.clone());
+    start_with_empty_wallpaper_catalogue(&extras);
+    let open = Stores::default()
+        .reconcile(&BTreeMap::from([
+            ("panel.open".into(), Value::Bool(true)),
+            ("extras.kind".into(), Value::Text("wallpaper".into())),
+        ]))
+        .unwrap();
+    let wake: CallWake = Arc::new(|| {});
+    let started = Instant::now();
+    extras.project(&open, Some(wake.clone()));
+    assert!(
+        started.elapsed() < Duration::from_millis(60),
+        "the open does not wait for the compositor's answer"
+    );
+    for _ in 0..100 {
+        extras.project(&open, Some(wake.clone()));
+        if extras.state.borrow().peek.is_some() {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+    assert!(extras.state.borrow().peek.is_some(), "the late answer is collected");
+    server.join().unwrap();
+    let _ = std::fs::remove_file(socket);
+}
 #[tokio::test(flavor = "current_thread")]
 async fn the_wallpaper_fade_is_warm_exactly_while_the_picker_is_open() {
     use bead::wayland::ShellControl;
