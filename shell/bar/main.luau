@@ -27,6 +27,14 @@ local flow,placed,extras_right=widgets.bar_layout(layout,render,width)
 -- left of the placed widgets with the normal gap, instead of the right edge where they would cover them.
 local extras=table.clone(require("./recording"))
 for _,node in require("../widgets/tray") do table.insert(extras,node) end
+if c.islands then
+    -- No border: the tray and the recording indicator share one small island, only while something shows in it.
+    local kids=extras
+    local shown=ui.resolve_for_check(ui.bind("bar.recording"))==true or ui.resolve_for_check(ui.bind("bar.reconnecting"))==true
+        or (ui.resolve_for_check(ui.bind("bar.tray.visible"))==true and #(ui.resolve_for_check(ui.bind("bead.desktop.tray")) or {})>0)
+    extras={}
+    if shown then extras[1]=ui.Row(c.island{id="status-extras-island",height=c.t.pill_height,radius=c.t.pill_radius,gap=4,padding_left=8,padding_right=8,align="center",shrink=0,table.unpack(kids)}) end
+end
 if extras_right then
     extras.id,extras.position,extras.top,extras.height,extras.align,extras.gap,extras.right="status-extras","absolute",0,"100%","center",c.t.power_gap or 12,extras_right
     table.insert(placed,ui.Row(extras))

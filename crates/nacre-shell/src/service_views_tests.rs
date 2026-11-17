@@ -1104,13 +1104,32 @@ fn bar_counts_share_icon_hit_areas_and_centered_line_boxes() -> Result<()> {
 /// thread. Goldens: dark at 1 and 1.5, light, a 21:9 width, and a busy desktop (thread at 30 %).
 #[test]
 fn no_border_bar_floats_islands_on_a_thread_that_fades_with_windows() -> Result<()> {
-    let island_bar = |palette: &str, width, scale, busy: bool| -> Result<bead_test::Frame> {
+    let island_bar = |palette: &str,
+                      width,
+                      scale,
+                      busy: bool,
+                      extras: bool|
+     -> Result<bead_test::Frame> {
         let mut values = super::initial_models()?;
         values.extend(parity_models());
         values.extend([
             ("bar.frame".into(), Value::Bool(false)),
             ("bar.height".into(), Value::Number(44.)),
         ]);
+        if extras {
+            values.extend([
+                ("bar.recording".into(), Value::Bool(true)),
+                ("bar.recording.elapsed".into(), Value::Text("1:15".into())),
+                ("bar.tray.visible".into(), Value::Bool(true)),
+                (
+                    "bead.desktop.tray".into(),
+                    Value::list(vec![
+                        serde_json::json!({"id":"a","title":"Chat","icon":"mail-unread","attention":false}),
+                        serde_json::json!({"id":"b","title":"Sync","icon":"folder","attention":true}),
+                    ]),
+                ),
+            ]);
+        }
         if busy {
             values.insert(
                 "bead.workspaces".into(),
@@ -1120,7 +1139,7 @@ fn no_border_bar_floats_islands_on_a_thread_that_fades_with_windows() -> Result<
                 ]),
             );
         }
-        let mut h = Harness::load(
+        let mut h = Harness::load_with_icons(
             &root(),
             Path::new("bar/main.luau"),
             &root().join(palette),
@@ -1130,29 +1149,36 @@ fn no_border_bar_floats_islands_on_a_thread_that_fades_with_windows() -> Result<
                 height: 44,
                 scale,
             },
+            BTreeMap::from(
+                ["mail-unread", "folder"].map(|icon| (icon.to_owned(), root().join("sample.svg"))),
+            ),
         )?;
         settle_harness_animations(&mut h)?;
         h.pose((0., 0.), 1.)
     };
     bar_golden(
-        &island_bar("palette.json", 1920, 1., false)?,
+        &island_bar("palette.json", 1920, 1., false, false)?,
         "bar-islands-1",
     )?;
     bar_golden(
-        &island_bar("palette.json", 1920, 1.5, false)?,
+        &island_bar("palette.json", 1920, 1.5, false, false)?,
         "bar-islands-1.5",
     )?;
     bar_golden(
-        &island_bar("tests/fixtures/palette-light.json", 1920, 1., false)?,
+        &island_bar("tests/fixtures/palette-light.json", 1920, 1., false, false)?,
         "bar-islands-light-1",
     )?;
     bar_golden(
-        &island_bar("palette.json", 3440, 1., false)?,
+        &island_bar("palette.json", 3440, 1., false, false)?,
         "bar-islands-wide-1",
     )?;
     bar_golden(
-        &island_bar("palette.json", 1920, 1., true)?,
+        &island_bar("palette.json", 1920, 1., true, false)?,
         "bar-islands-busy-1",
+    )?;
+    bar_golden(
+        &island_bar("palette.json", 1920, 1., false, true)?,
+        "bar-islands-extras-1",
     )
 }
 
