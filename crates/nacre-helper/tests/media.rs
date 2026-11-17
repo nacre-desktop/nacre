@@ -170,13 +170,16 @@ fn existing_valid_orient_cache_is_read_and_invalid_entries_are_replaced() {
     let poster = folder.path().join("poster.png");
     fs::write(&poster, orient_decoder::artwork_png(&input).unwrap()).unwrap();
     let options = value!({"mode":"dark","cache_dir":folder.path().join("palettes")});
-    let fresh = orient::from_image(&poster, &options).unwrap();
+    let fresh = orient::from_image_legacy(&poster, &options).unwrap();
     let path = cache_path(&poster, &fresh["input"], &folder.path().join("palettes"));
     let mut cached = fresh.clone();
     cached["fromCache"] = value!("existing valid entry");
     let bytes = serde_json::to_vec(&cached).unwrap();
     fs::write(&path, &bytes).unwrap();
-    assert_eq!(orient::from_image(&poster, &options).unwrap(), cached);
+    assert_eq!(
+        orient::from_image_legacy(&poster, &options).unwrap(),
+        cached
+    );
     assert_eq!(fs::read(&path).unwrap(), bytes);
     for invalid in [
         value!({}),
@@ -197,7 +200,7 @@ fn existing_valid_orient_cache_is_read_and_invalid_entries_are_replaced() {
             }
         }
         fs::write(&path, serde_json::to_vec(&entry).unwrap()).unwrap();
-        assert_eq!(orient::from_image(&poster, &options).unwrap(), fresh);
+        assert_eq!(orient::from_image_legacy(&poster, &options).unwrap(), fresh);
         assert_eq!(
             fs::read(&path).unwrap(),
             serde_json::to_vec(&fresh).unwrap()
@@ -208,7 +211,7 @@ fn existing_valid_orient_cache_is_read_and_invalid_entries_are_replaced() {
         );
     }
     fs::write(&path, "not json").unwrap();
-    assert_eq!(orient::from_image(&poster, &options).unwrap(), fresh);
+    assert_eq!(orient::from_image_legacy(&poster, &options).unwrap(), fresh);
     assert_eq!(
         fs::read(&path).unwrap(),
         serde_json::to_vec(&fresh).unwrap()

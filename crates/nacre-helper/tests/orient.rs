@@ -76,7 +76,7 @@ fn direct_libraries_match_frozen_wallpaper_palettes() {
             if let Some(options) = options.as_object_mut() {
                 options.insert("cache_dir".into(), json!(cache.path()));
             }
-            let result = orient::from_image(&path, &options);
+            let result = orient::from_image_legacy(&path, &options);
             let mut actual = match result {
                 Ok(value) => json!({"value":value}),
                 Err(error) => {

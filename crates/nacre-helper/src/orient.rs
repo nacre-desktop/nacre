@@ -44,7 +44,15 @@ fn cache_identity(path: &Path, settings: &Value) -> Result<String> {
     ))
 }
 
+/// The shipped palette: Orient's roles with the lacquer recipe applied on top.
 pub fn from_image(path: &Path, options: &Value) -> Result<Value> {
+    let mut palette = from_image_legacy(path, options)?;
+    crate::lacquer::apply(&mut palette)?;
+    Ok(palette)
+}
+
+/// Orient's own roles; only the frozen-parity test reads these.
+pub fn from_image_legacy(path: &Path, options: &Value) -> Result<Value> {
     if engine_id().rsplit_once('-').map(|(core, _)| core) != Some(orient_core::ENGINE_ID) {
         return Err("Compiled Orient core differs from the pinned engine".into());
     }

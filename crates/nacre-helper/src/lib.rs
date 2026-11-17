@@ -49,6 +49,7 @@ pub mod idle_brightness;
 pub mod image_paint;
 pub mod image_text;
 pub mod json;
+pub mod lacquer;
 pub mod launcher_preferences;
 pub mod launcher_workflows;
 pub mod launchers;

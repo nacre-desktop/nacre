@@ -287,7 +287,7 @@ pub fn track_data(meta: &Value) -> Result<Value> {
                 })?;
             files::atomic(&poster, &bytes)?;
             fs::set_permissions(&poster, fs::Permissions::from_mode(0o600))?;
-            let data = orient::from_image(
+            let data = orient::from_image_legacy(
                 &poster,
                 &json!({"mode":meta.get("mode").cloned().unwrap_or(json!("dark"))}),
             )?;
