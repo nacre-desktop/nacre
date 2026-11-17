@@ -598,6 +598,7 @@ fn start(
         return Err("--ui-notification-socket requires --ui-provider".into());
     }
     let gate = shell_control::Gate::new();
+    gate.publish_live();
     let niri_session = std::env::var("NACRE_COMPOSITOR").as_deref() == Ok("niri")
         || std::env::var_os("NIRI_SOCKET").is_some();
     let (edge_cue_sender, edge_cue_channel) = if niri_session && register_ui_provider {

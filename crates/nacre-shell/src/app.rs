@@ -876,7 +876,6 @@ pub fn run(cli: &[String]) -> Result<(), Box<dyn Error>> {
     });
     // The look follows the owner's settings like the shell's: motion, text style, frame size.
     let panel_gate = crate::shell_control::Gate::new();
-    panel_gate.publish_live();
     let prefs_gate = panel_gate.clone();
     let motion_policy = prefs::MotionPolicy::new();
     let (first, first_seen) = std::sync::mpsc::sync_channel::<()>(1);
