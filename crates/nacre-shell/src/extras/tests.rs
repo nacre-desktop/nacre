@@ -2496,7 +2496,10 @@ async fn a_slow_peek_answer_never_blocks_the_open() {
         }
         tokio::time::sleep(Duration::from_millis(10)).await;
     }
-    assert!(extras.state.borrow().peek.is_some(), "the late answer is collected");
+    assert!(
+        extras.state.borrow().peek.is_some(),
+        "the late answer is collected"
+    );
     server.join().unwrap();
     let _ = std::fs::remove_file(socket);
 }

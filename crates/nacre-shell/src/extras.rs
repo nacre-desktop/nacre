@@ -965,17 +965,11 @@ impl Extras {
                         entry["active"] = active.into();
                         // The caption's five dots come from the palette the daemon applied, so they exist for any
                         // entry the strand has shown even when the helper's catalogue cache holds no palette.
-                        if active && entry["swatch"].is_null() {
-                            let colours = &current["palette"]["colours"];
-                            let swatch: serde_json::Map<String, Json> = SWATCH_ROLES
-                                .iter()
-                                .filter_map(|role| {
-                                    Some((role.to_string(), colours.get(role)?.clone()))
-                                })
-                                .collect();
-                            if swatch.len() == SWATCH_ROLES.len() {
-                                entry["swatch"] = Json::Object(swatch);
-                            }
+                        if active
+                            && entry["swatch"].is_null()
+                            && let Some(swatch) = swatch_of(&current["palette"]["colours"])
+                        {
+                            entry["swatch"] = swatch;
                         }
                     }
                 }
@@ -1023,6 +1017,15 @@ impl Extras {
                                     format!("wallpaper:{field}:{}:{id}", state.image_revision)
                                         .into();
                             }
+                        }
+                        // Luau gets the five caption colours, not the 80+ entry palette of every row.
+                        if entry["swatch"].is_null()
+                            && let Some(swatch) = swatch_of(&entry["palette"]["colours"])
+                        {
+                            entry["swatch"] = swatch;
+                        }
+                        if let Some(object) = entry.as_object_mut() {
+                            object.remove("palette");
                         }
                         entry
                     })
@@ -1937,6 +1940,15 @@ fn wallpaper_source_metadata(path: &str) -> (u64, u32, u32) {
         .and_then(|reader| reader.into_dimensions().ok())
         .unwrap_or_default();
     (bytes, dimensions.0, dimensions.1)
+}
+
+/// The caption's five colours out of a palette's colour map (the whole map is 80+ entries: never sent to Luau).
+fn swatch_of(colours: &Json) -> Option<Json> {
+    let swatch: serde_json::Map<String, Json> = SWATCH_ROLES
+        .iter()
+        .filter_map(|role| Some((role.to_string(), colours.get(role)?.clone())))
+        .collect();
+    (swatch.len() == SWATCH_ROLES.len()).then_some(Json::Object(swatch))
 }
 
 fn raw_catalogue_palette<'a>(catalogue: &'a Json, id: &str) -> Option<&'a Json> {
