@@ -25,7 +25,10 @@ local animation_query=tostring(ui.resolve_for_check(ui.bind("extras.query")) or 
 local animation_key=2166136261
 for index=1,#animation_query do animation_key=(animation_key*33+string.byte(animation_query,index))%2147483647 end
 -- One continuous value drives the whole strand: pearls slide along the thread to a fractional slot.
-local strand=ui.animate("wallpaper-strand:"..kind..":"..tostring(count)..":"..tostring(animation_key),position,W.move_duration,"out-quint")
+-- A held key or a fast scroll (`glide`) follows its moving target at a steady pace instead of restarting the
+-- out-quint for every repeat; a single tap keeps the full 500 ms out-quint.
+local glide=ui.resolve_for_check(ui.bind("extras.wallpaper.glide"))==true
+local strand=ui.animate("wallpaper-strand:"..kind..":"..tostring(count)..":"..tostring(animation_key),position,glide and W.glide_duration or W.move_duration,glide and "linear" or "out-quint")
 -- Opening: the thread and its pearls drop in from the top edge. Swap this one line for another entrance.
 local entrance=ui.animate("wallpaper-strand-open",ui.resolve_for_check(ui.bind("panel.open"))==false and 0 or 1,W.open_duration,"out-cubic")
 

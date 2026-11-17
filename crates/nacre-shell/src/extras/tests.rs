@@ -2134,6 +2134,7 @@ fn strand_harness(
             Value::Text(selected.clone()),
         ),
         ("extras.wallpaper.position".into(), Value::Number(position)),
+        ("extras.wallpaper.glide".into(), Value::Bool(false)),
         (
             "extras.wallpaper.resolution_id".into(),
             Value::Text(selected),
@@ -2661,6 +2662,9 @@ async fn five_quick_moves_end_on_the_last_id() {
             wake.clone(),
         );
     }
+    // The first move fired at once; the cap holds the rest back until its trailing edge.
+    tokio::time::sleep(WALLPAPER_RETARGET_CAP).await;
+    extras.fire_pending_move();
     let mut last = None;
     while let Ok(Some((method, params))) =
         tokio::time::timeout(Duration::from_millis(300), lab.calls.recv()).await
@@ -2671,6 +2675,75 @@ async fn five_quick_moves_end_on_the_last_id() {
     assert_eq!(
         last.as_ref().and_then(Json::as_str),
         Some("/fixture/animated.gif")
+    );
+}
+#[tokio::test(flavor = "current_thread")]
+async fn a_three_second_hold_retargets_the_wallpaper_at_the_cap_and_ends_on_the_last_id() {
+    let mut lab = lab_with_topics(vec!["wallpaper.active".into()]).await;
+    let (extras, open, wake) = open_picker(&mut lab).await;
+    let ids = ["next.jpg", "animated.gif", "next.mp4"];
+    let (mut fires, mut seen) = (0, None);
+    for step in 0..90 {
+        extras.act(
+            &format!("wallpaper:move:/fixture/{}", ids[step % 3]),
+            &open,
+            wake.clone(),
+        );
+        tokio::time::sleep(Duration::from_millis(33)).await;
+        extras.fire_pending_move(); // the runtime's deadline wake
+        let fired = extras.state.borrow().wallpaper_fired_at;
+        if fired != seen {
+            (fires, seen) = (fires + 1, fired);
+        }
+    }
+    tokio::time::sleep(WALLPAPER_RELEASE).await;
+    extras.fire_pending_move(); // the landing
+    // 3 s at one retarget per 180 ms is about 17, plus the leading move and the landing.
+    assert!((10..=19).contains(&fires), "a 3 s hold: {fires} retargets");
+    assert_eq!(
+        extras.state.borrow().wallpaper_shown.as_deref(),
+        Some("/fixture/next.mp4"),
+        "the hold ends on the last pearl"
+    );
+    assert!(extras.state.borrow().wallpaper_pending.is_none());
+}
+#[tokio::test(flavor = "current_thread")]
+async fn the_predecode_window_is_replanned_only_when_a_move_fires() {
+    let mut lab = lab_with_topics(vec!["wallpaper.active".into()]).await;
+    let (extras, open, wake) = open_picker(&mut lab).await;
+    extras.act("wallpaper:move:/fixture/next.jpg", &open, wake.clone());
+    assert!(
+        !extras.state.borrow().wallpaper_prefetched,
+        "the first move fired"
+    );
+    extras.state.borrow_mut().wallpaper_prefetched = true;
+    extras.act("wallpaper:move:/fixture/animated.gif", &open, wake);
+    assert!(
+        extras.state.borrow().wallpaper_prefetched,
+        "a held-back move leaves the plan alone"
+    );
+    tokio::time::sleep(WALLPAPER_RETARGET_CAP).await;
+    extras.fire_pending_move();
+    assert!(
+        !extras.state.borrow().wallpaper_prefetched,
+        "the trailing move fired"
+    );
+}
+#[tokio::test(flavor = "current_thread")]
+async fn esc_in_a_burst_drops_the_pending_move_and_restores() {
+    let mut lab = lab_with_topics(vec!["wallpaper.active".into()]).await;
+    let (extras, open, wake) = open_picker(&mut lab).await;
+    extras.act("wallpaper:move:/fixture/next.jpg", &open, wake.clone());
+    extras.act("wallpaper:move:/fixture/animated.gif", &open, wake.clone());
+    assert_eq!(activated(&mut lab).await, "/fixture/next.jpg");
+    extras.project(&closed(&open), Some(wake));
+    assert_eq!(activated(&mut lab).await, "/fixture/current.jpg");
+    tokio::time::sleep(WALLPAPER_RETARGET_CAP).await;
+    extras.fire_pending_move();
+    tokio::time::sleep(Duration::from_millis(60)).await;
+    assert!(
+        lab.calls.try_recv().is_err(),
+        "nothing pending fires after Esc"
     );
 }
 #[tokio::test(flavor = "current_thread")]

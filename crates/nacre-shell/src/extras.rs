@@ -110,6 +110,12 @@ struct State {
     /// The last id this visit previewed; `None` while the desktop still shows the origin.
     wallpaper_shown: Option<String>,
     wallpaper_committed: bool,
+    /// Strand moves arrive in bursts (a held arrow, a trackpad): when the last one fired, the newest one that
+    /// has not landed with the normal fade yet, and when the last move arrived (the strand glides meanwhile).
+    wallpaper_fired_at: Option<Instant>,
+    wallpaper_pending: Option<(String, CallWake)>,
+    wallpaper_moved_at: Option<Instant>,
+    wallpaper_gliding: bool,
     /// Pixel size of the last previewed (or opening) wallpaper, for the strand's caption.
     wallpaper_resolution: Option<(String, u32, u32)>,
     query: Option<Query>,
@@ -373,6 +379,12 @@ const THUMB_RETRY_NEXT: Duration = Duration::from_millis(if cfg!(test) { 80 } el
 const THUMB_RETRIES: u8 = 2;
 /// Strand moves, and the wallpaper change they cause, run for this long (out-quint, like the pearls).
 const WALLPAPER_MOVE_MS: u32 = 500;
+/// A burst of moves (a held key, a flick) retargets the wallpaper at most this often, each with a quick fade of
+/// the same length so one finishes before the next starts; no move for `WALLPAPER_RELEASE` lands the last one
+/// with the normal fade (last wins).
+const WALLPAPER_RETARGET_CAP: Duration = Duration::from_millis(180);
+const WALLPAPER_GLIDE_FADE_MS: u32 = 180;
+const WALLPAPER_RELEASE: Duration = Duration::from_millis(100);
 /// The Esc restore is a little quicker than a move.
 const WALLPAPER_RESTORE_MS: u32 = 400;
 pub struct Extras {
@@ -1108,6 +1120,15 @@ impl Extras {
             let output_width = if width == 0 { 1440. } else { width as f32 };
             let output_height = if height == 0 { 900. } else { height as f32 };
             values.insert(
+                "extras.wallpaper.glide".into(),
+                Value::Bool(
+                    state.wallpaper_gliding
+                        && state
+                            .wallpaper_moved_at
+                            .is_some_and(|at| at.elapsed() < 2 * WALLPAPER_RETARGET_CAP),
+                ),
+            );
+            values.insert(
                 "extras.viewport.width".into(),
                 Value::Number((output_width - frame.left - frame.right).max(1.) as f64),
             );
@@ -1217,6 +1238,14 @@ impl Extras {
                 (id.to_owned(), width, height)
             });
             state.wallpaper_origin = origin;
+        }
+        if opening || closing {
+            // A move that has not fired yet dies with the visit: Esc restores, nothing is left pending.
+            (
+                state.wallpaper_pending,
+                state.wallpaper_fired_at,
+                state.wallpaper_gliding,
+            ) = (None, None, false);
         }
         if opening {
             state.wallpaper_shown = None;
@@ -1367,24 +1396,86 @@ impl Extras {
             preview.cancel(generation);
         }
     }
+    /// One retarget of the wallpaper (and of the pre-decoded window around the pearl) for a strand move.
+    fn fire_move(&self, id: &str, fade_ms: u32, wake: CallWake) {
+        let mut state = self.state.borrow_mut();
+        state.wallpaper_fired_at = Some(Instant::now());
+        state.wallpaper_prefetched = false; // the pre-decoded window follows the pearl
+        let unchanged = state
+            .wallpaper_shown
+            .as_ref()
+            .or(state.wallpaper_origin.as_ref())
+            .is_some_and(|shown| shown == id);
+        if !unchanged {
+            state.wallpaper_shown = Some(id.into());
+        }
+        drop(state);
+        if !unchanged {
+            self.activate_wallpaper(id, fade_ms, wake);
+        }
+    }
+    /// Runs on the runtime's deadline wake: while a burst goes on the held-back move retargets at the cap; once
+    /// it has ended the last pearl lands with the normal fade.
+    fn fire_pending_move(&self) {
+        let (id, wake, landing) = {
+            let mut state = self.state.borrow_mut();
+            let over = state
+                .wallpaper_moved_at
+                .is_none_or(|at| at.elapsed() >= WALLPAPER_RELEASE);
+            let due = state
+                .wallpaper_fired_at
+                .is_none_or(|at| at.elapsed() >= WALLPAPER_RETARGET_CAP);
+            if !(over || due) {
+                return;
+            }
+            let Some((id, wake)) = state.wallpaper_pending.clone() else {
+                return;
+            };
+            if over {
+                state.wallpaper_pending = None;
+            }
+            (id, wake, over)
+        };
+        self.fire_move(
+            &id,
+            if landing {
+                WALLPAPER_MOVE_MS
+            } else {
+                WALLPAPER_GLIDE_FADE_MS
+            },
+            wake,
+        );
+    }
     pub fn act(&self, request: &str, stores: &Stores, wake: CallWake) {
         if self.kind == Kind::Wallpaper {
             if let Some(id) = request.strip_prefix("wallpaper:move:") {
-                // The wallpaper moves with the strand: every step fades at once, the latest wins.
+                // The wallpaper moves with the strand: the first move of a burst fades at once, then at most
+                // one retarget per cap (the trailing one in `fire_pending_move`); the latest wins.
+                let now = Instant::now();
                 let mut state = self.state.borrow_mut();
                 state.wallpaper_focus = Some(id.into());
-                state.wallpaper_prefetched = false; // the pre-decoded window follows the pearl
-                let unchanged = state
-                    .wallpaper_shown
-                    .as_ref()
-                    .or(state.wallpaper_origin.as_ref())
-                    .is_some_and(|shown| shown == id);
-                if !unchanged {
-                    state.wallpaper_shown = Some(id.into());
-                }
+                state.wallpaper_gliding = state
+                    .wallpaper_moved_at
+                    .is_some_and(|at| now.duration_since(at) < 2 * WALLPAPER_RETARGET_CAP);
+                state.wallpaper_moved_at = Some(now);
+                let due = state
+                    .wallpaper_fired_at
+                    .is_none_or(|at| now.duration_since(at) >= WALLPAPER_RETARGET_CAP);
+                let burst = state.wallpaper_gliding;
                 drop(state);
-                if !unchanged {
-                    self.activate_wallpaper(id, WALLPAPER_MOVE_MS, wake);
+                if burst {
+                    self.state.borrow_mut().wallpaper_pending = Some((id.into(), wake.clone()));
+                }
+                if due {
+                    self.fire_move(
+                        id,
+                        if burst {
+                            WALLPAPER_GLIDE_FADE_MS
+                        } else {
+                            WALLPAPER_MOVE_MS
+                        },
+                        wake,
+                    );
                 }
                 return;
             }
@@ -1392,6 +1483,7 @@ impl Extras {
                 // The shown wallpaper is already the pick; only an id the strand has not previewed fades.
                 let mut state = self.state.borrow_mut();
                 state.wallpaper_committed = true;
+                state.wallpaper_pending = None;
                 state.close = true;
                 let shown = state
                     .wallpaper_shown
@@ -1525,6 +1617,7 @@ impl Extras {
     /// Resolve advertised cache paths; keep encoded leases only for this scene's images.
     pub fn attach_images(&self, scene: &mut bead::render::Scene, wake: Option<CallWake>) {
         const LIMIT: usize = 16 * bead::core::cache::MIB;
+        self.fire_pending_move();
         let mut state = self.state.borrow_mut();
         let mut visible_handles = std::collections::BTreeSet::new();
         let mut attached_bytes = 0usize;
@@ -1694,12 +1787,17 @@ impl Extras {
     }
     /// When the next thumbnail retry is due, so the runtime wakes without polling.
     pub fn thumb_retry_at(&self) -> Option<Instant> {
-        self.state
-            .borrow()
+        let state = self.state.borrow();
+        let trailing = state.wallpaper_pending.as_ref().and_then(|_| {
+            let release = state.wallpaper_moved_at? + WALLPAPER_RELEASE;
+            Some(release.min(state.wallpaper_fired_at? + WALLPAPER_RETARGET_CAP))
+        });
+        state
             .thumb_retries
             .values()
             .filter(|(count, _)| *count <= THUMB_RETRIES)
             .map(|(_, due)| *due)
+            .chain(trailing)
             .min()
     }
     pub fn content_ready(&self) -> bool {
