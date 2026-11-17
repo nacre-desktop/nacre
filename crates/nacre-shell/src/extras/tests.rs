@@ -1605,9 +1605,9 @@ async fn wallpaper_runtime_search_and_next_button_dispatch_real_activation() {
         next_wallpaper_runtime_call(&mut runtime, &mut lab.calls).await,
         (
             "wallpaper.activate".into(),
-            json!({"revision":19,"id":"/fixture/current.jpg"})
+            json!({"revision":19,"id":"/fixture/next.mp4"})
         ),
-        "positive Wayland wheel distance moves to the next wallpaper"
+        "positive Wayland wheel distance moves to the next wallpaper (videos share the strand)"
     );
     let root_node = runtime
         .session
