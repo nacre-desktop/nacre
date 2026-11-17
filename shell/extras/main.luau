@@ -22,7 +22,7 @@ local function row(item, selected)
   if shortcuts then
     return ui.Box{id="shortcut-"..tostring(item.id),width="fill",height=row_h,radius=row_r,fill="surfaceContainer",
       ui.Text{id="shortcut-key",position="absolute",left=T.shortcuts.padding,top=T.shortcuts.text_top,width=T.shortcuts.key_width,height=T.shortcuts.text_height,
-        text=item.key or "",font_size=T.shortcuts.font,color="primary",family="JetBrains Mono NF"},
+        text=item.key or "",font_size=T.shortcuts.font,color="primary",family=kit.tokens.fonts.sans},
       ui.Text{id="shortcut-description",position="absolute",left=T.shortcuts.description_offset,top=T.shortcuts.text_top,
         width=body_width-T.shortcuts.description_offset-T.shortcuts.padding,height=T.shortcuts.text_height,text=item.description or "",
         font_size=T.shortcuts.font,color="onSurface"}}

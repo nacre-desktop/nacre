@@ -1365,7 +1365,7 @@ fn panel(p: &Palette, assets: &Path) -> Result<Scene, Box<dyn std::error::Error>
                 features: Vec::new(),
                 rect: Rect::new(x, y, w, h),
                 text: s.into(),
-                family: "IBM Plex Sans".into(),
+                family: crate::prefs::INTERFACE_FONT.into(),
                 weight: 400,
                 align: None,
                 size,
