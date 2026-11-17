@@ -1097,6 +1097,10 @@ fn bar_counts_share_icon_hit_areas_and_centered_line_boxes() -> Result<()> {
         },
     )?;
     settle_harness_animations(&mut light)?;
+    assert!(
+        light.scene().input_islands.is_none(),
+        "the frame bar keeps its one full-width input rect"
+    );
     bar_golden(&light.pose((0., 0.), 1.)?, "bar-parity-light-1")
 }
 
@@ -1154,6 +1158,12 @@ fn no_border_bar_floats_islands_on_a_thread_that_fades_with_windows() -> Result<
             ),
         )?;
         settle_harness_animations(&mut h)?;
+        // B0321: only the islands (and the thread strip) take input; the gaps reach the windows.
+        let islands = h.scene().input_islands.clone().unwrap_or_default();
+        assert!(
+            (3..=8).contains(&islands.len()) && islands.iter().all(|r| r.h <= 44.),
+            "island input rects: {islands:?}"
+        );
         h.pose((0., 0.), 1.)
     };
     bar_golden(

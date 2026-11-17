@@ -64,5 +64,7 @@ if c.islands then
     end
     host.fill,host.padding_left,host.padding_right,host.padding_top="transparent",13,13,2
     host[1]=ui.Row(segments)
+    -- Clicks in the gaps between the islands reach the windows below (B0321).
+    host.input="children"
 end
 return ui.Host(host)
