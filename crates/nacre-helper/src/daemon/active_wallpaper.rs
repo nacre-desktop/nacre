@@ -1484,9 +1484,18 @@ pub async fn catalogue(
             true,
         )
     })?;
-    if let Some(ids) = request.ids.as_deref() {
-        enqueue_palette_prewarm(ids);
-    }
+    // Palettes are computed in the background and read back from the marker cache: the entries asked for first, or
+    // (a full listing) every entry still without one, so Strand's caption has its dots before a pearl is focused.
+    let wanted: Vec<String> = match request.ids.as_deref() {
+        Some(ids) => ids.to_vec(),
+        None => catalogue
+            .entries
+            .iter()
+            .filter(|entry| entry.palette.is_none())
+            .map(|entry| entry.id.clone())
+            .collect(),
+    };
+    enqueue_palette_prewarm(&wanted);
     Ok(catalogue)
 }
 

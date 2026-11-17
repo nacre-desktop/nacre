@@ -552,7 +552,7 @@ mod tests {
             .unwrap()
             .colours
             .remove("broken");
-        for index in 0..62 {
+        for index in 0..126 {
             catalogue.entries[0]
                 .palette
                 .as_mut()
@@ -562,7 +562,7 @@ mod tests {
         }
         assert!(
             catalogue.validate().is_err(),
-            "catalogue palettes are capped at 64 roles"
+            "catalogue palettes are capped at 128 roles"
         );
     }
 
