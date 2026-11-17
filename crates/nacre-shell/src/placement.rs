@@ -274,8 +274,9 @@ static LIVE: std::sync::Mutex<Frame> = std::sync::Mutex::new(Frame::DEFAULT);
 type PanelWatcher = Arc<dyn Fn(bool) + Send + Sync>;
 /// How many panels are open, and the bars to tell when that goes between none and some (the
 /// no-border bar's thread steps back while any panel is open).
-static PANELS: std::sync::Mutex<(usize, u64, Vec<(u64, PanelWatcher)>)> =
-    std::sync::Mutex::new((0, 0, Vec::new()));
+static PANELS: std::sync::Mutex<PanelsOpen> =
+    std::sync::Mutex::new(PanelsOpen(0, 0, Vec::new()));
+struct PanelsOpen(usize, u64, Vec<(u64, PanelWatcher)>);
 /// A panel runtime reports its visibility; `shown` is its own last report.
 pub fn panel_visible(shown: &mut bool, now: bool) {
     if std::mem::replace(shown, now) == now {
@@ -301,9 +302,6 @@ pub fn panel_visible(shown: &mut bool, now: bool) {
     for (_, watcher) in watchers {
         watcher(any);
     }
-}
-pub fn panels_open() -> bool {
-    PANELS.lock().unwrap_or_else(|p| p.into_inner()).0 > 0
 }
 /// Unregisters on drop.
 pub struct PanelWatch(u64);
