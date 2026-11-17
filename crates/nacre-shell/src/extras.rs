@@ -1510,7 +1510,11 @@ impl Extras {
             if let Some((id, wheel)) = request
                 .strip_prefix("wallpaper:move:")
                 .map(|id| (id, false))
-                .or_else(|| request.strip_prefix("wallpaper:wheel:").map(|id| (id, true)))
+                .or_else(|| {
+                    request
+                        .strip_prefix("wallpaper:wheel:")
+                        .map(|id| (id, true))
+                })
             {
                 // The wallpaper moves with the strand: the first move of a burst fades at once, then at most
                 // one retarget per cap (the trailing one in `fire_pending_move`); the latest wins.
@@ -1918,7 +1922,7 @@ fn valid_catalogue_palette(palette: &Json) -> bool {
         return false;
     };
     if colours.is_empty()
-        || colours.len() > 64
+        || colours.len() > 128
         || !["background", "onSurface", "primary"]
             .iter()
             .all(|key| colours.contains_key(*key))
