@@ -26,6 +26,8 @@ pub struct Frame {
     pub top: f32,
     pub bottom: f32,
     pub rounding: f32,
+    /// `screenBorder`: true draws today's frame, false the no-border bar (islands on a thread).
+    pub bordered: bool,
 }
 impl Frame {
     /// NacreFrame defaults: 40px header + 10px frame, 25px contour rounding.
@@ -35,6 +37,7 @@ impl Frame {
         top: 50.,
         bottom: 10.,
         rounding: 25.,
+        bordered: true,
     };
     /// The frame the settings currently describe. Positioners and the static tiles read
     /// it when they run, so a settings change needs no restart (B0047).
@@ -49,6 +52,16 @@ impl Frame {
     /// `NacreFrame.qml`: the header is the 40 px bar (when enabled) plus the top frame
     /// edge; each side is the frame width unless its toggle is off.
     pub fn from_settings(s: &FrameSettings) -> Frame {
+        if !s.border {
+            return Frame {
+                left: 0.,
+                right: 0.,
+                bottom: 0.,
+                top: if s.bar { ISLAND_BAR_HEIGHT } else { 0. },
+                rounding: 0.,
+                bordered: false,
+            };
+        }
         let width = s.width.max(0.);
         let edge = |on: bool| if on { width } else { 0. };
         Frame {
@@ -57,6 +70,7 @@ impl Frame {
             bottom: edge(s.bottom),
             top: if s.bar { BAR_HEIGHT } else { 0. } + edge(s.top),
             rounding: s.rounding.max(0.),
+            bordered: true,
         }
     }
 }
@@ -258,6 +272,12 @@ fn externals() -> Vec<External> {
 static LIVE: std::sync::Mutex<Frame> = std::sync::Mutex::new(Frame::DEFAULT);
 /// The Nacre bar's own height inside the header (the rest is the top frame edge).
 pub const BAR_HEIGHT: f32 = 40.;
+/// The no-border bar's zone: 34 px islands, 6 px from the top, 4 px below.
+pub const ISLAND_BAR_HEIGHT: f32 = 44.;
+/// No-border cards (interim panels): 8 px under the bar, 13 px from the screen sides and bottom.
+const CARD_GAP: f32 = 8.;
+const CARD_INSET: f32 = 13.;
+const CARD_RADIUS: f32 = 24.;
 /// Decoded frame settings (`frameWidth`, `frameRounding`, the four side toggles, bar on).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct FrameSettings {
@@ -268,6 +288,7 @@ pub struct FrameSettings {
     pub bottom: bool,
     pub top: bool,
     pub bar: bool,
+    pub border: bool,
 }
 impl Default for Frame {
     fn default() -> Self {
@@ -413,9 +434,7 @@ impl Chrome {
             fill: colors.get("surface")?,
             primary: colors.get("primary")?,
             secondary: colors.get("secondary")?,
-            ink: matches!(attachment, Attachment::Pearl)
-                .then(|| crate::pearls::Ink::new(colors))
-                .transpose()?,
+            ink: crate::pearls::Ink::new(colors).ok(),
         })
     }
     fn svg(
@@ -680,6 +699,9 @@ impl Chrome {
         engaged: bool,
         panel: Option<bead::wayland::DecorationPanel<'_>>,
     ) -> Result<Vec<bead::wayland::Decoration>, String> {
+        if !frame.bordered {
+            return Ok(Vec::new());
+        }
         let (w, h) = (w as f32, h as f32);
         let radius = frame.radius((w, h));
         let mut material = frame.material((w, h));
@@ -752,7 +774,11 @@ impl Chrome {
     /// A pearl keeps its shadow; the panel's root background takes the pearl's colour and
     /// corners, and the border is drawn above everything as small pieces (see
     /// `pearls::border_svgs`). Decorating a decorated scene again replaces the pieces.
-    fn decorate_pearl(&self, scene: &mut Scene) -> Result<(), Box<dyn std::error::Error>> {
+    fn decorate_pearl(
+        &self,
+        scene: &mut Scene,
+        radius: f32,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         use bead::render::Primitive;
         use std::hash::{Hash, Hasher};
         let ink = self.ink.ok_or("pearl chrome without ink")?;
@@ -770,11 +796,11 @@ impl Chrome {
             .ok_or("Panel root background missing")?;
         *root = Primitive::Rounded {
             rect: body,
-            radius: crate::pearls::RADIUS,
+            radius,
             fill: ink.body,
             border: None,
         };
-        for (piece, svg) in crate::pearls::border_svgs(body.w, body.h, &ink, self.engaged) {
+        for (piece, svg) in crate::pearls::border_svgs(body.w, body.h, radius, &ink, self.engaged) {
             let mut hash = std::collections::hash_map::DefaultHasher::new();
             svg.hash(&mut hash);
             let path = std::path::PathBuf::from(format!("@pearl-edge-{:x}.svg", hash.finish()));
@@ -806,7 +832,11 @@ impl Chrome {
         use bead::render::Primitive;
         use std::hash::{Hash, Hasher};
         if matches!(self.attachment, Attachment::Pearl) {
-            return self.decorate_pearl(scene);
+            return self.decorate_pearl(scene, crate::pearls::RADIUS);
+        }
+        // No border: every panel is a card with the pearl's own border and shadow.
+        if !frame.bordered {
+            return self.decorate_pearl(scene, CARD_RADIUS);
         }
         let attachment = scene_attachment(self.attachment, scene);
         let engaged = self.engaged
@@ -997,9 +1027,14 @@ impl Frame {
         size: (f32, f32),
         center: Option<f32>,
     ) -> Rect {
+        let (left, right, top, bottom) = if self.bordered {
+            (self.left, self.right, self.top, self.bottom)
+        } else {
+            (CARD_INSET, CARD_INSET, self.top + CARD_GAP, CARD_INSET)
+        };
         let viewport = (
-            (output.0 - self.left - self.right).max(0.),
-            (output.1 - self.top - self.bottom).max(0.),
+            (output.0 - left - right).max(0.),
+            (output.1 - top - bottom).max(0.),
         );
         let (x, y) = match attachment {
             Attachment::Attached(edge) | Attachment::SceneEdge(edge) => {
@@ -1012,7 +1047,7 @@ impl Frame {
             Attachment::Pearl => (0., 0.),
             Attachment::Popout => (
                 popout(
-                    self.left,
+                    left,
                     viewport.0,
                     center.unwrap_or(output.0 / 2.),
                     size.0,
@@ -1023,7 +1058,7 @@ impl Frame {
                 0.,
             ),
         };
-        Rect::new(self.left + x, self.top + y, size.0, size.1)
+        Rect::new(left + x, top + y, size.0, size.1)
     }
 
     /// Panel origin for the live frame (settings change it without a restart).
@@ -1419,6 +1454,7 @@ mod tests {
             bottom: true,
             top: true,
             bar: true,
+            border: true,
         }
     }
     fn rects(frame: Frame, size: (u32, u32)) -> Vec<(f32, f32, f32, f32)> {
@@ -1497,6 +1533,7 @@ mod tests {
             bottom: 14.,
             top: 54.,
             rounding: 25.,
+            bordered: true,
         };
         let tiles = rects(wide, (1920, 1200));
         assert_eq!(tiles[0], (0., 56., 16., 1200. - 56. - 16.));
@@ -1525,6 +1562,7 @@ mod tests {
             bottom: 0.,
             top: 0.,
             rounding: 25.,
+            bordered: true,
         };
         assert!(rects(none, (1920, 1200)).is_empty());
     }

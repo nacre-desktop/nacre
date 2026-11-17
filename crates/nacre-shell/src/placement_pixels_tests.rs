@@ -251,6 +251,7 @@ fn frame_with(change: impl FnOnce(&mut crate::placement::FrameSettings)) -> Fram
         bottom: true,
         top: true,
         bar: true,
+        border: true,
     };
     change(&mut settings);
     Frame::from_settings(&settings)

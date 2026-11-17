@@ -1124,4 +1124,13 @@ mod registry_fallback_tests {
         assert!(super::validate("innerEdgeHoldTime", &serde_json::json!(180.5), false).is_err());
         assert!(super::validate("edgeHandleStyle", &serde_json::json!("pearls"), false).is_err());
     }
+
+    #[test]
+    fn screen_border_accepts_only_none_and_frame() {
+        for ok in ["none", "frame"] {
+            assert!(super::validate("screenBorder", &serde_json::json!(ok), false).is_ok());
+        }
+        assert!(super::validate("screenBorder", &serde_json::json!("islands"), false).is_err());
+        assert!(super::validate("screenBorder", &serde_json::json!(true), false).is_err());
+    }
 }

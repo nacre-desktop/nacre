@@ -418,7 +418,7 @@ const BORDER: f32 = 2.;
 /// four edges (each overlapping its neighbour by a pixel) so that no raster is as
 /// large as the body; the fill is the panel's own root background. Rects are
 /// relative to the body. A body too small to cut gets the whole ring.
-pub fn border_svgs(w: f32, h: f32, ink: &Ink, engaged: bool) -> Vec<(Rect, String)> {
+pub fn border_svgs(w: f32, h: f32, radius: f32, ink: &Ink, engaged: bool) -> Vec<(Rect, String)> {
     let strength = if engaged { 1. } else { 0. };
     let a = blend(ink.outline, ink.accent, strength);
     let b = blend(ink.outline, ink.secondary, strength);
@@ -434,10 +434,10 @@ pub fn border_svgs(w: f32, h: f32, ink: &Ink, engaged: bool) -> Vec<(Rect, Strin
             crop.h,
             stop(0., a, 1.),
             stop(1., b, 1.),
-            RADIUS - 1.
+            radius - 1.
         )
     };
-    let r = RADIUS;
+    let r = radius;
     let pieces = if w < 2. * r + 2. || h < 2. * r + 2. {
         vec![Rect::new(0., 0., w, h)]
     } else {
@@ -944,8 +944,8 @@ mod tests {
     #[test]
     fn the_border_is_the_outline_at_rest_and_the_accent_when_engaged() {
         let ink = ink();
-        let rest = border_svgs(400., 300., &ink, false);
-        let hot = border_svgs(400., 300., &ink, true);
+        let rest = border_svgs(400., 300., RADIUS, &ink, false);
+        let hot = border_svgs(400., 300., RADIUS, &ink, true);
         let text =
             |pieces: &[(Rect, String)]| pieces.iter().map(|(_, s)| s.as_str()).collect::<String>();
         assert!(text(&rest).contains(&rgb(ink.outline)) && !text(&rest).contains(&rgb(ink.accent)));
@@ -960,7 +960,7 @@ mod tests {
         );
         assert!(rest.iter().all(|(_, svg)| svg.len() < 1200));
         // A body too small to cut gets the whole ring.
-        assert_eq!(border_svgs(30., 30., &ink, false).len(), 1);
+        assert_eq!(border_svgs(30., 30., RADIUS, &ink, false).len(), 1);
     }
 
     #[test]

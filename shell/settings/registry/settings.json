@@ -2082,6 +2082,41 @@
       "unit": "pt"
     },
     {
+      "id": "appearance.frame.screenBorder",
+      "page": "appearance",
+      "section": "appearance.frame",
+      "key": "screenBorder",
+      "labelId": "settings.registry.appearance.frame.screenBorder.label",
+      "descriptionId": "settings.registry.appearance.frame.screenBorder.description",
+      "type": "enum",
+      "default": "none",
+      "store": {
+        "id": "desktop",
+        "key": [
+          "screenBorder"
+        ]
+      },
+      "apply": "instant",
+      "synonyms": [
+        "frame",
+        "edge",
+        "bar",
+        "islands"
+      ],
+      "unavailableId": "settings.registry.ui.unavailable",
+      "advanced": false,
+      "options": [
+        {
+          "value": "none",
+          "labelId": "settings.registry.appearance.frame.screenBorder.option.none"
+        },
+        {
+          "value": "frame",
+          "labelId": "settings.registry.appearance.frame.screenBorder.option.frame"
+        }
+      ]
+    },
+    {
       "id": "appearance.frame.frameWidth",
       "page": "appearance",
       "section": "appearance.frame",

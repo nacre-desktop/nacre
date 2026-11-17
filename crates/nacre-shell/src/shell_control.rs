@@ -44,6 +44,7 @@ impl FrameState {
             bottom: true,
             top: true,
             bar,
+            border: false,
         })
     }
 }
@@ -54,7 +55,7 @@ pub(crate) fn configured_lip(config: &LipConfig, frame: Frame) -> Option<Lip> {
         bead::core::Edge::Left => frame.left,
         bead::core::Edge::Right => frame.right,
     };
-    (thickness > 0.).then(|| Lip {
+    (thickness > 0. && frame.bordered).then(|| Lip {
         id: config.id.clone(),
         edge: config.edge,
         length: config.length,
@@ -737,7 +738,9 @@ mod tests {
         )
         .unwrap()
     }
-    fn gate_with(desktop: serde_json::Value) -> std::sync::Arc<Gate> {
+    fn gate_with(mut desktop: serde_json::Value) -> std::sync::Arc<Gate> {
+        // The frame tests describe the frame; the no-border default has its own test.
+        desktop["screenBorder"] = json!("frame");
         let gate = Gate::new();
         gate.configure_frame(
             lips(),
@@ -771,6 +774,23 @@ mod tests {
         // Lengths come from the frame config (the old `lipSize` override is gone).
         let lengths: Vec<f32> = chrome.lips.iter().map(|l| l.length).collect();
         assert_eq!(lengths, [208., 144.]);
+    }
+
+    #[test]
+    fn no_border_is_the_default_and_reserves_only_the_44_px_bar() {
+        let gate = Gate::new();
+        gate.configure_frame(lips(), ["dashboard-today", "sound"].map(String::from));
+        gate.apply(&Prefs::decode(&json!({}), &json!(null)));
+        let chrome = gate.edge_chrome();
+        assert_eq!(chrome.reserved, [0; 4], "the bar surface holds its own zone");
+        assert_eq!(gate.bar_thickness(), Some(44));
+        assert!(chrome.lips.is_empty(), "no frame, no lips");
+        let before = gate.decoration_variant();
+        gate.apply(&Prefs::decode(&json!({"screenBorder": "frame"}), &json!(null)));
+        assert_eq!(gate.bar_thickness(), Some(50));
+        assert_ne!(gate.decoration_variant(), before, "switching repaints live");
+        gate.apply(&Prefs::decode(&json!({"screenBorder": "bogus"}), &json!(null)));
+        assert_eq!(gate.bar_thickness(), Some(44), "a stale value means none");
     }
 
     #[test]
