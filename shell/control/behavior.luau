@@ -11,7 +11,9 @@ local function edit(s,order) s["cc.order"]=store(order) s["cc.edited"]=true end
 local behavior={stores={
     ["view.detached"]=false,["panel.open"]=true,["view.edge"]="right",
     ["cc.back_focus"]="control-center.detail.header.back",["cc.detail_focus_prefix"]="control-center.detail.",
-    ["cc.page"]="home",["cc.detail"]="",["cc.scroll"]=0,["cc.max_height"]=800,
+    ["cc.page"]="home",["cc.detail"]="",["cc.scroll"]=0,["cc.max_height"]=800,["cc.flip"]=0,["cc.sheet"]=false,
+    -- The Session page's menu (the host's session-menu handler fills these in).
+    ["session.enabled"]=false,["session.busy"]=false,["session.confirm"]="",["session.confirm_action"]="",["session.message"]="",
     ["cc.src"]={},["cc.views"]={},["cc.saved"]={},["cc.saved_known"]=false,["cc.writable"]=false,["cc.message"]="",
     ["cc.battery"]="",["cc.battery_icon"]="battery_charging_full",["cc.battery_estimate"]="",
     ["cc.notice_note"]="",["cc.notices"]={},["cc.updates"]=0,["cc.updates_summary"]="",["cc.updates_detail"]="",["cc.updates_checked"]="",["cc.updates_health"]="",
@@ -22,8 +24,10 @@ local behavior={stores={
     close=function(s) s["panel.open"]=false s["network.secret"]="" s["bluetooth.secret"]="" end,
     -- The control-center runtime authorizes and handles this host action (verb:source[:argument]).
     ["cc.do"]=function(_) end,
-    page=function(s,name) s["network.secret"]="" s["bluetooth.secret"]="" s["cc.page"]=name s["cc.drag"]="" s["cc.scroll"]=0 end,
-    detail=function(s,id) s["cc.page"]="detail" s["cc.detail"]=id s["cc.scroll"]=0 end,
+    -- Every page change alternates `cc.flip`, which the view turns into the 220 ms slide (also set by the host).
+    page=function(s,name) s["network.secret"]="" s["bluetooth.secret"]="" s["cc.page"]=name s["cc.drag"]="" s["cc.scroll"]=0 s["cc.flip"]=1-s["cc.flip"] end,
+    detail=function(s,id) s["cc.page"]="detail" s["cc.detail"]=id s["cc.scroll"]=0 s["cc.flip"]=1-s["cc.flip"] end,
+    ["session.select"]=function(_) end,["session.confirm"]=function(_) end,["session.cancel"]=function(_) end,
     -- Entering the editor copies the shown order into the draft; nothing is saved until a change.
     begin=function(s,joined)
         if not s["cc.edited"] then s["cc.order"]=store(split(joined)) end

@@ -587,6 +587,8 @@ pub fn chat(
 
 /// Control center (B0049), the QML right sidebar: 424 wide on the right edge under the pill.
 /// The topic leases behind its data sources exist only while the panel is open.
+/// The no-border control centre's width.
+const SHEET_WIDTH: f32 = 480.;
 pub fn control_center(
     client: crate::nacre_source::Client,
     palette: PathBuf,
@@ -595,7 +597,9 @@ pub fn control_center(
     trace: bool,
 ) -> Result<PanelSpec, Box<dyn std::error::Error>> {
     let fill = colors.get("surface")?;
-    let (width, height) = (424., 300.);
+    // No border: the control centre is a 480 px sheet, like the AI sidebar's card.
+    let sheet = !crate::placement::Frame::current().bordered;
+    let (width, height) = (if sheet { SHEET_WIDTH } else { 424. }, 300.);
     let mut fallback = crate::sound::fallback(fill);
     fallback.width = width;
     fallback.bounds = Rect::new(-32., -32., width + 64., height + 64.);
@@ -651,9 +655,13 @@ pub fn control_center(
                 colors.clone(),
                 cold.clone(),
             );
-            crate::reload::Runtime::panel_session(session, open)
+            let mut runtime = crate::reload::Runtime::panel_session(session, open)
                 .with_trace(trace)
-                .with_view_edge("right")?
+                .with_view_edge("right")?;
+            if !crate::placement::Frame::current().bordered {
+                runtime = runtime.with_sheet(f64::from(SHEET_WIDTH))?;
+            }
+            runtime
                 .with_frame(crate::placement::Attachment::ControlCenter, &colors)
                 .and_then(|runtime| runtime.with_control_center(control))
                 .and_then(|runtime| runtime.with_docked_details(client.clone()))

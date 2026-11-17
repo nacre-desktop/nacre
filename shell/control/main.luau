@@ -7,7 +7,9 @@ local reg=require("./tiles")
 local T=kit.tokens
 local function get(name) return ui.resolve_for_check(ui.bind(name)) end
 local popup=get("view.edge")=="top"
-local W,PAD,GAP=popup and 410 or reg.layout.width,popup and 15 or T.spacing.xl,popup and 12 or T.spacing.sm
+-- The no-border control centre is a 480 px sheet like the AI sidebar's card: the host says so and gives its width.
+local sheet=not popup and get("cc.sheet")
+local W,PAD,GAP=popup and 410 or (sheet and get("view.width") or reg.layout.width),popup and 15 or T.spacing.xl,popup and 12 or T.spacing.sm
 local INNER=W-2*PAD
 local BODY,CAPTION=T.text.body*4/3,T.text.caption*4/3
 local HEAD=T.spacing.huge
@@ -74,9 +76,19 @@ local function tool(id,icon,label,action,selected)
         fill=selected and "primaryContainer" or "transparent",color=selected and "onPrimaryContainer" or "onSurface",
         hover_fill="surfaceContainerHighest",focus_ring=false,on_activate=action}
 end
-local function header(title,back,tools)
+local function header(title,back,tools,arrow)
     local row={id="header",width=INNER,height=HEADER,gap=HEADER_GAP,align="center"}
-    if back then row[#row+1]=tool("back","arrow_back",ui.tr("bead.panel.control-back"),back) end
+    if back and (arrow or not sheet) then row[#row+1]=tool("back","arrow_back",ui.tr("bead.panel.control-back"),back)
+    elseif back then
+        -- The "‹ Control centre" chip: returns to the overview (or, on the catalog, to the editor).
+        local label=ui.tr("bead.panel.control-overview")
+        local chip_w=textw(label,CAPTION)+T.spacing.xl+T.spacing.compact
+        row[#row+1]=kit.Button{id="back",width=chip_w,height=30,padding=0,radius=15,shrink=0,fill=ui.alpha("onSurface",.07),hover_fill=ui.alpha("onSurface",.12),
+            focus_ring=false,aria_label=ui.tr("bead.panel.control-back"),on_activate=back,
+            ui.Row{id="back-row",width=chip_w,height=30,gap=T.spacing.xs,align="center",justify="center",
+                glyph("back-icon","chevron_left","onSurfaceVariant",14*4/3),
+                ui.Text{id="back-label",text=label,width=chip_w-T.spacing.xl-T.spacing.xs,height=18,shrink=0,font_size=CAPTION,font_weight=500,color="onSurfaceVariant"}}}
+    end
     row[#row+1]=ui.Text{id="title",text=title,height=HEAD,grow=1,shrink=1,font_size=T.text.headline*4/3,font_weight=500,color="onSurface"}
     for _,item in ipairs(tools or {}) do row[#row+1]=item end
     return {ui.Row(row),HEADER}
@@ -349,7 +361,7 @@ local function catalog()
     for _,t in ipairs(reg.tiles) do
         if not inside[t.id] then table.insert(usable(t) and ready or waiting,t) end
     end
-    local items={header(ui.tr("bead.panel.control-add"),ui.action("page","edit"))}
+    local items={header(ui.tr("bead.panel.control-add"),ui.action("page","edit"),nil,true)}
     for _,t in ipairs(ready) do
         local label=ui.tr(t.label)
         table.insert(items,{row_button("add-"..t.id,t.icon,label,"add",ui.action("add",t.id)),ROW})
@@ -373,8 +385,45 @@ local function notifications_page()
         before=prefix,before_height=prefix_height,before_gap=#get("cc.notices")>0 and T.spacing.md or 0,render=notice_row}
     return list,height
 end
+-- The power button's page: the session menu's actions (inline confirmation for restart, log out and power
+-- off, like the power dropdown) and the power mode tile.
+local function session_page()
+    local enabled=get("session.enabled") and not get("session.busy")
+    local question,asking=get("session.confirm"),get("session.confirm_action")
+    local entries={{"lock","bead.panel.session-lock","lock"},{"logout","bead.panel.session-logout","logout"},
+        {"suspend","bead.panel.session-suspend","bedtime"},{"reboot","bead.panel.session-reboot","restart_alt"},
+        {"shutdown","bead.panel.session-shutdown","power_settings_new"}}
+    local tile_h=T.spacing.huge+T.spacing.sm
+    local items={header(ui.tr("bead.panel.control-power-title"),ui.action("page","home"))}
+    for _,entry in ipairs(entries) do
+        local key,label=entry[1],ui.tr(entry[2])
+        table.insert(items,{kit.ToggleTile{id="act-"..key,width=INNER,height=tile_h,icon=entry[3],label=label,on=asking==key,
+            available=enabled or asking==key,aria_label=label,
+            on_activate=enabled and (asking==key and ui.action("session.confirm") or ui.action("session.select",key)) or nil},tile_h})
+    end
+    if question~="" and asking~="" then
+        local half=(INNER-2*T.spacing.md-T.spacing.sm)/2
+        local label=question
+        for _,entry in ipairs(entries) do if entry[1]==asking then label=ui.tr(entry[2]) end end
+        table.insert(items,{kit.Card{id="confirmation",width=INNER,height=104,shrink=0,padding=T.spacing.md,gap=T.spacing.md,radius=T.radii.medium,
+            ui.Text{id="question",text=question,width=INNER-2*T.spacing.md,height=28,font_size=T.text.title*4/3,color="onSurface"},
+            ui.Row{id="buttons",width=INNER-2*T.spacing.md,height=40,gap=T.spacing.sm,
+                kit.Button{id="cancel",width=half,height=40,padding=0,radius=T.radii.full,aria_label=ui.tr("bead.common.cancel"),on_activate=ui.action("session.cancel"),
+                    ui.Row{id="cancel-row",width=half,height=40,align="center",justify="center",
+                        ui.Text{id="cancel-label",text=ui.tr("bead.common.cancel"),width=half-T.spacing.md,height=22,text_align="center",font_size=BODY,color="onSurface"}}},
+                kit.Button{id="confirm",width=half,height=40,padding=0,radius=T.radii.full,fill="primary",aria_label=question,on_activate=enabled and ui.action("session.confirm") or nil,
+                    ui.Row{id="confirm-row",width=half,height=40,align="center",justify="center",
+                        ui.Text{id="confirm-label",text=label,width=half-T.spacing.md,height=22,text_align="center",font_size=BODY,color="onPrimary"}}}}},104})
+    end
+    local mode=reg.by_id.battery
+    if supported(mode) then table.insert(items,{build_tile(mode,INNER,reg.layout.sizes.half.height),reg.layout.sizes.half.height}) end
+    local message=get("session.message")
+    if message~="" then table.insert(items,{ui.Text{id="message",text=message,width=INNER,height=CAPTION*3,font_size=CAPTION,color="error"},CAPTION*3}) end
+    return stack("detail",items,T.spacing.sm)
+end
 local function detail()
     local id=get("cc.detail")
+    if id=="session" then return session_page() end
     local dock={network={function() return require("../status/network-body")({width=INNER}) end,"bead.panel.control-network"},
         bluetooth={function() return require("../status/bluetooth-body")({width=INNER}) end,"bead.panel.control-bluetooth"},
         battery={function() return require("../status/battery-body")({width=INNER}) end,"bead.panel.control-power-brightness"},
@@ -458,9 +507,18 @@ local max=get("cc.max_height")
 -- 0280: the dock keeps the frame height on every page. Its body is its hit region, so a body that shrank under
 -- the pointer handed it to the click-outside catcher and the hover close fired. Long pages scroll inside.
 local height=popup and math.min(max,content+TOP+PAD) or max
-local inner=body
+local inner,inner_height=body,content
 if content+TOP+PAD>max then
-    inner=ui.Scroll{id="scroll",scrollbar=false,scroll=ui.bind("cc.scroll"),width=INNER,height=height-TOP-PAD,body}
+    inner_height=height-TOP-PAD
+    inner=ui.Scroll{id="scroll",scrollbar=false,scroll=ui.bind("cc.scroll"),width=INNER,height=inner_height,body}
 end
-return kit.Panel{id="control-center",edge=get("view.edge"),open=ui.bind("panel.open"),fade=false,reveal=not ui.resolve_for_check(ui.bind("view.detached")),slide_distance=not popup and W or nil,width=W,height=height,padding=PAD,padding_top=TOP,
+if sheet then
+    -- A page change (every one alternates `cc.flip`) slides the new page in from the right: 28 px over 220 ms.
+    local flip=get("cc.flip")
+    local offset=math.floor(28*math.abs(flip-ui.animate("cc.slide",flip,.22,"out-cubic"))+.5)
+    if offset>0 then inner=ui.Column{id="slide",width=INNER,height=inner_height,padding_left=offset,shrink=0,inner} end
+end
+-- The sheet enters with a 16 px slide and a fade (the AI sidebar's card); the duration is the panel profile's, panel views author none.
+return kit.Panel{id="control-center",edge=get("view.edge"),open=ui.bind("panel.open"),fade=sheet and true or false,reveal=not sheet and not ui.resolve_for_check(ui.bind("view.detached")),slide_distance=sheet and 16 or (not popup and W or nil),
+    width=W,height=height,padding=PAD,padding_top=TOP,
     gap=GAP,radius=T.radii.medium,fill="surface",inner}

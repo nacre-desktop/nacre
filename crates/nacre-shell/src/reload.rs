@@ -3799,8 +3799,18 @@ impl Runtime {
         );
         let control = self.control.clone().ok_or("control adapter required")?;
         let pages = self.dock_status.clone();
+        // The power button's Session page: the session menu's data and handlers inside the control panel.
+        let menu = std::rc::Rc::new(crate::session_menu::SessionMenu::new(client));
+        for name in ["session.select", "session.confirm", "session.cancel"] {
+            self.actions.register(name, "session.control")?;
+        }
+        self.actions.grant("session.control");
+        self.session_menu = Some(menu.clone());
         self.session.set_projector(Box::new(move |stores| {
             let mut values = control.project(stores);
+            if stores.get("cc.detail") == Some(&bead::core::Value::Text("session".into())) {
+                values.extend(menu.project());
+            }
             if let Some(bead::core::Value::Text(page)) = stores.get("cc.detail")
                 && stores.get("cc.page") == Some(&bead::core::Value::Text("detail".into()))
                 && let Some(status) = pages.get(page)
@@ -4934,6 +4944,18 @@ impl Runtime {
                 "view.edge".into(),
                 bead::core::Value::Text(edge.into()),
             )]))
+            .map_err(|error| error.to_string())?;
+        Ok(self)
+    }
+    /// The no-border control centre: a right-edge sheet of `width` (`control/main.luau`).
+    pub fn with_sheet(mut self, width: f64) -> Result<Self, String> {
+        self.session.stores = self
+            .session
+            .stores
+            .reconcile(&BTreeMap::from([
+                ("cc.sheet".into(), bead::core::Value::Bool(true)),
+                ("view.width".into(), bead::core::Value::Number(width)),
+            ]))
             .map_err(|error| error.to_string())?;
         Ok(self)
     }
@@ -8821,6 +8843,11 @@ impl SceneSource for Runtime {
                         && values.get("cc.detail") == self.session.stores.get("cc.detail")
                     {
                         values.insert("panel.open".into(), bead::core::Value::Bool(false));
+                    } else if let Some(bead::core::Value::Number(flip)) =
+                        self.session.stores.get("cc.flip")
+                    {
+                        // A page change slides the new page in (the store alternates, see `control/behavior.luau`).
+                        values.insert("cc.flip".into(), bead::core::Value::Number(1. - flip));
                     }
                 }
 

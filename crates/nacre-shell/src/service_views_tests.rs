@@ -2221,6 +2221,7 @@ fn status_pill_click_routes_switch_escape_and_reopen() -> Result<()> {
     };
     let network = target("Open network status")?;
     let bluetooth = target("Open Bluetooth status")?;
+    let power = target("Open session menu")?;
     let host = crate::desktop::start_services();
     let mut runtime = crate::reload::Runtime::new(h.session)
         .with_shared_desktop(host.clone(), true)?
@@ -2274,6 +2275,16 @@ fn status_pill_click_routes_switch_escape_and_reopen() -> Result<()> {
     runtime.stage(UiEvent::Release)?;
     runtime.commit();
     opens("network");
+    // The power button opens the Session page of the same panel.
+    events.lock().unwrap().clear();
+    runtime.stage(UiEvent::Click {
+        x: power.0,
+        y: power.1,
+    })?;
+    runtime.commit();
+    runtime.stage(UiEvent::Release)?;
+    runtime.commit();
+    opens("session");
     host.stop();
     Ok(())
 }

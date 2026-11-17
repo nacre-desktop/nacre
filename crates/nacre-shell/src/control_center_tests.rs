@@ -1202,13 +1202,15 @@ fn base() -> BTreeMap<String, Value> {
 }
 fn harness(mut out: BTreeMap<String, Value>, page: &str, scale: f32) -> bead_test::Result<Harness> {
     out.insert("cc.page".into(), Value::Text(page.into()));
+    // The surface carries a 32 px margin each side of the 424 px drawer or the 480 px sheet.
+    let width = if out.get("cc.sheet") == Some(&Value::Bool(true)) { 544 } else { 488 };
     Harness::load(
         &root(),
         Path::new("control/main.luau"),
         &root().join("palette.json"),
         out,
         bead_test::Config {
-            width: 488,
+            width,
             height: 704,
             scale,
         },
@@ -1274,6 +1276,82 @@ fn control_center_pages_match_goldens() -> bead_test::Result<()> {
             }
             golden(name, &mut h, scale)?;
         }
+    }
+    Ok(())
+}
+
+/// The power button's Session page: the session menu's actions with their inline confirmation and the power mode
+/// tile. Drawer (B) at both scales; the no-border sheet (A, 480 wide with the back chip) at 1.
+#[test]
+fn session_page_matches_goldens() -> bead_test::Result<()> {
+    for (suffix, sheet, scale) in [("", false, 1.), ("", false, 1.5), ("-sheet", true, 1.)] {
+        for (name, asking) in [("session", ""), ("session-confirm", "reboot")] {
+            let mut out = base();
+            out.insert("cc.detail".into(), Value::Text("session".into()));
+            out.insert("session.enabled".into(), Value::Bool(true));
+            if !asking.is_empty() {
+                out.insert("session.confirm".into(), Value::Text("Confirm restart".into()));
+                out.insert("session.confirm_action".into(), Value::Text(asking.into()));
+            }
+            if sheet {
+                out.insert("cc.sheet".into(), Value::Bool(true));
+        out.insert("view.width".into(), Value::Number(480.));
+            }
+            let mut h = harness(out, "detail", scale)?;
+            let ids = node_ids(&h);
+            assert!(ids.iter().any(|i| i.contains("act-lock")), "{ids:?}");
+            assert!(ids.iter().any(|i| i.contains("act-shutdown")));
+            assert_eq!(ids.iter().any(|i| i.contains("confirmation")), !asking.is_empty());
+            let node = h
+                .session
+                .view_nodes()
+                .iter()
+                .find(|n| n.id.contains("act-reboot"))
+                .map(|n| (n.action.clone(), n.action_arg.clone()))
+                .ok_or("no restart tile")?;
+            assert_eq!(
+                node,
+                if asking.is_empty() {
+                    (Some("session.select".into()), Some(Value::Text("reboot".into())))
+                } else {
+                    (Some("session.confirm".into()), None)
+                }
+            );
+            golden(&format!("{name}{suffix}"), &mut h, scale)?;
+        }
+    }
+    Ok(())
+}
+
+/// The no-border control centre: the overview and a detail page in the 480 px card, with the "Control centre"
+/// chip that returns to the overview (the drawer keeps its arrow).
+#[test]
+fn sheet_pages_match_goldens() -> bead_test::Result<()> {
+    for (name, page, detail) in [("overview", "home", ""), ("notifications", "detail", "dnd")] {
+        let mut out = base();
+        out.insert("cc.detail".into(), Value::Text(detail.into()));
+        out.insert("cc.sheet".into(), Value::Bool(true));
+        out.insert("view.width".into(), Value::Number(480.));
+        let mut h = harness(out, page, 1.)?;
+        if page == "detail" {
+            let back = h
+                .session
+                .view_nodes()
+                .iter()
+                .find(|n| n.id.ends_with("header.back"))
+                .map(|n| (n.action.clone(), n.action_arg.clone()))
+                .ok_or("no back chip")?;
+            assert_eq!(back, (Some("page".into()), Some(Value::Text("home".into()))));
+            let chip = h.session.view_nodes().iter().find(|n| n.id.ends_with("header.back")).map(|n| bead::ui::rect(&n.draw));
+            assert!(chip.is_some_and(|r| r.w > 80.), "a chip, not the 32 px arrow: {chip:?}");
+        }
+        let motion = h.scene().motion.as_ref().ok_or("no panel motion")?;
+        assert_eq!(
+            (motion.edge, motion.fade, motion.reveal, motion.slide_distance),
+            (bead::core::Edge::Right, true, false, Some(16.)),
+            "the sheet enters with a 16 px slide and a fade"
+        );
+        golden(&format!("sheet-{name}"), &mut h, 1.)?;
     }
     Ok(())
 }
@@ -1835,6 +1913,7 @@ async fn docked_pages_keep_the_surface_route_actions_and_return_home() -> bead_t
         ),
         ("audio", "audio.output.mute", "cc.do", "toggle:audio.output"),
     ] {
+        let flip = runtime.session.stores.get("cc.flip").cloned();
         runtime.stage(UiEvent::Model(BTreeMap::from([
             ("cc.page".into(), Value::Text("detail".into())),
             ("cc.detail".into(), Value::Text(page.into())),
@@ -1844,6 +1923,11 @@ async fn docked_pages_keep_the_surface_route_actions_and_return_home() -> bead_t
             ),
         ])))?;
         runtime.commit();
+        assert_ne!(
+            runtime.session.stores.get("cc.flip"),
+            flip.as_ref(),
+            "{page}: a page change slides the new page in"
+        );
         let nodes = runtime.session.view_nodes();
         assert!(
             nodes
@@ -1868,6 +1952,13 @@ async fn docked_pages_keep_the_surface_route_actions_and_return_home() -> bead_t
         for scale in [1., 1.5] {
             let mut h = harness(runtime.session.stores.values().clone(), "detail", scale)?;
             golden(&format!("docked-{page}"), &mut h, scale)?;
+        }
+        // No border: the same page in the 480 px sheet (Wi-Fi is the reviewed one).
+        if page == "network" {
+            let mut values = runtime.session.stores.values().clone();
+            values.insert("cc.sheet".into(), Value::Bool(true));
+            values.insert("view.width".into(), Value::Number(480.));
+            golden("sheet-network", &mut harness(values, "detail", 1.)?, 1.)?;
         }
         let rect = bead::ui::rect(&node.draw);
         runtime.stage(UiEvent::Click {

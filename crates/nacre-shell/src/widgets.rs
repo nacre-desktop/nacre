@@ -221,6 +221,8 @@ pub fn control_page(kind: &str) -> Option<&'static str> {
         "battery" => Some("battery"),
         "notifications" => Some("notifications"),
         "updates" => Some("updates"),
+        // The power button's Session page.
+        "session" => Some("session"),
         _ => None,
     }
 }
