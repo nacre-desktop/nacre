@@ -17,6 +17,7 @@ pub fn fallback(fill: [u8; 4]) -> Scene {
             curve: None,
             edge: Edge::Right,
             slide_distance: None,
+            scale_from: None,
             body: None,
             fade: true,
             reveal: false,

@@ -425,6 +425,7 @@ fn start(
             curve: None,
             edge: panel_edge,
             slide_distance: None,
+            scale_from: None,
             body: None,
             fade: true,
             reveal: false,
