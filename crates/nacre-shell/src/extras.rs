@@ -143,6 +143,9 @@ struct State {
     thumb_retries: std::collections::BTreeMap<String, (u8, Instant)>,
     catalogue_settled_handles: std::collections::BTreeSet<String>,
     wallpaper_open: bool,
+    /// Keeps the wallpaper fade warm while Strand is open (B0317): the gate to ask and the hold taken from it.
+    warm_gate: Option<Arc<crate::shell_control::Gate>>,
+    warm: Option<crate::shell_control::WarmHold>,
     /// The desktop peek of this visit: the compositor's hold, or the workspace switch to undo.
     peek: Option<Peek>,
     /// Keeps the fallback's workspace call alive until it has been sent.
@@ -533,7 +536,10 @@ impl Extras {
             kind,
             client,
             topic,
-            state: RefCell::new(state),
+            state: RefCell::new(State {
+                warm_gate: crate::shell_control::live(),
+                ..state
+            }),
             glyphs: Default::default(),
             previews: None,
             wallpaper_settings,
@@ -1257,6 +1263,15 @@ impl Extras {
             && state.wallpaper_shown.take().is_some()
         {
             activate = state.wallpaper_origin.clone();
+        }
+        // Warm while open: taken on the open edge, dropped on every close (the same single site as the peek).
+        if opening {
+            state.warm = state
+                .warm_gate
+                .as_ref()
+                .map(|gate| gate.hold_wallpaper_warm());
+        } else if closing {
+            state.warm = None;
         }
         drop(state);
         // The one place the desktop peek starts and the one place it ends, whatever closed the picker.

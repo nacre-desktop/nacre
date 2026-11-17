@@ -2576,6 +2576,32 @@ async fn the_peek_is_held_while_the_picker_is_open_and_dropped_on_every_close() 
     }
 }
 #[tokio::test(flavor = "current_thread")]
+async fn the_wallpaper_fade_is_warm_exactly_while_the_picker_is_open() {
+    use bead::wayland::ShellControl;
+    for close in ["esc", "commit"] {
+        let mut lab = lab_with_topics(vec!["wallpaper.active".into()]).await;
+        let (extras, open, wake) = open_picker(&mut lab).await;
+        let gate = crate::shell_control::Gate::new();
+        let woken = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let counter = woken.clone();
+        gate.watch(Box::new(move || {
+            counter.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        }));
+        extras.project(&closed(&open), Some(wake.clone()));
+        extras.state.borrow_mut().warm_gate = Some(gate.clone());
+        assert!(!gate.wallpaper_warm());
+        extras.project(&open, Some(wake.clone()));
+        assert!(gate.wallpaper_warm(), "open takes the hold");
+        assert_eq!(woken.load(std::sync::atomic::Ordering::SeqCst), 1);
+        if close == "commit" {
+            extras.act("wallpaper:commit:/fixture/current.jpg", &open, wake.clone());
+        }
+        extras.project(&closed(&open), Some(wake));
+        assert!(!gate.wallpaper_warm(), "closing by {close} drops it");
+        assert_eq!(woken.load(std::sync::atomic::Ordering::SeqCst), 2);
+    }
+}
+#[tokio::test(flavor = "current_thread")]
 async fn an_error_reply_holds_nothing_and_an_empty_desktop_switches_no_workspace() {
     let mut lab = lab_with_topics(vec!["wallpaper.active".into()]).await;
     let (socket, request, _eof) = fake_niri("err", r#"{"Err":"unknown request"}"#);

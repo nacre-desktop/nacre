@@ -76,6 +76,21 @@ pub struct Gate {
     native_edge_source: AtomicBool,
     frame: Mutex<FrameState>,
     watchers: Mutex<Vec<Box<dyn Fn() + Send + Sync>>>,
+    /// Holders of the warm wallpaper fade (B0317): Strand while it is open.
+    warm: std::sync::atomic::AtomicUsize,
+}
+/// The shell's own gate, for panels that live outside `app.rs` (set once at start).
+static LIVE: Mutex<std::sync::Weak<Gate>> = Mutex::new(std::sync::Weak::new());
+pub fn live() -> Option<std::sync::Arc<Gate>> {
+    LIVE.lock().unwrap_or_else(|p| p.into_inner()).upgrade()
+}
+/// Keeps the wallpaper fade warm for as long as it lives; taking and dropping it wakes the watchers.
+pub struct WarmHold(std::sync::Arc<Gate>);
+impl Drop for WarmHold {
+    fn drop(&mut self) {
+        self.0.warm.fetch_sub(1, SeqCst);
+        self.0.notify();
+    }
 }
 #[derive(Default)]
 struct EdgeSnapshots {
@@ -368,7 +383,16 @@ impl Gate {
                 ..Default::default()
             }),
             watchers: Mutex::new(Vec::new()),
+            warm: std::sync::atomic::AtomicUsize::new(0),
         })
+    }
+    pub fn publish_live(self: &std::sync::Arc<Self>) {
+        *LIVE.lock().unwrap_or_else(|p| p.into_inner()) = std::sync::Arc::downgrade(self);
+    }
+    pub fn hold_wallpaper_warm(self: &std::sync::Arc<Self>) -> WarmHold {
+        self.warm.fetch_add(1, SeqCst);
+        self.notify();
+        WarmHold(self.clone())
     }
     pub fn set_native_edge_source(&self, active: bool) {
         if self.native_edge_source.swap(active, SeqCst) != active {
@@ -474,6 +498,9 @@ impl ShellControl for Gate {
     }
     fn bar_enabled(&self) -> bool {
         self.bar.load(SeqCst)
+    }
+    fn wallpaper_warm(&self) -> bool {
+        self.warm.load(SeqCst) > 0
     }
     /// Dashboard pages follow `dashboardEnabled`; the audio, network, Bluetooth and
     /// battery panels (and their hover peeks) follow `controlCenterEnabled`.
