@@ -1486,7 +1486,7 @@ pub async fn catalogue(
     })?;
     // Palettes are computed in the background and read back from the marker cache: the entries asked for first, or
     // (a full listing) every entry still without one, so Strand's caption has its dots before a pearl is focused.
-    let wanted: Vec<String> = match request.ids.as_deref() {
+    let wanted: Vec<String> = match request.ids.as_deref().filter(|ids| !ids.is_empty()) {
         Some(ids) => ids.to_vec(),
         None => catalogue
             .entries
