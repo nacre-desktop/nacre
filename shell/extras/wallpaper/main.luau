@@ -30,7 +30,7 @@ local glide=ui.resolve_for_check(ui.bind("extras.wallpaper.glide"))==true
 local strand=ui.animate("wallpaper-strand:"..tostring(count)..":"..tostring(animation_key),position,glide and W.glide_duration or W.move_duration,glide and "linear" or "out-quint")
 -- The entry/exit storyboard, in one place: a linear 0..1 clock over the whole 675 ms (180 ms on the way back, the shared panel close, so the
 -- exit is the exact reverse), and every part below reads its own span of `ms`. `extras.wallpaper.entry_ms` pins it
--- for goldens. Bead has no node opacity: the veil, ring, texts and pill fade through colour alpha (pearls only scale).
+-- for goldens. Bead has no node opacity: the veil, ring, texts and pill fade through colour alpha (pearls scale and fade through Image opacity).
 local opening=ui.resolve_for_check(ui.bind("panel.open"))~=false
 local pinned=ui.resolve_for_check(ui.bind("extras.wallpaper.entry_ms")) or -1 -- only goldens pin it (>= 0)
 local ms=pinned>=0 and pinned or ui.animate("wallpaper-strand-open",opening and 1 or 0,(opening and W.open_ms or W.close_ms)/1000,"linear")*W.open_ms
@@ -105,7 +105,10 @@ local function pearl_node(pearl)
   local item=pearl.item
   -- Drop: from the thread line, scale .15 -> 1 (out-cubic), 120 ms + 35 ms per slot out, 380 ms each.
   local from=120+35*math.min(5,math.floor(math.abs(pearl.offset)+.5))
-  local drop=1-(1-span(from,from+380))^3
+  local loc=span(from,from+380)
+  local drop=1-(1-loc)^3
+  -- Fades in with the drop; the outer pair rests at 50 % (offset 4 -> 5), also while the strand moves.
+  local alpha=math.min(1,loc*1.6)*(1-.5*math.max(0,math.min(1,math.abs(pearl.offset)-4)))
   local size,cy=pearl.size*(.15+.85*drop),thread_y+(pearl.y-thread_y)*drop
   local near=math.max(0,1-math.abs(pearl.offset))
   local edge=math.max(1.5,size*.028)
@@ -113,11 +116,11 @@ local function pearl_node(pearl)
   local kids={}
   if math.abs(pearl.offset)<=2.5 then
     kids[#kids+1]=ui.Image{id="shadow",position="absolute",left=-size*.12,top=-size*.04,width=size*1.24,height=size*1.24,
-      path=W.glow,tint={0,0,0,math.floor(110*math.min(1,size/(W.pearl_sizes[1]*s)+.35))}}
+      path=W.glow,tint={0,0,0,math.floor(110*alpha*math.min(1,size/(W.pearl_sizes[1]*s)+.35))}}
   end
   if path and path~="" then
     kids[#kids+1]=ui.Image{id="thumbnail",position="absolute",left=0,top=0,width=size,height=size,
-      icon=path,image_fit="cover",clip_polygon=DISC,aria_label=item.title or "Wallpaper"}
+      icon=path,image_fit="cover",clip_polygon=DISC,opacity=alpha,aria_label=item.title or "Wallpaper"}
   else
     kids[#kids+1]=ui.Box{id="missing-thumbnail",position="absolute",left=0,top=0,width=size,height=size,radius=size/2,fill="surfaceContainerHigh"}
     kids[#kids+1]=ui.Text{id="missing-icon",position="absolute",left=0,top=size/2-W.thumbnail_fallback_icon*s/2,width=size,height=W.thumbnail_fallback_icon*s,
@@ -126,15 +129,15 @@ local function pearl_node(pearl)
   end
   if item.kind=="video" then
     local badge=math.max(16,size*.2)
-    kids[#kids+1]=ui.Box{id="video-badge",position="absolute",left=size*.5-badge/2,top=size*.74-badge/2,width=badge,height=badge,radius=badge/2,fill={10,11,16,170},
-      border_width=1,border_color=W.nav_ring,
-      ui.Text{text="play_arrow",position="absolute",left=0,top=badge*.1,width=badge,height=badge*.85,family="Material Symbols Rounded",font_size=badge*.7,color=W.ink,text_align="center"}}
+    kids[#kids+1]=ui.Box{id="video-badge",position="absolute",left=size*.5-badge/2,top=size*.74-badge/2,width=badge,height=badge,radius=badge/2,fill=fade({10,11,16,170},alpha),
+      border_width=1,border_color=fade(W.nav_ring,alpha),
+      ui.Text{text="play_arrow",position="absolute",left=0,top=badge*.1,width=badge,height=badge*.85,family="Material Symbols Rounded",font_size=badge*.7,color=fade(W.ink,alpha),text_align="center"}}
   end
   kids[#kids+1]=ui.Box{id="edge",position="absolute",left=0,top=0,width=size,height=size,radius=size/2,fill="transparent",
-    border_width=edge,border_color=W.pearl_edge}
+    border_width=edge,border_color=fade(W.pearl_edge,alpha)}
   if near>.3 then
     kids[#kids+1]=ui.Image{id="sheen",position="absolute",left=0,top=0,width=size,height=size,path=W.sheen,
-      tint={W.pearl_sheen[1],W.pearl_sheen[2],W.pearl_sheen[3],math.floor(W.pearl_sheen[4]*near)}}
+      tint={W.pearl_sheen[1],W.pearl_sheen[2],W.pearl_sheen[3],math.floor(W.pearl_sheen[4]*near*alpha)}}
   end
   -- The chosen pearl keeps the pick; any other pearl only moves the strand.
   local request=(math.abs(pearl.offset)<.5 and "wallpaper:commit:" or "wallpaper:select:")..tostring(item.id)
@@ -281,5 +284,6 @@ children[#children+1]=ui.Text{id="status",position="absolute",left=24,top=height
 -- slide: the shared profile would fight it); a click on empty
 -- space closes the picker like Esc (the wallpaper goes back).
 return kit.Panel{id="extras",edge="top",open=ui.bind("panel.open"),width=width,height=height,shadow=false,reveal=false,fade=false,slide_distance=0,
+  key_repeat={delay=260,interval=95,min_interval=62,ramp_ms=800}, -- the held-arrow glide clock (spec v5f)
   radius=0,fill="transparent",padding=0,gap=0,body="body",on_activate=ui.action("close"),aria_label="Close wallpaper picker",
   ui.Box{id="body",position="absolute",left=0,top=0,width=width,height=height,fill="transparent",join_edge="top",table.unpack(children)}}
