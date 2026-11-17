@@ -2182,7 +2182,8 @@ fn wallpaper_strand_goldens() -> bead_test::Result<()> {
     // (name, kind, query, strand position, logical size, scale)
     for (name, kind, query, position, logical, scale) in [
         ("rest", "static", "", 6., (1440, 900), 1.),
-        ("rest", "static", "", 6., (1280, 800), 1.5),
+        ("rest", "static", "", 6., (1920, 1200), 1.5),
+        ("wide", "static", "", 6., (1920, 1080), 1.),
         ("mid", "static", "", 6.5, (1440, 900), 1.),
         ("empty", "static", "zzz", 1., (1440, 900), 1.),
         ("dynamic", "dynamic", "", 3., (1440, 900), 1.),

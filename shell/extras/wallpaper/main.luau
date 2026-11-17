@@ -113,18 +113,25 @@ local function pearl_node(pearl)
     ui.Box{width=size,height=size,fill="transparent",table.unpack(kids)}}
 end
 
--- Silk: a dark shadow stroke under five iridescent segments that fade at the ends.
-local thread_top=W.anchor_y*s*2
-local thread_height=height-thread_top
+-- Silk: a dark shadow stroke under five iridescent segments that fade at the ends. Each stroke gets a box
+-- that hugs its own piece of the curve, so the CPU renderer never needs a panel-sized repair scratch.
 local function silk(id,from,to,colour,stroke)
-  local points={}
+  local x0,x1,top,bottom=width*from,width*to,math.huge,-math.huge
+  local curve={}
   for step=0,12 do
-    local x=width*(from+(to-from)*step/12)
-    points[#points+1]={x/width,(base-a*math.cosh((x-centre.x)/a)-thread_top)/thread_height}
+    local x=x0+(x1-x0)*step/12
+    local y=base-a*math.cosh((x-centre.x)/a)
+    curve[#curve+1]={x,y}
+    top,bottom=math.min(top,y),math.max(bottom,y)
   end
-  return ui.Polyline{id=id,position="absolute",left=0,top=thread_top,width=width,height=thread_height,points=points,stroke_width=stroke*s,color=colour}
+  local pad=stroke*s+2
+  local left,box_width,box_height=x0-pad,x1-x0+2*pad,bottom-top+2*pad
+  local points={}
+  for _,point in ipairs(curve) do points[#points+1]={(point[1]-left)/box_width,(point[2]-top+pad)/box_height} end
+  return ui.Polyline{id=id,position="absolute",left=left,top=top-pad,width=box_width,height=box_height,points=points,stroke_width=stroke*s,color=colour}
 end
-local strand_nodes={silk("thread-shadow",0,1,W.silk_shadow,W.silk_stroke+2)}
+local strand_nodes={}
+for index in ipairs(W.silk) do strand_nodes[#strand_nodes+1]=silk("thread-shadow-"..index,(index-1)/#W.silk,index/#W.silk,W.silk_shadow,W.silk_stroke+2) end
 for index,colour in ipairs(W.silk) do strand_nodes[#strand_nodes+1]=silk("thread-"..index,(index-1)/#W.silk,index/#W.silk,colour,W.silk_stroke) end
 
 local knot=math.max(3,W.knot*s)
@@ -169,10 +176,17 @@ local function toggle(id,label,active,request,toggle_width)
       text=label,font_size=T.palette.description_font*s,text_align="center",color=active and W.toggle_active_ink or W.ink}}
 end
 
-local children={
-  ui.Image{id="veil",position="absolute",left=0,top=0,width=width,height=height,path=W.veil},
-  ui.Box{id="strand",position="absolute",left=0,top=-(1-entrance)*W.drop*s,width=width,height=height,fill="transparent",table.unpack(strand_nodes)},
-}
+-- Veil: flat translucent bands that follow the design gradient (.55 top, .30 at 40 %, .62 bottom). A stretched
+-- SVG would be rasterised at the full panel size, which overruns Bead's retained raster budget at 2880x1800.
+local function veil_alpha(at) return at<.4 and .55-(.55-.30)*at/.4 or .30+(.62-.30)*(at-.4)/.6 end
+local children={}
+for band=0,W.veil_bands-1 do
+  -- Even edges land on whole physical pixels at scale 1, 1.5 and 2, so the bands leave no antialiased seams.
+  local function edge(index) return index==W.veil_bands and height or 2*math.floor(height*index/W.veil_bands/2) end
+  local top,bottom=edge(band),edge(band+1)
+  children[#children+1]=ui.Box{id="veil-"..band,position="absolute",left=0,top=top,width=width,height=bottom-top,radius=0,fill={6,7,10,math.floor(255*veil_alpha((band+.5)/W.veil_bands))}}
+end
+children[#children+1]=ui.Box{id="strand",position="absolute",left=0,top=-(1-entrance)*W.drop*s,width=width,height=height,fill="transparent",table.unpack(strand_nodes)}
 
 if selected then
   local name_top=centre.y+W.name_top*s
