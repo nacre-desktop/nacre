@@ -47,7 +47,7 @@ return {
     veil_bands=40, sheen="extras/wallpaper/assets/sheen.svg", glow="extras/wallpaper/assets/glow.svg",
     ink={255,255,255,255}, ink_soft={245,241,248,200},
     silk={{244,201,218,110},{216,200,244,225},{185,214,245,245},{191,234,219,225},{242,228,186,110}},
-    silk_shadow={0,0,0,70}, knot_fill={235,228,242,255}, pearl_edge={0,0,0,80}, pearl_sheen={255,249,241,255},
+    silk_shadow={0,0,0,70}, knot_fill={235,228,242,255}, pearl_edge={0,0,0,80}, pearl_sheen={255,255,255,255},
     thumbnail_fallback_icon=36,
     name_top=210, name_height=48, name_font=40, meta_top=274, meta_height=20, meta_font=13, meta_gap=14,
     dot=12, dot_gap=6, dot_edge={255,255,255,76},

@@ -2222,6 +2222,91 @@ fn wallpaper_strand_goldens() -> bead_test::Result<()> {
     let _ = std::fs::remove_dir_all(&thumbnails);
     Ok(())
 }
+#[tokio::test(flavor = "current_thread")]
+async fn the_strands_wrapped_left_side_is_requested_with_the_rest_of_the_window() {
+    use bead::render::{ImageFit, Primitive, Rect, Scene};
+    let mut lab = lab_with_topics(vec!["wallpaper.active".into()]).await;
+    let (extras, open, wake) = open_picker(&mut lab).await;
+    {
+        let mut state = extras.state.borrow_mut();
+        state.catalogue_result = (0..36)
+            .map(|index| json!({"id":format!("/fixture/w-{index:02}"),"kind":"image","active":index == 0}))
+            .collect();
+    }
+    // Open at index 0 of 36: the left pearls are the catalogue's tail, 31..=35.
+    let window: Vec<usize> = [31, 32, 33, 34, 35, 0, 1, 2, 3, 4, 5].into();
+    let mut scene = Scene {
+        opacity: 1.,
+        motion: None,
+        resource_revision: 0,
+        asset_data: Default::default(),
+        clips: Default::default(),
+        layers: Vec::new(),
+        prepared: Default::default(),
+        font_files: Vec::new(),
+        width: 8.,
+        slide: None,
+        primitives: window
+            .iter()
+            .map(|index| Primitive::Image {
+                blur: 0.,
+                fit: ImageFit::Fill,
+                clip_polygon: None,
+                radius: 0.,
+                tint: None,
+                rect: Rect::new(0., 0., 8., 6.),
+                path: std::path::PathBuf::from(format!(
+                    "@icon:wallpaper:thumbnail:/fixture/w-{index:02}"
+                )),
+            })
+            .collect(),
+        offset: (0., 0.),
+        bounds: Rect::new(0., 0., 8., 6.),
+    };
+    extras.attach_images(&mut scene, Some(wake));
+    let (method, params) = lab.calls.recv().await.unwrap();
+    assert_eq!(method, "wallpaper.catalogue");
+    let ids: Vec<&str> = params["ids"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter_map(Json::as_str)
+        .collect();
+    for index in &window {
+        assert!(
+            ids.contains(&format!("/fixture/w-{index:02}").as_str()),
+            "pearl {index} must be requested: {ids:?}"
+        );
+    }
+    let _ = open;
+}
+#[test]
+fn the_first_pearl_requests_its_left_neighbours_from_the_catalogue_tail() -> bead_test::Result<()> {
+    let thumbnails = std::env::temp_dir().join(format!("strand-wrap-{}", std::process::id()));
+    // On open at index 0 of 36 the strand's left side is the tail of the catalogue: 31..=35.
+    let harness = strand_harness(36, "static", "", 1., (1440, 900), 1., &thumbnails)?;
+    let names: Vec<String> = harness
+        .scene()
+        .primitives
+        .iter()
+        .filter_map(|primitive| match primitive {
+            bead::render::Primitive::Image { path, .. } => path
+                .file_name()
+                .map(|name| name.to_string_lossy().into_owned())
+                .filter(|name| name.starts_with("thumb-")),
+            _ => None,
+        })
+        .collect();
+    for tail in 31..36 {
+        assert!(
+            names.contains(&format!("thumb-{tail}.png")),
+            "pearl {tail} must be requested on open at index 0: {names:?}"
+        );
+    }
+    assert_eq!(names.len(), 11);
+    let _ = std::fs::remove_dir_all(&thumbnails);
+    Ok(())
+}
 #[test]
 fn a_big_catalogue_renders_at_most_eleven_pearls() -> bead_test::Result<()> {
     let thumbnails = std::env::temp_dir().join(format!("strand-count-{}", std::process::id()));
