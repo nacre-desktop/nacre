@@ -1418,7 +1418,7 @@ impl ControlCenter {
             .unwrap_or_default();
         let saved = self.saved();
         let frame = crate::placement::Frame::current();
-        let frame_height = f64::from(frame.top) + f64::from(frame.bottom);
+        let frame_height = f64::from(frame.vertical_inset());
         let st = self.st.borrow();
         BTreeMap::from([
             ("cc.src".into(), Value::list(self.sources())),

@@ -107,14 +107,14 @@ return {id="title",title="Title",icon="title",category="bar",data={topics={},act
             if ui.text_width(title,font,t.title_font)>animated_width then
                 shown=middle_ellipsize(full,animated_width,t.title_font)
             end
-            return ui.Group{ui.Row{id="title-cue",position="absolute",left="28%",right="28%",top=7,height=36,justify="center",visible=ui.bind("bar.title.cue.visible"),
+            return ui.Group{ui.Row{id="title-cue",position="absolute",left="28%",right="28%",top=c.islands and 5 or 7,height=36,justify="center",visible=ui.bind("bar.title.cue.visible"),
         ui.Box{id="cue",width=animated_cue+4,height=36,radius=18,fill=ui.alpha("primary",ui.bind("bar.title.cue.halo")),
             ui.Box{id="body",position="absolute",left=2,top=2,width=animated_cue,height=32,radius=16,fill=ui.alpha("primary",ui.bind("bar.title.cue.body")),border_width=1,border_color=ui.alpha("primary",ui.bind("bar.title.cue.border"))},
         },
     },
-    ui.Button{id="title-band",position="absolute",left="28%",right="28%",top=(header-t.title_height)/2,height=t.title_height,direction="row",justify="center",align="center",fill="transparent",hover_fill="transparent",focus_ring=false,focus_on_pointer=false,activate_on_release=true,edge_hover=true,aria_label=ui.tr("bead.bar.active-window"),on_activate=ui.action("bar.title"),
+    ui.Button{id="title-band",position="absolute",left="28%",right="28%",top=c.band_top,height=c.band_height,direction="row",justify="center",align="center",fill="transparent",hover_fill="transparent",focus_ring=false,focus_on_pointer=false,activate_on_release=true,edge_hover=true,aria_label=ui.tr("bead.bar.active-window"),on_activate=ui.action("bar.title"),
         -- The drag handle covers the band; it must stay part of the edge-hover target.
-        ui.Row{id="title-content",width=animated_width+t.title_icon+t.title_gap,height=t.title_height,justify="center",align="center",gap=t.title_gap,drag_payload=props.instance.iid,edge_hover=true,
+        ui.Row{id="title-content",width=animated_width+t.title_icon+t.title_gap+(c.islands and 32 or 0),height=c.band_height,justify="center",align="center",gap=t.title_gap,drag_payload=props.instance.iid,edge_hover=true,fill=c.i_fill,border_width=c.i_stroke,border_color=c.i_stroke_color,radius=c.islands and t.pill_radius or nil,
             table.unpack(title_children(shown,animated_width,true,true)),
         },
         trace(props.instance.iid),
@@ -156,19 +156,20 @@ return {id="title",title="Title",icon="title",category="bar",data={topics={},act
             local kids={}
             if centered then
                 local cue=math.min(t.title_cue_max,content_width+10)
-                table.insert(kids,ui.Row{id="title-cue",position="absolute",left="28%",right="28%",top=7,height=36,justify="center",visible=ui.bind("bar.title.cue.visible"),
+                table.insert(kids,ui.Row{id="title-cue",position="absolute",left="28%",right="28%",top=c.islands and 5 or 7,height=36,justify="center",visible=ui.bind("bar.title.cue.visible"),
                     ui.Box{id="cue",width=cue+4,height=36,radius=18,fill=ui.alpha("primary",ui.bind("bar.title.cue.halo")),
                         ui.Box{id="body",position="absolute",left=2,top=2,width=cue,height=32,radius=16,fill=ui.alpha("primary",ui.bind("bar.title.cue.body")),border_width=1,border_color=ui.alpha("primary",ui.bind("bar.title.cue.border"))}}})
             end
-            local content={id="title-content",width=content_width,height=t.title_height,gap=gap,align="center",justify="center",
+            local pad=c.islands and 32 or 0
+            local content=c.island{id="title-content",width=content_width+pad,height=c.band_height,gap=gap,align="center",justify="center",radius=c.islands and t.pill_radius or nil,
                 drag_payload=props.instance.iid,edge_hover=behavior=="hover",clip_children=true}
             for _,kid in title_children(shown,text_width,show_icon,show_text) do table.insert(content,kid) end
-            local row={id=centered and "title-band" or "title-local",height=t.title_height,direction="row",gap=0,align="center",justify="center",
+            local row={id=centered and "title-band" or "title-local",height=c.band_height,direction="row",gap=0,align="center",justify="center",
                 edge_hover=behavior=="hover",activate_on_release=true,focus_on_pointer=false,on_activate=action,aria_label=ui.tr("bead.bar.active-window")}
             if centered then
-                row.position="absolute"; row.left="28%"; row.right="28%"; row.top=(header-t.title_height)/2
+                row.position="absolute"; row.left="28%"; row.right="28%"; row.top=c.band_top
                 row.fill="transparent"; row.hover_fill="transparent"; row.focus_ring=false
-            else row.width=content_width end
+            else row.width=content_width+pad end
             table.insert(row,ui.Row(content))
             if centered and show_text then
                 table.insert(row,trace(props.instance.iid))

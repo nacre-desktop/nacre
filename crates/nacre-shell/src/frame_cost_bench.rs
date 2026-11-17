@@ -308,6 +308,12 @@ fn slide(open_scene: &Scene, opening: bool) -> Steps {
 #[ignore = "manual B0185 frame-cost benchmark; release build on a build host"]
 fn frame_cost_bench() {
     crate::i18n::init();
+    // NACRE_BENCH_BORDER=none measures the no-border cards; the default measures the frame.
+    if std::env::var("NACRE_BENCH_BORDER").as_deref() == Ok("none") {
+        crate::placement::Frame::set_current(crate::placement::Frame::from_settings(
+            &crate::prefs::Prefs::default().frame_settings(),
+        ));
+    }
     // B0202: building the routes again is what a panel reopen pays (new sessions).
     let started = Instant::now();
     drop(scenes());

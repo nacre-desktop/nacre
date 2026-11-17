@@ -1100,6 +1100,62 @@ fn bar_counts_share_icon_hit_areas_and_centered_line_boxes() -> Result<()> {
     bar_golden(&light.pose((0., 0.), 1.)?, "bar-parity-light-1")
 }
 
+/// Screen border "none" (the default): transparent bar, three islands and the power button on the silk
+/// thread. Goldens: dark at 1 and 1.5, light, a 21:9 width, and a busy desktop (thread at 30 %).
+#[test]
+fn no_border_bar_floats_islands_on_a_thread_that_fades_with_windows() -> Result<()> {
+    let island_bar = |palette: &str, width, scale, busy: bool| -> Result<bead_test::Frame> {
+        let mut values = super::initial_models()?;
+        values.extend(parity_models());
+        values.extend([
+            ("bar.frame".into(), Value::Bool(false)),
+            ("bar.height".into(), Value::Number(44.)),
+        ]);
+        if busy {
+            values.insert(
+                "bead.workspaces".into(),
+                Value::list(vec![
+                    serde_json::json!({"id":"one","index":1,"label":"1","active":true,"occupied":true,"hinted":true,"shown":1,"app1":"terminal"}),
+                    serde_json::json!({"id":"two","index":2,"label":"2"}),
+                ]),
+            );
+        }
+        let mut h = Harness::load(
+            &root(),
+            Path::new("bar/main.luau"),
+            &root().join(palette),
+            values,
+            Config {
+                width,
+                height: 44,
+                scale,
+            },
+        )?;
+        settle_harness_animations(&mut h)?;
+        h.pose((0., 0.), 1.)
+    };
+    bar_golden(
+        &island_bar("palette.json", 1920, 1., false)?,
+        "bar-islands-1",
+    )?;
+    bar_golden(
+        &island_bar("palette.json", 1920, 1.5, false)?,
+        "bar-islands-1.5",
+    )?;
+    bar_golden(
+        &island_bar("tests/fixtures/palette-light.json", 1920, 1., false)?,
+        "bar-islands-light-1",
+    )?;
+    bar_golden(
+        &island_bar("palette.json", 3440, 1., false)?,
+        "bar-islands-wide-1",
+    )?;
+    bar_golden(
+        &island_bar("palette.json", 1920, 1., true)?,
+        "bar-islands-busy-1",
+    )
+}
+
 /// Owner 2026-11-14: Settings > Top bar > Workspace style "App icons" with the +N fold off: the active
 /// workspace lists every window. The harness has no deterministic desktop-icon fixtures, so the rows
 /// carry empty icon names and the goldens show the category-glyph fallback of that style.

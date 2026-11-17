@@ -90,7 +90,7 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
                 local box=size+t.strand_border
                 local left=on and 0 or (t.strand_current-t.strand_overlap)+(i-2)*(t.strand_other-t.strand_overlap)
                 pearls[#pearls+1]=ui.Box{id="stack-pearl-"..i,position="absolute",left=left-t.strand_border/2,top=(t.workspace_height-box)/2,width=box,height=box,radius=box/2,
-                    fill=on and ui.tint(pearl_accent(0),t.pearl_cream,.4) or "outline",border_width=t.strand_border,border_color="surfaceContainer"}
+                    fill=on and ui.tint(pearl_accent(0),t.pearl_cream,.4) or "outline",border_width=t.strand_border,border_color=c.base}
             end
             local collection_control=show_collections and kit.Button{id="collection-badge",width=stack_control_width,height=cap_style and t.cap_height or t.workspace_height,padding=0,radius=cap_style and t.cap_radius or t.workspace_radius,shrink=0,
                     fill=cap_style and "surfaceContainerHighest" or "transparent",hover_fill=cap_style and "surfaceBright" or "transparent",aria_label=current_collection_label,on_activate=c.popouts and ui.action("collection.switcher.open") or nil,
@@ -99,11 +99,11 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
                         ui.Text{id="collection-name",text=cap_name,width=cap_name_width,height=math.ceil(ui.text_line_height(stack_family,t.cap_font)),shrink=0,font_size=t.cap_font,family=stack_family,color="onSurface"}}
                     or ui.Box{id="strand",position="absolute",left=t.strand_pad,top=0,width=strand_width,height=t.workspace_height,table.unpack(pearls)}}
                 or nil
-            return ui.Row{id="capsule",width=pill_width,height=t.pill_height,padding_left=5,padding_right=5,gap=capsule_gap,radius=t.pill_radius,fill="surfaceContainer",clip_children=false,align="center",
+            return ui.Row{id="capsule",width=pill_width,height=t.pill_height,padding_left=5,padding_right=5,gap=capsule_gap,radius=t.pill_radius,fill=c.islands and "transparent" or "surfaceContainer",clip_children=false,align="center",
             -- QML workspaceThread: a 1 px primary -> secondary -> tertiary line at 12 % behind the pearls, inset 16 px.
             thread and kit.tokens.gradients and ui.Image{id="thread",position="absolute",left=21+collection_width,right=21,top=(t.pill_height-1)/2,height=1,path="bar/assets/workspace-thread.themed.svg"} or ui.Box{id="thread",width=0,height=0,shrink=0,visible=false},
             active_left and ui.Box{id="active-capsule",position="absolute",left=ui.animate("workspaces.active.left:"..props.instance.iid,active_left,.18,"out-cubic"),top=(t.pill_height-t.active_height)/2,width=ui.animate("workspaces.active.width:"..props.instance.iid,active_width,.16,"out-cubic"),height=t.active_height,radius=t.active_radius,
-                fill=active_icon_mode and active_accent or ui.tint("surfaceContainer",active_accent,.15),border_width=1,border_color=ui.alpha(active_accent,.24)} or ui.Box{id="active-capsule",width=0,height=0,visible=false,shrink=0},
+                fill=active_icon_mode and active_accent or ui.tint(c.base,active_accent,.15),border_width=1,border_color=ui.alpha(active_accent,.24)} or ui.Box{id="active-capsule",width=0,height=0,visible=false,shrink=0},
             -- Keep the child list dense when no stack is advertised, so Repeat still renders.
             collection_control or ui.Box{id="collection-segment",width=0,height=0,visible=false,shrink=0},
             ui.Repeat{id="workspaces",model=ui.bind("bead.workspaces"),key="id",render=function(item)
@@ -170,7 +170,7 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
                     -- cream with a neutral cream/secondary shading and specular highlight over it, so any blended accent works.
                     -- Gradients on: the plain accent under the shading; off: the flat warmed colour (QML numberSurface).
                     local shaded=lit and kit.tokens.gradients
-                    add(ui.Box{id="pearl",position="absolute",left=16-size/2,top=t.workspace_height/2-size/2,width=size,height=size,radius=size/2,fill=lit and (shaded and accent or ui.tint(accent,t.pearl_cream,on and .4 or .1)) or "surfaceContainer"})
+                    add(ui.Box{id="pearl",position="absolute",left=16-size/2,top=t.workspace_height/2-size/2,width=size,height=size,radius=size/2,fill=lit and (shaded and accent or ui.tint(accent,t.pearl_cream,on and .4 or .1)) or c.base})
                     if shaded then
                         add(ui.Image{id="enamel-gradient",position="absolute",left=16-size/2,top=t.workspace_height/2-size/2,width=size,height=size,
                             path="bar/assets/pearl-"..(on and "current" or "occupied")..".themed.svg"})

@@ -782,14 +782,23 @@ mod tests {
         gate.configure_frame(lips(), ["dashboard-today", "sound"].map(String::from));
         gate.apply(&Prefs::decode(&json!({}), &json!(null)));
         let chrome = gate.edge_chrome();
-        assert_eq!(chrome.reserved, [0; 4], "the bar surface holds its own zone");
+        assert_eq!(
+            chrome.reserved, [0; 4],
+            "the bar surface holds its own zone"
+        );
         assert_eq!(gate.bar_thickness(), Some(44));
         assert!(chrome.lips.is_empty(), "no frame, no lips");
         let before = gate.decoration_variant();
-        gate.apply(&Prefs::decode(&json!({"screenBorder": "frame"}), &json!(null)));
+        gate.apply(&Prefs::decode(
+            &json!({"screenBorder": "frame"}),
+            &json!(null),
+        ));
         assert_eq!(gate.bar_thickness(), Some(50));
         assert_ne!(gate.decoration_variant(), before, "switching repaints live");
-        gate.apply(&Prefs::decode(&json!({"screenBorder": "bogus"}), &json!(null)));
+        gate.apply(&Prefs::decode(
+            &json!({"screenBorder": "bogus"}),
+            &json!(null),
+        ));
         assert_eq!(gate.bar_thickness(), Some(44), "a stale value means none");
     }
 
@@ -825,13 +834,16 @@ mod tests {
         assert_eq!(ids(&gate.edge_chrome()), [("dashboard", 50.)]);
         let variant = gate.decoration_variant();
         gate.apply(&Prefs::decode(
-            &json!({"edgeHandleTop": false, "edgeHandleStyle": "arrows"}),
+            &json!({"edgeHandleTop": false, "edgeHandleStyle": "arrows", "screenBorder": "frame"}),
             &json!(null),
         ));
         assert_eq!(ids(&gate.edge_chrome()), [("controls", 10.)]);
         assert!(gate.frame_lock().arrows);
         assert_ne!(gate.decoration_variant(), variant, "the lip art changed");
-        gate.apply(&Prefs::decode(&json!({}), &json!(null)));
+        gate.apply(&Prefs::decode(
+            &json!({"screenBorder": "frame"}),
+            &json!(null),
+        ));
         assert!(!gate.frame_lock().arrows);
         assert_eq!(gate.edge_chrome().lips.len(), 2);
     }
@@ -851,7 +863,10 @@ mod tests {
             counter.fetch_add(1, SeqCst);
         }));
         let variant = gate.decoration_variant();
-        gate.apply(&Prefs::decode(&json!({"lipHoverDelay": 500}), &json!(null)));
+        gate.apply(&Prefs::decode(
+            &json!({"lipHoverDelay": 500, "screenBorder": "frame"}),
+            &json!(null),
+        ));
         assert_eq!(woke.load(SeqCst), 1);
         assert_eq!(gate.decoration_variant(), variant);
         assert_eq!(gate.edge_chrome().hover_delay_ms, 500);
@@ -859,6 +874,10 @@ mod tests {
     #[test]
     fn child_backdrops_preserve_parent_lips_without_creating_duplicate_lips() {
         let gate = Gate::new();
+        gate.apply(&Prefs::decode(
+            &json!({"screenBorder": "frame"}),
+            &json!(null),
+        ));
         gate.parent_lips(
             crate::frame_config::parse(
                 include_bytes!("../../../shell/frame/behavior.luau"),
@@ -884,7 +903,7 @@ mod tests {
         assert!(covers(3., 600.) && covers(1917., 600.) && covers(960., 3.));
         assert!(!covers(200., 600.));
         gate.apply(&Prefs::decode(
-            &serde_json::json!({"aiSidebarEnabled":false}),
+            &serde_json::json!({"aiSidebarEnabled":false,"screenBorder":"frame"}),
             &serde_json::Value::Null,
         ));
         // The parent's strips hold the frame; the chat app reserving it again shrank windows.
@@ -929,7 +948,7 @@ mod tests {
         assert!(gate.edge_chrome().external_source);
         assert!(gate.edge_input_regions((1000, 800)).is_empty());
         gate.apply(&Prefs::decode(
-            &json!({"clickEdgeMenus":true}),
+            &json!({"clickEdgeMenus":true,"screenBorder":"frame"}),
             &json!(null),
         ));
         assert!(!gate.edge_chrome().external_source);

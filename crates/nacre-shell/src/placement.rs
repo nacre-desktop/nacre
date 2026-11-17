@@ -270,6 +270,59 @@ fn externals() -> Vec<External> {
         .visible_geometry()
 }
 static LIVE: std::sync::Mutex<Frame> = std::sync::Mutex::new(Frame::DEFAULT);
+
+type PanelWatcher = Arc<dyn Fn(bool) + Send + Sync>;
+/// How many panels are open, and the bars to tell when that goes between none and some (the
+/// no-border bar's thread steps back while any panel is open).
+static PANELS: std::sync::Mutex<(usize, u64, Vec<(u64, PanelWatcher)>)> =
+    std::sync::Mutex::new((0, 0, Vec::new()));
+/// A panel runtime reports its visibility; `shown` is its own last report.
+pub fn panel_visible(shown: &mut bool, now: bool) {
+    if std::mem::replace(shown, now) == now {
+        return;
+    }
+    let (any, watchers) = {
+        let mut panels = PANELS.lock().unwrap_or_else(|p| p.into_inner());
+        panels.0 = if now {
+            panels.0 + 1
+        } else {
+            panels.0.saturating_sub(1)
+        };
+        let any = panels.0 > 0;
+        (
+            any,
+            if now && panels.0 == 1 || !now && !any {
+                panels.2.clone()
+            } else {
+                Vec::new()
+            },
+        )
+    };
+    for (_, watcher) in watchers {
+        watcher(any);
+    }
+}
+pub fn panels_open() -> bool {
+    PANELS.lock().unwrap_or_else(|p| p.into_inner()).0 > 0
+}
+/// Unregisters on drop.
+pub struct PanelWatch(u64);
+pub fn watch_panels(changed: PanelWatcher) -> PanelWatch {
+    let mut panels = PANELS.lock().unwrap_or_else(|p| p.into_inner());
+    panels.1 += 1;
+    let id = panels.1;
+    panels.2.push((id, changed));
+    PanelWatch(id)
+}
+impl Drop for PanelWatch {
+    fn drop(&mut self) {
+        PANELS
+            .lock()
+            .unwrap_or_else(|p| p.into_inner())
+            .2
+            .retain(|(id, _)| *id != self.0);
+    }
+}
 /// The Nacre bar's own height inside the header (the rest is the top frame edge).
 pub const BAR_HEIGHT: f32 = 40.;
 /// The no-border bar's zone: 34 px islands, 6 px from the top, 4 px below.
@@ -1019,6 +1072,14 @@ impl Frame {
             rects.push(Rect::new(0., h - self.bottom, w, self.bottom));
         }
         rects
+    }
+    /// The height panels lose to the chrome: the frame's top and bottom edges, or a card's insets.
+    pub fn vertical_inset(self) -> f32 {
+        if self.bordered {
+            self.top + self.bottom
+        } else {
+            self.top + CARD_GAP + CARD_INSET
+        }
     }
     pub fn panel(
         self,

@@ -768,6 +768,8 @@ pub struct Runtime {
     /// B0193 `pause_on`: the canvas of this output was told it is covered (fullscreen/lock).
     widgets_covered: bool,
     wallpaper_luma_watch: Option<crate::wallpaper_luma::Watch>,
+    panel_shown: bool,
+    panel_watch: Option<crate::placement::PanelWatch>,
     widgets_client: Option<crate::nacre_source::Client>,
     widget_editor: bool,
     widgets_close_on_commit: bool,
@@ -920,6 +922,7 @@ mod panel_animation_wakeup_tests {
 }
 impl Drop for Runtime {
     fn drop(&mut self) {
+        crate::placement::panel_visible(&mut self.panel_shown, false);
         if self.widget_app && self.widget_drag_app_announced {
             let delivered =
                 crate::widgets::widget_drag::app_state_close(std::time::Duration::from_millis(145));
@@ -2719,6 +2722,8 @@ impl Runtime {
             widget_canvas_projection: None,
             widgets_covered: false,
             wallpaper_luma_watch: None,
+            panel_shown: false,
+            panel_watch: None,
             widgets_client: None,
             widget_editor: false,
             widgets_close_on_commit: false,
@@ -5564,6 +5569,15 @@ impl SceneSource for Runtime {
         }
         if self.bar {
             let wakeup = wakeup.clone();
+            let panels = wakeup.clone();
+            self.panel_watch = Some(crate::placement::watch_panels(std::sync::Arc::new(
+                move |open| {
+                    panels(UiEvent::Model(BTreeMap::from([(
+                        "bar.panel.open".into(),
+                        bead::core::Value::Bool(open),
+                    )])))
+                },
+            )));
             self.wallpaper_luma_watch = Some(crate::wallpaper_luma::watch(std::sync::Arc::new(
                 move || {
                     wakeup(UiEvent::Model(BTreeMap::from([(
@@ -9030,6 +9044,7 @@ impl SceneSource for Runtime {
                 }
             }
             UiEvent::PanelVisibility(open) => {
+                crate::placement::panel_visible(&mut self.panel_shown, open);
                 if self.chat.is_some() {
                     crate::app::notify_panel_visibility(open);
                 }

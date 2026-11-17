@@ -735,18 +735,30 @@ mod tests {
         );
         // No border is the default: the 44 px bar zone and no frame.
         let frame = |desktop: Json| {
-            Prefs::decode(&json!({"screenBorder": "frame", "frameTopEnabled": desktop}), &Json::Null)
+            Prefs::decode(
+                &json!({"screenBorder": "frame", "frameTopEnabled": desktop}),
+                &Json::Null,
+            )
         };
         assert_eq!(d.bar_stores()["bar.height"], bead::core::Value::Number(44.));
         assert_eq!(d.bar_stores()["bar.frame"], bead::core::Value::Bool(false));
-        assert_eq!(set.bar_stores()["bar.height"], bead::core::Value::Number(44.));
+        assert_eq!(
+            set.bar_stores()["bar.height"],
+            bead::core::Value::Number(44.)
+        );
         assert_eq!(
             frame(json!(false)).bar_stores()["bar.height"],
             bead::core::Value::Number(40.),
             "bar only: no top frame edge"
         );
-        assert_eq!(frame(json!(true)).bar_stores()["bar.height"], bead::core::Value::Number(50.));
-        assert_eq!(frame(json!(true)).bar_stores()["bar.frame"], bead::core::Value::Bool(true));
+        assert_eq!(
+            frame(json!(true)).bar_stores()["bar.height"],
+            bead::core::Value::Number(50.)
+        );
+        assert_eq!(
+            frame(json!(true)).bar_stores()["bar.frame"],
+            bead::core::Value::Bool(true)
+        );
     }
     #[test]
     fn workspace_and_rail_prefs_follow_qml_defaults_and_wrong_types() {

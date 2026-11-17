@@ -928,7 +928,7 @@ return {
         ["settings.title"]="",["settings.description"]="",["settings.message"]="",["settings.notice"]="",
         ["settings.noticed"]=false,["settings.writable"]=false,["settings.readonly"]=true,
         ["settings.searching"]=false,["settings.empty"]=true,
-        ["bar.height"]=50,["bar.launcher"]=true,["bar.popouts"]=true,["bar.reconnecting"]=false,
+        ["bar.height"]=50,["bar.frame"]=true,["bar.panel.open"]=false,["bar.launcher"]=true,["bar.popouts"]=true,["bar.reconnecting"]=false,
         ["bar.collections"]={},["bar.collection.current"]="",["bar.collection.output"]="",
         ["bar.workspace.enabled"]=true,["bar.tray.enabled"]=true,["bar.window.focus.enabled"]=true,
         ["bar.workspace.origins"]={},["bar.dashboard.enabled"]=true,["bar.tray.visible"]=false,

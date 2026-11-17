@@ -15,7 +15,7 @@ return {stores={
     ["widgets.drag.app_width"]=0,["widgets.drag.app_height"]=0,
     ["widgets.drag.target_output_id"]="",
     ["view.width"]=0,["view.height"]=0,
-    ["bar.height"]=50,["bar.launcher"]=false,["bar.popouts"]=false,["bar.reconnecting"]=false,
+    ["bar.height"]=50,["bar.frame"]=true,["bar.panel.open"]=false,["bar.launcher"]=false,["bar.popouts"]=false,["bar.reconnecting"]=false,
     ["bar.workspace.enabled"]=true,["bar.tray.enabled"]=true,["bar.window.focus.enabled"]=true,
     ["bar.workspace.origins"]={},["bar.dashboard.enabled"]=true,["bar.tray.visible"]=false,
     ["bar.collections"]={},["bar.collection.current"]="",["bar.collection.output"]="",

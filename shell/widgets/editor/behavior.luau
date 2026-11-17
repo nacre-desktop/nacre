@@ -246,7 +246,7 @@ return {
         ["widgets.select"]="",["widgets.scroll"]=0,["widgets.editing"]=true,["panel.open"]=true,
         ["view.width"]=0,["view.height"]=0,
         -- Bar defaults needed by widgets/context during catalogue live previews.
-        ["bar.height"]=50,["bar.launcher"]=false,["bar.popouts"]=false,["bar.reconnecting"]=false,
+        ["bar.height"]=50,["bar.frame"]=true,["bar.panel.open"]=false,["bar.launcher"]=false,["bar.popouts"]=false,["bar.reconnecting"]=false,
         ["bar.workspace.enabled"]=true,["bar.tray.enabled"]=true,["bar.window.focus.enabled"]=true,
         ["bar.workspace.origins"]={},["bar.dashboard.enabled"]=true,["bar.tray.visible"]=false,
         ["bar.collections"]={},["bar.collection.current"]="",["bar.collection.output"]="",

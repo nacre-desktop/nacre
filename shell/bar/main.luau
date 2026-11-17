@@ -34,7 +34,27 @@ else regions.right.before=extras end
 -- Placed widgets come after the title's band so they sit above it for input.
 regions.centre.after=placed
 -- B0211: drags draw nothing on the bar (no outline, no insertion slot); the ghost is the preview.
-return ui.Host{edge="top",id="bar",shape="strip-h",grid={tiles=layout.tiles,mode="content",regions=regions},layout=flow,catalogue=widgets.catalogue,render=render,
+local host={edge="top",id="bar",shape="strip-h",grid={tiles=layout.tiles,mode="content",regions=regions},layout=flow,catalogue=widgets.catalogue,render=render,
     metadata=require("../widgets/editing").seed(canonical,width,ui.resolve_for_check(ui.bind("widgets.canvas.height")),"bar"),
     width="100%",height=c.header,radius=0,fill="surface",padding_left=15,padding_right=15,align="center",justify="space-between",direction="row",
 }
+if c.islands then
+    -- No border: a transparent bar. The silk thread runs behind the islands (the first child), full strength on a
+    -- clear desktop and 30 % while a window is on the active workspace; 220 ms, on the thread layer only.
+    local busy=false
+    for _,workspace in ui.resolve_for_check(ui.bind("bead.workspaces")) or {} do
+        if workspace.active and workspace.occupied then busy=true end
+    end
+    busy=busy or ui.resolve_for_check(ui.bind("bar.panel.open"))==true
+    local fade=ui.animate("bar.thread.fade",busy and .3 or 1,.22,"out-cubic")
+    local segments={id="thread",position="absolute",left=-13,top=23,width=width,height=1,direction="row"}
+    local count=48
+    for i=1,count do
+        local at=(i-.5)/count
+        local colour=at<=.5 and ui.tint("primary","secondary",at*2) or ui.tint("secondary","tertiary",(at-.5)*2)
+        segments[i]=ui.Box{id="s"..i,width=0,grow=1,height=1,fill=ui.alpha(colour,.6*fade*math.min(1,at/.09,(1-at)/.22))}
+    end
+    host.fill,host.padding_left,host.padding_right,host.padding_top="transparent",13,13,2
+    host[1]=ui.Row(segments)
+end
+return ui.Host(host)

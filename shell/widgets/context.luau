@@ -34,6 +34,20 @@ local updates_on=ui.resolve_for_check(ui.bind("bar.updates.enabled"))
 local updates_n=ui.resolve_for_check(ui.bind("bar.updates.count"))
 local badges_on=ui.resolve_for_check(ui.bind("bar.status.badges"))~=false
 local header=ui.resolve_for_check(ui.bind("bar.height"))
+-- Screen border "none" (the default): islands float on a transparent bar over a thread. Islands are 96 % surface
+-- with a 1 px inner highlight; the frame variant keeps today's surfaceContainer pills untouched.
+local islands=ui.resolve_for_check(ui.bind("bar.frame"))==false
+local base=islands and "surface" or "surfaceContainer"
+local i_fill=islands and ui.alpha("surface",.96) or nil
+local i_stroke=islands and 1 or nil
+local i_stroke_color=islands and ui.alpha("onSurface",.13) or nil
+local function island(p)
+    if islands then p.fill,p.border_width,p.border_color=i_fill,i_stroke,i_stroke_color end
+    return p
+end
+-- The title band: 30 px centred in the frame bar; a 34 px island 6 px from the top in the islands bar.
+local band_top=islands and 6 or (header-t.title_height)/2
+local band_height=islands and t.pill_height or t.title_height
 local title=ui.bind("bar.title")
 local title_width=math.min(t.title_max_width,math.ceil(ui.text_width(title,"IBM Plex Sans",t.title_font))+kit.tokens.spacing.hairline/2)
 local cue_extent=math.min(t.title_cue_max,title_width+t.icon_width+t.title_gap+10)
@@ -82,4 +96,4 @@ local function status_text(p)
     p.max_width=whole_width(p.max_width)
     return ui.Text(p)
 end
-return {ui=ui,kit=kit,t=t,centered_text=centered_text,launcher=launcher,popouts=popouts,ws_on=ws_on,tray_on=tray_on,dash_on=dash_on,focus_on=focus_on,updates_on=updates_on,updates_n=updates_n,header=header,title=title,title_width=title_width,cue_extent=cue_extent,dwell=dwell,ws_count=ws_count,ws_icons=ws_icons,thread=thread,pearl_accent=pearl_accent,glyph=glyph,status_glyph=status_glyph,status_text=status_text,whole_width=whole_width}
+return {i_fill=i_fill,i_stroke=i_stroke,i_stroke_color=i_stroke_color,islands=islands,base=base,island=island,band_top=band_top,band_height=band_height,ui=ui,kit=kit,t=t,centered_text=centered_text,launcher=launcher,popouts=popouts,ws_on=ws_on,tray_on=tray_on,dash_on=dash_on,focus_on=focus_on,updates_on=updates_on,updates_n=updates_n,header=header,title=title,title_width=title_width,cue_extent=cue_extent,dwell=dwell,ws_count=ws_count,ws_icons=ws_icons,thread=thread,pearl_accent=pearl_accent,glyph=glyph,status_glyph=status_glyph,status_text=status_text,whole_width=whole_width}
