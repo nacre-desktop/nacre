@@ -1,0 +1,8 @@
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+<defs>
+<clipPath id="disc"><circle cx="50" cy="50" r="50"/></clipPath>
+<radialGradient id="rim" cx="50" cy="42" r="62" gradientUnits="userSpaceOnUse"><stop offset=".72" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".34"/></radialGradient>
+</defs>
+<circle cx="50" cy="50" r="50" fill="url(#rim)" clip-path="url(#disc)"/>
+</svg>

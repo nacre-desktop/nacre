@@ -117,6 +117,8 @@ struct State {
     wallpaper_fired_at: Option<Instant>,
     wallpaper_pending: Option<(String, CallWake)>,
     wallpaper_moved_at: Option<Instant>,
+    /// The last move came from the wheel, which lands later than a released key.
+    wallpaper_wheel: bool,
     wallpaper_gliding: bool,
     /// Pixel size of the last previewed (or opening) wallpaper, for the strand's caption.
     wallpaper_resolution: Option<(String, u32, u32)>,
@@ -164,6 +166,16 @@ struct State {
     image_bytes: usize,
     image_revision: u64,
     viewport: (u32, u32),
+}
+impl State {
+    /// How long after the last move the final pearl lands.
+    fn release(&self) -> Duration {
+        if self.wallpaper_wheel {
+            WALLPAPER_WHEEL_RELEASE
+        } else {
+            WALLPAPER_RELEASE
+        }
+    }
 }
 #[derive(Clone)]
 struct WallpaperSelection {
@@ -413,6 +425,8 @@ impl StepGate {
         true
     }
 }
+/// The prototype's wheel: the strand lands 240 ms after the last event.
+const WALLPAPER_WHEEL_RELEASE: Duration = Duration::from_millis(240);
 /// The Esc restore is a little quicker than a move.
 const WALLPAPER_RESTORE_MS: u32 = 400;
 /// Strand's open storyboard (shell/extras/tokens.luau open_ms): the warm hold waits for it.
@@ -1466,7 +1480,7 @@ impl Extras {
             let mut state = self.state.borrow_mut();
             let over = state
                 .wallpaper_moved_at
-                .is_none_or(|at| at.elapsed() >= WALLPAPER_RELEASE);
+                .is_none_or(|at| at.elapsed() >= state.release());
             let due = state
                 .wallpaper_fired_at
                 .is_none_or(|at| at.elapsed() >= WALLPAPER_RETARGET_CAP);
@@ -1493,12 +1507,17 @@ impl Extras {
     }
     pub fn act(&self, request: &str, stores: &Stores, wake: CallWake) {
         if self.kind == Kind::Wallpaper {
-            if let Some(id) = request.strip_prefix("wallpaper:move:") {
+            if let Some((id, wheel)) = request
+                .strip_prefix("wallpaper:move:")
+                .map(|id| (id, false))
+                .or_else(|| request.strip_prefix("wallpaper:wheel:").map(|id| (id, true)))
+            {
                 // The wallpaper moves with the strand: the first move of a burst fades at once, then at most
                 // one retarget per cap (the trailing one in `fire_pending_move`); the latest wins.
                 let now = Instant::now();
                 let mut state = self.state.borrow_mut();
                 state.wallpaper_focus = Some(id.into());
+                state.wallpaper_wheel = wheel;
                 let size = *state.wallpaper_sizes.entry(id.into()).or_insert_with(|| {
                     let (_, width, height) = wallpaper_source_metadata(id);
                     (width, height)
@@ -1822,7 +1841,7 @@ impl Extras {
     pub fn thumb_retry_at(&self) -> Option<Instant> {
         let state = self.state.borrow();
         let trailing = state.wallpaper_pending.as_ref().and_then(|_| {
-            let release = state.wallpaper_moved_at? + WALLPAPER_RELEASE;
+            let release = state.wallpaper_moved_at? + state.release();
             Some(release.min(state.wallpaper_fired_at? + WALLPAPER_RETARGET_CAP))
         });
         state

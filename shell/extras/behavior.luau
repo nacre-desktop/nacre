@@ -237,6 +237,13 @@ local exports = {
   actions = {
     ["extras.next"] = function(s) step(s,1) end,
     ["extras.prev"] = function(s) step(s,-1) end,
+    -- Wheel or trackpad flick (Bead's scroll_steps already limits it to one step per 60 ms): the same move, but the
+    -- last pearl lands 240 ms after the last event (the prototype's sdWheel), not 100 ms.
+    ["strand_wheel"] = function(s,delta)
+      step(s,delta)
+      local request=s["extras.request"]
+      if type(request)=="string" then s["extras.request"]=request:gsub("^wallpaper:move:","wallpaper:wheel:") end
+    end,
     ["extras.choose"] = choose,
     ["extras.shuffle"] = function(s)
       local count=#filtered(s)

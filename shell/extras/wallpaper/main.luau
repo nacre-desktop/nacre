@@ -28,8 +28,7 @@ for index=1,#animation_query do animation_key=(animation_key*33+string.byte(anim
 -- out-quint for every repeat; a single tap keeps the full 500 ms out-quint.
 local glide=ui.resolve_for_check(ui.bind("extras.wallpaper.glide"))==true
 local strand=ui.animate("wallpaper-strand:"..tostring(count)..":"..tostring(animation_key),position,glide and W.glide_duration or W.move_duration,glide and "linear" or "out-quint")
--- The entry/exit storyboard, in one place: a linear 0..1 clock over the whole 675 ms (180 ms on the way back: the shared panel close; the prototype's 260 ms needs a per-panel close duration from Bead,
--- the surface is hidden when the panel's own 180 ms close ends), and every part below reads its own span of `ms`. `extras.wallpaper.entry_ms` pins it
+-- The entry/exit storyboard, in one place: a linear 0..1 clock over the whole 675 ms (260 ms on the way back, the prototype's reverse; the panel's `return_duration` keeps the surface until it ends), and every part below reads its own span of `ms`. `extras.wallpaper.entry_ms` pins it
 -- for goldens. Bead has no node opacity: the veil, ring, texts and pill fade through colour alpha (pearls scale and fade through Image opacity).
 local opening=ui.resolve_for_check(ui.bind("panel.open"))~=false
 local pinned=ui.resolve_for_check(ui.bind("extras.wallpaper.entry_ms")) or -1 -- only goldens pin it (>= 0)
@@ -102,6 +101,8 @@ local nearest=W.visible_reach
 for _,pearl in ipairs(placed) do nearest=math.min(nearest,math.abs(pearl.offset)) end
 
 local function pearl_node(pearl)
+  -- B0328: every image is baked once at its largest slot size and the draw scales it, so sliding never re-bakes.
+  local bake=math.abs(pearl.offset)<=2.5 and size_at(0) or size_at(3)
   local item=pearl.item
   -- Drop: from the thread line, scale .15 -> 1 (out-cubic), 120 ms + 35 ms per slot out, 380 ms each.
   local from=120+35*math.min(5,math.floor(math.abs(pearl.offset)+.5))
@@ -116,11 +117,11 @@ local function pearl_node(pearl)
   local kids={}
   if math.abs(pearl.offset)<=2.5 then
     kids[#kids+1]=ui.Image{id="shadow",position="absolute",left=-size*.12,top=-size*.04,width=size*1.24,height=size*1.24,
-      path=W.glow,tint={0,0,0,math.floor(110*alpha*math.min(1,size/(W.pearl_sizes[1]*s)+.35))}}
+      path=W.glow,bake_size={w=bake*1.24,h=bake*1.24},tint={0,0,0,math.floor(110*alpha*math.min(1,size/(W.pearl_sizes[1]*s)+.35))}}
   end
   if path and path~="" then
     kids[#kids+1]=ui.Image{id="thumbnail",position="absolute",left=0,top=0,width=size,height=size,
-      icon=path,image_fit="cover",clip_polygon=DISC,opacity=alpha,aria_label=item.title or "Wallpaper"}
+      icon=path,bake_size={w=bake,h=bake},image_fit="cover",clip_polygon=DISC,opacity=alpha,aria_label=item.title or "Wallpaper"}
   else
     kids[#kids+1]=ui.Box{id="missing-thumbnail",position="absolute",left=0,top=0,width=size,height=size,radius=size/2,fill="surfaceContainerHigh"}
     kids[#kids+1]=ui.Text{id="missing-icon",position="absolute",left=0,top=size/2-W.thumbnail_fallback_icon*s/2,width=size,height=W.thumbnail_fallback_icon*s,
@@ -132,10 +133,14 @@ local function pearl_node(pearl)
     kids[#kids+1]=ui.Box{id="video-badge",position="absolute",left=size*.88-badge,top=size*.88-badge,width=badge,height=badge,radius=badge/2,fill=fade({10,11,14,184},alpha),
       ui.Text{text="play_arrow",position="absolute",left=0,top=badge*.1,width=badge,height=badge*.85,family="Material Symbols Rounded",font_size=badge*.6,color=fade(W.ink,alpha),text_align="center"}}
   end
+  -- The prototype's inset bottom shade (inset 0 -14px 26px rgba(0,0,0,.34)), under the rim.
+  if math.abs(pearl.offset)<=2.5 then
+    kids[#kids+1]=ui.Image{id="shade",position="absolute",left=0,top=0,width=size,height=size,path=W.shade,bake_size={w=bake,h=bake},opacity=alpha}
+  end
   kids[#kids+1]=ui.Box{id="edge",position="absolute",left=0,top=0,width=size,height=size,radius=size/2,fill="transparent",
     border_width=edge,border_color=fade(W.pearl_edge,alpha)}
   if near>.3 then
-    kids[#kids+1]=ui.Image{id="sheen",position="absolute",left=0,top=0,width=size,height=size,path=W.sheen,
+    kids[#kids+1]=ui.Image{id="sheen",position="absolute",left=0,top=0,width=size,height=size,path=W.sheen,bake_size={w=bake,h=bake},
       tint={W.pearl_sheen[1],W.pearl_sheen[2],W.pearl_sheen[3],math.floor(W.pearl_sheen[4]*near*alpha)}}
   end
   -- The chosen pearl keeps the pick; any other pearl only moves the strand.
@@ -214,7 +219,9 @@ for band=0,W.veil_bands-1 do
   local top,bottom=edge(band),edge(band+1)
   children[#children+1]=ui.Box{id="veil-"..band,position="absolute",left=0,top=top,width=width,height=bottom-top,radius=0,fill={6,7,10,math.floor(255*scrim*veil_alpha((band+.5)/W.veil_bands))}}
 end
-children[#children+1]=ui.Box{id="strand",position="absolute",left=0,top=0,width=width,height=height,fill="transparent",table.unpack(strand_nodes)}
+-- Wheel or trackpad: at most one step per 60 ms (Bead drops the rest); extras.rs lands it 240 ms after the last step.
+children[#children+1]=ui.Box{id="strand",position="absolute",left=0,top=0,width=width,height=height,fill="transparent",
+  scroll=ui.action("strand_wheel"),scroll_steps={min_interval_ms=60},table.unpack(strand_nodes)}
 
 if selected then
   local name_top=centre.y+W.name_top*s
@@ -287,6 +294,6 @@ children[#children+1]=ui.Text{id="status",position="absolute",left=24,top=height
 -- slide: the shared profile would fight it); a click on empty
 -- space closes the picker like Esc (the wallpaper goes back).
 return kit.Panel{id="extras",edge="top",open=ui.bind("panel.open"),width=width,height=height,shadow=false,reveal=false,fade=false,slide_distance=0,
-  key_repeat={delay=260,interval=95,min_interval=62,ramp_ms=800}, -- the held-arrow glide clock (spec v5f)
+  return_duration=W.close_ms/1000,key_repeat={delay=260,interval=95,min_interval=62,ramp_ms=800}, -- the held-arrow glide clock (spec v5f)
   radius=0,fill="transparent",padding=0,gap=0,body="body",on_activate=ui.action("close"),aria_label="Close wallpaper picker",
   ui.Box{id="body",position="absolute",left=0,top=0,width=width,height=height,fill="transparent",join_edge="top",table.unpack(children)}}

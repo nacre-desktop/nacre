@@ -96,7 +96,7 @@
         "colours": {
           "type": "object",
           "minProperties": 3,
-          "maxProperties": 64,
+          "maxProperties": 128,
           "required": [
             "background",
             "onSurface",
