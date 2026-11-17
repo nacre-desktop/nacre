@@ -356,6 +356,7 @@ fn current_scene_attaches_bounded_catalogue_thumbnail_bytes() {
     let settings = Settings::new(None, &root()).unwrap();
     let scene_with_preview = || Scene {
         primitives: vec![Primitive::Image {
+            bake_size: None,
             blur: 0.,
             fit: ImageFit::Cover,
             clip_polygon: None,

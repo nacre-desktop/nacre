@@ -139,10 +139,10 @@ impl CompactTranscript {
             .map(|entry| {
                 let single = !entry.text.contains('\n');
                 let style = self.inner.style();
-                let text = self
-                    .inner
-                    .meter()
-                    .width(&entry.text, &style.sans, style.scale.body);
+                let text =
+                    self.inner
+                        .meter()
+                        .width(&entry.text, &style.sans, style.scale.body, 400, &[]);
                 (
                     entry.key.as_str(),
                     (single && text + 2. * pad < width).then_some(text + 2. * pad),
@@ -867,7 +867,7 @@ impl Chat {
                 let label = tr(id, &[]);
                 let transcript = self.transcript.borrow();
                 let meter = transcript.meter();
-                json!({"text": label,"body": meter.width(&label,SANS,self.metrics.body),"caption": meter.width(&label,SANS,self.metrics.info)})
+                json!({"text": label,"body": meter.width(&label,SANS,self.metrics.body,400,&[]),"caption": meter.width(&label,SANS,self.metrics.info,400,&[])})
             }).collect();
         out.insert("chat.labels".into(), Value::list(labels));
         // Keep the worker alive and recover after a reconnect (QML: open on start, every 10 s).

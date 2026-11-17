@@ -1362,6 +1362,7 @@ fn panel(p: &Palette, assets: &Path) -> Result<Scene, Box<dyn std::error::Error>
     {
         let mut text = |x, y, w, h, s: &str, size, color| {
             v.push(Primitive::Text {
+                features: Vec::new(),
                 rect: Rect::new(x, y, w, h),
                 text: s.into(),
                 family: "IBM Plex Sans".into(),

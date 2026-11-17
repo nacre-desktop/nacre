@@ -248,6 +248,7 @@ mod tests {
         let mut scene = Scene {
             resource_revision: 1,
             primitives: vec![Primitive::Text {
+                features: Vec::new(),
                 rect: Rect::new(0., 0., 240., 180.),
                 text: "1".into(),
                 family: "Outfit".into(),
@@ -321,6 +322,7 @@ mod tests {
         let scene = Scene {
             resource_revision: 1,
             primitives: vec![Primitive::Text {
+                features: Vec::new(),
                 rect: Rect::new(0., 0., 100., 20.),
                 text: "cache".into(),
                 family,
