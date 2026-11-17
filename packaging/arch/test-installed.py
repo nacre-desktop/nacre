@@ -145,7 +145,7 @@ for name in (
 for name in (
     "LICENSE-MIT",
     "LICENSE-GPL-3.0",
-    "Outfit-OFL.txt",
+    "Commissioner-OFL.txt",
     "fontconfig-LICENSE",
     "system-tray-LICENSE",
 ):

@@ -11,8 +11,8 @@ M.glass_fill=ui.alpha("surface",.62)
 M.glass_border=ui.alpha("onSurface",.08)
 M.text="onSurface"
 M.secondary="onSurfaceVariant"
-M.display_font="Outfit"
-M.display_weight=200
+M.display_font="Commissioner"
+M.display_weight=300
 M.body_font="IBM Plex Sans"
 M.radius=kit.tokens.radii.large
 
@@ -139,7 +139,7 @@ function M.ring(id,diameter,value,caption,detail)
             stroke_width=16,color="primary",round_caps=true},
         ui.Column{id="ring-copy",position="absolute",left=12,top=diameter*.28,width=diameter-24,height=diameter*.46,
             align="center",justify="center",gap=sp.xs,
-            ui.Text{id="reading",text=reading,width="fill",height=82,font_size=64,font_weight=200,family=M.display_font,text_align="center",color=M.text},
+            ui.Text{id="reading",text=reading,width="fill",height=82,font_size=64,font_weight=M.display_weight,family=M.display_font,text_align="center",color=M.text},
             ui.Text{id="caption",text=caption or "",width="fill",height=22,font_size=tx.caption*4/3,text_align="center",color=M.secondary}},
         detail and ui.Text{id="detail",position="absolute",left=0,top=diameter+sp.xs,width=diameter,height=18,
             text=detail,font_size=tx.caption*4/3,text_align="center",color="onSurfaceVariant"} or nil}

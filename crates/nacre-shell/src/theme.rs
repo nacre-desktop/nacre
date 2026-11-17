@@ -16,7 +16,7 @@ pub(crate) fn apply(prefs: &crate::prefs::Prefs) {
     // their original faces rather than gaining a second alias layer here.
     tokens["fonts"] = json!({
         "sans": crate::prefs::INTERFACE_FONT,
-        "mono": crate::prefs::MONO_FONT,
+        "mono": crate::prefs::INTERFACE_FONT,
         "icon": "Material Symbols Rounded",
     });
     tokens["gradients"] = prefs.interface_gradients.into();

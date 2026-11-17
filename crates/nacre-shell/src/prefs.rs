@@ -21,8 +21,9 @@ pub const WALLPAPER_PICKER: &str = "settings.store.wallpaper-picker";
 const CORE: [&str; 4] = ["today", "media", "weather", "system"];
 /// Tab lists written before the core set was fixed; QML treats them as unset.
 /// `NacreTokens.qml` defaults: families and the body size `textSize` is relative to.
-pub const INTERFACE_FONT: &str = "IBM Plex Sans";
-pub const MONO_FONT: &str = "JetBrainsMono Nerd Font";
+pub const INTERFACE_FONT: &str = "Commissioner";
+/// Family names older Luau markup and Rust scenes still write; they resolve to the interface font.
+const LEGACY_FONTS: [&str; 2] = ["IBM Plex Sans", "JetBrainsMono Nerd Font"];
 const BODY_SIZE: i32 = 12;
 const LEGACY: [&str; 5] = ["today", "weather", "media", "system", "focus"];
 
@@ -84,9 +85,8 @@ pub struct Prefs {
     pub status_percent: bool,
     /// N0213 `modules`: the default top-bar instances to show; empty shows them all.
     pub bar_modules: Vec<String>,
-    /// `interfaceFont` / `monoFont`: empty means Nacre's default family.
+    /// `interfaceFont`: empty means Nacre's default family (the shell has no monospace; `monoFont` is the terminal's).
     pub interface_font: String,
-    pub mono_font: String,
     /// `textSize` minus Nacre's body size (12): added to every text token.
     pub text_offset: i32,
     /// `profile.workspaceCount` (`|| 6`), `profile.workspaceIcons` (one Material symbol
@@ -247,7 +247,6 @@ impl Prefs {
             status_percent: flag("statusPercentages").or(flag("batteryPercent")) == Some(true),
             bar_modules: strings(desktop.get("modules"), false),
             interface_font: family("interfaceFont"),
-            mono_font: family("monoFont"),
             text_offset: size - BODY_SIZE,
             reduce_motion: flag("reduceMotion") == Some(true) || flag("animations") == Some(false),
             fahrenheit: flag("weatherFahrenheit") == Some(true),
@@ -306,19 +305,22 @@ impl Prefs {
             border: self.frame_border,
         }
     }
-    /// Generic text style: Luau markup names `IBM Plex Sans` and
-    /// `JetBrainsMono Nerd Font` literally, so those names map to the owner's choice.
+    /// Generic text style: the interface font and the legacy literal names map to the owner's choice.
     pub fn text_style(&self) -> bead::ui::text_style::TextStyle {
         let alias =
             |from: &str, to: &str| (!to.is_empty() && to != from).then(|| (from.into(), to.into()));
         bead::ui::text_style::TextStyle {
-            aliases: [
-                alias(INTERFACE_FONT, &self.interface_font),
-                alias(MONO_FONT, &self.mono_font),
-            ]
-            .into_iter()
-            .flatten()
-            .collect(),
+            aliases: std::iter::once(INTERFACE_FONT)
+                .chain(LEGACY_FONTS)
+                .filter_map(|from| {
+                    let to = if self.interface_font.is_empty() {
+                        INTERFACE_FONT
+                    } else {
+                        &self.interface_font
+                    };
+                    alias(from, to)
+                })
+                .collect(),
             fixed_size_families: Default::default(),
             fixed_size_prefixes: Default::default(),
             size_offset: self.text_offset as f32,
@@ -628,7 +630,7 @@ mod tests {
         let d = Prefs::default();
         assert!(d.dashboard_enabled && d.control_center_enabled && d.top_bar_enabled);
         assert!(d.frame_sheen && d.interface_font.is_empty() && d.text_offset == 0);
-        assert_eq!(d.text_style(), Default::default());
+        assert_eq!(d.text_style().aliases[LEGACY_FONTS[0]], INTERFACE_FONT);
         // `!== false` semantics: only a real false disables.
         let odd = Prefs::decode(
             &json!({"dashboardEnabled": 0, "topBarEnabled": null, "frameSheen": "no",
@@ -651,14 +653,17 @@ mod tests {
         let style = set.text_style();
         assert_eq!(style.size_offset, 2.);
         assert_eq!(style.aliases[INTERFACE_FONT], "DejaVu Sans");
-        assert_eq!(style.aliases[MONO_FONT], "DejaVu Sans Mono");
+        assert_eq!(style.aliases[LEGACY_FONTS[1]], "DejaVu Sans");
         // `textSize: 0` is falsy in QML and means the body size; a family equal to the
         // default needs no alias.
         let zero = Prefs::decode(
             &json!({"textSize": 0, "interfaceFont": INTERFACE_FONT}),
             &Json::Null,
         );
-        assert_eq!(zero.text_style(), Default::default());
+        assert!(
+            !zero.text_style().aliases.contains_key(INTERFACE_FONT)
+                && zero.text_style().size_offset == 0.
+        );
         assert_eq!(
             set.bar_stores()["bar.dashboard.enabled"],
             bead::core::Value::Bool(false)

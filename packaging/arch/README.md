@@ -47,7 +47,7 @@ lock assets seed only missing user files; later palette changes are preserved.
 Setup does not run source checks, provision a virtual environment or invoke
 source/native installers. Source contributors retain `install.sh`. The installed
 acceptance test checks the private three-binary bundle, matching `shell/`, the
-product and Outfit OFL notices, and confirms `/usr/bin/nacre-shell` remains the
+product and Commissioner OFL notices, and confirms `/usr/bin/nacre-shell` remains the
 Nacre control wrapper rather than the Bead executable.
 
 The palette CLI is native: `/usr/bin/nacre_shell` dispatches through the packaged

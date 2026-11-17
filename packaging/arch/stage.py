@@ -73,7 +73,7 @@ def stage(root, destination, component, build):
             build / "ui-shell",
             destination / "usr/lib/nacre/ui-shell",
             root,
-            root / "crates/nacre-shell/assets/fonts/Outfit-OFL.txt",
+            root / "crates/nacre-shell/assets/fonts/Commissioner-OFL.txt",
         )
         for vendor in ("fontconfig", "system-tray"):
             copy(
@@ -395,7 +395,7 @@ def stage_ui_shell(bundle, destination, product_root, embedded_notice):
         if not source.is_file():
             raise FileNotFoundError(f"Missing product license notice: {source}")
         shutil.copy2(source, notices / name)
-    shutil.copy2(embedded_notice, notices / "Outfit-OFL.txt")
+    shutil.copy2(embedded_notice, notices / "Commissioner-OFL.txt")
 
 
 if __name__ == "__main__":

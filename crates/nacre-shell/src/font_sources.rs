@@ -9,10 +9,10 @@ use std::{
     sync::{LazyLock, Mutex, MutexGuard},
     time::Instant,
 };
-const OUTFIT: &[u8] = include_bytes!("../assets/fonts/Outfit-Variable.ttf");
-static OUTFIT_PATH: std::sync::OnceLock<std::result::Result<PathBuf, String>> =
+const COMMISSIONER: &[u8] = include_bytes!("../assets/fonts/Commissioner-Variable.ttf");
+static COMMISSIONER_PATH: std::sync::OnceLock<std::result::Result<PathBuf, String>> =
     std::sync::OnceLock::new();
-static OUTFIT_REGISTERED: std::sync::OnceLock<std::result::Result<(), String>> =
+static COMMISSIONER_REGISTERED: std::sync::OnceLock<std::result::Result<(), String>> =
     std::sync::OnceLock::new();
 #[link(name = "fontconfig")]
 unsafe extern "C" {
@@ -23,8 +23,8 @@ unsafe extern "C" {
 /// the process-wide current config under a concurrent match (SIGSEGV on 2026-11-15).
 static FONTCONFIG: Mutex<()> = Mutex::new(());
 
-fn bundled_outfit_path() -> Result<PathBuf> {
-    OUTFIT_PATH
+fn bundled_commissioner_path() -> Result<PathBuf> {
+    COMMISSIONER_PATH
         .get_or_init(|| -> std::result::Result<PathBuf, String> {
             let cache = std::env::var_os("XDG_CACHE_HOME")
                 .map(PathBuf::from)
@@ -32,20 +32,21 @@ fn bundled_outfit_path() -> Result<PathBuf> {
                 .unwrap_or_else(std::env::temp_dir)
                 .join("bead/fonts");
             std::fs::create_dir_all(&cache).map_err(|error| error.to_string())?;
-            let path = cache.join("Outfit-Variable.ttf");
-            if std::fs::metadata(&path).is_ok_and(|metadata| metadata.len() == OUTFIT.len() as u64)
+            let path = cache.join("Commissioner-Variable.ttf");
+            if std::fs::metadata(&path)
+                .is_ok_and(|metadata| metadata.len() == COMMISSIONER.len() as u64)
             {
                 return Ok(path);
             }
-            let temporary = cache.join(format!(".Outfit-{}.ttf", std::process::id()));
-            std::fs::write(&temporary, OUTFIT).map_err(|error| error.to_string())?;
+            let temporary = cache.join(format!(".Commissioner-{}.ttf", std::process::id()));
+            std::fs::write(&temporary, COMMISSIONER).map_err(|error| error.to_string())?;
             std::fs::rename(&temporary, &path).map_err(|error| error.to_string())?;
             Ok(path)
         })
         .clone()
         .map_err(|error| error.into())
         .and_then(|path| {
-            OUTFIT_REGISTERED
+            COMMISSIONER_REGISTERED
                 .get_or_init(|| {
                     let filename = std::ffi::CString::new(path.to_string_lossy().as_bytes())
                         .map_err(|error| error.to_string())?;
@@ -55,7 +56,7 @@ fn bundled_outfit_path() -> Result<PathBuf> {
                     if config.is_null()
                         || unsafe { FcConfigAppFontAddFile(config, filename.as_ptr().cast()) } == 0
                     {
-                        return Err("Fontconfig rejected bundled Outfit".to_owned());
+                        return Err("Fontconfig rejected bundled Commissioner".to_owned());
                     }
                     Ok(())
                 })
@@ -172,8 +173,13 @@ fn select_chars(scene: &Scene, ascii: bool) -> Result<Vec<PathBuf>> {
     let mut paths = BTreeSet::new();
     let mut db = fontdb::Database::new();
     for (family, weight) in &families {
-        if family.eq_ignore_ascii_case("Outfit") {
-            load(&mut db, &mut paths, bundled_outfit_path()?, &mut needed)?;
+        if family.eq_ignore_ascii_case("Commissioner") {
+            load(
+                &mut db,
+                &mut paths,
+                bundled_commissioner_path()?,
+                &mut needed,
+            )?;
             continue;
         }
         let mut pattern = fontconfig::Pattern::new(&fc)?;
@@ -192,7 +198,7 @@ fn select_chars(scene: &Scene, ascii: bool) -> Result<Vec<PathBuf>> {
         let fallback_family = families
             .iter()
             .map(|family| family.0)
-            .find(|family| !family.eq_ignore_ascii_case("Outfit"))
+            .find(|family| !family.eq_ignore_ascii_case("Commissioner"))
             .unwrap_or("sans-serif");
         pattern.add_string(fontconfig::FC_FAMILY, &CString::new(fallback_family)?)?;
         let mut charset = fontconfig::CharSet::new(&fc)?;
@@ -243,18 +249,17 @@ mod tests {
         CpuRenderer, Damage, PixelFormat, Primitive, Rect, Renderer, Scene, ShmTarget, TextAlign,
     };
 
-    #[test]
-    fn bundled_outfit_thin_digit_has_solid_ink_inside_the_stem() {
+    fn render(text: &str, family: &str, weight: u16) -> Vec<u8> {
         let mut scene = Scene {
             resource_revision: 1,
             primitives: vec![Primitive::Text {
                 features: Vec::new(),
                 rect: Rect::new(0., 0., 240., 180.),
-                text: "1".into(),
-                family: "Outfit".into(),
+                text: text.into(),
+                family: family.into(),
                 size: 120.,
                 color: [238, 246, 243, 255],
-                weight: 200,
+                weight,
                 align: Some(TextAlign::Center),
                 shadow: None,
             }],
@@ -277,6 +282,33 @@ mod tests {
                 Damage::full(240, 180),
             )
             .unwrap();
+        pixels
+    }
+
+    /// Ink columns of a rendering: the text width as painted.
+    fn ink(pixels: &[u8]) -> usize {
+        let mut cols = (0..240).filter(|x| (0..180).any(|y| pixels[(y * 240 + x) * 4 + 3] > 127));
+        let first = cols.next().unwrap_or(0);
+        cols.next_back().unwrap_or(first) - first
+    }
+
+    #[test]
+    fn bundled_commissioner_resolves_and_weight_is_continuous() {
+        let a = render("Nacre", "Commissioner", 450);
+        let b = render("Nacre", "Commissioner", 600);
+        let c = render("Nacre", "Commissioner", 300);
+        // A continuous wght moves ink and advance; a static-instance pick would repeat a render.
+        assert!(
+            a != b && a != c && ink(&a) != ink(&b),
+            "weight is not applied as wght"
+        );
+        // A fallback face would make every weight look alike; Commissioner is not the system sans.
+        assert_ne!(ink(&a), ink(&render("Nacre", "sans-serif", 450)));
+    }
+
+    #[test]
+    fn bundled_commissioner_thin_digit_has_solid_ink_inside_the_stem() {
+        let pixels = render("1", "Commissioner", 200);
         let mut best = None;
         for (y, row) in pixels.as_chunks::<960>().0.iter().enumerate() {
             let mut start = None;
@@ -292,7 +324,8 @@ mod tests {
                 }
             }
         }
-        let (begin, y, run) = best.expect("the Outfit digit must contain fully covered pixels");
+        let (begin, y, run) =
+            best.expect("the Commissioner digit must contain fully covered pixels");
         assert!(
             run >= 2,
             "digit has no solid interior scanline, longest run {run}"
@@ -306,7 +339,7 @@ mod tests {
         );
         assert!(
             center[0] > 210 && center[1] > 220 && center[2] > 215,
-            "digit center pixel ({x},{y}) is not Outfit text color: {center:?}"
+            "digit center pixel ({x},{y}) is not Commissioner text color: {center:?}"
         );
     }
 
