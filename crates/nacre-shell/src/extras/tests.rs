@@ -2786,6 +2786,42 @@ fn wallpaper_picker_uses_active_middle_then_visible_query_and_pointer_selection(
         panic!("the wallpaper filter returns rows")
     };
     assert_eq!(all_rows.len(), 6, "no Static/Dynamic split");
+    // "video" and "still" match the media type as well as the text.
+    for (word, expected) in [
+        ("video", vec!["/wallpapers/movie.mp4"]),
+        (
+            "still",
+            vec![
+                "/wallpapers/first.jpg",
+                "/wallpapers/current.jpg",
+                "/wallpapers/garden.jpg",
+                "/wallpapers/last.jpg",
+            ],
+        ),
+    ] {
+        let typed = session
+            .update(BTreeMap::from([(
+                "extras.query".into(),
+                Value::Text(word.into()),
+            )]))?
+            .expect("typing a media word");
+        session.commit(typed);
+        let Value::List(found) = behavior
+            .resolve("extras.filtered", &session.stores)
+            .unwrap()
+        else {
+            panic!("the wallpaper filter returns rows")
+        };
+        let ids: Vec<&str> = found.iter().filter_map(|row| row["id"].as_str()).collect();
+        assert_eq!(ids, expected, "typing {word}");
+    }
+    let cleared = session
+        .update(BTreeMap::from([(
+            "extras.query".into(),
+            Value::Text(String::new()),
+        )]))?
+        .expect("clearing the search");
+    session.commit(cleared);
     // Opening on the final item must take one forward step across the seam.
     let reset = session
         .update(BTreeMap::from([

@@ -5,7 +5,11 @@ end
 
 local function wallpaper_item_matches(item,s)
   local text=(tostring(item.title or "").." "..tostring(item.id or "")):lower()
-  for word in tostring(s["extras.query"] or ""):lower():gmatch("%S+") do if not text:find(word,1,true) then return false end end
+  -- "video" and "still" also match the media type (a still is an image that is not animated).
+  local media=item.kind=="video" and "video" or (item.animated~=true and "still" or "")
+  for word in tostring(s["extras.query"] or ""):lower():gmatch("%S+") do
+    if not text:find(word,1,true) and word~=media then return false end
+  end
   return true
 end
 
