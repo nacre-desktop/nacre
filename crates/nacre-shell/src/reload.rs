@@ -10314,6 +10314,10 @@ impl SceneSource for Runtime {
         }
         self.session.scroll_regions()
     }
+    /// Strand's wheel takes whole steps (B0329); other panels declare none.
+    fn scroll_step_regions(&self) -> Vec<bead::wayland::StepRegion> {
+        self.session.scroll_step_regions()
+    }
     fn outside_dismiss(&self) -> bool {
         self.session.stores.get("chat.pinned") != Some(&bead::core::Value::Bool(true))
     }
