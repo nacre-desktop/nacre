@@ -1353,6 +1353,9 @@ fn panel(p: &Palette, assets: &Path) -> Result<Scene, Box<dyn std::error::Error>
             rect: Rect::new(-30., -30., 1160., 650.),
             radius: 12.,
             blur: 10.,
+            spread: 0.,
+            dy: 0.,
+            alpha: 1.,
         },
         Primitive::Rounded {
             rect: Rect::new(0., 0., 1100., 590.),

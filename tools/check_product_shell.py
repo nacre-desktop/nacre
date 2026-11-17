@@ -11,7 +11,7 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 LUAU_URL = "https://github.com/luau-lang/luau/releases/download/0.742/luau-ubuntu.zip"
 LUAU_SHA256 = "152058b98c60ff1f5b5ec9bca0b8eb37793cae161dd3a05608cc3d8738ba1a4d"
-BEAD_REVISION = "4938dfbd859f7a9f175a6231d7d42e101ca0196e"
+BEAD_REVISION = "808007920df8bad015f9a862961d51ac5e01ddeb"
 BEAD_PACKAGES = {
     "bead",
     "bead-test",
