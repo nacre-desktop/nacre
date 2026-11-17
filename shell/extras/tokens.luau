@@ -43,7 +43,7 @@ return {
     art_width=1440, art_height=864,
     pearl_sizes={280,150,108,84,68,56,48}, pearl_gap=22, visible_reach=5, knot=5,
     anchor_x=-140, anchor_y=-30,
-    ring_gap=5, ring_stroke=2, silk_stroke=3, move_duration=.5, glide_duration=.09, open_duration=.3, drop=90,
+    ring_gap=5, ring_stroke=2, silk_stroke=3, move_duration=.5, glide_duration=.09, open_ms=675, close_ms=180, thread_y=-27,
     veil_bands=40, sheen="extras/wallpaper/assets/sheen.svg", glow="extras/wallpaper/assets/glow.svg",
     ink={255,255,255,255}, ink_soft={245,241,248,200},
     silk={{244,201,218,110},{216,200,244,225},{185,214,245,245},{191,234,219,225},{242,228,186,110}},

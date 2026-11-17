@@ -188,7 +188,7 @@ local exports = {
     ["extras.wallpaper.loading"] = false,
     ["extras.wallpaper.can_pause"] = false, ["extras.wallpaper.paused"] = false,
     ["extras.wallpaper.selection_id"] = "",
-    ["extras.wallpaper.position"] = 1, ["extras.wallpaper.glide"] = false,
+    ["extras.wallpaper.position"] = 1, ["extras.wallpaper.glide"] = false, ["extras.wallpaper.entry_ms"] = -1,
     ["extras.wallpaper.resolution"] = "", ["extras.wallpaper.resolution_id"] = "",
     ["extras.viewport.width"] = 1440, ["extras.viewport.height"] = 900,
     ["extras.body_height"] = 424, ["extras.palette_row_pitch"] = 64,

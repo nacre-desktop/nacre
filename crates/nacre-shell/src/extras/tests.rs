@@ -1413,7 +1413,10 @@ async fn wallpaper_runtime_search_and_next_button_dispatch_real_activation() {
         .motion
         .as_ref()
         .expect("picker uses the shared panel motion");
-    assert!(motion.reveal, "the strand grows out of the bar edge");
+    assert!(
+        !motion.reveal,
+        "the strand runs its own entry, not the shared reveal"
+    );
     assert_eq!(
         tokio::time::timeout(Duration::from_secs(2), lab.calls.recv())
             .await
@@ -2004,6 +2007,7 @@ fn strand_harness(
         ),
         ("extras.wallpaper.position".into(), Value::Number(position)),
         ("extras.wallpaper.glide".into(), Value::Bool(false)),
+        ("extras.wallpaper.entry_ms".into(), Value::Number(-1.)),
         (
             "extras.wallpaper.resolution_id".into(),
             Value::Text(selected),
@@ -2079,6 +2083,33 @@ fn wallpaper_strand_goldens() -> bead_test::Result<()> {
         );
         let frame = harness.render()?;
         let file = format!("wallpaper-strand-{name}-{scale}.png");
+        let path = root.join("tests/goldens").join(&file);
+        if std::env::var("BEAD_UPDATE_GOLDENS").as_deref() == Ok("1") {
+            frame.save(&path)?;
+        }
+        frame.compare(
+            &path,
+            Default::default(),
+            &std::env::temp_dir().join(format!("{file}-diff")),
+        )?;
+    }
+    let _ = std::fs::remove_dir_all(&thumbnails);
+    Ok(())
+}
+/// The entry storyboard pinned at two instants (`extras.wallpaper.entry_ms`): the thread partly sagged with only
+/// the centre pearls dropped, then the pearls out to the sides and the name still fading in.
+#[test]
+fn wallpaper_strand_entry_goldens() -> bead_test::Result<()> {
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../shell");
+    let thumbnails = std::env::temp_dir().join(format!("strand-entry-{}", std::process::id()));
+    for ms in [200., 450.] {
+        let mut harness = strand_harness(12, "mixed", "", 6., (1440, 900), 1., &thumbnails)?;
+        harness.update(BTreeMap::from([(
+            "extras.wallpaper.entry_ms".into(),
+            Value::Number(ms),
+        )]))?;
+        let frame = harness.render()?;
+        let file = format!("wallpaper-strand-open-{ms}-1.png");
         let path = root.join("tests/goldens").join(&file);
         if std::env::var("BEAD_UPDATE_GOLDENS").as_deref() == Ok("1") {
             frame.save(&path)?;
