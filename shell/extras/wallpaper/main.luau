@@ -21,16 +21,17 @@ if math.floor(position-1)%math.max(1,count)+1~=selection_index then position=sel
 local animation_query=tostring(ui.resolve_for_check(ui.bind("extras.query")) or "")
 local animation_key=2166136261
 for index=1,#animation_query do animation_key=(animation_key*33+string.byte(animation_query,index))%2147483647 end
--- One continuous value drives the whole strand: pearls slide along the thread to a fractional slot.
--- A held key or a fast scroll (`glide`) follows its moving target at a steady pace instead of restarting the
--- out-quint for every repeat; a single tap keeps the full 500 ms out-quint.
-local glide=ui.resolve_for_check(ui.bind("extras.wallpaper.glide"))==true
-local strand=ui.animate("wallpaper-strand:"..tostring(count)..":"..tostring(animation_key),position,glide and W.glide_duration or W.move_duration,glide and "linear" or "out-quint")
 -- The entry/exit storyboard, in one place: a linear 0..1 clock over the whole 675 ms (260 ms on the way back, the prototype's reverse; the panel's `return_duration` keeps the surface until it ends), and every part below reads its own span of `ms`. `extras.wallpaper.entry_ms` pins it
 -- for goldens. Bead has no node opacity: the veil, ring, texts and pill fade through colour alpha (pearls scale and fade through Image opacity).
 local opening=ui.resolve_for_check(ui.bind("panel.open"))~=false
 local pinned=ui.resolve_for_check(ui.bind("extras.wallpaper.entry_ms")) or -1 -- only goldens pin it (>= 0)
 local ms=pinned>=0 and pinned or ui.animate("wallpaper-strand-open",opening and 1 or 0,(opening and W.open_ms or W.close_ms)/1000,"linear")*W.open_ms
+-- One continuous value drives the whole strand: pearls slide along the thread to a fractional slot.
+-- A held key or a fast scroll (`glide`) follows its moving target at a steady pace instead of restarting the
+-- out-quint for every repeat; a single tap keeps the full 500 ms out-quint.
+local glide=ui.resolve_for_check(ui.bind("extras.wallpaper.glide"))==true
+-- Until the first pearl drops (120 ms) the strand rests on its pearl: a new visit never spins in from where the last one left off.
+local strand=ui.animate("wallpaper-strand:"..tostring(count)..":"..tostring(animation_key),position,ms<120 and 0 or glide and W.glide_duration or W.move_duration,glide and "linear" or "out-quint")
 local function span(from,to) return math.max(0,math.min(1,(ms-from)/(to-from))) end
 -- cubic-bezier(.3,.75,.3,1) exactly (Bead has no such named curve): bisect x(u)=t, return y(u).
 local function bezier(t)
@@ -291,8 +292,10 @@ children[#children+1]=ui.Text{id="status",position="absolute",left=24,top=height
 
 -- A transparent full-size root that only keeps the surface alive for the storyboard (no reveal, no fade, no
 -- slide: the shared profile would fight it); a click on empty
--- space closes the picker like Esc (the wallpaper goes back).
+-- space closes the picker like Esc (the wallpaper goes back). No open motion either (`duration=0`): Bead keeps a
+-- panel on its CPU renderer while the panel motion runs, which at full screen held the strand's first GL frame
+-- back ~200 ms behind 10-20 ms CPU frames.
 return kit.Panel{id="extras",edge="top",open=ui.bind("panel.open"),width=width,height=height,shadow=false,reveal=false,fade=false,slide_distance=0,
-  return_duration=W.close_ms/1000,key_repeat={delay=260,interval=95,min_interval=62,ramp_ms=800}, -- the held-arrow glide clock (spec v5f)
+  duration=0,return_duration=W.close_ms/1000,key_repeat={delay=260,interval=95,min_interval=62,ramp_ms=800}, -- the held-arrow glide clock (spec v5f)
   radius=0,fill="transparent",padding=0,gap=0,body="body",on_activate=ui.action("close"),aria_label="Close wallpaper picker",
   ui.Box{id="body",position="absolute",left=0,top=0,width=width,height=height,fill="transparent",join_edge="top",table.unpack(children)}}

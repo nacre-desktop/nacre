@@ -792,7 +792,7 @@ mod tests {
                     && (text.contains("kit.Panel")
                         || text.contains("ui.Panel")
                         || text.contains("panel(embedded"))
-                    // Strand's exit is the reversed storyboard (the prototype's 260 ms): its one authored `return_duration`.
+                    // Strand runs its own storyboard: no open motion (`duration=0`) and the reversed exit (260 ms `return_duration`).
                     && !name.ends_with("/extras/wallpaper/main.luau")
                     && ["duration=", "transition=", "view.duration", "leave_delay"]
                         .iter()
