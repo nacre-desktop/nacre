@@ -4,11 +4,6 @@ local function body_height(s)
 end
 
 local function wallpaper_item_matches(item,s)
-  local animated=item.animated==true
-  local dynamic=(s["extras.wallpaper.kind"] or "static") == "dynamic"
-  if dynamic then
-    if item.kind~="video" and not animated then return false end
-  elseif item.kind~="image" or animated then return false end
   local text=(tostring(item.title or "").." "..tostring(item.id or "")):lower()
   for word in tostring(s["extras.query"] or ""):lower():gmatch("%S+") do if not text:find(word,1,true) then return false end end
   return true
@@ -188,7 +183,6 @@ local exports = {
     ["extras.workspaces"] = {}, ["extras.rows"] = {}, ["extras.available"] = true,
     ["extras.per_output"] = false, ["extras.workspace_count"] = 7,
     ["extras.message"] = "", ["extras.query"] = "", ["extras.scroll"] = 0,
-    ["extras.wallpaper.kind"] = "static",
     ["extras.wallpaper.revision"] = 0,
     ["extras.wallpaper.resource_revision"] = 0,
     ["extras.wallpaper.loading"] = false,

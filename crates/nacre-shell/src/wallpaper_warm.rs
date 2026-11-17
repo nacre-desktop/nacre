@@ -17,14 +17,13 @@ use std::{
     time::{Duration, Instant},
 };
 
-type WarmIdentity = (String, String, String, u32, u32, u32, u32, u32);
+type WarmIdentity = (String, String, u32, u32, u32, u32, u32);
 type DesiredRaster = (Option<PathBuf>, Option<PathBuf>, u32, u32, ImageFit);
 const WARM_CATALOGUE_LIMIT: usize = bead::core::cache::MIB;
 
 pub(crate) struct PreparedCatalogue {
     pub(crate) boot: String,
     pub(crate) active_path: String,
-    pub(crate) kind: String,
     viewport: (u32, u32),
     pub(crate) entries: Arc<[Json]>,
     scene: bead::render::Scene,
@@ -105,10 +104,9 @@ fn publish_catalogue(
     *slot = Some(Arc::new(PreparedCatalogue {
         boot: identity.0.clone(),
         active_path: identity.1.clone(),
-        kind: identity.2.clone(),
         viewport: (
+            f32::from_bits(identity.2) as u32,
             f32::from_bits(identity.3) as u32,
-            f32::from_bits(identity.4) as u32,
         ),
         entries: entries.into(),
         scene,
@@ -238,12 +236,6 @@ impl Warmer {
                             continue;
                         };
                         let active = source.snapshot();
-                        let preferences = settings.snapshot().data["data"].clone();
-                        let kind = if preferences["kind"] == "dynamic" {
-                            "dynamic"
-                        } else {
-                            "static"
-                        };
                         let active_path = active.data["current"]["motion"]["path"]
                             .as_str()
                             .or_else(|| active.data["current"]["path"].as_str())
@@ -252,7 +244,6 @@ impl Warmer {
                         let identity = (
                             boot.clone(),
                             active_path,
-                            kind.to_owned(),
                             w.to_bits(),
                             h.to_bits(),
                             inner_w.to_bits(),
@@ -279,7 +270,7 @@ impl Warmer {
                             scale: s,
                         };
                         let warm = |entries: &[Json]| {
-                            warm_catalogue(&root, &palette, entries, kind, geometry)
+                            warm_catalogue(&root, &palette, entries, geometry)
                         };
                         let Some(mut result) = warm(&catalogue) else {
                             warmed = None;
@@ -407,21 +398,13 @@ fn warm_catalogue(
     root: &Path,
     palette: &Palette,
     entries: &[Json],
-    kind: &str,
     geometry: WarmGeometry,
 ) -> Option<WarmResult> {
-    let selectable: Vec<_> = entries
-        .iter()
-        .filter(|item| wallpaper_item_matches(item, kind))
-        .collect();
+    let selectable: Vec<_> = entries.iter().collect();
     if selectable.is_empty() {
         // Catalogue can be valid but empty during daemon startup. Do not mark
         // this identity warm: no topic signals when catalogue indexing ends.
-        bead::core::vprintln!(
-            "WALLPAPER_WARM waiting_catalogue entries={} kind={}",
-            entries.len(),
-            kind
-        );
+        bead::core::vprintln!("WALLPAPER_WARM waiting_catalogue entries={}", entries.len());
         return None;
     }
     let selected = selectable
@@ -466,7 +449,6 @@ fn warm_catalogue(
                 ("extras.message".into(), Value::Text(String::new())),
                 ("extras.query".into(), Value::Text(String::new())),
                 ("extras.rows".into(), Value::list(rows.clone())),
-                ("extras.wallpaper.kind".into(), Value::Text(kind.into())),
                 ("extras.wallpaper.loading".into(), Value::Bool(false)),
                 (
                     "extras.wallpaper.selection_id".into(),
@@ -551,13 +533,12 @@ fn warm_catalogue(
     }
     if requests.is_empty() {
         bead::core::vprintln!(
-            "WALLPAPER_WARM no_rasters entries={} selectable={} scene_images={} handles={} rows={} kind={}",
+            "WALLPAPER_WARM no_rasters entries={} selectable={} scene_images={} handles={} rows={}",
             entries.len(),
             selectable.len(),
             scene_images,
             wallpaper_handles,
-            matched_rows,
-            kind
+            matched_rows
         );
         return None;
     }
@@ -630,14 +611,5 @@ fn resolve_wallpaper_handles(scene: &mut bead::render::Scene, entries: &[Json]) 
         if let Some(source) = source {
             *path = PathBuf::from(source);
         }
-    }
-}
-
-fn wallpaper_item_matches(item: &Json, kind: &str) -> bool {
-    let animated = item["animated"] == true;
-    if kind == "dynamic" {
-        item["kind"] == "video" || animated
-    } else {
-        item["kind"] == "image" && !animated
     }
 }

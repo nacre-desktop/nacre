@@ -6562,6 +6562,16 @@ impl SceneSource for Runtime {
                 .is_some_and(|e| e.kind == crate::extras::Kind::Wallpaper)
                 && matches!(&event, UiEvent::Command { command, .. } if command == "escape")
             {
+                // The first Esc clears a typed search; the next one closes and restores.
+                if matches!(self.session.stores.get("extras.query"),
+                    Some(bead::core::Value::Text(query)) if !query.is_empty())
+                {
+                    let scene = self.session.update(BTreeMap::from([(
+                        "extras.query".into(),
+                        bead::core::Value::Text(String::new()),
+                    )]))?;
+                    return self.finish_scene(scene);
+                }
                 let wakeup = self
                     .wakeup
                     .clone()

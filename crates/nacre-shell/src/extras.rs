@@ -402,19 +402,14 @@ pub struct Extras {
     compositor: Option<Arc<dyn Source>>,
     wallpaper_actions: Option<Arc<std::sync::Mutex<WallpaperActivationQueue>>>,
 }
-fn preload_wallpaper_catalogue(
-    state: &mut State,
-    boot: &str,
-    active_path: &str,
-    kind: &str,
-) -> bool {
+fn preload_wallpaper_catalogue(state: &mut State, boot: &str, active_path: &str) -> bool {
     if state.catalogue_preloaded || !state.catalogue_result.is_empty() {
         return false;
     }
     let Some(prepared) = crate::wallpaper_warm::prepared_catalogue() else {
         return false;
     };
-    if prepared.boot != boot || prepared.active_path != active_path || prepared.kind != kind {
+    if prepared.boot != boot || prepared.active_path != active_path {
         return false;
     }
     let entry_count = prepared.entries.len();
@@ -487,9 +482,8 @@ impl Extras {
             state.wallpaper_boot = Some(boot);
         }
         if kind == Kind::Wallpaper
-            && let (Some(topic), Some(settings), Some(boot)) = (
+            && let (Some(topic), Some(boot)) = (
                 topic.as_ref(),
-                wallpaper_settings.as_ref(),
                 client
                     .status()
                     .boot
@@ -502,14 +496,7 @@ impl Extras {
                 .as_str()
                 .or_else(|| active.data["current"]["path"].as_str())
                 .unwrap_or_default();
-            let preferences = settings.snapshot();
-            let data = &preferences.data["data"];
-            let wallpaper_kind = if data["kind"] == "dynamic" {
-                "dynamic"
-            } else {
-                "static"
-            };
-            if preload_wallpaper_catalogue(&mut state, &boot, active_path, wallpaper_kind) {
+            if preload_wallpaper_catalogue(&mut state, &boot, active_path) {
                 state.wallpaper_boot = Some(boot);
             }
         }
@@ -704,7 +691,6 @@ impl Extras {
             crate::wallpaper_motion::set_picker_open(open);
         }
         let mut wallpaper_revision = 0;
-        let mut wallpaper_kind = "static";
         let mut wallpaper_opened = false;
         if self.kind == Kind::Wallpaper {
             wallpaper_opened = open && !state.wallpaper_open;
@@ -749,21 +735,8 @@ impl Extras {
             {
                 wallpaper_revision = wallpaper_revision.max(revision);
             }
-            if let Some(settings) = &self.wallpaper_settings {
-                let snapshot = settings.snapshot();
-                let data = &snapshot.data["data"];
-                wallpaper_kind = match data["kind"].as_str() {
-                    Some("dynamic") => "dynamic",
-                    _ => "static",
-                };
-            }
             if open && let Some(boot) = boot.as_ref() {
-                preload_wallpaper_catalogue(
-                    &mut state,
-                    boot,
-                    &wallpaper_active_path,
-                    wallpaper_kind,
-                );
+                preload_wallpaper_catalogue(&mut state, boot, &wallpaper_active_path);
             }
             if open
                 && boot.is_some()
@@ -1156,10 +1129,6 @@ impl Extras {
                 let current = &topic.snapshot().data["current"];
                 current["motion"]["path"].as_str().is_some()
             });
-            values.insert(
-                "extras.wallpaper.kind".into(),
-                Value::Text(wallpaper_kind.into()),
-            );
             let (resolution_id, resolution) = match &state.wallpaper_resolution {
                 Some((id, width, height)) if *width > 0 && *height > 0 => {
                     (id.clone(), format!("{width} × {height}"))
@@ -1531,24 +1500,6 @@ impl Extras {
                     state.action = self.begin("settings.provider", params, Some(wake));
                 }
                 return;
-            }
-            let (key, value) = if let Some(value) = request.strip_prefix("wallpaper:kind:") {
-                if !matches!(value, "static" | "dynamic") {
-                    return;
-                }
-                ("kind", value)
-            } else {
-                return;
-            };
-            let Some(params) = self.wallpaper_preference(key, |_| json!(value)) else {
-                return;
-            };
-            // Picker-only fields are helper-owned, not Settings registry descriptors.
-            // Publish the revision-fenced document through the same lane as QML;
-            // preserving every field avoids deleting unrelated provider preferences.
-            state.action = self.begin("settings.provider", params, Some(wake));
-            if state.action.is_none() {
-                state.message = "Wallpaper action unavailable".into();
             }
             return;
         }

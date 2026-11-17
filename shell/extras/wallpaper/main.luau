@@ -8,7 +8,6 @@ local T=require("../tokens")
 local W=T.wallpaper
 local width=ui.resolve_for_check(ui.bind("extras.viewport.width")) or W.viewport_fallback_width
 local height=ui.resolve_for_check(ui.bind("extras.viewport.height")) or W.viewport_fallback_height
-local kind=ui.resolve_for_check(ui.bind("extras.wallpaper.kind")) or "static"
 local search_focused=ui.resolve_for_check(ui.bind("bead.focused"))=="extras.search"
 local rows=ui.resolve_for_check(ui.bind("extras.filtered")) or {}
 local count=#rows
@@ -28,7 +27,7 @@ for index=1,#animation_query do animation_key=(animation_key*33+string.byte(anim
 -- A held key or a fast scroll (`glide`) follows its moving target at a steady pace instead of restarting the
 -- out-quint for every repeat; a single tap keeps the full 500 ms out-quint.
 local glide=ui.resolve_for_check(ui.bind("extras.wallpaper.glide"))==true
-local strand=ui.animate("wallpaper-strand:"..kind..":"..tostring(count)..":"..tostring(animation_key),position,glide and W.glide_duration or W.move_duration,glide and "linear" or "out-quint")
+local strand=ui.animate("wallpaper-strand:"..tostring(count)..":"..tostring(animation_key),position,glide and W.glide_duration or W.move_duration,glide and "linear" or "out-quint")
 -- Opening: the thread and its pearls drop in from the top edge. Swap this one line for another entrance.
 local entrance=ui.animate("wallpaper-strand-open",ui.resolve_for_check(ui.bind("panel.open"))==false and 0 or 1,W.open_duration,"out-cubic")
 
@@ -101,6 +100,12 @@ local function pearl_node(pearl)
       text=item.kind=="video" and "movie" or "image",family="Material Symbols Rounded",font_size=W.thumbnail_fallback_icon*s,
       color="onSurfaceVariant",text_align="center"}
   end
+  if item.kind=="video" then
+    local badge=math.max(16,size*.2)
+    kids[#kids+1]=ui.Box{id="video-badge",position="absolute",left=size*.5-badge/2,top=size*.74-badge/2,width=badge,height=badge,radius=badge/2,fill={10,11,16,170},
+      border_width=1,border_color=W.nav_ring,
+      ui.Text{text="play_arrow",position="absolute",left=0,top=badge*.1,width=badge,height=badge*.85,family="Material Symbols Rounded",font_size=badge*.7,color=W.ink,text_align="center"}}
+  end
   kids[#kids+1]=ui.Box{id="edge",position="absolute",left=0,top=0,width=size,height=size,radius=size/2,fill="transparent",
     border_width=edge,border_color=W.pearl_edge}
   if near>.3 then
@@ -171,14 +176,6 @@ local function glyph_button(id,label,glyph,size,font,fill,action,request,left,to
   if left then props.position,props.left,props.top="absolute",left,top end
   return kit.Button(props)
 end
-local function toggle(id,label,active,request,toggle_width)
-  local size=W.button_size*s
-  return kit.Button{id=id,aria_label=label,width=toggle_width*s,shrink=0,height=size,padding=0,radius=size/2,
-    fill=active and W.toggle_active or "transparent",hover_fill=active and W.toggle_active or {255,255,255,26},
-    activate_on_release=true,focus_on_pointer=false,on_activate=ui.action("extras.do",request),
-    ui.Text{position="absolute",left=0,top=(size-T.palette.description_font*s*1.4)/2,width="fill",height=T.palette.description_font*s*1.4,
-      text=label,font_size=T.palette.description_font*s,text_align="center",color=active and W.toggle_active_ink or W.ink}}
-end
 
 -- Veil: flat translucent bands that follow the design gradient (.55 top, .30 at 40 %, .62 bottom). A stretched
 -- SVG would be rasterised at the full panel size, which overruns Bead's retained raster budget at 2880x1800.
@@ -224,13 +221,9 @@ if selected then
     "extras.next",true,centre.x+W.nav_offset*s-nav/2,nav_top)
 end
 
--- One bottom pill: Static | Dynamic, a divider, search, (pause while a video plays), shuffle.
+-- One pill, centred under the name and meta: search, (pause while a video plays), shuffle.
 local button=W.button_size*s
 local pill_items={
-  ui.Row{id="media",height=button,gap=0,shrink=0,align="center",
-    toggle("static","Static",kind=="static","wallpaper:kind:static",W.toggle_static),
-    toggle("dynamic","Dynamic",kind=="dynamic","wallpaper:kind:dynamic",W.toggle_dynamic)},
-  ui.Box{id="media-divider",width=1,height=W.divider_height*s,shrink=0,fill=W.divider_fill},
   ui.Box{id="search-field",width=W.search_width*s,height=button,shrink=0,fill="transparent",
     kit.TextInput{id="search",position="absolute",left=0,top=0,width=W.search_width*s,height=button,
       focus_ring=false,text=ui.bind("extras.query"),placeholder="Search wallpapers",
@@ -244,9 +237,9 @@ if can_pause then
     paused and "play_arrow" or "pause",button,W.button_font*s,"transparent","extras.do","wallpaper:pause")
 end
 pill_items[#pill_items+1]=glyph_button("shuffle",ui.tr("bead.dashboard.wallpaper-shuffle"),"shuffle",button,W.button_font*s,"transparent","extras.shuffle",true)
-local pill_width=W.pill_padding*2*s+W.toggle_static*s+W.toggle_dynamic*s+1+W.search_width*s+button*(can_pause and 2 or 1)+W.pill_gap*s*(can_pause and 4 or 3)
+local pill_width=W.pill_padding*2*s+W.search_width*s+button*(can_pause and 2 or 1)+W.pill_gap*s*(can_pause and 2 or 1)
 local pill_height=W.pill_height*s
-children[#children+1]=ui.Box{id="wallpaper-controls",position="absolute",left=(width-pill_width)/2,top=height-W.pill_bottom*s-pill_height,
+children[#children+1]=ui.Box{id="wallpaper-controls",position="absolute",left=(width-pill_width)/2,top=centre.y+W.pill_top*s,
   width=pill_width,height=pill_height,radius=pill_height/2,fill=W.pill_fill,
   ui.Row{width=pill_width,height=pill_height,padding_left=W.pill_padding*s,padding_right=W.pill_padding*s,gap=W.pill_gap*s,align="center",table.unpack(pill_items)}}
 

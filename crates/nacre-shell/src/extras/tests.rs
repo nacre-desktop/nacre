@@ -578,10 +578,6 @@ async fn wallpaper_catalogue_projects_and_selection_calls_revision_fenced_activa
             ("panel.open".into(), Value::Bool(true)),
             ("extras.query".into(), Value::Text(String::new())),
             ("extras.kind".into(), Value::Text("wallpaper".into())),
-            (
-                "extras.wallpaper.kind".into(),
-                Value::Text("dynamic".into()),
-            ),
         ]))
         .unwrap();
     let wake: CallWake = Arc::new(|| {});
@@ -1765,7 +1761,6 @@ async fn wallpaper_thumbnail_cache_is_advertised_bounded_and_released_on_close()
                 "extras.wallpaper.selection_id".into(),
                 Value::Text("/fixture/advertised.jpg".into()),
             ),
-            ("extras.wallpaper.kind".into(), Value::Text("static".into())),
         ]))
         .unwrap();
     let opened_model = extras.project(&opened, None);
@@ -1778,7 +1773,6 @@ async fn wallpaper_thumbnail_cache_is_advertised_bounded_and_released_on_close()
                 "extras.wallpaper.selection_id".into(),
                 Value::Text("/fixture/advertised.jpg".into()),
             ),
-            ("extras.wallpaper.kind".into(), Value::Text("static".into())),
         ]))
         .unwrap();
     let closing_model = extras.project(&closed, None);
@@ -1970,7 +1964,7 @@ fn strand_rows(count: usize, kind: &str) -> Value {
                 };
                 json!({
                     "id":format!("/fixture/wallpaper-{index:02}"),
-                    "kind":if kind == "dynamic" {"video"} else {"image"},
+                    "kind":if kind == "mixed" && index % 3 == 1 {"video"} else {"image"},
                     "title":if index < NAMES.len() {NAMES[index].to_owned()} else {format!("Wallpaper {index:02}")},
                     "thumbnail":format!("wallpaper:thumbnail:0:/fixture/wallpaper-{index:02}"),
                     "preview":"",
@@ -2003,7 +1997,6 @@ fn strand_harness(
         ("extras.message".into(), Value::Text(String::new())),
         ("extras.query".into(), Value::Text(query.into())),
         ("extras.rows".into(), strand_rows(count, kind)),
-        ("extras.wallpaper.kind".into(), Value::Text(kind.into())),
         ("extras.wallpaper.loading".into(), Value::Bool(false)),
         (
             "extras.wallpaper.selection_id".into(),
@@ -2058,12 +2051,12 @@ fn wallpaper_strand_goldens() -> bead_test::Result<()> {
     let thumbnails = std::env::temp_dir().join(format!("strand-goldens-{}", std::process::id()));
     // (name, kind, query, strand position, logical size, scale)
     for (name, kind, query, position, logical, scale) in [
-        ("rest", "static", "", 6., (1440, 900), 1.),
-        ("rest", "static", "", 6., (1920, 1200), 1.5),
-        ("wide", "static", "", 6., (1920, 1080), 1.),
-        ("mid", "static", "", 6.5, (1440, 900), 1.),
-        ("empty", "static", "zzz", 1., (1440, 900), 1.),
-        ("dynamic", "dynamic", "", 3., (1440, 900), 1.),
+        ("rest", "mixed", "", 6., (1440, 900), 1.),
+        ("rest", "mixed", "", 6., (1920, 1200), 1.5),
+        ("wide", "mixed", "", 6., (1920, 1080), 1.),
+        ("mid", "mixed", "", 6.5, (1440, 900), 1.),
+        ("empty", "mixed", "zzz", 1., (1440, 900), 1.),
+        ("search", "mixed", "o", 3., (1440, 900), 1.),
     ] {
         let mut harness = strand_harness(12, kind, query, position, logical, scale, &thumbnails)?;
         let pearls = pearl_images(&harness);
@@ -2081,7 +2074,7 @@ fn wallpaper_strand_goldens() -> bead_test::Result<()> {
                 .primitives
                 .iter()
                 .any(|primitive| matches!(primitive,
-                bead::render::Primitive::Text { text, .. } if text == "Static")),
+                bead::render::Primitive::Text { text, .. } if text == "shuffle")),
             "the pill must render before approving a golden"
         );
         let frame = harness.render()?;
@@ -2149,7 +2142,7 @@ async fn the_strands_wrapped_left_side_is_requested_with_the_rest_of_the_window(
 fn the_first_pearl_requests_its_left_neighbours_from_the_catalogue_tail() -> bead_test::Result<()> {
     let thumbnails = std::env::temp_dir().join(format!("strand-wrap-{}", std::process::id()));
     // On open at index 0 of 36 the strand's left side is the tail of the catalogue: 31..=35.
-    let harness = strand_harness(36, "static", "", 1., (1440, 900), 1., &thumbnails)?;
+    let harness = strand_harness(36, "mixed", "", 1., (1440, 900), 1., &thumbnails)?;
     let names: Vec<String> = harness
         .scene()
         .primitives
@@ -2176,13 +2169,13 @@ fn the_first_pearl_requests_its_left_neighbours_from_the_catalogue_tail() -> bea
 fn a_big_catalogue_renders_at_most_eleven_pearls() -> bead_test::Result<()> {
     let thumbnails = std::env::temp_dir().join(format!("strand-count-{}", std::process::id()));
     for position in [1., 20., 46.5, 47.] {
-        let harness = strand_harness(47, "static", "", position, (1440, 900), 1., &thumbnails)?;
+        let harness = strand_harness(47, "mixed", "", position, (1440, 900), 1., &thumbnails)?;
         assert!(
             pearl_images(&harness) <= 11,
             "47 wallpapers at position {position} must render at most 11 pearl images"
         );
     }
-    let at_rest = strand_harness(47, "static", "", 20., (1440, 900), 1., &thumbnails)?;
+    let at_rest = strand_harness(47, "mixed", "", 20., (1440, 900), 1., &thumbnails)?;
     assert_eq!(pearl_images(&at_rest), 11);
     let _ = std::fs::remove_dir_all(&thumbnails);
     Ok(())
@@ -2701,7 +2694,6 @@ fn wallpaper_picker_uses_active_middle_then_visible_query_and_pointer_selection(
             ("extras.available".into(), Value::Bool(true)),
             ("extras.message".into(), Value::Text(String::new())),
             ("extras.rows".into(), rows),
-            ("extras.wallpaper.kind".into(), Value::Text("static".into())),
             (
                 "extras.wallpaper.selection_id".into(),
                 Value::Text(String::new()),
@@ -2745,40 +2737,27 @@ fn wallpaper_picker_uses_active_middle_then_visible_query_and_pointer_selection(
         Value::Text("wallpaper:commit:/wallpapers/last.jpg".into()),
         "pointer selection controls the next keyboard activation"
     );
-    let dynamic = session
+    // One strand holds stills, animated images and videos together.
+    let all = session
         .update(BTreeMap::from([(
-            "extras.wallpaper.kind".into(),
-            Value::Text("dynamic".into()),
+            "extras.query".into(),
+            Value::Text(String::new()),
         )]))?
-        .expect("dynamic filter update");
-    session.commit(dynamic);
+        .expect("clearing the search");
+    session.commit(all);
     let behavior_path = root.join("extras/behavior.luau");
     let behavior =
         bead::ui::script::Script::load(&std::fs::read(&behavior_path)?, &behavior_path).unwrap();
-    let Value::List(dynamic_rows) = behavior
+    let Value::List(all_rows) = behavior
         .resolve("extras.filtered", &session.stores)
         .unwrap()
     else {
-        panic!("dynamic wallpaper filter returns rows")
+        panic!("the wallpaper filter returns rows")
     };
-    let dynamic_ids: std::collections::BTreeSet<&str> = dynamic_rows
-        .iter()
-        .filter_map(|row| row["id"].as_str())
-        .collect();
-    assert_eq!(
-        dynamic_ids,
-        std::collections::BTreeSet::from(["/wallpapers/animated.gif", "/wallpapers/movie.mp4"])
-    );
-    let chosen = session.action_values("extras.choose", Value::Bool(true))?;
-    assert_eq!(
-        chosen["extras.request"],
-        Value::Text("wallpaper:commit:/wallpapers/movie.mp4".into()),
-        "a media filter clamps the prior ordinal when its selected/active ID is absent"
-    );
+    assert_eq!(all_rows.len(), 6, "no Static/Dynamic split");
     // Opening on the final item must take one forward step across the seam.
     let reset = session
         .update(BTreeMap::from([
-            ("extras.wallpaper.kind".into(), Value::Text("static".into())),
             (
                 "extras.wallpaper.selection_id".into(),
                 Value::Text("/wallpapers/last.jpg".into()),
@@ -3300,29 +3279,12 @@ async fn picker_preferences_use_provider_lane_and_preserve_the_document() {
         lab.calls.try_recv().is_err(),
         "layout is no longer a preference"
     );
-    for (key, value) in [("kind", "dynamic")] {
-        wallpaper.act(
-            &format!("wallpaper:{key}:{value}"),
-            &Stores::default(),
-            wake.clone(),
-        );
-        let (method, params) = tokio::time::timeout(Duration::from_secs(2), lab.calls.recv())
-            .await
-            .unwrap()
-            .unwrap();
-        assert_eq!(method, "settings.provider");
-        assert_eq!(params["store"], "wallpaper-picker");
-        assert_eq!(params["rev"], 3);
-        assert_eq!(params["value"]["version"], 1);
-        assert_eq!(params["value"][key], value);
-        assert_eq!(params["value"]["paused"], true);
-        assert_eq!(params["value"]["future"], "preserve");
-        assert_eq!(
-            params["value"]["layout"], "carousel",
-            "a stale saved key is tolerated"
-        );
-        wallpaper.state.borrow_mut().action = None;
-    }
+    // The retired Static/Dynamic `kind` request does nothing too; the saved key survives every write.
+    wallpaper.act("wallpaper:kind:dynamic", &Stores::default(), wake.clone());
+    assert!(
+        lab.calls.try_recv().is_err(),
+        "kind is no longer a preference"
+    );
     wallpaper.act("wallpaper:pause", &Stores::default(), wake);
     let (method, params) = lab.calls.recv().await.unwrap();
     assert_eq!(method, "settings.provider");
@@ -3330,6 +3292,11 @@ async fn picker_preferences_use_provider_lane_and_preserve_the_document() {
     assert_eq!(params["rev"], 3);
     assert_eq!(params["value"]["paused"], false);
     assert_eq!(params["value"]["future"], "preserve");
+    assert_eq!(
+        params["value"]["kind"], "static",
+        "a stale saved kind is tolerated"
+    );
+    assert_eq!(params["value"]["layout"], "carousel");
 }
 
 #[tokio::test(flavor = "current_thread")]
