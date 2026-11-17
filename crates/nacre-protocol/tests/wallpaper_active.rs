@@ -175,7 +175,7 @@ fn activation_revision_is_positive_and_safe() {
     assert_eq!(
         catalogue_schema["$defs"]["WallpaperCataloguePalette"]["properties"]["colours"]
             ["maxProperties"],
-        64
+        128
     );
     let active_schema: serde_json::Value =
         serde_json::from_str(&generated["protocol/schema/wallpaper-active-image.json"]).unwrap();
