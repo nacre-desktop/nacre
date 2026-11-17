@@ -114,7 +114,7 @@ return {id="title",title="Title",icon="title",category="bar",data={topics={},act
     },
     ui.Button{id="title-band",position="absolute",left="28%",right="28%",top=c.band_top,height=c.band_height,direction="row",justify="center",align="center",fill="transparent",hover_fill="transparent",focus_ring=false,focus_on_pointer=false,activate_on_release=true,edge_hover=true,aria_label=ui.tr("bead.bar.active-window"),on_activate=ui.action("bar.title"),
         -- The drag handle covers the band; it must stay part of the edge-hover target.
-        ui.Row{id="title-content",width=animated_width+t.title_icon+t.title_gap+(c.islands and 32 or 0),height=c.band_height,justify="center",align="center",gap=t.title_gap,drag_payload=props.instance.iid,edge_hover=true,fill=c.i_fill,border_width=c.i_stroke,border_color=c.i_stroke_color,radius=c.islands and t.pill_radius or nil,
+        ui.Row{id="title-content",width=animated_width+t.title_icon+t.title_gap+(c.islands and 32 or 0),height=c.band_height,justify="center",align="center",gap=t.title_gap,drag_payload=props.instance.iid,edge_hover=true,fill=c.i_fill,border_width=c.i_stroke,border_color=c.i_stroke_color,shadow=c.i_shadow,radius=c.islands and t.pill_radius or nil,
             table.unpack(title_children(shown,animated_width,true,true)),
         },
         trace(props.instance.iid),

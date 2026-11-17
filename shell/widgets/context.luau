@@ -41,8 +41,10 @@ local base=islands and "surface" or "surfaceContainer"
 local i_fill=islands and ui.alpha("surface",.96) or nil
 local i_stroke=islands and 1 or nil
 local i_stroke_color=islands and ui.alpha("onSurface",.13) or nil
+-- B0320: a tight shadow (13 px margin); the surface clips it at the bar zone.
+local i_shadow=islands and {blur=4,spread=0,dy=1,alpha=.6} or nil
 local function island(p)
-    if islands then p.fill,p.border_width,p.border_color=i_fill,i_stroke,i_stroke_color end
+    if islands then p.fill,p.border_width,p.border_color,p.shadow=i_fill,i_stroke,i_stroke_color,i_shadow end
     return p
 end
 -- The title band: 30 px centred in the frame bar; a 34 px island 6 px from the top in the islands bar.
@@ -96,4 +98,4 @@ local function status_text(p)
     p.max_width=whole_width(p.max_width)
     return ui.Text(p)
 end
-return {i_fill=i_fill,i_stroke=i_stroke,i_stroke_color=i_stroke_color,islands=islands,base=base,island=island,band_top=band_top,band_height=band_height,ui=ui,kit=kit,t=t,centered_text=centered_text,launcher=launcher,popouts=popouts,ws_on=ws_on,tray_on=tray_on,dash_on=dash_on,focus_on=focus_on,updates_on=updates_on,updates_n=updates_n,header=header,title=title,title_width=title_width,cue_extent=cue_extent,dwell=dwell,ws_count=ws_count,ws_icons=ws_icons,thread=thread,pearl_accent=pearl_accent,glyph=glyph,status_glyph=status_glyph,status_text=status_text,whole_width=whole_width}
+return {i_shadow=i_shadow,i_fill=i_fill,i_stroke=i_stroke,i_stroke_color=i_stroke_color,islands=islands,base=base,island=island,band_top=band_top,band_height=band_height,ui=ui,kit=kit,t=t,centered_text=centered_text,launcher=launcher,popouts=popouts,ws_on=ws_on,tray_on=tray_on,dash_on=dash_on,focus_on=focus_on,updates_on=updates_on,updates_n=updates_n,header=header,title=title,title_width=title_width,cue_extent=cue_extent,dwell=dwell,ws_count=ws_count,ws_icons=ws_icons,thread=thread,pearl_accent=pearl_accent,glyph=glyph,status_glyph=status_glyph,status_text=status_text,whole_width=whole_width}
