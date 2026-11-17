@@ -28,8 +28,8 @@ for index=1,#animation_query do animation_key=(animation_key*33+string.byte(anim
 -- out-quint for every repeat; a single tap keeps the full 500 ms out-quint.
 local glide=ui.resolve_for_check(ui.bind("extras.wallpaper.glide"))==true
 local strand=ui.animate("wallpaper-strand:"..tostring(count)..":"..tostring(animation_key),position,glide and W.glide_duration or W.move_duration,glide and "linear" or "out-quint")
--- The entry/exit storyboard, in one place: a linear 0..1 clock over the whole 675 ms (260 ms on the way back, so the
--- exit is the exact reverse), and every part below reads its own span of `ms`. `extras.wallpaper.entry_ms` pins it
+-- The entry/exit storyboard, in one place: a linear 0..1 clock over the whole 675 ms (180 ms on the way back: the shared panel close; the prototype's 260 ms needs a per-panel close duration from Bead,
+-- the surface is hidden when the panel's own 180 ms close ends), and every part below reads its own span of `ms`. `extras.wallpaper.entry_ms` pins it
 -- for goldens. Bead has no node opacity: the veil, ring, texts and pill fade through colour alpha (pearls scale and fade through Image opacity).
 local opening=ui.resolve_for_check(ui.bind("panel.open"))~=false
 local pinned=ui.resolve_for_check(ui.bind("extras.wallpaper.entry_ms")) or -1 -- only goldens pin it (>= 0)
@@ -228,10 +228,10 @@ if selected then
   if selected.kind=="video" then meta=ui.tr("bead.dashboard.wallpaper-meta-video",{meta=meta})
   elseif resolution~="" and resolution_id==selected.id then meta=ui.tr("bead.dashboard.wallpaper-meta-size",{meta=meta,size=resolution}) end
   local meta_font=W.meta_font*s
-  local meta_row={ui.Text{id="selection-count",width=ui.text_width(meta,ui.default_font_family,meta_font)+2,height=W.meta_height*s,text=meta,
+  local meta_row={ui.Text{id="selection-count",width=ui.text_width(meta,ui.default_font_family,meta_font)+12*s,height=W.meta_height*s,text=meta,
     font_weight=500,font_size=meta_font,color=fade(W.ink_soft,chrome)}}
   local dots={}
-  local colours=type(selected.palette)=="table" and selected.palette.colours or nil
+  local colours=selected.swatch or (type(selected.palette)=="table" and selected.palette.colours or nil)
   for _,role in ipairs(W.palette_roles) do
     local r,g,b=string.match(type(colours)=="table" and tostring(colours[role] or "") or "","#(%x%x)(%x%x)(%x%x)")
     if r then

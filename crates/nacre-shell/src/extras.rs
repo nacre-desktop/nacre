@@ -416,6 +416,14 @@ impl StepGate {
 /// The Esc restore is a little quicker than a move.
 const WALLPAPER_RESTORE_MS: u32 = 400;
 /// Strand's open storyboard (shell/extras/tokens.luau open_ms): the warm hold waits for it.
+/// The caption's palette dots (shell/extras/tokens.luau palette_roles).
+const SWATCH_ROLES: [&str; 5] = [
+    "primary",
+    "secondary",
+    "tertiary",
+    "primaryContainer",
+    "onSurface",
+];
 const STRAND_SETTLE: Duration = Duration::from_millis(675);
 pub struct Extras {
     pub kind: Kind,
@@ -938,10 +946,19 @@ impl Extras {
                     for entry in &mut state.catalogue_result {
                         let active = entry["id"].as_str() == Some(id);
                         entry["active"] = active.into();
-                        // The palette the daemon applied is the caption's palette: it is there for any entry the
-                        // strand has shown, even when the helper's catalogue cache holds none for it.
-                        if active && entry["palette"].is_null() && valid_catalogue_palette(&current["palette"]) {
-                            entry["palette"] = current["palette"].clone();
+                        // The caption's five dots come from the palette the daemon applied, so they exist for any
+                        // entry the strand has shown even when the helper's catalogue cache holds no palette.
+                        if active && entry["swatch"].is_null() {
+                            let colours = &current["palette"]["colours"];
+                            let swatch: serde_json::Map<String, Json> = SWATCH_ROLES
+                                .iter()
+                                .filter_map(|role| {
+                                    Some((role.to_string(), colours.get(role)?.clone()))
+                                })
+                                .collect();
+                            if swatch.len() == SWATCH_ROLES.len() {
+                                entry["swatch"] = Json::Object(swatch);
+                            }
                         }
                     }
                 }
@@ -1276,10 +1293,7 @@ impl Extras {
         } else if closing {
             (state.warm, state.warm_due) = (None, None);
         }
-        if open
-            && state.warm.is_none()
-            && state.warm_due.is_some_and(|due| Instant::now() >= due)
-        {
+        if open && state.warm.is_none() && state.warm_due.is_some_and(|due| Instant::now() >= due) {
             state.warm_due = None;
             state.warm = state
                 .warm_gate

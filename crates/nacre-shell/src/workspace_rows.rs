@@ -447,10 +447,15 @@ impl Rows {
             rows
         };
         let icon_mode = view.icons.iter().any(|i| !i.is_empty());
-        let frozen = FROZEN_ACTIVE.lock().unwrap_or_else(|p| p.into_inner()).clone();
-        let held = frozen
-            .as_deref()
-            .and_then(|id| shown.iter().find(|w| topic_id(&w.id).as_deref() == Some(id)));
+        let frozen = FROZEN_ACTIVE
+            .lock()
+            .unwrap_or_else(|p| p.into_inner())
+            .clone();
+        let held = frozen.as_deref().and_then(|id| {
+            shown
+                .iter()
+                .find(|w| topic_id(&w.id).as_deref() == Some(id))
+        });
         let active = held
             .or_else(|| shown.iter().find(|w| w.focused))
             .or_else(|| shown.iter().find(|w| w.active))
@@ -603,11 +608,18 @@ mod tests {
     fn the_fallbacks_empty_workspace_does_not_take_the_pill_from_the_one_the_user_came_from() {
         let mut came_from = workspace(1, "1", false, false);
         let mut empty = workspace(2, "2", false, true);
-        (came_from.id, empty.id) = (Id("niri:x:workspace:1".into()), Id("niri:x:workspace:2".into()));
+        (came_from.id, empty.id) = (
+            Id("niri:x:workspace:1".into()),
+            Id("niri:x:workspace:2".into()),
+        );
         let snap = snapshot(vec![came_from, empty], vec![], false);
         let rows = Rows::default();
         freeze_active(Some("niri-workspace:1".into()));
-        let held: Vec<_> = rows.rows_with(&snap, Some("out"), &no_dirs).iter().map(|r| r["active"] == true).collect();
+        let held: Vec<_> = rows
+            .rows_with(&snap, Some("out"), &no_dirs)
+            .iter()
+            .map(|r| r["active"] == true)
+            .collect();
         freeze_active(None);
         assert_eq!(held, [true, false]);
     }

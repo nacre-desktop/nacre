@@ -2468,10 +2468,16 @@ async fn the_wallpaper_fade_is_warm_exactly_while_the_picker_is_open() {
         extras.state.borrow_mut().warm_gate = Some(gate.clone());
         assert!(!gate.wallpaper_warm());
         extras.project(&open, Some(wake.clone()));
-        assert!(!gate.wallpaper_warm(), "the hold waits for the open storyboard");
+        assert!(
+            !gate.wallpaper_warm(),
+            "the hold waits for the open storyboard"
+        );
         extras.state.borrow_mut().warm_due = Some(Instant::now());
         extras.project(&open, Some(wake.clone()));
-        assert!(gate.wallpaper_warm(), "the settled storyboard takes the hold");
+        assert!(
+            gate.wallpaper_warm(),
+            "the settled storyboard takes the hold"
+        );
         assert_eq!(woken.load(std::sync::atomic::Ordering::SeqCst), 1);
         if close == "commit" {
             extras.act("wallpaper:commit:/fixture/current.jpg", &open, wake.clone());
@@ -2538,7 +2544,10 @@ fn the_fallback_shows_an_empty_workspace_and_leaves_an_already_empty_one_alone()
     let busy = json!({"focus":{"outputId":"OUT"},
         "workspaces":{"a":{"index":1,"outputId":"OUT","active":true},"b":{"index":2,"outputId":"OUT"},"c":{"index":1,"outputId":"OTHER","active":true}},
         "windows":{"w":{"workspaceId":"a"},"x":{"workspaceId":"c"}}});
-    assert_eq!(peek_workspace_plan(&busy), Some((json!("OUT"), 1, 2, "a".into())));
+    assert_eq!(
+        peek_workspace_plan(&busy),
+        Some((json!("OUT"), 1, 2, "a".into()))
+    );
     let empty_now = json!({"focus":{"outputId":"OUT"},
         "workspaces":{"a":{"index":1,"outputId":"OUT","active":true},"b":{"index":2,"outputId":"OUT"}},
         "windows":{}});
