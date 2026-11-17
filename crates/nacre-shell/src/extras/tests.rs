@@ -2459,7 +2459,7 @@ async fn the_peek_is_held_while_the_picker_is_open_and_dropped_on_every_close() 
 #[tokio::test(flavor = "current_thread")]
 async fn a_slow_peek_answer_never_blocks_the_open() {
     use std::io::{BufRead, Write};
-    let mut lab = lab_with_topics(vec!["wallpaper.active".into()]).await;
+    let lab = lab_with_topics(vec!["wallpaper.active".into()]).await;
     let socket = std::env::temp_dir().join(format!("extras-peek-slow-{}.sock", std::process::id()));
     let _ = std::fs::remove_file(&socket);
     let listener = std::os::unix::net::UnixListener::bind(&socket).unwrap();
