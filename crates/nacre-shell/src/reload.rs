@@ -4965,6 +4965,12 @@ impl Runtime {
             {
                 motion.edge = anchor.edge;
             }
+            if self.launcher.is_some()
+                && !crate::placement::Frame::current().bordered
+                && let Some(motion) = &mut scene.motion
+            {
+                crate::launcher_panel::island_motion(motion);
+            }
             // Canvas surfaces are positioned by content bounds in output coordinates, so the
             // layout's 32 px shadow margin must not shift their content (or the drag overlay's
             // zones and ghost) away from the output-local hit tests.

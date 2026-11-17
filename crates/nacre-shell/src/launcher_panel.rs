@@ -6,6 +6,38 @@ use bead::{
     wayland::PanelSpec,
 };
 use std::path::PathBuf;
+/// No border (A): the launcher fades in place, never growing from an edge. Bead's panel motion has no
+/// scale, so this is the fade half of "fade + scale .97 -> 1" (180 ms out-quint; close 120 ms ease-in).
+pub fn island_motion(motion: &mut bead::render::Motion) {
+    motion.edge = Edge::Bottom;
+    motion.duration = 0.18;
+    motion.auto_open = false;
+    motion.spring = false;
+    motion.curve = Some(bead::core::animation::Curve::OutQuint);
+    motion.return_duration = Some(0.12);
+    motion.return_curve = Some(bead::core::animation::Curve::InCubic);
+    motion.fade = true;
+    motion.reveal = false;
+    motion.slide_distance = Some(0.);
+}
+/// The card's surface origin: body centred on the output, its top 18 % down.
+fn island_origin(scene: &bead::render::Scene, output: (i32, i32)) -> (i32, i32) {
+    let body = crate::placement::body(scene);
+    (
+        ((output.0 as f32 - body.w) / 2. - body.x + scene.bounds.x).round() as i32,
+        (output.1 as f32 * 0.18 - body.y + scene.bounds.y).round() as i32,
+    )
+}
+/// Frame (B): today's bottom drawer. No border (A): the card above.
+fn position(drawer: bead::wayland::PanelPositioner) -> bead::wayland::PanelPositioner {
+    std::sync::Arc::new(move |scene, center, output| {
+        if crate::placement::Frame::current().bordered {
+            drawer(scene, center, output)
+        } else {
+            island_origin(scene, output)
+        }
+    })
+}
 pub fn spec(
     fill: [u8; 4],
     palette: PathBuf,
@@ -35,10 +67,10 @@ pub fn spec(
     }
     let cold = fallback.clone();
     PanelSpec {
-        position: Some(
+        position: Some(position(
             crate::placement::Frame::default()
                 .positioner(crate::placement::Attachment::Attached(Edge::Bottom)),
-        ),
+        )),
         engages_decorations: false,
         overlay: false,
         retain_when_closed: false,
@@ -50,12 +82,18 @@ pub fn spec(
         fallback_factory: None,
         renderer: bead::render::RendererKind::Cpu,
         factory: std::sync::Arc::new(move |open| {
+            let mut cold = cold.clone();
+            if !crate::placement::Frame::current().bordered
+                && let Some(motion) = &mut cold.motion
+            {
+                island_motion(motion);
+            }
             let session = bead::ui::Session::new(
                 "shell".into(),
                 "ui/main.luau".into(),
                 palette.clone(),
                 colors.clone(),
-                cold.clone(),
+                cold,
             );
             let quick = source.quick().map_err(|e| e.to_string())?;
             let source = source.connect().map_err(|e| e.to_string())?;
@@ -86,5 +124,31 @@ pub fn spec(
                 .map(|r| Box::new(r) as Box<dyn bead::wayland::SceneSource>)
                 .map_err(|e| e.to_string())
         }),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn island_launcher_is_centred_at_18_percent_and_frame_keeps_the_drawer() {
+        let mut scene = bead::render::Scene::empty(1164., 654.);
+        scene.bounds = Rect::new(-32., -32., 1164., 654.);
+        scene.primitives = vec![Primitive::Rounded {
+            rect: Rect::new(0., 0., 1100., 590.),
+            radius: 12.,
+            fill: [0; 4],
+            border: None,
+        }];
+        // Body left (1920 - 1100) / 2 = 410, top 18 % of 1200 = 216, less the 32 px shadow margin.
+        assert_eq!(island_origin(&scene, (1920, 1200)), (378, 184));
+        // The live frame is bordered by default: the drawer positioner answers unchanged.
+        let drawer = crate::placement::Frame::default()
+            .positioner(crate::placement::Attachment::Attached(Edge::Bottom));
+        assert_eq!(
+            position(drawer.clone())(&scene, None, (1920, 1200)),
+            drawer(&scene, None, (1920, 1200))
+        );
     }
 }

@@ -1565,3 +1565,79 @@ fn launcher_rail_hover_and_selected_goldens() -> Result<()> {
     }
     Ok(())
 }
+
+/// No border (A): the launcher is a radius-24 card; the appear is a fade, so the mid-appear pose
+/// is the open card at half opacity. The frame (B) look is the unchanged launcher-rows goldens.
+#[test]
+fn launcher_island_open_and_mid_appear_goldens() -> Result<()> {
+    use bead::render::{Damage, PixelFormat, ShmTarget};
+    let h = harness("", 0.)?;
+    let colors = bead::render::Palette::read(&root().join("palette.json"))?;
+    let mut card = h.scene().clone();
+    let frame = crate::placement::Frame {
+        bordered: false,
+        ..crate::placement::Frame::DEFAULT
+    };
+    crate::placement::Chrome::new(
+        crate::placement::Attachment::Attached(bead::core::Edge::Bottom),
+        &colors,
+    )?
+    .decorate_with(frame, &mut card)?;
+    crate::launcher_panel::island_motion(card.motion.as_mut().expect("panel motion"));
+    let motion = card.motion.as_ref().unwrap();
+    assert!(motion.fade && !motion.reveal && motion.slide_distance == Some(0.));
+    assert_eq!(
+        (motion.duration, motion.return_duration),
+        (0.18, Some(0.12))
+    );
+    for (name, opacity) in [("open", 1.), ("mid-appear", 0.5)] {
+        let mut scene = card.clone();
+        scene.opacity = opacity;
+        let (w, hgt) = (
+            (scene.bounds.w * 1.5).ceil() as u32,
+            (scene.bounds.h * 1.5).ceil() as u32,
+        );
+        let mut bytes = vec![0u8; (w * hgt * 4) as usize];
+        let mut renderer = bead::render::renderer(bead::render::RendererKind::Cpu)?;
+        renderer.prepare(&scene, 1.5)?;
+        renderer.render(
+            &scene,
+            ShmTarget {
+                bytes: &mut bytes,
+                width: w,
+                height: hgt,
+                scale: 1.5,
+                format: PixelFormat::Rgba,
+            },
+            Damage::full(w, hgt),
+        )?;
+        // Premultiplied over a desktop-grey backdrop, so the shadow and the fade are visible.
+        for px in bytes.as_chunks_mut::<4>().0 {
+            let a = u16::from(px[3]);
+            for (c, back) in [0x34u16, 0x37, 0x3f].into_iter().enumerate() {
+                px[c] = (u16::from(px[c]) + back * (255 - a) / 255).min(255) as u8;
+            }
+            px[3] = 255;
+        }
+        let shot = bead_test::Frame {
+            width: w,
+            height: hgt,
+            pixels: bytes,
+        };
+        let golden = root()
+            .join("tests/goldens")
+            .join(format!("launcher-island-{name}.png"));
+        if std::env::var("BEAD_UPDATE_GOLDENS").as_deref() == Ok("1") {
+            shot.save(&golden)?;
+        }
+        shot.compare(
+            &golden,
+            bead_test::Tolerance {
+                channel: 0,
+                changed_fraction: 0.,
+            },
+            &std::env::temp_dir().join("bead-launcher-island"),
+        )?;
+    }
+    Ok(())
+}

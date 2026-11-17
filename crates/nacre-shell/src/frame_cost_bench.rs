@@ -131,7 +131,13 @@ fn scenes() -> Vec<(&'static str, Scene)> {
             .expect("calendar runtime");
     vec![
         ("dashboard", open_scene(dashboard)),
-        ("launcher", open_scene(launcher)),
+        ("launcher", {
+            let mut scene = open_scene(launcher);
+            if !crate::placement::Frame::current().bordered {
+                crate::launcher_panel::island_motion(scene.motion.as_mut().expect("panel motion"));
+            }
+            scene
+        }),
         ("control", open_scene(control)),
         ("calendar", open_scene(calendar)),
     ]
