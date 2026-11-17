@@ -96,6 +96,8 @@ struct State {
     catalogue_request_handles: Vec<String>,
     catalogue_pending_handles: std::collections::BTreeSet<String>,
     catalogue_visible_handles: std::collections::BTreeSet<String>,
+    /// A thumbnail that settled without an image: (retries made, when the next step is due).
+    thumb_retries: std::collections::BTreeMap<String, (u8, Instant)>,
     catalogue_settled_handles: std::collections::BTreeSet<String>,
     wallpaper_open: bool,
     wallpaper_prefetched: bool,
@@ -321,6 +323,11 @@ impl WallpaperActivationQueue {
         }
     }
 }
+/// A thumbnail that settled without an image (not written yet) is asked for again once after this,
+/// then once more after the second delay, then left blank for the visit.
+const THUMB_RETRY_FIRST: Duration = Duration::from_millis(if cfg!(test) { 40 } else { 500 });
+const THUMB_RETRY_NEXT: Duration = Duration::from_millis(if cfg!(test) { 80 } else { 1500 });
+const THUMB_RETRIES: u8 = 2;
 /// Strand moves, and the wallpaper change they cause, run for this long (out-quint, like the pearls).
 const WALLPAPER_MOVE_MS: u32 = 500;
 /// The Esc restore is a little quicker than a move.
@@ -706,6 +713,15 @@ impl Extras {
                     "Wallpaper catalogue unavailable".into()
                 };
             }
+            if open
+                && state
+                    .thumb_retries
+                    .values()
+                    .any(|(count, due)| *count <= THUMB_RETRIES && *due <= Instant::now())
+            {
+                // New handles rebuild the rows, which brings the scene back through attach_images.
+                state.image_revision = state.image_revision.wrapping_add(1);
+            }
             if !open {
                 // The panel is sliding out. Cancel service work, but keep the last
                 // projected content and encoded image leases until the worker retires.
@@ -716,6 +732,7 @@ impl Extras {
                 state.catalogue_pending_handles.clear();
                 state.catalogue_visible_handles.clear();
                 state.catalogue_settled_handles.clear();
+                state.thumb_retries.clear();
                 state.catalogue_preloaded = false;
             }
             if let Some(ticket) = &mut state.catalogue
@@ -1457,6 +1474,25 @@ impl Extras {
             let primary_image = primary_file
                 .as_ref()
                 .and_then(|file| cached_wallpaper_image(&mut state, file, LIMIT));
+            if field == "thumbnail" && primary_image.is_some() {
+                state.thumb_retries.remove(&logical);
+            } else if field == "thumbnail" && state.catalogue_settled_handles.contains(&logical) {
+                // Settled without a usable image: step through the bounded retries.
+                let now = Instant::now();
+                let slot = state
+                    .thumb_retries
+                    .entry(logical.clone())
+                    .or_insert((0, now + THUMB_RETRY_FIRST));
+                if slot.0 <= THUMB_RETRIES && now >= slot.1 {
+                    if slot.0 < THUMB_RETRIES {
+                        *slot = (slot.0 + 1, now + THUMB_RETRY_NEXT);
+                        state.catalogue_settled_handles.remove(&logical);
+                    } else {
+                        slot.0 = THUMB_RETRIES + 1;
+                        eprintln!("STRAND_THUMB_GIVEUP id={id}");
+                    }
+                }
+            }
             if (primary_image.is_none() || needs_pick_data)
                 && !state.catalogue_settled_handles.contains(&logical)
             {
@@ -1544,6 +1580,16 @@ impl Extras {
                 }
             }
         }
+    }
+    /// When the next thumbnail retry is due, so the runtime wakes without polling.
+    pub fn thumb_retry_at(&self) -> Option<Instant> {
+        self.state
+            .borrow()
+            .thumb_retries
+            .values()
+            .filter(|(count, _)| *count <= THUMB_RETRIES)
+            .map(|(_, due)| *due)
+            .min()
     }
     pub fn content_ready(&self) -> bool {
         // Wallpaper metadata and thumbnails arrive progressively. Never hold the

@@ -5484,6 +5484,9 @@ impl SceneSource for Runtime {
             hover_close,
             self.reattach_hover_grace_until,
             self.dashboard_pearl_deadline,
+            self.extras
+                .as_ref()
+                .and_then(|extras| extras.thumb_retry_at()),
         ]
         .into_iter()
         .flatten()

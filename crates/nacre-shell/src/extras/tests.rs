@@ -2372,6 +2372,141 @@ async fn activated(lab: &mut Lab) -> Json {
     assert_eq!(method, "wallpaper.activate");
     params["id"].clone()
 }
+fn thumbnail_scene(handles: &[&str]) -> bead::render::Scene {
+    use bead::render::{ImageFit, Primitive, Rect, Scene};
+    Scene {
+        opacity: 1.,
+        motion: None,
+        resource_revision: 0,
+        asset_data: Default::default(),
+        clips: Default::default(),
+        layers: Vec::new(),
+        prepared: Default::default(),
+        font_files: Vec::new(),
+        width: 8.,
+        slide: None,
+        primitives: handles
+            .iter()
+            .map(|id| Primitive::Image {
+                blur: 0.,
+                fit: ImageFit::Fill,
+                clip_polygon: None,
+                radius: 0.,
+                tint: None,
+                rect: Rect::new(0., 0., 8., 6.),
+                path: std::path::PathBuf::from(format!("@icon:wallpaper:thumbnail:{id}")),
+            })
+            .collect(),
+        offset: (0., 0.),
+        bounds: Rect::new(0., 0., 8., 6.),
+    }
+}
+#[tokio::test(flavor = "current_thread")]
+async fn a_thumbnail_that_settles_empty_is_retried_twice_then_given_up() {
+    let mut lab = lab_with_topics(vec!["wallpaper.active".into()]).await;
+    let (extras, open, wake) = open_picker(&mut lab).await;
+    let blank = "/fixture/next.jpg";
+    let handle = format!("thumbnail:{blank}");
+    // Its file is not there (yet) and the reply does not change that.
+    let unready = |extras: &Extras| {
+        extras.state.borrow_mut().catalogue_result.iter_mut().for_each(|entry| {
+            entry["thumbnail"] = "/fixture/not-written-yet.jpg".into();
+            entry["palette"] = json!({"mode":"dark","colours":{"background":"#102030","onSurface":"#f0f0f0","primary":"#22aa88"}});
+        });
+    };
+    unready(&extras);
+    let settle = |extras: &Extras| extras.state.borrow().catalogue.is_none();
+    let mut requests = 0;
+    // First sight, then each due retry: one request apiece; a not-yet-due look asks nothing.
+    for (wait, asks) in [
+        (0, true),
+        (0, false),
+        (60, true),
+        (100, true),
+        (100, false),
+        (100, false),
+    ] {
+        tokio::time::sleep(Duration::from_millis(wait)).await;
+        extras.project(&open, Some(wake.clone()));
+        extras.attach_images(&mut thumbnail_scene(&[blank]), Some(wake.clone()));
+        let got = tokio::time::timeout(Duration::from_millis(150), lab.calls.recv())
+            .await
+            .ok()
+            .flatten();
+        {
+            let state = extras.state.borrow();
+            assert_eq!(
+                got.is_some(),
+                asks,
+                "step after {wait} ms: {got:?} settled={:?} retries={:?} pending={} open={}",
+                state.catalogue_settled_handles,
+                state.thumb_retries,
+                state.catalogue.is_some(),
+                state.wallpaper_open
+            );
+        }
+        if let Some((method, params)) = got {
+            assert_eq!(method, "wallpaper.catalogue");
+            assert_eq!(params["ids"], json!([blank]));
+            requests += 1;
+            for _ in 0..200 {
+                extras.project(&open, Some(wake.clone()));
+                if settle(&extras) {
+                    break;
+                }
+                tokio::time::sleep(Duration::from_millis(5)).await;
+            }
+            unready(&extras);
+        }
+    }
+    assert_eq!(requests, 3, "the first ask and exactly two retries");
+    assert_eq!(
+        extras.state.borrow().thumb_retries[&handle].0,
+        THUMB_RETRIES + 1
+    );
+    assert!(
+        extras.thumb_retry_at().is_none(),
+        "nothing left to wake for"
+    );
+    extras.project(&closed(&open), Some(wake));
+    assert!(
+        extras.state.borrow().thumb_retries.is_empty(),
+        "the count resets on close"
+    );
+}
+#[tokio::test(flavor = "current_thread")]
+async fn a_thumbnail_that_loads_is_never_retried() {
+    let mut lab = lab_with_topics(vec!["wallpaper.active".into()]).await;
+    let (extras, open, wake) = open_picker(&mut lab).await;
+    let file = std::env::temp_dir().join(format!("loaded-thumb-{}.png", std::process::id()));
+    image::RgbaImage::from_pixel(4, 4, image::Rgba([9, 9, 9, 255]))
+        .save(&file)
+        .unwrap();
+    {
+        let mut state = extras.state.borrow_mut();
+        let entry = state
+            .catalogue_result
+            .iter_mut()
+            .find(|entry| entry["id"] == "/fixture/next.jpg")
+            .unwrap();
+        entry["thumbnail"] = file.to_string_lossy().into_owned().into();
+        entry["palette"] = json!({"mode":"dark","colours":{"background":"#102030","onSurface":"#f0f0f0","primary":"#22aa88"}});
+    }
+    for _ in 0..4 {
+        tokio::time::sleep(Duration::from_millis(100)).await;
+        extras.project(&open, Some(wake.clone()));
+        extras.attach_images(
+            &mut thumbnail_scene(&["/fixture/next.jpg"]),
+            Some(wake.clone()),
+        );
+        assert!(
+            lab.calls.try_recv().is_err(),
+            "a loaded thumbnail asks for nothing"
+        );
+    }
+    assert!(extras.state.borrow().thumb_retries.is_empty());
+    let _ = std::fs::remove_file(file);
+}
 #[tokio::test(flavor = "current_thread")]
 async fn a_move_activates_at_once_with_a_500_ms_out_quint_fade() {
     let mut lab = lab_with_topics(vec!["wallpaper.active".into()]).await;
