@@ -857,15 +857,10 @@ impl Chrome {
             scene
                 .asset_data
                 .insert(path.clone(), Arc::from(svg.into_bytes()));
-            scene.primitives.push(Primitive::Image {
-                blur: 0.,
-                fit: bead::render::ImageFit::Fill,
-                clip_polygon: None,
-                radius: 0.,
-                tint: None,
-                rect: Rect::new(body.x + piece.x, body.y + piece.y, piece.w, piece.h),
+            scene.primitives.push(Primitive::image(
+                Rect::new(body.x + piece.x, body.y + piece.y, piece.w, piece.h),
                 path,
-            });
+            ));
         }
         scene.prepared.clear();
         Ok(())
@@ -950,20 +945,15 @@ impl Chrome {
                 _ => false,
             };
             if !replaced && is_root {
-                *primitive = Primitive::Image {
-                    blur: 0.,
-                    fit: bead::render::ImageFit::Fill,
-                    clip_polygon: None,
-                    radius: 0.,
-                    tint: None,
-                    rect: Rect::new(
+                *primitive = Primitive::image(
+                    Rect::new(
                         body.x - 32.,
                         body.y - top_inset,
                         body.w + 64.,
                         body.h + 32. + top_inset,
                     ),
-                    path: path.clone(),
-                };
+                    path.clone(),
+                );
                 replaced = true;
             }
         }

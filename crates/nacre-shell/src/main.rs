@@ -436,15 +436,6 @@ fn start(
     }
     let mut scene = if ui.is_some() {
         Scene {
-            opacity: 1.,
-            motion: None,
-            resource_revision: 0,
-            asset_data: Default::default(),
-            clips: Default::default(),
-            layers: Vec::new(),
-            prepared: Default::default(),
-            font_files: vec![],
-            width: 1100.,
             slide: Some(Slide {
                 closed_y: 32.,
                 open_y: 32.,
@@ -458,29 +449,19 @@ fn start(
                 fill: colors.get("surface")?,
                 border: None,
             }],
+            ..Scene::empty(1100., 590.)
         }
     } else if options.panel {
         panel(&colors, Path::new("shell"))?
     } else {
         Scene {
-            opacity: 1.,
-            motion: None,
-            resource_revision: 0,
-            asset_data: Default::default(),
-            clips: Default::default(),
-            layers: Vec::new(),
-            prepared: Default::default(),
-            font_files: Vec::new(),
-            width: 20000.,
-            slide: None,
             primitives: vec![Primitive::Rounded {
                 rect: Rect::new(0., 0., 20000., 32.),
                 radius: 0.,
                 fill: [32, 32, 32, 255],
                 border: None,
             }],
-            offset: (0., 0.),
-            bounds: Rect::new(0., 0., 20000., 32.),
+            ..Scene::empty(20000., 32.)
         }
     };
     if options.debug_progress {
@@ -1447,24 +1428,14 @@ fn panel(p: &Palette, assets: &Path) -> Result<Scene, Box<dyn std::error::Error>
             ink,
         );
     }
-    v.push(Primitive::Image {
-        blur: 0.,
-        fit: bead::render::ImageFit::Fill,
-        clip_polygon: None,
-        radius: 0.,
-        tint: None,
-        rect: Rect::new(28., 422., 48., 48.),
-        path: assets.join("sample.svg"),
-    });
-    v.push(Primitive::Image {
-        blur: 0.,
-        fit: bead::render::ImageFit::Fill,
-        clip_polygon: None,
-        radius: 0.,
-        tint: None,
-        rect: Rect::new(96., 422., 48., 48.),
-        path: assets.join("sample.png"),
-    });
+    v.push(Primitive::image(
+        Rect::new(28., 422., 48., 48.),
+        assets.join("sample.svg"),
+    ));
+    v.push(Primitive::image(
+        Rect::new(96., 422., 48., 48.),
+        assets.join("sample.png"),
+    ));
     let theme = if std::env::var_os("BEAD_ICON_PATH").is_none() {
         freedesktop_icons::default_theme_gtk().unwrap_or_else(|| "hicolor".into())
     } else {
@@ -1485,36 +1456,19 @@ fn panel(p: &Palette, assets: &Path) -> Result<Scene, Box<dyn std::error::Error>
         });
     if let Some(path) = icon {
         println!("ICON folder resolved=true");
-        v.push(Primitive::Image {
-            blur: 0.,
-            fit: bead::render::ImageFit::Fill,
-            clip_polygon: None,
-            radius: 0.,
-            tint: None,
-            rect: Rect::new(62., 490., 48., 48.),
-            path,
-        });
+        v.push(Primitive::image(Rect::new(62., 490., 48., 48.), path));
     } else {
         eprintln!("ICON folder unavailable in installed themes");
     }
     Ok(Scene {
-        opacity: 1.,
-        motion: None,
-        resource_revision: 0,
-        asset_data: Default::default(),
-        clips: Default::default(),
-        layers: Vec::new(),
-        prepared: Default::default(),
-        font_files: Vec::new(),
-        width: 1100.,
         slide: Some(Slide {
             closed_y: -650.,
             open_y: 30.,
             period_seconds: 2.,
         }),
         primitives: v,
-        offset: (0., 0.),
         bounds: Rect::new(-32., -32., 1164., 654.),
+        ..Scene::empty(1100., 590.)
     })
 }
 

@@ -246,18 +246,7 @@ mod tests {
     #[test]
     fn bundled_outfit_thin_digit_has_solid_ink_inside_the_stem() {
         let mut scene = Scene {
-            opacity: 1.,
-            motion: None,
             resource_revision: 1,
-            asset_data: Default::default(),
-            clips: Default::default(),
-            layers: vec![],
-            prepared: Default::default(),
-            font_files: vec![],
-            width: 240.,
-            slide: None,
-            offset: (0., 0.),
-            bounds: Rect::new(0., 0., 240., 180.),
             primitives: vec![Primitive::Text {
                 rect: Rect::new(0., 0., 240., 180.),
                 text: "1".into(),
@@ -268,6 +257,7 @@ mod tests {
                 align: Some(TextAlign::Center),
                 shadow: None,
             }],
+            ..Scene::empty(240., 180.)
         };
         scene.font_files = Selector::default().select(&scene).unwrap();
         let mut renderer = CpuRenderer::default();
@@ -329,18 +319,7 @@ mod tests {
         );
         selections().insert(key, probe.clone(), 64).unwrap();
         let scene = Scene {
-            opacity: 1.,
-            motion: None,
             resource_revision: 1,
-            asset_data: Default::default(),
-            clips: Default::default(),
-            layers: vec![],
-            prepared: Default::default(),
-            font_files: vec![],
-            width: 100.,
-            slide: None,
-            offset: (0., 0.),
-            bounds: Rect::new(0., 0., 100., 20.),
             primitives: vec![Primitive::Text {
                 rect: Rect::new(0., 0., 100., 20.),
                 text: "cache".into(),
@@ -351,6 +330,7 @@ mod tests {
                 align: None,
                 shadow: None,
             }],
+            ..Scene::empty(100., 20.)
         };
         // A panel reopened with a new runtime, and the session's text-meter picker, hit the
         // shared entry instead of asking Fontconfig (which knows no such family).

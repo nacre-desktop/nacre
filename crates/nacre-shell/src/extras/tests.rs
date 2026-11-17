@@ -683,7 +683,7 @@ async fn wallpaper_catalogue_projects_and_selection_calls_revision_fenced_activa
 
 #[tokio::test(flavor = "current_thread")]
 async fn wallpaper_hydrates_only_visible_image_ids_and_suppresses_missing_preview_retries() {
-    use bead::render::{ImageFit, Primitive, Rect, Scene};
+    use bead::render::{Primitive, Rect, Scene};
     let mut lab = lab_with_topics(vec!["wallpaper.active".into()]).await;
     let wallpaper = Extras::new(Kind::Wallpaper, lab.client.clone()).unwrap();
     start_with_empty_wallpaper_catalogue(&wallpaper);
@@ -708,27 +708,13 @@ async fn wallpaper_hydrates_only_visible_image_ids_and_suppresses_missing_previe
     }
 
     let mut scene = Scene {
-        opacity: 1.,
-        motion: None,
-        resource_revision: 0,
-        asset_data: Default::default(),
-        clips: Default::default(),
         layers: Vec::new(),
-        prepared: Default::default(),
         font_files: Vec::new(),
-        width: 8.,
-        slide: None,
-        primitives: vec![Primitive::Image {
-            blur: 0.,
-            fit: ImageFit::Fill,
-            clip_polygon: None,
-            radius: 0.,
-            tint: None,
-            rect: Rect::new(0., 0., 8., 6.),
-            path: std::path::PathBuf::from("@icon:wallpaper:preview:/fixture/next.mp4"),
-        }],
-        offset: (0., 0.),
-        bounds: Rect::new(0., 0., 8., 6.),
+        primitives: vec![Primitive::image(
+            Rect::new(0., 0., 8., 6.),
+            std::path::PathBuf::from("@icon:wallpaper:preview:/fixture/next.mp4"),
+        )],
+        ..Scene::empty(8., 6.)
     };
     wallpaper.attach_images(&mut scene, Some(wake.clone()));
     assert!(
@@ -785,27 +771,13 @@ async fn wallpaper_hydrates_only_visible_image_ids_and_suppresses_missing_previe
         );
     }
     let mut repeated = Scene {
-        opacity: 1.,
-        motion: None,
-        resource_revision: 0,
-        asset_data: Default::default(),
-        clips: Default::default(),
         layers: Vec::new(),
-        prepared: Default::default(),
         font_files: Vec::new(),
-        width: 8.,
-        slide: None,
-        primitives: vec![Primitive::Image {
-            blur: 0.,
-            fit: ImageFit::Fill,
-            clip_polygon: None,
-            radius: 0.,
-            tint: None,
-            rect: Rect::new(0., 0., 8., 6.),
-            path: std::path::PathBuf::from("@icon:wallpaper:preview:/fixture/next.mp4"),
-        }],
-        offset: (0., 0.),
-        bounds: Rect::new(0., 0., 8., 6.),
+        primitives: vec![Primitive::image(
+            Rect::new(0., 0., 8., 6.),
+            std::path::PathBuf::from("@icon:wallpaper:preview:/fixture/next.mp4"),
+        )],
+        ..Scene::empty(8., 6.)
     };
     wallpaper.attach_images(&mut repeated, Some(wake.clone()));
     assert!(
@@ -894,7 +866,7 @@ async fn wallpaper_hydrates_only_visible_image_ids_and_suppresses_missing_previe
 
 #[tokio::test(flavor = "current_thread")]
 async fn wallpaper_cached_thumbnails_without_pick_data_fetch_it_once() {
-    use bead::render::{ImageFit, Primitive, Rect, Scene};
+    use bead::render::{Primitive, Rect, Scene};
     let mut lab = lab_with_topics(vec!["wallpaper.active".into()]).await;
     let wallpaper = Extras::new(Kind::Wallpaper, lab.client.clone()).unwrap();
     start_with_empty_wallpaper_catalogue(&wallpaper);
@@ -919,27 +891,13 @@ async fn wallpaper_cached_thumbnails_without_pick_data_fetch_it_once() {
         tokio::time::sleep(Duration::from_millis(5)).await;
     }
     let scene = |handle: &str| Scene {
-        opacity: 1.,
-        motion: None,
-        resource_revision: 0,
-        asset_data: Default::default(),
-        clips: Default::default(),
         layers: Vec::new(),
-        prepared: Default::default(),
         font_files: Vec::new(),
-        width: 8.,
-        slide: None,
-        primitives: vec![Primitive::Image {
-            blur: 0.,
-            fit: ImageFit::Fill,
-            clip_polygon: None,
-            radius: 0.,
-            tint: None,
-            rect: Rect::new(0., 0., 8., 6.),
-            path: std::path::PathBuf::from(handle),
-        }],
-        offset: (0., 0.),
-        bounds: Rect::new(0., 0., 8., 6.),
+        primitives: vec![Primitive::image(
+            Rect::new(0., 0., 8., 6.),
+            std::path::PathBuf::from(handle),
+        )],
+        ..Scene::empty(8., 6.)
     };
     // First sight hydrates the thumbnail, palette and the video's poster descriptor.
     wallpaper.attach_images(
@@ -1013,7 +971,7 @@ async fn wallpaper_cached_thumbnails_without_pick_data_fetch_it_once() {
 
 #[tokio::test(flavor = "current_thread")]
 async fn wallpaper_close_discards_an_inflight_hydration_ticket_and_cache() {
-    use bead::render::{ImageFit, Primitive, Rect, Scene};
+    use bead::render::{Primitive, Rect, Scene};
     let mut lab = lab_with_topics(vec!["wallpaper.active".into()]).await;
     let wallpaper = Extras::new(Kind::Wallpaper, lab.client.clone()).unwrap();
     start_with_empty_wallpaper_catalogue(&wallpaper);
@@ -1034,27 +992,13 @@ async fn wallpaper_close_discards_an_inflight_hydration_ticket_and_cache() {
         tokio::time::sleep(Duration::from_millis(5)).await;
     }
     let mut scene = Scene {
-        opacity: 1.,
-        motion: None,
-        resource_revision: 0,
-        asset_data: Default::default(),
-        clips: Default::default(),
         layers: Vec::new(),
-        prepared: Default::default(),
         font_files: Vec::new(),
-        width: 8.,
-        slide: None,
-        primitives: vec![Primitive::Image {
-            blur: 0.,
-            fit: ImageFit::Fill,
-            clip_polygon: None,
-            radius: 0.,
-            tint: None,
-            rect: Rect::new(0., 0., 8., 6.),
-            path: std::path::PathBuf::from("@icon:wallpaper:thumbnail:/fixture/current.jpg"),
-        }],
-        offset: (0., 0.),
-        bounds: Rect::new(0., 0., 8., 6.),
+        primitives: vec![Primitive::image(
+            Rect::new(0., 0., 8., 6.),
+            std::path::PathBuf::from("@icon:wallpaper:thumbnail:/fixture/current.jpg"),
+        )],
+        ..Scene::empty(8., 6.)
     };
     wallpaper.attach_images(&mut scene, Some(wake.clone()));
     let call = lab.calls.recv().await.unwrap();
@@ -1073,7 +1017,7 @@ async fn wallpaper_close_discards_an_inflight_hydration_ticket_and_cache() {
 
 #[tokio::test(flavor = "current_thread")]
 async fn wallpaper_refreshes_deleted_cache_paths_and_settles_still_broken_paths() {
-    use bead::render::{ImageFit, Primitive, Rect, Scene};
+    use bead::render::{Primitive, Rect, Scene};
     let mut lab = lab_with_topics(vec!["wallpaper.active".into()]).await;
     let wallpaper = Extras::new(Kind::Wallpaper, lab.client.clone()).unwrap();
     let wake: CallWake = Arc::new(|| {});
@@ -1093,27 +1037,13 @@ async fn wallpaper_refreshes_deleted_cache_paths_and_settles_still_broken_paths(
         })];
     }
     let scene_for = |id: &str| Scene {
-        opacity: 1.,
-        motion: None,
-        resource_revision: 0,
-        asset_data: Default::default(),
-        clips: Default::default(),
         layers: Vec::new(),
-        prepared: Default::default(),
         font_files: Vec::new(),
-        width: 8.,
-        slide: None,
-        primitives: vec![Primitive::Image {
-            blur: 0.,
-            fit: ImageFit::Fill,
-            clip_polygon: None,
-            radius: 0.,
-            tint: None,
-            rect: Rect::new(0., 0., 8., 6.),
-            path: std::path::PathBuf::from(format!("@icon:wallpaper:thumbnail:0:{id}")),
-        }],
-        offset: (0., 0.),
-        bounds: Rect::new(0., 0., 8., 6.),
+        primitives: vec![Primitive::image(
+            Rect::new(0., 0., 8., 6.),
+            std::path::PathBuf::from(format!("@icon:wallpaper:thumbnail:0:{id}")),
+        )],
+        ..Scene::empty(8., 6.)
     };
 
     let cached = lab.dir.join("cached.png");
@@ -1207,15 +1137,10 @@ async fn wallpaper_refreshes_deleted_cache_paths_and_settles_still_broken_paths(
     );
 
     let mut changed_set = scene_for("/fixture/broken.jpg");
-    changed_set.primitives.push(Primitive::Image {
-        blur: 0.,
-        fit: ImageFit::Fill,
-        clip_polygon: None,
-        radius: 0.,
-        tint: None,
-        rect: Rect::new(0., 0., 8., 6.),
-        path: std::path::PathBuf::from("@icon:wallpaper:thumbnail:0:/fixture/current.jpg"),
-    });
+    changed_set.primitives.push(Primitive::image(
+        Rect::new(0., 0., 8., 6.),
+        std::path::PathBuf::from("@icon:wallpaper:thumbnail:0:/fixture/current.jpg"),
+    ));
     wallpaper.attach_images(&mut changed_set, Some(wake.clone()));
     assert_eq!(
         lab.calls.recv().await.unwrap(),
@@ -1233,15 +1158,10 @@ async fn wallpaper_refreshes_deleted_cache_paths_and_settles_still_broken_paths(
         tokio::time::sleep(Duration::from_millis(5)).await;
     }
     let mut stable_changed = scene_for("/fixture/broken.jpg");
-    stable_changed.primitives.push(Primitive::Image {
-        blur: 0.,
-        fit: ImageFit::Fill,
-        clip_polygon: None,
-        radius: 0.,
-        tint: None,
-        rect: Rect::new(0., 0., 8., 6.),
-        path: std::path::PathBuf::from("@icon:wallpaper:thumbnail:0:/fixture/current.jpg"),
-    });
+    stable_changed.primitives.push(Primitive::image(
+        Rect::new(0., 0., 8., 6.),
+        std::path::PathBuf::from("@icon:wallpaper:thumbnail:0:/fixture/current.jpg"),
+    ));
     wallpaper.attach_images(&mut stable_changed, Some(wake));
     assert!(
         lab.calls.try_recv().is_err(),
@@ -1251,7 +1171,7 @@ async fn wallpaper_refreshes_deleted_cache_paths_and_settles_still_broken_paths(
 
 #[tokio::test(flavor = "current_thread")]
 async fn wallpaper_latest_activation_survives_view_retirement() {
-    use bead::render::{Rect, Scene};
+    use bead::render::Scene;
     let mut lab = lab_with_activation_gate(vec!["wallpaper.active".into()], true).await;
     let extras = Extras::new(Kind::Wallpaper, lab.client.clone()).unwrap();
     start_with_empty_wallpaper_catalogue(&extras);
@@ -1313,19 +1233,11 @@ async fn wallpaper_latest_activation_survives_view_retirement() {
         .images
         .insert(file.clone(), bytes.clone());
     let scene = Scene {
-        opacity: 1.,
-        motion: None,
-        resource_revision: 0,
         asset_data: BTreeMap::from([(file, bytes.clone())]),
-        clips: Default::default(),
         layers: Vec::new(),
-        prepared: Default::default(),
         font_files: Vec::new(),
-        width: 8.,
-        slide: None,
         primitives: Vec::new(),
-        offset: (0., 0.),
-        bounds: Rect::new(0., 0., 8., 8.),
+        ..Scene::empty(8., 8.)
     };
     drop(bytes);
     drop(scene);
@@ -1771,7 +1683,7 @@ async fn next_wallpaper_runtime_call(
 
 #[tokio::test(flavor = "current_thread")]
 async fn wallpaper_thumbnail_cache_is_advertised_bounded_and_released_on_close() {
-    use bead::render::{ImageFit, Primitive, Rect, Scene};
+    use bead::render::{Primitive, Rect, Scene};
     let lab = lab_with_topics(vec!["wallpaper.active".into()]).await;
     let extras = Extras::new(Kind::Wallpaper, lab.client.clone()).unwrap();
     let thumbnail = lab.dir.join("thumbnail.png");
@@ -1813,47 +1725,23 @@ async fn wallpaper_thumbnail_cache_is_advertised_bounded_and_released_on_close()
     let logical =
         |field: &str, id: &str| std::path::PathBuf::from(format!("@icon:wallpaper:{field}:{id}"));
     let mut scene = Scene {
-        opacity: 1.,
-        motion: None,
-        resource_revision: 0,
-        asset_data: Default::default(),
-        clips: Default::default(),
         layers: Vec::new(),
-        prepared: Default::default(),
         font_files: Vec::new(),
-        width: 32.,
-        slide: None,
         primitives: vec![
-            Primitive::Image {
-                blur: 0.,
-                fit: ImageFit::Fill,
-                clip_polygon: None,
-                radius: 0.,
-                tint: None,
-                rect: Rect::new(0., 0., 8., 6.),
-                path: logical("thumbnail", "/fixture/advertised.jpg"),
-            },
-            Primitive::Image {
-                blur: 0.,
-                fit: ImageFit::Fill,
-                clip_polygon: None,
-                radius: 0.,
-                tint: None,
-                rect: Rect::new(10., 0., 8., 6.),
-                path: logical("thumbnail", "/fixture/unadvertised.jpg"),
-            },
-            Primitive::Image {
-                blur: 0.,
-                fit: ImageFit::Fill,
-                clip_polygon: None,
-                radius: 0.,
-                tint: None,
-                rect: Rect::new(20., 0., 8., 6.),
-                path: logical("thumbnail", "/fixture/oversized.jpg"),
-            },
+            Primitive::image(
+                Rect::new(0., 0., 8., 6.),
+                logical("thumbnail", "/fixture/advertised.jpg"),
+            ),
+            Primitive::image(
+                Rect::new(10., 0., 8., 6.),
+                logical("thumbnail", "/fixture/unadvertised.jpg"),
+            ),
+            Primitive::image(
+                Rect::new(20., 0., 8., 6.),
+                logical("thumbnail", "/fixture/oversized.jpg"),
+            ),
         ],
-        offset: (0., 0.),
-        bounds: Rect::new(0., 0., 32., 8.),
+        ..Scene::empty(32., 8.)
     };
     extras.attach_images(&mut scene, None);
     assert!(scene.asset_data.contains_key(&thumbnail));
@@ -1920,7 +1808,7 @@ async fn wallpaper_thumbnail_cache_is_advertised_bounded_and_released_on_close()
 
 #[tokio::test(flavor = "current_thread")]
 async fn wallpaper_scene_attachment_bytes_stay_within_the_cache_budget() {
-    use bead::render::{ImageFit, Primitive, Rect, Scene};
+    use bead::render::{Primitive, Rect, Scene};
     let lab = lab_with_topics(vec!["wallpaper.active".into()]).await;
     let extras = Extras::new(Kind::Wallpaper, lab.client.clone()).unwrap();
     let shared: Arc<[u8]> = Arc::from(vec![0u8; 9 * bead::core::cache::MIB]);
@@ -1945,31 +1833,19 @@ async fn wallpaper_scene_attachment_bytes_stay_within_the_cache_budget() {
         }
     }
     let mut scene = Scene {
-        opacity: 1.,
-        motion: None,
-        resource_revision: 0,
-        asset_data: Default::default(),
-        clips: Default::default(),
         layers: Vec::new(),
-        prepared: Default::default(),
         font_files: Vec::new(),
-        width: 24.,
-        slide: None,
         primitives: (0..3)
-            .map(|index| Primitive::Image {
-                blur: 0.,
-                fit: ImageFit::Fill,
-                clip_polygon: None,
-                radius: 0.,
-                tint: None,
-                rect: Rect::new(index as f32 * 8., 0., 8., 6.),
-                path: std::path::PathBuf::from(format!(
-                    "@icon:wallpaper:thumbnail:/fixture/large-{index}.png"
-                )),
+            .map(|index| {
+                Primitive::image(
+                    Rect::new(index as f32 * 8., 0., 8., 6.),
+                    std::path::PathBuf::from(format!(
+                        "@icon:wallpaper:thumbnail:/fixture/large-{index}.png"
+                    )),
+                )
             })
             .collect(),
-        offset: (0., 0.),
-        bounds: Rect::new(0., 0., 24., 8.),
+        ..Scene::empty(24., 8.)
     };
     extras.attach_images(&mut scene, None);
     let attached_bytes: usize = scene.asset_data.values().map(|bytes| bytes.len()).sum();
@@ -2225,7 +2101,7 @@ fn wallpaper_strand_goldens() -> bead_test::Result<()> {
 }
 #[tokio::test(flavor = "current_thread")]
 async fn the_strands_wrapped_left_side_is_requested_with_the_rest_of_the_window() {
-    use bead::render::{ImageFit, Primitive, Rect, Scene};
+    use bead::render::{Primitive, Rect, Scene};
     let mut lab = lab_with_topics(vec!["wallpaper.active".into()]).await;
     let (extras, open, wake) = open_picker(&mut lab).await;
     {
@@ -2237,32 +2113,20 @@ async fn the_strands_wrapped_left_side_is_requested_with_the_rest_of_the_window(
     // Open at index 0 of 36: the left pearls are the catalogue's tail, 31..=35.
     let window: Vec<usize> = [31, 32, 33, 34, 35, 0, 1, 2, 3, 4, 5].into();
     let mut scene = Scene {
-        opacity: 1.,
-        motion: None,
-        resource_revision: 0,
-        asset_data: Default::default(),
-        clips: Default::default(),
         layers: Vec::new(),
-        prepared: Default::default(),
         font_files: Vec::new(),
-        width: 8.,
-        slide: None,
         primitives: window
             .iter()
-            .map(|index| Primitive::Image {
-                blur: 0.,
-                fit: ImageFit::Fill,
-                clip_polygon: None,
-                radius: 0.,
-                tint: None,
-                rect: Rect::new(0., 0., 8., 6.),
-                path: std::path::PathBuf::from(format!(
-                    "@icon:wallpaper:thumbnail:/fixture/w-{index:02}"
-                )),
+            .map(|index| {
+                Primitive::image(
+                    Rect::new(0., 0., 8., 6.),
+                    std::path::PathBuf::from(format!(
+                        "@icon:wallpaper:thumbnail:/fixture/w-{index:02}"
+                    )),
+                )
             })
             .collect(),
-        offset: (0., 0.),
-        bounds: Rect::new(0., 0., 8., 6.),
+        ..Scene::empty(8., 6.)
     };
     extras.attach_images(&mut scene, Some(wake));
     let (method, params) = lab.calls.recv().await.unwrap();
@@ -2381,32 +2245,20 @@ async fn activated(lab: &mut Lab) -> Json {
     params["id"].clone()
 }
 fn thumbnail_scene(handles: &[&str]) -> bead::render::Scene {
-    use bead::render::{ImageFit, Primitive, Rect, Scene};
+    use bead::render::{Primitive, Rect, Scene};
     Scene {
-        opacity: 1.,
-        motion: None,
-        resource_revision: 0,
-        asset_data: Default::default(),
-        clips: Default::default(),
         layers: Vec::new(),
-        prepared: Default::default(),
         font_files: Vec::new(),
-        width: 8.,
-        slide: None,
         primitives: handles
             .iter()
-            .map(|id| Primitive::Image {
-                blur: 0.,
-                fit: ImageFit::Fill,
-                clip_polygon: None,
-                radius: 0.,
-                tint: None,
-                rect: Rect::new(0., 0., 8., 6.),
-                path: std::path::PathBuf::from(format!("@icon:wallpaper:thumbnail:{id}")),
+            .map(|id| {
+                Primitive::image(
+                    Rect::new(0., 0., 8., 6.),
+                    std::path::PathBuf::from(format!("@icon:wallpaper:thumbnail:{id}")),
+                )
             })
             .collect(),
-        offset: (0., 0.),
-        bounds: Rect::new(0., 0., 8., 6.),
+        ..Scene::empty(8., 6.)
     }
 }
 #[tokio::test(flavor = "current_thread")]

@@ -6,7 +6,6 @@ use bead::{
 };
 pub fn fallback(fill: [u8; 4]) -> Scene {
     Scene {
-        opacity: 1.,
         motion: Some(Motion {
             id: "sound".into(),
             open: true,
@@ -25,14 +24,6 @@ pub fn fallback(fill: [u8; 4]) -> Scene {
             parts: Vec::new(),
             art: None,
         }),
-        resource_revision: 0,
-        asset_data: Default::default(),
-        clips: Default::default(),
-        layers: vec![],
-        prepared: Default::default(),
-        font_files: vec![],
-        width: 400.,
-        slide: None,
         offset: (32., 32.),
         // Match the kit's 32px shadow inset so CPU startup does not allocate
         // a second SHM geometry as soon as the script becomes ready.
@@ -43,5 +34,6 @@ pub fn fallback(fill: [u8; 4]) -> Scene {
             fill,
             border: None,
         }],
+        ..Scene::empty(400., 286.)
     }
 }

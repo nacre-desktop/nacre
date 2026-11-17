@@ -617,19 +617,7 @@ fn guide_origin(scene: &Scene, output: (i32, i32)) -> (i32, i32) {
 
 fn blank(w: f32, h: f32) -> Scene {
     Scene {
-        opacity: 1.,
-        motion: None,
-        resource_revision: 0,
-        asset_data: Default::default(),
-        clips: Default::default(),
-        layers: vec![],
-        prepared: Default::default(),
-        font_files: vec![],
-        width: w,
-        slide: None,
-        offset: (0., 0.),
-        bounds: Rect::new(0., 0., w, h),
-        primitives: vec![],
+        ..Scene::empty(w, h)
     }
 }
 fn asset(scene: &mut Scene, name: &str, rect: Rect, svg: String) {
@@ -640,15 +628,7 @@ fn asset(scene: &mut Scene, name: &str, rect: Rect, svg: String) {
     scene
         .asset_data
         .insert(path.clone(), Arc::from(svg.into_bytes()));
-    scene.primitives.push(Primitive::Image {
-        blur: 0.,
-        fit: bead::render::ImageFit::Fill,
-        clip_polygon: None,
-        radius: 0.,
-        tint: None,
-        rect,
-        path,
-    });
+    scene.primitives.push(Primitive::image(rect, path));
 }
 /// The guide for one output as a scene: its landing field and, while a panel is
 /// within reach of the edge, the film.

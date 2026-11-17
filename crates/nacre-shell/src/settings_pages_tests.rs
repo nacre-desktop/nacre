@@ -355,27 +355,17 @@ fn current_scene_attaches_bounded_catalogue_thumbnail_bytes() {
         .unwrap();
     let settings = Settings::new(None, &root()).unwrap();
     let scene_with_preview = || Scene {
-        opacity: 1.,
-        motion: None,
-        resource_revision: 0,
-        asset_data: Default::default(),
-        clips: Default::default(),
-        layers: vec![],
-        prepared: Default::default(),
-        font_files: vec![],
-        width: 320.,
-        slide: None,
         primitives: vec![Primitive::Image {
             blur: 0.,
             fit: ImageFit::Cover,
             clip_polygon: None,
             radius: 0.,
             tint: None,
+            opacity: 1.,
             rect: Rect::new(0., 0., 320., 180.),
             path: format!("@icon:wallpaper:current:{}", thumbnail.display()).into(),
         }],
-        offset: (0., 0.),
-        bounds: Rect::new(0., 0., 320., 180.),
+        ..Scene::empty(320., 180.)
     };
     let mut scene = scene_with_preview();
     settings.attach_images(&mut scene);

@@ -2432,27 +2432,11 @@ fn weather_photo_placeholder_is_swapped_for_the_held_bytes() {
     let path = daemon_photo(&root, 640, 360);
     let (dashboard, photo) = weather_with_photo(photo_state(&path, "ready", true));
     let mut scene = bead::render::Scene {
-        opacity: 1.,
-        motion: None,
-        resource_revision: 0,
-        asset_data: Default::default(),
-        clips: Default::default(),
-        layers: vec![],
-        prepared: Default::default(),
-        font_files: vec![],
-        width: 100.,
-        slide: None,
-        primitives: vec![bead::render::Primitive::Image {
-            rect: bead::render::Rect::new(0., 0., 10., 10.),
-            path: PathBuf::from("@icon:weather-photo"),
-            blur: 0.,
-            fit: bead::render::ImageFit::Fill,
-            clip_polygon: None,
-            radius: 0.,
-            tint: None,
-        }],
-        offset: (0., 0.),
-        bounds: bead::render::Rect::new(0., 0., 100., 100.),
+        primitives: vec![bead::render::Primitive::image(
+            bead::render::Rect::new(0., 0., 10., 10.),
+            PathBuf::from("@icon:weather-photo"),
+        )],
+        ..bead::render::Scene::empty(100., 100.)
     };
     dashboard.attach_art(&mut scene);
     assert!(

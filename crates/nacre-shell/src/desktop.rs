@@ -317,19 +317,8 @@ mod tests {
         let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../shell");
         let palette_path = root.join("palette.json");
         let fallback = bead::render::Scene {
-            opacity: 1.,
-            motion: None,
-            resource_revision: 0,
-            asset_data: Default::default(),
-            clips: Default::default(),
             layers: Vec::new(),
-            prepared: Default::default(),
-            font_files: vec![],
-            width: 1920.,
-            slide: None,
-            primitives: vec![],
-            offset: (0., 0.),
-            bounds: bead::render::Rect::new(0., 0., 1920., 50.),
+            ..bead::render::Scene::empty(1920., 50.)
         };
         let mut session = bead::ui::Session::new(
             root,
@@ -579,29 +568,13 @@ mod tests {
             ..Default::default()
         };
         let mut scene = bead::render::Scene {
-            opacity: 1.,
-            motion: None,
-            resource_revision: 0,
-            asset_data: Default::default(),
-            clips: Default::default(),
             layers: Vec::new(),
-            prepared: Default::default(),
-            font_files: vec![],
-            width: 24.,
-            slide: None,
-            primitives: vec![],
-            offset: (0., 0.),
-            bounds: bead::render::Rect::new(0., 0., 24., 24.),
+            ..bead::render::Scene::empty(24., 24.)
         };
-        scene.primitives.push(bead::render::Primitive::Image {
-            blur: 0.,
-            fit: bead::render::ImageFit::Fill,
-            clip_polygon: None,
-            radius: 0.,
-            tint: None,
-            path: "@icon:tray:fixture".into(),
-            rect: bead::render::Rect::new(0., 0., 24., 24.),
-        });
+        scene.primitives.push(bead::render::Primitive::image(
+            bead::render::Rect::new(0., 0., 24., 24.),
+            "@icon:tray:fixture",
+        ));
         let mut snapshot = Snapshot::default();
         snapshot.tray = vec![item.clone()];
         icons(&mut scene, &snapshot).unwrap();
@@ -617,30 +590,20 @@ mod tests {
         assert_eq!(named_icon(&item), Some(nested.join("fixture.png")));
         // A found but undecodable named icon also falls back to the real pixmap.
         std::fs::write(nested.join("fixture.png"), b"broken PNG").unwrap();
-        scene.primitives[0] = bead::render::Primitive::Image {
-            blur: 0.,
-            fit: bead::render::ImageFit::Fill,
-            clip_polygon: None,
-            radius: 0.,
-            tint: None,
-            path: "@icon:tray:fixture".into(),
-            rect: bead::render::Rect::new(0., 0., 24., 24.),
-        };
+        scene.primitives[0] = bead::render::Primitive::image(
+            bead::render::Rect::new(0., 0., 24., 24.),
+            "@icon:tray:fixture",
+        );
         icons(&mut scene, &snapshot).unwrap();
         let png = &scene.asset_data[&std::path::PathBuf::from("@tray-pixmap/fixture.png")];
         let decoded = image::load_from_memory(png).unwrap().to_rgba8();
         assert_eq!(decoded.get_pixel(0, 0).0, [20, 40, 60, 128]);
         let mut missing = snapshot.clone();
         missing.tray[0].icon_name = "bead-nonexistent-icon-7832".into();
-        scene.primitives[0] = bead::render::Primitive::Image {
-            blur: 0.,
-            fit: bead::render::ImageFit::Fill,
-            clip_polygon: None,
-            radius: 0.,
-            tint: None,
-            path: "@icon:tray:fixture".into(),
-            rect: bead::render::Rect::new(0., 0., 24., 24.),
-        };
+        scene.primitives[0] = bead::render::Primitive::image(
+            bead::render::Rect::new(0., 0., 24., 24.),
+            "@icon:tray:fixture",
+        );
         icons(&mut scene, &missing).unwrap();
         assert!(
             matches!(&scene.primitives[0],bead::render::Primitive::Image {path,..} if path.to_string_lossy().starts_with("@tray-pixmap/"))

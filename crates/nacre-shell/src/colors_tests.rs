@@ -499,30 +499,16 @@ async fn a_daemon_without_the_methods_gets_no_calls() {
 
 fn scene(slots: &[(&str, f32, f32)]) -> bead::render::Scene {
     bead::render::Scene {
-        opacity: 1.,
-        motion: None,
-        resource_revision: 0,
-        asset_data: Default::default(),
-        clips: Default::default(),
-        layers: vec![],
-        prepared: Default::default(),
-        font_files: vec![],
-        width: 800.,
-        slide: None,
         primitives: slots
             .iter()
-            .map(|(name, w, h)| bead::render::Primitive::Image {
-                blur: 0.,
-                fit: bead::render::ImageFit::Fill,
-                clip_polygon: None,
-                radius: 0.,
-                tint: None,
-                rect: bead::render::Rect::new(0., 0., *w, *h),
-                path: format!("@icon:colors-{name}").into(),
+            .map(|(name, w, h)| {
+                bead::render::Primitive::image(
+                    bead::render::Rect::new(0., 0., *w, *h),
+                    format!("@icon:colors-{name}"),
+                )
             })
             .collect(),
-        offset: (0., 0.),
-        bounds: bead::render::Rect::new(0., 0., 800., 600.),
+        ..bead::render::Scene::empty(800., 600.)
     }
 }
 /// Colours seeded with a decoded poster and one thumbnail, as a projection would leave them.
