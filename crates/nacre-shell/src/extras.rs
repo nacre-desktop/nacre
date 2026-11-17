@@ -638,6 +638,9 @@ impl Extras {
         if self.kind == Kind::Wallpaper {
             let open = matches!(stores.get("panel.open"), Some(Value::Bool(true)));
             self.wallpaper_visit(open, &wake);
+            if open {
+                self.fire_pending_move(); // the deadline wake of a burst's trailing edge
+            }
         }
         let mut state = self.state.borrow_mut();
         let boot = self
