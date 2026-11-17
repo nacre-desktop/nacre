@@ -6,8 +6,8 @@ use bead::{
     wayland::PanelSpec,
 };
 use std::path::PathBuf;
-/// No border (A): the launcher fades in place, never growing from an edge. Bead's panel motion has no
-/// scale, so this is the fade half of "fade + scale .97 -> 1" (180 ms out-quint; close 120 ms ease-in).
+/// No border (A): the launcher rises 24 px from below with a fade (owner's pick, "rise"), never growing
+/// from an edge or the logo (180 ms out-quint; close 120 ms ease-in).
 pub fn island_motion(motion: &mut bead::render::Motion) {
     motion.edge = Edge::Bottom;
     motion.duration = 0.18;
@@ -18,14 +18,14 @@ pub fn island_motion(motion: &mut bead::render::Motion) {
     motion.return_curve = Some(bead::core::animation::Curve::InCubic);
     motion.fade = true;
     motion.reveal = false;
-    motion.slide_distance = Some(0.);
+    motion.slide_distance = Some(24.);
 }
-/// The card's surface origin: body centred on the output, its top 18 % down.
+/// The card's surface origin: body centred on the output, 13 px above its bottom edge.
 fn island_origin(scene: &bead::render::Scene, output: (i32, i32)) -> (i32, i32) {
     let body = crate::placement::body(scene);
     (
         ((output.0 as f32 - body.w) / 2. - body.x + scene.bounds.x).round() as i32,
-        (output.1 as f32 * 0.18 - body.y + scene.bounds.y).round() as i32,
+        (output.1 as f32 - 13. - body.h - body.y + scene.bounds.y).round() as i32,
     )
 }
 /// Frame (B): today's bottom drawer. No border (A): the card above.
@@ -132,7 +132,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn island_launcher_is_centred_at_18_percent_and_frame_keeps_the_drawer() {
+    fn island_launcher_rises_at_the_bottom_centre_and_frame_keeps_the_drawer() {
         let mut scene = bead::render::Scene::empty(1164., 654.);
         scene.bounds = Rect::new(-32., -32., 1164., 654.);
         scene.primitives = vec![Primitive::Rounded {
@@ -141,8 +141,8 @@ mod tests {
             fill: [0; 4],
             border: None,
         }];
-        // Body left (1920 - 1100) / 2 = 410, top 18 % of 1200 = 216, less the 32 px shadow margin.
-        assert_eq!(island_origin(&scene, (1920, 1200)), (378, 184));
+        // Body left (1920 - 1100) / 2 = 410, top 1200 - 13 - 590 = 597, less the 32 px shadow margin.
+        assert_eq!(island_origin(&scene, (1920, 1200)), (378, 565));
         // The live frame is bordered by default: the drawer positioner answers unchanged.
         let drawer = crate::placement::Frame::default()
             .positioner(crate::placement::Attachment::Attached(Edge::Bottom));

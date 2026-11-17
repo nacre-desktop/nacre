@@ -1585,7 +1585,7 @@ fn launcher_island_open_and_mid_appear_goldens() -> Result<()> {
     .decorate_with(frame, &mut card)?;
     crate::launcher_panel::island_motion(card.motion.as_mut().expect("panel motion"));
     let motion = card.motion.as_ref().unwrap();
-    assert!(motion.fade && !motion.reveal && motion.slide_distance == Some(0.));
+    assert!(motion.fade && !motion.reveal && motion.slide_distance == Some(24.));
     assert_eq!(
         (motion.duration, motion.return_duration),
         (0.18, Some(0.12))
