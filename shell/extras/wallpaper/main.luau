@@ -1,6 +1,6 @@
 -- SPDX-License-Identifier: GPL-3.0-only
 -- Strand, the wallpaper picker: pearls on a silk thread that hangs from the bar. Moving along the strand
--- previews the real wallpaper (extras.rs fires it once the strand settles); the shell colours follow it.
+-- changes the real wallpaper in tandem (extras.rs activates every step at once); the shell colours follow it.
 -- Nacre routes and settings writes stay in extras.rs.
 local ui=require("bead.ui")
 local kit=require("bead.kit")
@@ -25,9 +25,9 @@ local animation_query=tostring(ui.resolve_for_check(ui.bind("extras.query")) or 
 local animation_key=2166136261
 for index=1,#animation_query do animation_key=(animation_key*33+string.byte(animation_query,index))%2147483647 end
 -- One continuous value drives the whole strand: pearls slide along the thread to a fractional slot.
-local strand=ui.animate("wallpaper-strand:"..kind..":"..tostring(count)..":"..tostring(animation_key),position,W.move_duration,"out-cubic")
+local strand=ui.animate("wallpaper-strand:"..kind..":"..tostring(count)..":"..tostring(animation_key),position,W.move_duration,"out-quint")
 -- Opening: the thread and its pearls drop in from the top edge. Swap this one line for another entrance.
-local entrance=ui.animate("wallpaper-strand-open",ui.resolve_for_check(ui.bind("panel.open"))==false and 0 or 1,W.move_duration,"out-cubic")
+local entrance=ui.animate("wallpaper-strand-open",ui.resolve_for_check(ui.bind("panel.open"))==false and 0 or 1,W.open_duration,"out-cubic")
 
 local s=math.min(width/W.art_width,height/W.art_height)
 local centre={x=width/2,y=height/2}
@@ -101,8 +101,8 @@ local function pearl_node(pearl)
   kids[#kids+1]=ui.Box{id="edge",position="absolute",left=0,top=0,width=size,height=size,radius=size/2,fill="transparent",
     border_width=edge,border_color=W.pearl_edge}
   if near>.3 then
-    kids[#kids+1]=ui.Box{id="sheen",position="absolute",left=size*.2,top=size*.07,width=size*.36,height=size*.12,radius=9999,
-      fill={W.pearl_sheen[1],W.pearl_sheen[2],W.pearl_sheen[3],math.floor(W.pearl_sheen[4]*near)}}
+    kids[#kids+1]=ui.Image{id="sheen",position="absolute",left=0,top=0,width=size,height=size,path=W.sheen,
+      tint={W.pearl_sheen[1],W.pearl_sheen[2],W.pearl_sheen[3],math.floor(W.pearl_sheen[4]*near)}}
   end
   -- The chosen pearl keeps the pick; any other pearl only moves the strand.
   local request=(math.abs(pearl.offset)<.5 and "wallpaper:commit:" or "wallpaper:select:")..tostring(item.id)
@@ -162,6 +162,7 @@ end
 local function glyph_button(id,label,glyph,size,font,fill,action,request,left,top)
   local props={id=id,aria_label=label,width=size,height=size,shrink=0,padding=0,radius=size/2,fill=fill,hover_fill=fill,
     activate_on_release=true,focus_on_pointer=false,on_activate=ui.action(action,request),
+    border_width=fill==W.nav_fill and 1 or nil,border_color=W.nav_ring,
     ui.Row{width=size,height=size,align="center",justify="center",
       ui.Text{text=glyph,width=font,height=font*1.15,family="Material Symbols Rounded",font_size=font,color=W.ink}}}
   if left then props.position,props.left,props.top="absolute",left,top end

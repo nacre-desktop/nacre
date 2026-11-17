@@ -66,8 +66,8 @@ struct Query {
 }
 #[derive(Default)]
 struct State {
-    /// A move waiting for the strand to settle: the id and when it previews.
-    wallpaper_pending: Option<(String, Instant)>,
+    /// The pearl the strand rests on, so the pre-decoded window follows it.
+    wallpaper_focus: Option<String>,
     /// The active wallpaper when the picker opened; closing without a commit restores it.
     wallpaper_origin: Option<String>,
     /// The last id this visit previewed; `None` while the desktop still shows the origin.
@@ -75,7 +75,6 @@ struct State {
     wallpaper_committed: bool,
     /// Pixel size of the last previewed (or opening) wallpaper, for the strand's caption.
     wallpaper_resolution: Option<(String, u32, u32)>,
-    scale: f32,
     query: Option<Query>,
     wanted: Option<(String, String, String)>,
     result: Option<(String, MenuQueryResult)>,
@@ -322,14 +321,10 @@ impl WallpaperActivationQueue {
         }
     }
 }
-/// How long the strand rests before its pearl previews as the real wallpaper.
-const WALLPAPER_SETTLE: Duration = Duration::from_millis(150);
-fn grow_origin(frame: &crate::placement::Frame, scale: f32) -> (f32, f32) {
-    (
-        (frame.left - frame.right) / 2. * scale,
-        (frame.top - frame.bottom) / 2. * scale,
-    )
-}
+/// Strand moves, and the wallpaper change they cause, run for this long (out-quint, like the pearls).
+const WALLPAPER_MOVE_MS: u32 = 500;
+/// The Esc restore is a little quicker than a move.
+const WALLPAPER_RESTORE_MS: u32 = 400;
 pub struct Extras {
     pub kind: Kind,
     client: Client,
@@ -867,7 +862,11 @@ impl Extras {
                     .iter()
                     .filter_map(|entry| entry["id"].as_str().map(str::to_owned))
                     .collect();
-                let active = images.iter().position(|entry| entry["active"] == true);
+                let active = state
+                    .wallpaper_focus
+                    .as_deref()
+                    .and_then(|focus| images.iter().position(|entry| entry["id"] == focus))
+                    .or_else(|| images.iter().position(|entry| entry["active"] == true));
                 state.wallpaper_prefetched = preview.prefetch(&ids, active);
             }
             if boot.is_some() && state.catalogue_boot == boot {
@@ -1118,25 +1117,8 @@ impl Extras {
         }
         values
     }
-    /// Where a preview grows from, in output pixels from the output centre: the chosen pearl rests
-    /// at the centre of the panel, which sits inside the shell frame.
-    fn grow_origin(&self) -> (f32, f32) {
-        let scale = self.state.borrow().scale.max(1.);
-        grow_origin(&crate::placement::Frame::current(), scale)
-    }
-    pub fn set_scale(&self, scale: f32) {
-        self.state.borrow_mut().scale = scale;
-    }
-    /// The deferred wake the strand needs: when the last move has settled.
-    pub fn settle_at(&self) -> Option<Instant> {
-        self.state
-            .borrow()
-            .wallpaper_pending
-            .as_ref()
-            .map(|(_, at)| *at)
-    }
-    /// The picker's visit: remember the wallpaper it opened over, preview a settled move, and let a
-    /// close that was not a commit put the original back (a plain fade, no grow).
+    /// The picker's visit: remember the wallpaper it opened over, and let a close that was not a
+    /// commit put the original back (a quicker fade).
     fn wallpaper_visit(&self, open: bool, wake: &Option<CallWake>) {
         let mut state = self.state.borrow_mut();
         let mut activate = None;
@@ -1160,28 +1142,22 @@ impl Extras {
         }
         if opening {
             state.wallpaper_shown = None;
-            state.wallpaper_pending = None;
+            state.wallpaper_focus = None;
             state.wallpaper_committed = false;
-        } else if !open && state.wallpaper_open {
-            state.wallpaper_pending = None;
-            if !state.wallpaper_committed && state.wallpaper_shown.take().is_some() {
-                activate = state.wallpaper_origin.clone().map(|id| (id, false));
-            }
-        } else if open
-            && let Some((id, _)) = state
-                .wallpaper_pending
-                .take_if(|pending| pending.1 <= Instant::now())
+        } else if !open
+            && state.wallpaper_open
+            && !state.wallpaper_committed
+            && state.wallpaper_shown.take().is_some()
         {
-            state.wallpaper_shown = Some(id.clone());
-            activate = Some((id, true));
+            activate = state.wallpaper_origin.clone();
         }
         drop(state);
-        if let Some((id, grow)) = activate {
+        if let Some(id) = activate {
             let wake = wake.clone().unwrap_or_else(|| Arc::new(|| {}));
-            self.activate_wallpaper(&id, grow, wake);
+            self.activate_wallpaper(&id, WALLPAPER_RESTORE_MS, wake);
         }
     }
-    fn activate_wallpaper(&self, id: &str, grow: bool, wake: CallWake) {
+    fn activate_wallpaper(&self, id: &str, fade_ms: u32, wake: CallWake) {
         let boot = self.client.status().boot.clone();
         let state = self.state.borrow();
         if state.catalogue_boot != boot {
@@ -1244,7 +1220,7 @@ impl Extras {
             .preview
             .clone();
         if let Some(preview) = &preview {
-            preview.grow_from(grow.then(|| self.grow_origin()));
+            preview.fade_next(Some(fade_ms));
         }
         let generation = preview.as_ref().map(|preview| {
             preview.select_at_with_palette(crate::wallpaper::SelectionRequest {
@@ -1266,14 +1242,27 @@ impl Extras {
     pub fn act(&self, request: &str, stores: &Stores, wake: CallWake) {
         if self.kind == Kind::Wallpaper {
             if let Some(id) = request.strip_prefix("wallpaper:move:") {
-                // Moving along the strand only queues the preview; `project` fires it once it settles.
-                self.state.borrow_mut().wallpaper_pending =
-                    Some((id.into(), Instant::now() + WALLPAPER_SETTLE));
+                // The wallpaper moves with the strand: every step fades at once, the latest wins.
+                let mut state = self.state.borrow_mut();
+                state.wallpaper_focus = Some(id.into());
+                state.wallpaper_prefetched = false; // the pre-decoded window follows the pearl
+                let unchanged = state
+                    .wallpaper_shown
+                    .as_ref()
+                    .or(state.wallpaper_origin.as_ref())
+                    .is_some_and(|shown| shown == id);
+                if !unchanged {
+                    state.wallpaper_shown = Some(id.into());
+                }
+                drop(state);
+                if !unchanged {
+                    self.activate_wallpaper(id, WALLPAPER_MOVE_MS, wake);
+                }
                 return;
             }
             if let Some(id) = request.strip_prefix("wallpaper:commit:") {
+                // The shown wallpaper is already the pick; only an id the strand has not previewed fades.
                 let mut state = self.state.borrow_mut();
-                state.wallpaper_pending = None;
                 state.wallpaper_committed = true;
                 state.close = true;
                 let shown = state
@@ -1286,12 +1275,12 @@ impl Extras {
                 }
                 drop(state);
                 if !unchanged {
-                    self.activate_wallpaper(id, true, wake);
+                    self.activate_wallpaper(id, WALLPAPER_MOVE_MS, wake);
                 }
                 return;
             }
             if let Some(id) = request.strip_prefix("wallpaper:activate:") {
-                self.activate_wallpaper(id, true, wake);
+                self.activate_wallpaper(id, WALLPAPER_MOVE_MS, wake);
                 return;
             }
         }

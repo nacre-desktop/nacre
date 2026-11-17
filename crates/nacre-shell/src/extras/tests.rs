@@ -2288,34 +2288,54 @@ async fn activated(lab: &mut Lab) -> Json {
     params["id"].clone()
 }
 #[tokio::test(flavor = "current_thread")]
-async fn three_moves_inside_the_settle_window_preview_once_for_the_last_id() {
+async fn a_move_activates_at_once_with_a_500_ms_out_quint_fade() {
     let mut lab = lab_with_topics(vec!["wallpaper.active".into()]).await;
     let (extras, open, wake) = open_picker(&mut lab).await;
-    for id in ["next.jpg", "next.mp4", "animated.gif"] {
+    extras.act("wallpaper:move:/fixture/next.jpg", &open, wake);
+    assert_eq!(
+        activated(&mut lab).await,
+        "/fixture/next.jpg",
+        "no settle: the step activates when it is made"
+    );
+    if let Some(preview) = extras.wallpaper_preview() {
+        let fade = preview.take_fade().expect("the strand asked for a fade");
+        assert_eq!(fade.kind, bead::wayland::WallpaperFadeKind::Fade);
+        assert_eq!(fade.duration_ms, 500);
+        assert_eq!(fade.curve, bead::core::animation::Curve::OutQuint);
+        assert_eq!(
+            preview.take_fade(),
+            Some(fade),
+            "a retarget gets the same fade"
+        );
+    }
+}
+#[tokio::test(flavor = "current_thread")]
+async fn five_quick_moves_end_on_the_last_id() {
+    let mut lab = lab_with_topics(vec!["wallpaper.active".into()]).await;
+    let (extras, open, wake) = open_picker(&mut lab).await;
+    for id in [
+        "next.jpg",
+        "next.mp4",
+        "animated.gif",
+        "next.jpg",
+        "animated.gif",
+    ] {
         extras.act(
             &format!("wallpaper:move:/fixture/{id}"),
             &open,
             wake.clone(),
         );
     }
-    extras.project(&open, Some(wake.clone()));
-    assert!(
-        lab.calls.try_recv().is_err(),
-        "nothing previews before the strand settles"
-    );
-    assert!(
-        extras.settle_at().is_some(),
-        "the runtime is woken for the deadline"
-    );
-    tokio::time::sleep(WALLPAPER_SETTLE + Duration::from_millis(40)).await;
-    extras.project(&open, Some(wake.clone()));
-    assert_eq!(activated(&mut lab).await, "/fixture/animated.gif");
-    assert!(extras.settle_at().is_none());
-    extras.project(&open, Some(wake));
-    tokio::time::sleep(Duration::from_millis(30)).await;
-    assert!(
-        lab.calls.try_recv().is_err(),
-        "exactly one activation for the three moves"
+    let mut last = None;
+    while let Ok(Some((method, params))) =
+        tokio::time::timeout(Duration::from_millis(300), lab.calls.recv()).await
+    {
+        assert_eq!(method, "wallpaper.activate");
+        last = Some(params["id"].clone());
+    }
+    assert_eq!(
+        last.as_ref().and_then(Json::as_str),
+        Some("/fixture/animated.gif")
     );
 }
 #[tokio::test(flavor = "current_thread")]
@@ -2328,21 +2348,9 @@ async fn closing_restores_the_opening_wallpaper_only_when_a_preview_changed_it()
         lab.calls.try_recv().is_err(),
         "an untouched visit activates nothing"
     );
-    extras.project(&open, Some(wake.clone()));
-    // A pending move is cancelled by a close before it settles.
-    extras.act("wallpaper:move:/fixture/next.jpg", &open, wake.clone());
-    extras.project(&closed(&open), Some(wake.clone()));
-    tokio::time::sleep(WALLPAPER_SETTLE + Duration::from_millis(40)).await;
-    extras.project(&closed(&open), Some(wake.clone()));
-    assert!(
-        lab.calls.try_recv().is_err(),
-        "a move that never settled never previews or restores"
-    );
-    // A preview that landed is undone on close, as the last activation.
+    // A step is undone on close, as the last activation, with the quicker 400 ms fade.
     extras.project(&open, Some(wake.clone()));
     extras.act("wallpaper:move:/fixture/next.jpg", &open, wake.clone());
-    tokio::time::sleep(WALLPAPER_SETTLE + Duration::from_millis(40)).await;
-    extras.project(&open, Some(wake.clone()));
     assert_eq!(activated(&mut lab).await, "/fixture/next.jpg");
     extras.project(&closed(&open), Some(wake.clone()));
     assert_eq!(
@@ -2350,55 +2358,30 @@ async fn closing_restores_the_opening_wallpaper_only_when_a_preview_changed_it()
         "/fixture/current.jpg",
         "Esc puts the original back"
     );
+    if let Some(preview) = extras.wallpaper_preview() {
+        assert_eq!(preview.take_fade().map(|fade| fade.duration_ms), Some(400));
+    }
     extras.project(&closed(&open), Some(wake));
     assert!(lab.calls.try_recv().is_err());
 }
 #[tokio::test(flavor = "current_thread")]
-async fn enter_applies_a_pending_move_at_once_and_closes_without_a_restore() {
+async fn enter_on_a_shown_wallpaper_fades_nothing_new_and_closes_without_a_restore() {
     let mut lab = lab_with_topics(vec!["wallpaper.active".into()]).await;
     let (extras, open, wake) = open_picker(&mut lab).await;
     extras.act("wallpaper:move:/fixture/next.jpg", &open, wake.clone());
+    assert_eq!(activated(&mut lab).await, "/fixture/next.jpg");
     extras.act("wallpaper:commit:/fixture/next.jpg", &open, wake.clone());
-    assert_eq!(
-        activated(&mut lab).await,
-        "/fixture/next.jpg",
-        "no waiting for the settle"
-    );
-    assert!(extras.settle_at().is_none(), "the pending move is spent");
     let values = extras.project(&open, Some(wake.clone()));
     assert_eq!(
         values["panel.open"],
         Value::Bool(false),
         "the commit closes the picker"
     );
-    extras.project(&closed(&open), Some(wake.clone()));
-    tokio::time::sleep(WALLPAPER_SETTLE + Duration::from_millis(40)).await;
     extras.project(&closed(&open), Some(wake));
+    tokio::time::sleep(Duration::from_millis(60)).await;
     assert!(
         lab.calls.try_recv().is_err(),
-        "a commit is never restored, and nothing fires late"
-    );
-}
-#[test]
-fn the_grow_origin_is_exact_in_output_pixels_at_scale_one_and_a_half() {
-    use crate::placement::Frame;
-    let frame = Frame {
-        left: 20.,
-        right: 10.,
-        top: 50.,
-        bottom: 10.,
-        rounding: 25.,
-    };
-    // The panel centre sits (left-right)/2 and (top-bottom)/2 logical px from the output centre.
-    assert_eq!(grow_origin(&frame, 1.5), (7.5, 30.));
-    let preview = crate::wallpaper::Preview::default();
-    preview.grow_from(Some(grow_origin(&frame, 1.5)));
-    let fade = preview.take_fade((2880, 1800)).unwrap();
-    assert_eq!(
-        fade.kind,
-        bead::wayland::WallpaperFadeKind::Grow {
-            origin: (0.5 + 7.5 / 2880., 0.5 + 30. / 1800.)
-        }
+        "the pick was already shown: no new fade and no restore"
     );
 }
 #[test]

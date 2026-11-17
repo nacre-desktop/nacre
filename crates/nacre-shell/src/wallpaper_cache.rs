@@ -138,7 +138,57 @@ pub(crate) fn load_or_decode(
     if pair.motion.is_some() {
         return decode();
     }
+    if let Some(rgba) = hot_get(pair, width, height) {
+        return Ok(rgba.to_vec());
+    }
     load_or_decode_async_at(&cache_root(), pair, width, height, decode)
+}
+
+/// While the strand is open its +-2 neighbours stay decoded in memory, so previewing one is a
+/// copy instead of a disk read plus zstd. Keyed like the disk entry; released when the picker closes.
+type Hot = Vec<(PathBuf, Arc<Vec<u8>>)>;
+fn hot() -> &'static Mutex<Hot> {
+    static HOT: std::sync::OnceLock<Mutex<Hot>> = std::sync::OnceLock::new();
+    HOT.get_or_init(Default::default)
+}
+fn hot_key(pair: &ActiveWallpaper, width: u32, height: u32) -> Option<PathBuf> {
+    entry_path(&cache_root(), pair, width, height)
+        .ok()
+        .map(|(path, _)| path)
+}
+fn hot_get(pair: &ActiveWallpaper, width: u32, height: u32) -> Option<Arc<Vec<u8>>> {
+    let key = hot_key(pair, width, height)?;
+    let hot = hot().lock().unwrap_or_else(|p| p.into_inner());
+    hot.iter()
+        .find(|(path, _)| *path == key)
+        .map(|(_, rgba)| rgba.clone())
+}
+pub(crate) fn hot_has(pair: &ActiveWallpaper, width: u32, height: u32) -> bool {
+    hot_get(pair, width, height).is_some()
+}
+pub(crate) fn hot_hold(pair: &ActiveWallpaper, width: u32, height: u32, rgba: Vec<u8>) {
+    if let Some(key) = hot_key(pair, width, height) {
+        let mut hot = hot().lock().unwrap_or_else(|p| p.into_inner());
+        if !hot.iter().any(|(path, _)| *path == key) {
+            hot.push((key, Arc::new(rgba)));
+        }
+    }
+}
+/// Drop every held raster that is not in `keep` (pair, width, height); an empty `keep` releases all.
+pub(crate) fn hot_retain(keep: &[(ActiveWallpaper, u32, u32)]) {
+    let keys: Vec<PathBuf> = keep
+        .iter()
+        .filter_map(|(pair, width, height)| hot_key(pair, *width, *height))
+        .collect();
+    hot()
+        .lock()
+        .unwrap_or_else(|p| p.into_inner())
+        .retain(|(path, _)| keys.contains(path));
+}
+/// (entries, resident bytes) of the held window.
+pub(crate) fn hot_resident() -> (usize, usize) {
+    let hot = hot().lock().unwrap_or_else(|p| p.into_inner());
+    (hot.len(), hot.iter().map(|(_, rgba)| rgba.len()).sum())
 }
 
 /// Return an already cached raster without starting a decode or blocking on a miss.
@@ -365,6 +415,27 @@ mod tests {
         let identity = WallpaperFileIdentity::from_metadata(&fs::metadata(&source).unwrap());
         let pair: ActiveWallpaper = serde_json::from_value(serde_json::json!({"revision":1,"palette_revision":1,"path":source,"file_identity":identity,"presentation":"crop","palette":{"mode":"dark","colours":{"background":"#101820","onSurface":"#f0f4f8","primary":"#22aa88"}}})).unwrap();
         (root, pair)
+    }
+    #[test]
+    fn the_held_window_keeps_only_what_it_is_told_to_and_releases_on_close() {
+        let (root, pair) = fixture();
+        let other = root.join("other.bin");
+        fs::write(&other, [9u8, 9]).unwrap();
+        let mut second = pair.clone();
+        second.path = other.to_string_lossy().into_owned();
+        second.file_identity = nacre_protocol::wallpaper::WallpaperFileIdentity::from_metadata(
+            &fs::metadata(&other).unwrap(),
+        );
+        hot_hold(&pair, 2, 2, vec![1; 16]);
+        hot_hold(&second, 2, 2, vec![2; 16]);
+        assert_eq!(hot_resident(), (2, 32));
+        assert!(hot_has(&pair, 2, 2));
+        hot_retain(&[(second.clone(), 2, 2)]);
+        assert_eq!(hot_resident(), (1, 16));
+        assert!(!hot_has(&pair, 2, 2) && hot_has(&second, 2, 2));
+        hot_retain(&[]);
+        assert_eq!(hot_resident(), (0, 0));
+        let _ = fs::remove_dir_all(root);
     }
     #[test]
     fn invalidates_changed_source_and_dimensions() {

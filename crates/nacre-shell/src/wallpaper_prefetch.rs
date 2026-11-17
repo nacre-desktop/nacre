@@ -15,10 +15,16 @@ pub(crate) struct Prefetch {
 }
 
 impl Prefetch {
-    /// Replace any earlier plan; `jobs` (pair, width, height) are decoded in order, skipping
-    /// cached entries.
-    pub(crate) fn start(&self, jobs: Vec<(ActiveWallpaper, u32, u32)>) {
+    /// Replace any earlier plan; `jobs` (pair, width, height, hold) are decoded in order. A `hold`
+    /// job (the strand's +-2 window) stays resident in memory; the rest only warm the disk cache.
+    pub(crate) fn start(&self, jobs: Vec<(ActiveWallpaper, u32, u32, bool)>) {
         let mine = self.epoch.fetch_add(1, Ordering::AcqRel) + 1;
+        let window: Vec<_> = jobs
+            .iter()
+            .filter(|job| job.3)
+            .map(|job| (job.0.clone(), job.1, job.2))
+            .collect();
+        crate::wallpaper_cache::hot_retain(&window);
         if jobs.is_empty() {
             return;
         }
@@ -31,11 +37,33 @@ impl Prefetch {
                     // selection finish before this cancellable raster worker.
                     libc::setpriority(libc::PRIO_PROCESS, libc::gettid() as u32, 19);
                 }
-                // Give the newly populated picker scene a frame before background decoding.
-                std::thread::sleep(std::time::Duration::from_millis(100));
-                for (pair, width, height) in jobs {
+                // Give the newly populated picker scene a frame before the first background decode.
+                if crate::wallpaper_cache::hot_resident().0 == 0 {
+                    std::thread::sleep(std::time::Duration::from_millis(100));
+                }
+                let mut held = false;
+                for (pair, width, height, hold) in jobs {
                     if epoch.load(Ordering::Acquire) != mine {
                         return;
+                    }
+                    if hold {
+                        if !crate::wallpaper_cache::hot_has(&pair, width, height) {
+                            let _one = gate.lock().unwrap_or_else(|p| p.into_inner());
+                            if let Ok(decoded) =
+                                crate::wallpaper::decode_pair(pair.clone(), width, height)
+                            {
+                                crate::wallpaper_cache::hot_hold(
+                                    &pair,
+                                    width,
+                                    height,
+                                    decoded.rgba,
+                                );
+                            }
+                        }
+                        continue;
+                    }
+                    if !std::mem::replace(&mut held, true) {
+                        strand_predecode_log();
                     }
                     if crate::wallpaper_cache::is_cached(&pair, width, height) {
                         continue;
@@ -46,12 +74,40 @@ impl Prefetch {
                     }
                     let _ = crate::wallpaper::decode_pair(pair, width, height);
                 }
+                if !held {
+                    strand_predecode_log();
+                }
             });
     }
 
+    /// The picker closed: stop decoding and release the held window.
     pub(crate) fn cancel(&self) {
         self.epoch.fetch_add(1, Ordering::AcqRel);
+        crate::wallpaper_cache::hot_retain(&[]);
+        eprintln!("STRAND_PREDECODE entries=0 resident_bytes=0");
     }
+}
+
+fn strand_predecode_log() {
+    let (entries, resident_bytes) = crate::wallpaper_cache::hot_resident();
+    eprintln!("STRAND_PREDECODE entries={entries} resident_bytes={resident_bytes}");
+}
+
+/// The chosen wallpaper and its two neighbours either side, wrapping around like the strand.
+pub(crate) fn window(ids: &[String], active: Option<usize>) -> Vec<String> {
+    let (count, centre) = (ids.len() as isize, active.unwrap_or(0) as isize);
+    let mut window: Vec<String> = Vec::new();
+    for offset in 0..=2 {
+        for step in [offset, -offset] {
+            if count > 0 {
+                let id = &ids[(centre + step).rem_euclid(count) as usize];
+                if !window.contains(id) {
+                    window.push(id.clone());
+                }
+            }
+        }
+    }
+    window
 }
 
 /// Catalogue ids nearest the active wallpaper first, so the likeliest next picks are ready first.
@@ -70,6 +126,17 @@ pub(crate) fn nearest_first(ids: &[String], active: Option<usize>) -> Vec<String
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_window_is_the_chosen_wallpaper_and_two_neighbours_wrapping() {
+        let ids: Vec<String> = ["a", "b", "c", "d", "e", "f", "g"]
+            .map(String::from)
+            .to_vec();
+        assert_eq!(window(&ids, Some(3)), ["d", "e", "c", "f", "b"]);
+        assert_eq!(window(&ids, Some(0)), ["a", "b", "g", "c", "f"]);
+        assert_eq!(window(&ids[..3], Some(0)), ["a", "b", "c"]);
+        assert!(window(&[], None).is_empty());
+    }
 
     #[test]
     fn prefetch_order_starts_beside_the_active_wallpaper() {

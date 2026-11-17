@@ -5484,7 +5484,6 @@ impl SceneSource for Runtime {
             hover_close,
             self.reattach_hover_grace_until,
             self.dashboard_pearl_deadline,
-            self.extras.as_ref().and_then(|extras| extras.settle_at()),
         ]
         .into_iter()
         .flatten()
@@ -6106,11 +6105,6 @@ impl SceneSource for Runtime {
             && let Some(scale) = scale
         {
             dashboard.borrow().set_raster_scale(scale);
-        }
-        if let Some(extras) = &self.extras
-            && let Some(scale) = scale
-        {
-            extras.set_scale(scale);
         }
         if let Some(warmer) = &self.wallpaper_warmer
             && let Some(scale) = scale
