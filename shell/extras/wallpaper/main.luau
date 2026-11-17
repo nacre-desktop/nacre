@@ -28,7 +28,7 @@ for index=1,#animation_query do animation_key=(animation_key*33+string.byte(anim
 -- out-quint for every repeat; a single tap keeps the full 500 ms out-quint.
 local glide=ui.resolve_for_check(ui.bind("extras.wallpaper.glide"))==true
 local strand=ui.animate("wallpaper-strand:"..tostring(count)..":"..tostring(animation_key),position,glide and W.glide_duration or W.move_duration,glide and "linear" or "out-quint")
--- The entry/exit storyboard, in one place: a linear 0..1 clock over the whole 675 ms (180 ms on the way back, the shared panel close, so the
+-- The entry/exit storyboard, in one place: a linear 0..1 clock over the whole 675 ms (260 ms on the way back, so the
 -- exit is the exact reverse), and every part below reads its own span of `ms`. `extras.wallpaper.entry_ms` pins it
 -- for goldens. Bead has no node opacity: the veil, ring, texts and pill fade through colour alpha (pearls scale and fade through Image opacity).
 local opening=ui.resolve_for_check(ui.bind("panel.open"))~=false
@@ -101,6 +101,7 @@ table.sort(placed,function(left,right) return math.abs(left.offset)>math.abs(rig
 local nearest=W.visible_reach
 for _,pearl in ipairs(placed) do nearest=math.min(nearest,math.abs(pearl.offset)) end
 
+local function snap(size,step) return math.max(step*s,math.floor(size/(step*s)+.5)*step*s) end
 local function pearl_node(pearl)
   local item=pearl.item
   -- Drop: from the thread line, scale .15 -> 1 (out-cubic), 120 ms + 35 ms per slot out, 380 ms each.
@@ -111,12 +112,15 @@ local function pearl_node(pearl)
   local alpha=math.min(1,loc*1.6)*(1-.5*math.max(0,math.min(1,math.abs(pearl.offset)-4)))
   local size,cy=pearl.size*(.15+.85*drop),thread_y+(pearl.y-thread_y)*drop
   local near=math.max(0,1-math.abs(pearl.offset))
-  local edge=math.max(1.5,size*.028)
+  local edge=math.max(1,s)
   local path=item.thumbnail
   local kids={}
   if math.abs(pearl.offset)<=2.5 then
-    kids[#kids+1]=ui.Image{id="shadow",position="absolute",left=-size*.12,top=-size*.04,width=size*1.24,height=size*1.24,
-      path=W.glow,tint={0,0,0,math.floor(110*alpha*math.min(1,size/(W.pearl_sizes[1]*s)+.35))}}
+    -- Soft textures: Bead keys an image raster by size and tint, so these keep one tint (the strength rides on
+    -- `opacity`) and a stepped size, centred on the pearl; a fresh raster per animation frame cost ~40 ms (measured).
+    local glow=snap(size*1.24,32)
+    kids[#kids+1]=ui.Image{id="shadow",position="absolute",left=size*.5-glow/2,top=size*.58-glow/2,width=glow,height=glow,
+      path=W.glow,tint={0,0,0,110},opacity=alpha*math.min(1,size/(W.pearl_sizes[1]*s)+.35)}
   end
   if path and path~="" then
     kids[#kids+1]=ui.Image{id="thumbnail",position="absolute",left=0,top=0,width=size,height=size,
@@ -128,16 +132,16 @@ local function pearl_node(pearl)
       color="onSurfaceVariant",text_align="center"}
   end
   if item.kind=="video" then
-    local badge=math.max(16,size*.2)
-    kids[#kids+1]=ui.Box{id="video-badge",position="absolute",left=size*.5-badge/2,top=size*.74-badge/2,width=badge,height=badge,radius=badge/2,fill=fade({10,11,16,170},alpha),
-      border_width=1,border_color=fade(W.nav_ring,alpha),
-      ui.Text{text="play_arrow",position="absolute",left=0,top=badge*.1,width=badge,height=badge*.85,family="Material Symbols Rounded",font_size=badge*.7,color=fade(W.ink,alpha),text_align="center"}}
+    local badge=W.badge*s -- the prototype's 18 px disc, 12 % in from the pearl's lower right
+    kids[#kids+1]=ui.Box{id="video-badge",position="absolute",left=size*.88-badge,top=size*.88-badge,width=badge,height=badge,radius=badge/2,fill=fade({10,11,14,184},alpha),
+      ui.Text{text="play_arrow",position="absolute",left=0,top=badge*.1,width=badge,height=badge*.85,family="Material Symbols Rounded",font_size=badge*.6,color=fade(W.ink,alpha),text_align="center"}}
   end
   kids[#kids+1]=ui.Box{id="edge",position="absolute",left=0,top=0,width=size,height=size,radius=size/2,fill="transparent",
     border_width=edge,border_color=fade(W.pearl_edge,alpha)}
   if near>.3 then
-    kids[#kids+1]=ui.Image{id="sheen",position="absolute",left=0,top=0,width=size,height=size,path=W.sheen,
-      tint={W.pearl_sheen[1],W.pearl_sheen[2],W.pearl_sheen[3],math.floor(W.pearl_sheen[4]*near*alpha)}}
+    local sheen=snap(size,16)
+    kids[#kids+1]=ui.Image{id="sheen",position="absolute",left=(size-sheen)/2,top=(size-sheen)/2,width=sheen,height=sheen,path=W.sheen,
+      tint=W.pearl_sheen,opacity=near*alpha}
   end
   -- The chosen pearl keeps the pick; any other pearl only moves the strand.
   local request=(math.abs(pearl.offset)<.5 and "wallpaper:commit:" or "wallpaper:select:")..tostring(item.id)
@@ -205,9 +209,9 @@ local function glyph_button(id,label,glyph,size,font,fill,action,request,left,to
   return kit.Button(props)
 end
 
--- Veil: flat translucent bands that follow the design gradient (.55 top, .30 at 40 %, .62 bottom). A stretched
+-- Veil: flat translucent bands that follow the design gradient (.40 top, .12 at 40 %, .60 bottom). A stretched
 -- SVG would be rasterised at the full panel size, which overruns Bead's retained raster budget at 2880x1800.
-local function veil_alpha(at) return at<.4 and .55-(.55-.30)*at/.4 or .30+(.62-.30)*(at-.4)/.6 end
+local function veil_alpha(at) return at<.4 and .40-(.40-.12)*at/.4 or .12+(.60-.12)*(at-.4)/.6 end
 local children={}
 for band=0,W.veil_bands-1 do
   -- Even edges land on whole physical pixels at scale 1, 1.5 and 2, so the bands leave no antialiased seams.
@@ -220,13 +224,17 @@ children[#children+1]=ui.Box{id="strand",position="absolute",left=0,top=0,width=
 if selected then
   local name_top=centre.y+W.name_top*s
   children[#children+1]=ui.Text{id="selected-title",position="absolute",left=0,top=name_top,width=width,height=W.name_height*s,
-    text=selected.title or "",font_size=W.name_font*s,font_weight=600,text_align="center",color=fade(W.ink,chrome),
+    text=selected.title or "",font_size=W.name_font*s,font_weight=300,text_align="center",color=fade(W.ink,chrome),
     text_shadow_blur=18,text_shadow_y=2,text_shadow_color={0,0,0,math.floor(115*chrome)}}
-  local meta=string.format("%02d / %d",selection_index,count)
-  if resolution~="" and resolution_id==selected.id then meta=meta.." · "..resolution end
+  -- The prototype's caption: "3 of 47, 3840 x 2560" for a still, "3 of 47, video, 24 s loop, plays muted" for a video;
+  -- "3 of 5 matches" while a search narrows the strand.
+  local meta=animation_query~="" and ui.tr("bead.dashboard.wallpaper-meta-matches",{index=selection_index,count=count})
+    or ui.tr("bead.dashboard.wallpaper-meta",{index=selection_index,total=count})
+  if selected.kind=="video" then meta=ui.tr("bead.dashboard.wallpaper-meta-video",{meta=meta})
+  elseif resolution~="" and resolution_id==selected.id then meta=ui.tr("bead.dashboard.wallpaper-meta-size",{meta=meta,size=resolution}) end
   local meta_font=W.meta_font*s
-  local meta_row={ui.Text{id="selection-count",width=ui.text_width(meta,"JetBrains Mono NF",meta_font)+2,height=W.meta_height*s,text=meta,
-    family="JetBrains Mono NF",font_size=meta_font,color=fade(W.ink_soft,chrome)}}
+  local meta_row={ui.Text{id="selection-count",width=ui.text_width(meta,ui.default_font_family,meta_font)+2,height=W.meta_height*s,text=meta,
+    font_weight=500,font_size=meta_font,color=fade(W.ink_soft,chrome)}}
   local dots={}
   local colours=type(selected.palette)=="table" and selected.palette.colours or nil
   for _,role in ipairs(W.palette_roles) do
@@ -257,10 +265,10 @@ local pill_items={
   ui.Box{id="search-field",width=W.search_width*s,height=button,shrink=0,fill="transparent",
     kit.TextInput{id="search",position="absolute",left=0,top=0,width=W.search_width*s,height=button,
       focus_ring=false,text=ui.bind("extras.query"),placeholder=footer>.5 and "Search wallpapers" or "",
-      padding_left=(W.search_icon+22)*s,padding_right=12*s,padding_top=(button-kit.tokens.text.body*4/3*1.4)/2,padding_bottom=(button-kit.tokens.text.body*4/3*1.4)/2,
+      padding_left=(W.search_icon+19)*s,padding_right=12*s,padding_top=(button-kit.tokens.text.body*4/3*1.4)/2,padding_bottom=(button-kit.tokens.text.body*4/3*1.4)/2,
       radius=button/2,font_size=kit.tokens.text.body*4/3,fill=fade(W.search_fill,footer),
       border_width=search_focused and 1 or 0,border_color="outline"},
-    ui.Text{id="search-icon",position="absolute",left=14*s,top=(button-W.search_icon*s*1.15)/2,width=W.search_icon*s,height=W.search_icon*s*1.15,
+    ui.Text{id="search-icon",position="absolute",left=10*s,top=(button-W.search_icon*s*1.15)/2,width=W.search_icon*s,height=W.search_icon*s*1.15,
       text="search",family="Material Symbols Rounded",font_size=W.search_icon*s,color=fade(W.ink_soft,footer)}}}
 if can_pause then
   pill_items[#pill_items+1]=glyph_button("pause",ui.tr(paused and "bead.dashboard.wallpaper-resume" or "bead.dashboard.wallpaper-pause"),

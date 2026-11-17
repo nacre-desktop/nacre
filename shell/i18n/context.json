@@ -1059,5 +1059,9 @@
   "bead.panel.ai-unchecked": "Nacre AI app: account status before any sign-in check.",
   "bead.panel.ai-running": "Nacre AI app: chat list group heading for chats that are running now.",
   "bead.panel.ai-today": "Nacre AI app: chat list group heading for chats used in the last day.",
-  "bead.panel.ai-earlier": "Nacre AI app: chat list group heading for older chats."
+  "bead.panel.ai-earlier": "Nacre AI app: chat list group heading for older chats.",
+  "bead.dashboard.wallpaper-meta": "Strand wallpaper picker caption under the name: the position in the strand, for example '3 of 47'. {index} is the pearl number, {total} the count.",
+  "bead.dashboard.wallpaper-meta-matches": "Strand caption while a search narrows the strand: '3 of 5 matches'. {index} is the pearl number, {count} how many wallpapers match.",
+  "bead.dashboard.wallpaper-meta-size": "Strand caption for a still: the position text followed by the image size, for example '3 of 47, 3840 x 2160'. {meta} is the position text, {size} the pixel size.",
+  "bead.dashboard.wallpaper-meta-video": "Strand caption for a video wallpaper: the position text followed by what the video does. {meta} is the position text."
 }

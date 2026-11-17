@@ -1080,5 +1080,9 @@
   "bead.panel.ai-unchecked": "Not checked yet",
   "bead.panel.ai-running": "Running",
   "bead.panel.ai-today": "Today",
-  "bead.panel.ai-earlier": "Earlier"
+  "bead.panel.ai-earlier": "Earlier",
+  "bead.dashboard.wallpaper-meta": "{index} of {total}",
+  "bead.dashboard.wallpaper-meta-matches": "{index} of {count} matches",
+  "bead.dashboard.wallpaper-meta-size": "{meta}, {size}",
+  "bead.dashboard.wallpaper-meta-video": "{meta}, video, 24 s loop, plays muted"
 }
