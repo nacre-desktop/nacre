@@ -1012,6 +1012,28 @@
       },
       {
         "kind": "binding",
+        "keys": "SUPER + C",
+        "action": "application.launch",
+        "parameters": {
+          "command": "nacrectl ui drawers toggle right"
+        },
+        "options": {
+          "description": "Nacre:control-centre"
+        }
+      },
+      {
+        "kind": "binding",
+        "keys": "SUPER + D",
+        "action": "application.launch",
+        "parameters": {
+          "command": "nacrectl ui drawers toggle dashboard"
+        },
+        "options": {
+          "description": "Nacre:dashboard"
+        }
+      },
+      {
+        "kind": "binding",
         "keys": "SUPER + SHIFT + W",
         "action": "application.launch",
         "parameters": {

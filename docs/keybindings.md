@@ -17,6 +17,7 @@ generated tables, including Hyprland's resize mode, are in
 | Super+Shift+B | Browser |
 | Super+I | Settings |
 | Super+W | Wallpaper picker |
+| Super+C | Control centre |
 | Super+V | Clipboard history |
 | Super+. or Super+Ctrl+E | Emoji picker |
 | Super+Ctrl+Space | Command palette |
@@ -57,7 +58,7 @@ onto the current one; see [monitor workspaces](configuration.md#monitor-workspac
 
 | Key | Action |
 | --- | --- |
-| Super+O | Dashboard |
+| Super+O or Super+D | Dashboard |
 | Super+Z | Hide or show the shell frame and panels |
 | Super+Shift+W | Widgets |
 | Super+Ctrl+D | [Detach the open panel](detachable-panels.md) into a window |

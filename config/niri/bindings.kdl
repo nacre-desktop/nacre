@@ -66,6 +66,8 @@ binds {
     Super+TAB repeat=false hotkey-overlay-title="Nacre:overview" { spawn-sh "niri msg action toggle-overview"; }
     Super+V repeat=false hotkey-overlay-title="Nacre:clipboard" { spawn "nacrectl" "ui" "nacre" "clipboard"; }
     Super+W repeat=false hotkey-overlay-title="Nacre:wallpaper" { spawn "nacrectl" "ui" "nacre" "launcher" ">wallpaper "; }
+    Super+C repeat=false hotkey-overlay-title="Nacre:control-centre" { spawn "nacrectl" "ui" "drawers" "toggle" "right"; }
+    Super+D repeat=false hotkey-overlay-title="Nacre:dashboard" { spawn "nacrectl" "ui" "drawers" "toggle" "dashboard"; }
     Super+Shift+W repeat=false hotkey-overlay-title="Nacre:widgets" { spawn "nacrectl" "ui" "widgets" "open"; }
     Super+Z repeat=false { spawn "nacrectl" "ui" "nacre" "hide"; }
     Super+O repeat=false hotkey-overlay-title="Nacre:dashboard" { spawn "nacrectl" "ui" "drawers" "toggle" "dashboard"; }
