@@ -624,23 +624,18 @@ async fn wallpaper_catalogue_projects_and_selection_calls_revision_fenced_activa
             .all(|entry| entry["thumbnail"] == "" && entry["preview"] == ""),
         "ids:[] provides all metadata without materializing cache paths"
     );
-    wallpaper.act("wallpaper:shuffle", &stores, wake.clone());
+    wallpaper.act(
+        "wallpaper:activate:/fixture/next.jpg",
+        &stores,
+        wake.clone(),
+    );
     let (method, params) = tokio::time::timeout(Duration::from_secs(2), lab.calls.recv())
         .await
         .unwrap()
         .unwrap();
     assert_eq!(method, "wallpaper.activate");
-    assert!(
-        [
-            "/fixture/current.jpg",
-            "/fixture/next.jpg",
-            "/fixture/next.mp4",
-            "/fixture/animated.gif"
-        ]
-        .contains(&params["id"].as_str().unwrap()),
-        "shuffle activates a catalogue entry"
-    );
-    // The shuffle's reply confirms revision 18; selecting before it lands would race it.
+    assert_eq!(params["id"], "/fixture/next.jpg");
+    // The first reply confirms revision 18; selecting before it lands would race it.
     let confirmed = || {
         let queue = wallpaper.wallpaper_actions.as_ref().unwrap();
         let queue = queue.lock().unwrap_or_else(|e| e.into_inner());
@@ -1490,101 +1485,27 @@ async fn wallpaper_runtime_search_and_next_button_dispatch_real_activation() {
         runtime.session.stores.get("extras.viewport.height"),
         Some(&Value::Number(usable_height as f64))
     );
-    let carousel_root = runtime
+    let panel_root = runtime
         .session
         .view_nodes()
         .iter()
         .find(|node| node.action.as_deref() == Some("close"))
         .expect("picker root has the generic close action");
-    let carousel_rect = bead::ui::rect(&carousel_root.draw);
-    let expected_carousel_width = 320_f32.max(1360_f32.min(usable_width - 96.));
+    let panel_rect = bead::ui::rect(&panel_root.draw);
     assert_eq!(
-        (carousel_rect.w, carousel_rect.h),
-        (expected_carousel_width, 320.)
+        (panel_rect.w, panel_rect.h),
+        (usable_width, usable_height),
+        "Strand fills the area inside the shell frame"
     );
     assert!(
         runtime.scroll_regions().is_empty(),
-        "carousel wheel ticks navigate once instead of expanding into smooth scrolling"
+        "wheel ticks move the strand once instead of expanding into smooth scrolling"
     );
     let motion = initial_scene
         .motion
         .as_ref()
-        .expect("picker uses sliding panel motion");
-    assert!(
-        !motion.reveal,
-        "wallpaper content slides without collapsing its children"
-    );
-    assert_eq!(motion.slide_distance, Some(carousel_rect.h));
-    runtime
-        .session
-        .stores
-        .commit(BTreeMap::from([(
-            "extras.wallpaper.layout".into(),
-            Value::Text("spotlight".into()),
-        )]))
-        .unwrap();
-    let full_scene = runtime
-        .session
-        .relayout()
-        .unwrap()
-        .expect("fullscreen layout relayouts");
-    runtime.session.commit(full_scene);
-    assert_eq!(
-        runtime.session.resolve("view.frame").unwrap(),
-        Value::Bool(false),
-        "Luau owns whether the spotlight joins the shell frame"
-    );
-    let fullscreen_root = runtime
-        .session
-        .view_nodes()
-        .iter()
-        .find(|node| node.action.as_deref() == Some("close"))
-        .expect("fullscreen picker root has the generic close action");
-    let fullscreen_rect = bead::ui::rect(&fullscreen_root.draw);
-    assert_eq!(
-        (fullscreen_rect.w, fullscreen_rect.h),
-        (usable_width, usable_height)
-    );
-    assert!(
-        runtime.scroll_regions().is_empty(),
-        "spotlight remains a discrete navigation surface"
-    );
-    runtime
-        .session
-        .stores
-        .commit(BTreeMap::from([(
-            "extras.wallpaper.layout".into(),
-            Value::Text("hexagons".into()),
-        )]))
-        .unwrap();
-    let hex_scene = runtime
-        .session
-        .relayout()
-        .unwrap()
-        .expect("hexagon layout relayouts");
-    runtime.session.commit(hex_scene);
-    assert!(
-        !runtime.scroll_regions().is_empty(),
-        "hexagon gallery retains its content-scroll region"
-    );
-    runtime
-        .session
-        .stores
-        .commit(BTreeMap::from([(
-            "extras.wallpaper.layout".into(),
-            Value::Text("carousel".into()),
-        )]))
-        .unwrap();
-    let carousel_scene = runtime
-        .session
-        .relayout()
-        .unwrap()
-        .expect("carousel relayouts");
-    runtime.session.commit(carousel_scene);
-    assert_eq!(
-        runtime.session.resolve("view.frame").unwrap(),
-        Value::Bool(true)
-    );
+        .expect("picker uses the shared panel motion");
+    assert!(motion.reveal, "the strand grows out of the bar edge");
     assert_eq!(
         tokio::time::timeout(Duration::from_secs(2), lab.calls.recv())
             .await
@@ -1678,19 +1599,6 @@ async fn wallpaper_runtime_search_and_next_button_dispatch_real_activation() {
     runtime.stage(UiEvent::Release).unwrap();
     runtime.commit();
     runtime
-        .stage(UiEvent::Scroll {
-            x: search_rect.x + search_rect.w / 2.,
-            y: search_rect.y + search_rect.h / 2.,
-            delta: 15.,
-        })
-        .unwrap();
-    runtime.commit();
-    assert!(
-        lab.calls.try_recv().is_err(),
-        "scrolling the search toolbar does not navigate wallpapers"
-    );
-
-    runtime
         .stage(UiEvent::Key {
             text: "Next".into(),
             backspace: false,
@@ -1713,8 +1621,19 @@ async fn wallpaper_runtime_search_and_next_button_dispatch_real_activation() {
         (
             "wallpaper.activate".into(),
             json!({"revision":17,"id":"/fixture/next.jpg"})
-        )
+        ),
+        "Enter keeps the chosen wallpaper at once"
     );
+    assert_eq!(
+        runtime.session.stores.get("panel.open"),
+        Some(&Value::Bool(false)),
+        "and closes the picker"
+    );
+    runtime
+        .session
+        .stores
+        .commit(BTreeMap::from([("panel.open".into(), Value::Bool(true))]))
+        .unwrap();
 
     for _ in 0..4 {
         runtime
@@ -1747,13 +1666,17 @@ async fn wallpaper_runtime_search_and_next_button_dispatch_real_activation() {
     runtime.commit();
     assert_eq!(
         runtime.session.stores.get("extras.wallpaper.selection_id"),
-        Some(&Value::Text("/fixture/current.jpg".into()))
+        Some(&Value::Text("/fixture/next.jpg".into()))
+    );
+    assert!(
+        lab.calls.try_recv().is_err(),
+        "a move only slides the strand; the wallpaper follows once it settles"
     );
     assert_eq!(
         next_wallpaper_runtime_call(&mut runtime, &mut lab.calls).await,
         (
             "wallpaper.activate".into(),
-            json!({"revision":18,"id":"/fixture/current.jpg"})
+            json!({"revision":18,"id":"/fixture/next.jpg"})
         )
     );
     let card = runtime.session.view_nodes().iter().find(|node| {
@@ -1774,7 +1697,7 @@ async fn wallpaper_runtime_search_and_next_button_dispatch_real_activation() {
         next_wallpaper_runtime_call(&mut runtime, &mut lab.calls).await,
         (
             "wallpaper.activate".into(),
-            json!({"revision":19,"id":"/fixture/next.jpg"})
+            json!({"revision":19,"id":"/fixture/current.jpg"})
         ),
         "positive Wayland wheel distance moves to the next wallpaper"
     );
@@ -2117,100 +2040,365 @@ fn extras_goldens() -> bead_test::Result<()> {
     }
     Ok(())
 }
-#[test]
-fn wallpaper_picker_goldens() -> bead_test::Result<()> {
+/// Twelve distinct 320x200 gradients stand in for the catalogue's thumbnails.
+fn strand_thumbnails(dir: &std::path::Path, count: usize) -> BTreeMap<String, std::path::PathBuf> {
+    std::fs::create_dir_all(dir).unwrap();
+    (0..count)
+        .map(|index| {
+            let [r, g, b] = strand_colour(index, 1.);
+            let image = image::RgbaImage::from_fn(320, 200, |x, y| {
+                let light = 1.15 - y as f32 / 200. * 0.6 + x as f32 / 320. * 0.15;
+                let channel = |value: u8| (f32::from(value) * light).clamp(0., 255.) as u8;
+                image::Rgba([channel(r), channel(g), channel(b), 255])
+            });
+            let path = dir.join(format!("thumb-{index:02}.png"));
+            image.save(&path).unwrap();
+            (
+                format!("wallpaper:thumbnail:0:/fixture/wallpaper-{index:02}"),
+                path,
+            )
+        })
+        .collect()
+}
+fn strand_colour(index: usize, light: f32) -> [u8; 3] {
+    // HSV with hue stepping 37 degrees per wallpaper, saturation .65 and value .9.
+    let hue = (index * 37 % 360) as f32 / 60.;
+    let channel = |n: f32| {
+        let k = (n + hue) % 6.;
+        let value = 0.9 - 0.9 * 0.65 * k.min(4. - k).clamp(0., 1.);
+        (value * light * 255.).clamp(0., 255.) as u8
+    };
+    [channel(5.), channel(3.), channel(1.)]
+}
+fn strand_rows(count: usize, kind: &str) -> Value {
+    const NAMES: [&str; 12] = [
+        "Aurora",
+        "Coast",
+        "Crimson Wood",
+        "Blue Layers",
+        "Blossom Lake",
+        "Canyon",
+        "Forest",
+        "Galaxy",
+        "Glacier",
+        "Lagoon",
+        "Moss",
+        "Orchid",
+    ];
+    Value::list(
+        (0..count)
+            .map(|index| {
+                let hex = |light: f32| {
+                    let [r, g, b] = strand_colour(index, light);
+                    format!("#{r:02x}{g:02x}{b:02x}")
+                };
+                json!({
+                    "id":format!("/fixture/wallpaper-{index:02}"),
+                    "kind":if kind == "dynamic" {"video"} else {"image"},
+                    "title":if index < NAMES.len() {NAMES[index].to_owned()} else {format!("Wallpaper {index:02}")},
+                    "thumbnail":format!("wallpaper:thumbnail:0:/fixture/wallpaper-{index:02}"),
+                    "preview":"",
+                    "active":index == 5,
+                    "palette":{"mode":"dark","colours":{
+                        "background":"#0b0c10","onSurface":"#f0f0f0","primary":hex(1.),
+                        "secondary":hex(0.7),"tertiary":hex(1.2),"primaryContainer":hex(0.5)}}
+                })
+            })
+            .collect(),
+    )
+}
+/// The picker over `count` wallpapers; `position` (the strand's unwrapped slot) may sit between two.
+fn strand_harness(
+    count: usize,
+    kind: &str,
+    query: &str,
+    position: f64,
+    logical: (u32, u32),
+    scale: f32,
+    thumbnails: &std::path::Path,
+) -> bead_test::Result<bead_test::Harness> {
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../shell");
-    let palette = root.join("palette.json");
-    let thumbnail = "wallpaper:thumbnail:0:/fixture/sample.png".to_owned();
-    for (kind, layout) in [
-        ("static", "carousel"),
-        ("dynamic", "carousel"),
-        ("static", "spotlight"),
-        ("dynamic", "spotlight"),
-        ("static", "hexagons"),
-        ("dynamic", "hexagons"),
+    let frame = crate::placement::Frame::DEFAULT;
+    let selected = format!("/fixture/wallpaper-{:02}", position.floor() as usize - 1);
+    let stores = BTreeMap::from([
+        ("panel.open".into(), Value::Bool(true)),
+        ("extras.kind".into(), Value::Text("wallpaper".into())),
+        ("extras.available".into(), Value::Bool(true)),
+        ("extras.message".into(), Value::Text(String::new())),
+        ("extras.query".into(), Value::Text(query.into())),
+        ("extras.rows".into(), strand_rows(count, kind)),
+        ("extras.wallpaper.kind".into(), Value::Text(kind.into())),
+        ("extras.wallpaper.loading".into(), Value::Bool(false)),
+        (
+            "extras.wallpaper.selection_id".into(),
+            Value::Text(selected.clone()),
+        ),
+        ("extras.wallpaper.position".into(), Value::Number(position)),
+        (
+            "extras.wallpaper.resolution_id".into(),
+            Value::Text(selected),
+        ),
+        (
+            "extras.wallpaper.resolution".into(),
+            Value::Text("3840 × 2160".into()),
+        ),
+        (
+            "extras.viewport.width".into(),
+            Value::Number(f64::from(logical.0) - f64::from(frame.left + frame.right)),
+        ),
+        (
+            "extras.viewport.height".into(),
+            Value::Number(f64::from(logical.1) - f64::from(frame.top + frame.bottom)),
+        ),
+    ]);
+    bead_test::Harness::load_with_icons(
+        &root,
+        std::path::Path::new("extras/main.luau"),
+        &root.join("palette.json"),
+        stores,
+        bead_test::Config {
+            width: logical.0 - 20 + 64,
+            height: logical.1 - 60 + 64,
+            scale,
+        },
+        strand_thumbnails(thumbnails, count),
+    )
+}
+fn pearl_images(harness: &bead_test::Harness) -> usize {
+    harness
+        .scene()
+        .primitives
+        .iter()
+        .filter(|primitive| {
+            matches!(primitive, bead::render::Primitive::Image { path, .. }
+            if path.file_name().is_some_and(|name| name.to_string_lossy().starts_with("thumb-")))
+        })
+        .count()
+}
+#[test]
+fn wallpaper_strand_goldens() -> bead_test::Result<()> {
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../shell");
+    let thumbnails = std::env::temp_dir().join(format!("strand-goldens-{}", std::process::id()));
+    // (name, kind, query, strand position, logical size, scale)
+    for (name, kind, query, position, logical, scale) in [
+        ("rest", "static", "", 6., (1440, 900), 1.),
+        ("rest", "static", "", 6., (1280, 800), 1.5),
+        ("mid", "static", "", 6.5, (1440, 900), 1.),
+        ("empty", "static", "zzz", 1., (1440, 900), 1.),
+        ("dynamic", "dynamic", "", 3., (1440, 900), 1.),
     ] {
-        for scale in [1., 1.5] {
-            let rows=Value::list((0..12).map(|index| json!({
-                "id":format!("/fixture/wallpaper-{index:02}"),
-                "kind":if index<10 {"image"} else {"video"},
-                "title":format!("Fixture wallpaper {index:02}"),
-                "thumbnail":thumbnail.clone(),"preview":thumbnail.clone(),"active":kind=="static" && index==5
-            })).collect());
-            let stores = BTreeMap::from([
-                ("panel.open".into(), Value::Bool(true)),
-                ("extras.kind".into(), Value::Text("wallpaper".into())),
-                ("extras.available".into(), Value::Bool(true)),
-                ("extras.message".into(), Value::Text(String::new())),
-                ("extras.query".into(), Value::Text(String::new())),
-                ("extras.rows".into(), rows),
-                ("extras.wallpaper.kind".into(), Value::Text(kind.into())),
-                ("extras.wallpaper.layout".into(), Value::Text(layout.into())),
-                ("extras.wallpaper.loading".into(), Value::Bool(false)),
-                (
-                    "extras.wallpaper.selection_id".into(),
-                    Value::Text(String::new()),
-                ),
-                ("extras.viewport.width".into(), Value::Number(1216.)),
-                ("extras.viewport.height".into(), Value::Number(936.)),
-            ]);
-            let mut harness = bead_test::Harness::load_with_icons(
-                &root,
-                std::path::Path::new("extras/main.luau"),
-                &palette,
-                stores,
-                bead_test::Config {
-                    width: 1280,
-                    height: 1000,
-                    scale,
-                },
-                BTreeMap::from([(thumbnail.clone(), root.join("sample.png"))]),
-            )?;
-            assert!(harness.scene().primitives.iter().any(|primitive|
-                matches!(primitive, bead::render::Primitive::Text { text, .. } if text == "Static")),
-                "picker controls must render before approving a golden");
-            assert!(harness.scene().primitives.iter().any(|primitive|
-                matches!(primitive, bead::render::Primitive::Image { path, .. } if path.file_name().is_some_and(|name| name == "sample.png"))),
-                "populated picker must render wallpaper thumbnails");
-            if layout == "spotlight" {
-                assert!(!harness.scene().primitives.iter().any(|primitive| matches!(primitive,
-                    bead::render::Primitive::Image { rect, .. } if rect.w >= 1216. && rect.h >= 936.)),
-                    "spotlight must leave the live desktop behind its translucent scrim");
-            }
-            let frame = harness.render()?;
-            for primitive in &harness.scene().primitives {
-                if let bead::render::Primitive::Text {
-                    text,
-                    rect,
-                    family,
-                    size,
-                    ..
-                } = primitive
-                    && ["Static", "Dynamic", "Carousel", "Spotlight", "Hexagons"]
-                        .contains(&text.as_str())
-                {
-                    assert_eq!(
-                        bead::render::text_lines(harness.scene(), text, family, *size, rect.w)?,
-                        1,
-                        "toolbar label {text} must fit one visible line"
-                    );
-                }
-            }
-            let path = root.join(format!(
-                "tests/goldens/wallpaper-picker-{layout}-{kind}-{scale}.png"
-            ));
-            if std::env::var("BEAD_UPDATE_GOLDENS").as_deref() == Ok("1") {
-                frame.save(&path)?;
-            }
-            frame.compare(
-                &path,
-                Default::default(),
-                &std::env::temp_dir()
-                    .join(format!("wallpaper-picker-{layout}-{kind}-{scale}-diff")),
-            )?;
+        let mut harness = strand_harness(12, kind, query, position, logical, scale, &thumbnails)?;
+        let pearls = pearl_images(&harness);
+        if name == "empty" {
+            assert_eq!(pearls, 0, "no result, no pearls");
+        } else {
+            assert!(
+                pearls >= 9,
+                "the strand shows its pearls before a golden is approved"
+            );
         }
+        assert!(
+            harness
+                .scene()
+                .primitives
+                .iter()
+                .any(|primitive| matches!(primitive,
+                bead::render::Primitive::Text { text, .. } if text == "Static")),
+            "the pill must render before approving a golden"
+        );
+        let frame = harness.render()?;
+        let file = format!("wallpaper-strand-{name}-{scale}.png");
+        let path = root.join("tests/goldens").join(&file);
+        if std::env::var("BEAD_UPDATE_GOLDENS").as_deref() == Ok("1") {
+            frame.save(&path)?;
+        }
+        frame.compare(
+            &path,
+            Default::default(),
+            &std::env::temp_dir().join(format!("{file}-diff")),
+        )?;
     }
+    let _ = std::fs::remove_dir_all(&thumbnails);
     Ok(())
+}
+#[test]
+fn a_big_catalogue_renders_at_most_eleven_pearls() -> bead_test::Result<()> {
+    let thumbnails = std::env::temp_dir().join(format!("strand-count-{}", std::process::id()));
+    for position in [1., 20., 46.5, 47.] {
+        let harness = strand_harness(47, "static", "", position, (1440, 900), 1., &thumbnails)?;
+        assert!(
+            pearl_images(&harness) <= 11,
+            "47 wallpapers at position {position} must render at most 11 pearl images"
+        );
+    }
+    let at_rest = strand_harness(47, "static", "", 20., (1440, 900), 1., &thumbnails)?;
+    assert_eq!(pearl_images(&at_rest), 11);
+    let _ = std::fs::remove_dir_all(&thumbnails);
+    Ok(())
+}
+async fn open_picker(lab: &mut Lab) -> (Extras, Stores, CallWake) {
+    let extras = Extras::new(Kind::Wallpaper, lab.client.clone()).unwrap();
+    start_with_empty_wallpaper_catalogue(&extras);
+    let open = Stores::default()
+        .reconcile(&BTreeMap::from([
+            ("panel.open".into(), Value::Bool(true)),
+            ("extras.kind".into(), Value::Text("wallpaper".into())),
+        ]))
+        .unwrap();
+    let wake: CallWake = Arc::new(|| {});
+    extras.project(&open, Some(wake.clone()));
+    assert_eq!(
+        lab.calls.recv().await.unwrap(),
+        ("wallpaper.catalogue".into(), json!({"ids":[]}))
+    );
+    for _ in 0..200 {
+        extras.project(&open, Some(wake.clone()));
+        let ready = {
+            let state = extras.state.borrow();
+            state.catalogue.is_none() && state.wallpaper_origin.is_some()
+        };
+        if ready {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(5)).await;
+    }
+    assert_eq!(extras.state.borrow().catalogue_result.len(), 4);
+    assert_eq!(
+        extras.state.borrow().wallpaper_origin.as_deref(),
+        Some("/fixture/current.jpg"),
+        "the picker remembers the wallpaper it opened over"
+    );
+    (extras, open, wake)
+}
+fn closed(_open: &Stores) -> Stores {
+    Stores::default()
+        .reconcile(&BTreeMap::from([
+            ("panel.open".into(), Value::Bool(false)),
+            ("extras.kind".into(), Value::Text("wallpaper".into())),
+        ]))
+        .unwrap()
+}
+async fn activated(lab: &mut Lab) -> Json {
+    let (method, params) = tokio::time::timeout(Duration::from_secs(2), lab.calls.recv())
+        .await
+        .expect("an activation")
+        .unwrap();
+    assert_eq!(method, "wallpaper.activate");
+    params["id"].clone()
+}
+#[tokio::test(flavor = "current_thread")]
+async fn three_moves_inside_the_settle_window_preview_once_for_the_last_id() {
+    let mut lab = lab_with_topics(vec!["wallpaper.active".into()]).await;
+    let (extras, open, wake) = open_picker(&mut lab).await;
+    for id in ["next.jpg", "next.mp4", "animated.gif"] {
+        extras.act(
+            &format!("wallpaper:move:/fixture/{id}"),
+            &open,
+            wake.clone(),
+        );
+    }
+    extras.project(&open, Some(wake.clone()));
+    assert!(
+        lab.calls.try_recv().is_err(),
+        "nothing previews before the strand settles"
+    );
+    assert!(
+        extras.settle_at().is_some(),
+        "the runtime is woken for the deadline"
+    );
+    tokio::time::sleep(WALLPAPER_SETTLE + Duration::from_millis(40)).await;
+    extras.project(&open, Some(wake.clone()));
+    assert_eq!(activated(&mut lab).await, "/fixture/animated.gif");
+    assert!(extras.settle_at().is_none());
+    extras.project(&open, Some(wake));
+    tokio::time::sleep(Duration::from_millis(30)).await;
+    assert!(
+        lab.calls.try_recv().is_err(),
+        "exactly one activation for the three moves"
+    );
+}
+#[tokio::test(flavor = "current_thread")]
+async fn closing_restores_the_opening_wallpaper_only_when_a_preview_changed_it() {
+    let mut lab = lab_with_topics(vec!["wallpaper.active".into()]).await;
+    let (extras, open, wake) = open_picker(&mut lab).await;
+    // Open and close without moving: nothing is activated.
+    extras.project(&closed(&open), Some(wake.clone()));
+    assert!(
+        lab.calls.try_recv().is_err(),
+        "an untouched visit activates nothing"
+    );
+    extras.project(&open, Some(wake.clone()));
+    // A pending move is cancelled by a close before it settles.
+    extras.act("wallpaper:move:/fixture/next.jpg", &open, wake.clone());
+    extras.project(&closed(&open), Some(wake.clone()));
+    tokio::time::sleep(WALLPAPER_SETTLE + Duration::from_millis(40)).await;
+    extras.project(&closed(&open), Some(wake.clone()));
+    assert!(
+        lab.calls.try_recv().is_err(),
+        "a move that never settled never previews or restores"
+    );
+    // A preview that landed is undone on close, as the last activation.
+    extras.project(&open, Some(wake.clone()));
+    extras.act("wallpaper:move:/fixture/next.jpg", &open, wake.clone());
+    tokio::time::sleep(WALLPAPER_SETTLE + Duration::from_millis(40)).await;
+    extras.project(&open, Some(wake.clone()));
+    assert_eq!(activated(&mut lab).await, "/fixture/next.jpg");
+    extras.project(&closed(&open), Some(wake.clone()));
+    assert_eq!(
+        activated(&mut lab).await,
+        "/fixture/current.jpg",
+        "Esc puts the original back"
+    );
+    extras.project(&closed(&open), Some(wake));
+    assert!(lab.calls.try_recv().is_err());
+}
+#[tokio::test(flavor = "current_thread")]
+async fn enter_applies_a_pending_move_at_once_and_closes_without_a_restore() {
+    let mut lab = lab_with_topics(vec!["wallpaper.active".into()]).await;
+    let (extras, open, wake) = open_picker(&mut lab).await;
+    extras.act("wallpaper:move:/fixture/next.jpg", &open, wake.clone());
+    extras.act("wallpaper:commit:/fixture/next.jpg", &open, wake.clone());
+    assert_eq!(
+        activated(&mut lab).await,
+        "/fixture/next.jpg",
+        "no waiting for the settle"
+    );
+    assert!(extras.settle_at().is_none(), "the pending move is spent");
+    let values = extras.project(&open, Some(wake.clone()));
+    assert_eq!(
+        values["panel.open"],
+        Value::Bool(false),
+        "the commit closes the picker"
+    );
+    extras.project(&closed(&open), Some(wake.clone()));
+    tokio::time::sleep(WALLPAPER_SETTLE + Duration::from_millis(40)).await;
+    extras.project(&closed(&open), Some(wake));
+    assert!(
+        lab.calls.try_recv().is_err(),
+        "a commit is never restored, and nothing fires late"
+    );
+}
+#[test]
+fn the_grow_origin_is_exact_in_output_pixels_at_scale_one_and_a_half() {
+    use crate::placement::Frame;
+    let frame = Frame {
+        left: 20.,
+        right: 10.,
+        top: 50.,
+        bottom: 10.,
+        rounding: 25.,
+    };
+    // The panel centre sits (left-right)/2 and (top-bottom)/2 logical px from the output centre.
+    assert_eq!(grow_origin(&frame, 1.5), (7.5, 30.));
+    let preview = crate::wallpaper::Preview::default();
+    preview.grow_from(Some(grow_origin(&frame, 1.5)));
+    let fade = preview.take_fade((2880, 1800)).unwrap();
+    assert_eq!(
+        fade.kind,
+        bead::wayland::WallpaperFadeKind::Grow {
+            origin: (0.5 + 7.5 / 2880., 0.5 + 30. / 1800.)
+        }
+    );
 }
 #[test]
 fn wallpaper_picker_uses_active_middle_then_visible_query_and_pointer_selection()
@@ -2245,10 +2433,6 @@ fn wallpaper_picker_uses_active_middle_then_visible_query_and_pointer_selection(
             ("extras.rows".into(), rows),
             ("extras.wallpaper.kind".into(), Value::Text("static".into())),
             (
-                "extras.wallpaper.layout".into(),
-                Value::Text("carousel".into()),
-            ),
-            (
                 "extras.wallpaper.selection_id".into(),
                 Value::Text(String::new()),
             ),
@@ -2260,7 +2444,7 @@ fn wallpaper_picker_uses_active_middle_then_visible_query_and_pointer_selection(
     let chosen = session.action_values("extras.choose", Value::Bool(true))?;
     assert_eq!(
         chosen["extras.request"],
-        Value::Text("wallpaper:activate:/wallpapers/current.jpg".into())
+        Value::Text("wallpaper:commit:/wallpapers/current.jpg".into())
     );
     let query = session
         .update(BTreeMap::from([(
@@ -2272,7 +2456,7 @@ fn wallpaper_picker_uses_active_middle_then_visible_query_and_pointer_selection(
     let chosen = session.action_values("extras.choose", Value::Bool(true))?;
     assert_eq!(
         chosen["extras.request"],
-        Value::Text("wallpaper:activate:/wallpapers/garden.jpg".into())
+        Value::Text("wallpaper:commit:/wallpapers/garden.jpg".into())
     );
     let query = session
         .update(BTreeMap::from([(
@@ -2288,7 +2472,7 @@ fn wallpaper_picker_uses_active_middle_then_visible_query_and_pointer_selection(
     let chosen = session.action_values("extras.choose", Value::Bool(true))?;
     assert_eq!(
         chosen["extras.request"],
-        Value::Text("wallpaper:activate:/wallpapers/last.jpg".into()),
+        Value::Text("wallpaper:commit:/wallpapers/last.jpg".into()),
         "pointer selection controls the next keyboard activation"
     );
     let dynamic = session
@@ -2318,7 +2502,7 @@ fn wallpaper_picker_uses_active_middle_then_visible_query_and_pointer_selection(
     let chosen = session.action_values("extras.choose", Value::Bool(true))?;
     assert_eq!(
         chosen["extras.request"],
-        Value::Text("wallpaper:activate:/wallpapers/movie.mp4".into()),
+        Value::Text("wallpaper:commit:/wallpapers/movie.mp4".into()),
         "a media filter clamps the prior ordinal when its selected/active ID is absent"
     );
     // Opening on the final item must take one forward step across the seam.
@@ -2329,18 +2513,12 @@ fn wallpaper_picker_uses_active_middle_then_visible_query_and_pointer_selection(
                 "extras.wallpaper.selection_id".into(),
                 Value::Text("/wallpapers/last.jpg".into()),
             ),
-            (
-                "extras.wallpaper.carousel_position".into(),
-                Value::Number(1.),
-            ),
+            ("extras.wallpaper.position".into(), Value::Number(1.)),
         ]))?
         .unwrap();
     session.commit(reset);
     let next = session.action_values("extras.next", Value::Bool(true))?;
-    assert_eq!(
-        next["extras.wallpaper.carousel_position"],
-        Value::Number(5.)
-    );
+    assert_eq!(next["extras.wallpaper.position"], Value::Number(5.));
     let next = session.update(next)?.unwrap();
     session.commit(next);
     let reset = session
@@ -2349,16 +2527,13 @@ fn wallpaper_picker_uses_active_middle_then_visible_query_and_pointer_selection(
                 "extras.wallpaper.selection_id".into(),
                 Value::Text("/wallpapers/first.jpg".into()),
             ),
-            (
-                "extras.wallpaper.carousel_position".into(),
-                Value::Number(1.),
-            ),
+            ("extras.wallpaper.position".into(), Value::Number(1.)),
         ]))?
         .unwrap();
     session.commit(reset);
     let previous = session.action_values("extras.prev", Value::Bool(true))?;
     assert_eq!(
-        previous["extras.wallpaper.carousel_position"],
+        previous["extras.wallpaper.position"],
         Value::Number(0.),
         "zero is a valid unwrapped position when moving left across the seam"
     );
@@ -2845,11 +3020,17 @@ async fn picker_preferences_use_provider_lane_and_preserve_the_document() {
         }
         tokio::time::sleep(Duration::from_millis(5)).await;
     }
-    for (key, value) in [
-        ("layout", "spotlight"),
-        ("layout", "hexagons"),
-        ("kind", "dynamic"),
-    ] {
+    // The retired `layout` request does nothing; a saved `layout` key survives every write untouched.
+    wallpaper.act(
+        "wallpaper:layout:spotlight",
+        &Stores::default(),
+        wake.clone(),
+    );
+    assert!(
+        lab.calls.try_recv().is_err(),
+        "layout is no longer a preference"
+    );
+    for (key, value) in [("kind", "dynamic")] {
         wallpaper.act(
             &format!("wallpaper:{key}:{value}"),
             &Stores::default(),
@@ -2866,6 +3047,10 @@ async fn picker_preferences_use_provider_lane_and_preserve_the_document() {
         assert_eq!(params["value"][key], value);
         assert_eq!(params["value"]["paused"], true);
         assert_eq!(params["value"]["future"], "preserve");
+        assert_eq!(
+            params["value"]["layout"], "carousel",
+            "a stale saved key is tolerated"
+        );
         wallpaper.state.borrow_mut().action = None;
     }
     wallpaper.act("wallpaper:pause", &Stores::default(), wake);

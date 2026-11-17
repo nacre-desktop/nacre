@@ -37,8 +37,7 @@ visualizers or resource sampling running.
 
 Maximized dashboards enlarge their wallpaper area while keeping calendar and
 system cards bounded. App tiles retain their spacing as a launcher grows. Detached
-wallpaper pickers fit their current window, and grow within the monitor's usable
-area when switching to Spotlight or Hexagons. No decorative frame bumps are drawn;
+wallpaper pickers fit their current window. No decorative frame bumps are drawn;
 the flat top-center and side-center hover targets remain available.
 
 Reattachment restores the panel directly, without repeating its opening animation.

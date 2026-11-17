@@ -41,7 +41,7 @@ end
 
 local function unwrapped_selection(s, target, count, current)
   if count == 0 then return target end
-  local position=s["extras.wallpaper.carousel_position"] or current
+  local position=s["extras.wallpaper.position"] or current
   local represented=((math.floor(position-1)%count)+1)
   if represented~=current then position=current end
   local delta=target-current
@@ -149,12 +149,12 @@ local function step(s, delta)
   local count = #filtered(s)
   local current=normalized_selection(s)
   local index = count == 0 and 1 or (kind == "wallpaper" and ((current-1+delta)%count)+1 or math.clamp(current+delta,1,count))
-  if kind=="wallpaper" then s["extras.wallpaper.carousel_position"]=unwrapped_selection(s,index,count,current) end
+  if kind=="wallpaper" then s["extras.wallpaper.position"]=unwrapped_selection(s,index,count,current) end
   s["extras.selection"] = index
   if kind == "wallpaper" then
     local item=filtered(s)[index]
     s["extras.wallpaper.selection_id"]=item and item.id or ""
-    if item then s["extras.request"]="wallpaper:activate:"..tostring(item.id) end
+    if item then s["extras.request"]="wallpaper:move:"..tostring(item.id) end
   end
   if kind == "palette" and count > 0 then
     local pitch = s["extras.palette_row_pitch"] or 64
@@ -178,7 +178,7 @@ local function choose(s)
   if not item or item.disabled == true then return end
   if kind == "wallpaper" then s["extras.wallpaper.selection_id"]=item.id end
   if kind == "overview" then s["extras.request"] = "focus:"..tostring(item.id)
-  elseif kind == "wallpaper" then s["extras.request"] = "wallpaper:activate:"..tostring(item.id)
+  elseif kind == "wallpaper" then s["extras.request"] = "wallpaper:commit:"..tostring(item.id)
   elseif kind == "palette" then s["extras.request"] = "activate:"..tostring(item.id) end
 end
 
@@ -188,13 +188,14 @@ local exports = {
     ["extras.workspaces"] = {}, ["extras.rows"] = {}, ["extras.available"] = true,
     ["extras.per_output"] = false, ["extras.workspace_count"] = 7,
     ["extras.message"] = "", ["extras.query"] = "", ["extras.scroll"] = 0,
-    ["extras.wallpaper.kind"] = "static", ["extras.wallpaper.layout"] = "carousel",
+    ["extras.wallpaper.kind"] = "static",
     ["extras.wallpaper.revision"] = 0,
     ["extras.wallpaper.resource_revision"] = 0,
     ["extras.wallpaper.loading"] = false,
     ["extras.wallpaper.can_pause"] = false, ["extras.wallpaper.paused"] = false,
     ["extras.wallpaper.selection_id"] = "",
-    ["extras.wallpaper.carousel_scroll"] = 0, ["extras.wallpaper.carousel_position"] = 1,
+    ["extras.wallpaper.position"] = 1,
+    ["extras.wallpaper.resolution"] = "", ["extras.wallpaper.resolution_id"] = "",
     ["extras.viewport.width"] = 1440, ["extras.viewport.height"] = 900,
     ["extras.body_height"] = 424, ["extras.palette_row_pitch"] = 64,
     ["extras.palette_row_height"] = 58, ["extras.scroll_step"] = 47,
@@ -203,23 +204,7 @@ local exports = {
     ["extras.do"] = "",
   },
   computed = {
-    ["view.frame"] = function(s)
-      return s["extras.kind"]~="wallpaper" or s["extras.wallpaper.layout"]~="spotlight"
-    end,
     ["extras.filtered"] = filtered,
-    ["extras.wallpaper.backdrop"] = function(s)
-      if s["extras.kind"] ~= "wallpaper" then return "" end
-      for _, item in ipairs(filtered(s)) do
-        if item.selected then
-          local path=item.preview and item.preview~="" and item.preview or item.thumbnail or ""
-          return path or ""
-        end
-      end
-      return ""
-    end,
-    ["extras.wallpaper.backdrop_visible"] = function(s)
-      return (s["extras.wallpaper.backdrop"] or "") ~= ""
-    end,
     ["extras.groups"] = groups,
     ["extras.empty"] = function(s)
       return s["extras.kind"] == "keybindings" and s["extras.available"] ~= false and not any_match(s)
@@ -255,6 +240,10 @@ local exports = {
     ["extras.next"] = function(s) step(s,1) end,
     ["extras.prev"] = function(s) step(s,-1) end,
     ["extras.choose"] = choose,
+    ["extras.shuffle"] = function(s)
+      local count=#filtered(s)
+      if count>1 then step(s,math.random(1,count-1)) end
+    end,
     ["extras.close"] = function(s) s["panel.open"] = false end,
     ["close"] = function(s) s["panel.open"] = false end,
     ["extras.select"] = function(s, id)
@@ -266,7 +255,7 @@ local exports = {
         if item.id == id then
           s["extras.selection"] = index
           if s["extras.kind"]=="wallpaper" then
-            s["extras.wallpaper.carousel_position"]=unwrapped_selection(s,index,#filtered(s),previous)
+            s["extras.wallpaper.position"]=unwrapped_selection(s,index,#filtered(s),previous)
           end
           return
         end

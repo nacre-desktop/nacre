@@ -285,9 +285,6 @@ pub fn provider_field(store: &str, key: &str, value: &Value) -> bool {
         ("wallpaper-picker", "rotationKind") => value
             .as_str()
             .is_some_and(|s| ["all", "static", "dynamic"].contains(&s)),
-        ("wallpaper-picker", "layout") => value
-            .as_str()
-            .is_some_and(|s| ["carousel", "spotlight", "hexagons"].contains(&s)),
         ("wallpaper-picker", "motionMode") => value
             .as_str()
             .is_some_and(|s| ["full", "battery", "still"].contains(&s)),
@@ -336,7 +333,6 @@ pub fn provider_key(store: &str, key: &str) -> bool {
             "wallpaper-picker" => [
                 "kind",
                 "rotationKind",
-                "layout",
                 "motionMode",
                 "paletteMode",
                 "palettePersonality",
@@ -384,7 +380,6 @@ pub fn provider_keys(store: &str) -> Vec<String> {
         "wallpaper-picker" => &[
             "kind",
             "rotationKind",
-            "layout",
             "motionMode",
             "paletteMode",
             "palettePersonality",

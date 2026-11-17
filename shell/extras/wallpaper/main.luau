@@ -1,271 +1,246 @@
 -- SPDX-License-Identifier: GPL-3.0-only
--- Wallpaper picker presentation. Nacre routes and settings writes stay in extras.rs.
+-- Strand, the wallpaper picker: pearls on a silk thread that hangs from the bar. Moving along the strand
+-- previews the real wallpaper (extras.rs fires it once the strand settles); the shell colours follow it.
+-- Nacre routes and settings writes stay in extras.rs.
 local ui=require("bead.ui")
 local kit=require("bead.kit")
 local T=require("../tokens")
-local viewport_w=ui.resolve_for_check(ui.bind("extras.viewport.width")) or T.wallpaper.viewport_fallback_width
-local viewport_h=ui.resolve_for_check(ui.bind("extras.viewport.height")) or T.wallpaper.viewport_fallback_height
-local layout=ui.resolve_for_check(ui.bind("extras.wallpaper.layout")) or "carousel"
+local W=T.wallpaper
+local width=ui.resolve_for_check(ui.bind("extras.viewport.width")) or W.viewport_fallback_width
+local height=ui.resolve_for_check(ui.bind("extras.viewport.height")) or W.viewport_fallback_height
 local kind=ui.resolve_for_check(ui.bind("extras.wallpaper.kind")) or "static"
-local carousel=layout=="carousel"
-local spotlight=layout=="spotlight"
 local search_focused=ui.resolve_for_check(ui.bind("bead.focused"))=="extras.search"
-local width=carousel and math.max(T.wallpaper.carousel_min_width,math.min(T.wallpaper.carousel_width,viewport_w-T.wallpaper.carousel_viewport_inset*2)) or viewport_w
-local height=carousel and T.wallpaper.carousel_height or viewport_h
 local rows=ui.resolve_for_check(ui.bind("extras.filtered")) or {}
 local count=#rows
 local selected
 for _,item in ipairs(rows) do if item.selected then selected=item; break end end
+local selection_index=selected and selected.selection_index or 1
 local can_pause=ui.resolve_for_check(ui.bind("extras.wallpaper.can_pause"))==true
 local paused=ui.resolve_for_check(ui.bind("extras.wallpaper.paused"))==true
-local selection_index=selected and selected.selection_index or 1
-local carousel_position=ui.resolve_for_check(ui.bind("extras.wallpaper.carousel_position")) or 1
-local position_index=math.floor(carousel_position-1)%math.max(1,count)+1
-if position_index~=selection_index then carousel_position=selection_index end
+local resolution=ui.resolve_for_check(ui.bind("extras.wallpaper.resolution")) or ""
+local resolution_id=ui.resolve_for_check(ui.bind("extras.wallpaper.resolution_id")) or ""
+local position=ui.resolve_for_check(ui.bind("extras.wallpaper.position")) or 1
+if math.floor(position-1)%math.max(1,count)+1~=selection_index then position=selection_index end
 local animation_query=tostring(ui.resolve_for_check(ui.bind("extras.query")) or "")
 local animation_key=2166136261
 for index=1,#animation_query do animation_key=(animation_key*33+string.byte(animation_query,index))%2147483647 end
-local animated_selection=(carousel or spotlight) and ui.animate("wallpaper-carousel:"..kind..":"..tostring(count)..":"..tostring(animation_key),
-  carousel_position,.3,"out-cubic") or selection_index
-local function circular_rows(limit)
-  local visible={}
-  if count==0 then return visible end
-  -- The catalogue can contain hundreds of full-resolution wallpapers. Only
-  -- the bounded neighborhood around the selected row can be painted here;
-  -- walking every row on every animation tick made a slide exceed the markup
-  -- budget even though only a handful of cards were visible.
-  local selection=(carousel or spotlight) and animated_selection or selection_index
-  local first=math.floor(selection-limit)
-  local seen={}
-  for index=first,first+limit*2 do
+-- One continuous value drives the whole strand: pearls slide along the thread to a fractional slot.
+local strand=ui.animate("wallpaper-strand:"..kind..":"..tostring(count)..":"..tostring(animation_key),position,W.move_duration,"out-cubic")
+-- Opening: the thread and its pearls drop in from the top edge. Swap this one line for another entrance.
+local entrance=ui.animate("wallpaper-strand-open",ui.resolve_for_check(ui.bind("panel.open"))==false and 0 or 1,W.move_duration,"out-cubic")
+
+local s=math.min(width/W.art_width,height/W.art_height)
+local centre={x=width/2,y=height/2}
+local gap=W.pearl_gap*s
+
+-- True catenary through the two off-screen anchors with its lowest point at the centre: a*(cosh(half/a)-1)=sag.
+local half=centre.x-W.anchor_x*s
+local sag=centre.y-W.anchor_y*s
+local lo,hi=50*s,5000*s
+for _=1,60 do
+  local mid=(lo+hi)/2
+  if mid*(math.cosh(half/mid)-1)>sag then lo=mid else hi=mid end
+end
+local a=(lo+hi)/2
+local base=centre.y+a
+local function point_at(arc) return centre.x+a*math.log(arc/a+math.sqrt(arc*arc/(a*a)+1)),base-math.sqrt(a*a+arc*arc) end
+
+local sizes=W.pearl_sizes
+local function size_at(d)
+  local i=math.min(#sizes-2,math.floor(d))
+  return (sizes[i+1]+(sizes[i+2]-sizes[i+1])*(d-i))*s
+end
+-- Arc length from the lowest point to the centre of the pearl `d` slots away (fractional d interpolates).
+local function reach(d)
+  local length,k=0,0
+  while d-k>1 do length=length+(size_at(k)+size_at(k+1))/2+gap; k=k+1 end
+  return length+(d-k)*((size_at(k)+size_at(k+1))/2+gap)
+end
+
+local DISC={}
+for index=0,31 do local angle=index*math.pi/16; DISC[#DISC+1]={.5+.5*math.cos(angle),.5+.5*math.sin(angle)} end
+
+-- The pearls within reach of the animated position, farthest first so the chosen one draws on top.
+local placed={}
+for index=math.floor(strand-W.visible_reach),math.floor(strand+W.visible_reach)+1 do
+  if count>0 then
     local wrapped=((index-1)%count)+1
-    local item=rows[wrapped]
-    local offset=((wrapped-selection+count/2)%count)-count/2
-    if not seen[wrapped] and math.abs(offset)<=limit then
-      seen[wrapped]=true
-      item.carousel_offset=offset
-      visible[#visible+1]=item
+    local offset=((wrapped-strand+count/2)%count)-count/2
+    local seen=false
+    for _,known in ipairs(placed) do if known.wrapped==wrapped then seen=true end end
+    if not seen and math.abs(offset)<=W.visible_reach then
+      local arc=math.sign(offset)*reach(math.abs(offset))
+      local x,y=point_at(arc)
+      placed[#placed+1]={item=rows[wrapped],wrapped=wrapped,offset=offset,arc=arc,x=x,y=y,size=size_at(math.abs(offset))}
     end
   end
-  return visible
 end
-local toolbar_y=carousel and T.wallpaper.carousel_top or T.wallpaper.fullscreen_top
-local toolbar_h=T.wallpaper.toolbar_height
-local query_y=toolbar_y+toolbar_h+T.wallpaper.toolbar_gap
-local search_h=T.wallpaper.search_height
-local body_y=layout=="spotlight" and query_y+search_h+T.wallpaper.spotlight_top_gap
-  or layout=="hexagons" and query_y+search_h+T.wallpaper.hex_top_gap
-  or query_y+search_h+T.wallpaper.carousel_content_gap
-local body_h=math.max(0,height-body_y-(layout=="spotlight" and T.wallpaper.spotlight_body_clearance or T.wallpaper.fullscreen_nav_clearance))
-local body_w=width-T.wallpaper.content_inset*2
-local nav_y=height-T.wallpaper.nav_bottom-T.wallpaper.nav_height
--- A normalized polygon approximates the QML rounded image clip within a pixel.
-local function rounded_clip(w,h)
-  local r=math.min(T.wallpaper.image_radius,w/2,h/2)
-  local points={}
-  for corner,center in ipairs{{w-r,r},{w-r,h-r},{r,h-r},{r,r}} do
-    for step=0,7 do
-      local angle=(corner-2)*math.pi/2+step*math.pi/14
-      points[#points+1]={math.clamp((center[1]+r*math.cos(angle))/w,0,1),math.clamp((center[2]+r*math.sin(angle))/h,0,1)}
-    end
-  end
-  return points
-end
-local hex_clip={{.25,0},{.75,0},{1,.5},{.75,1},{.25,1},{0,.5}}
-local hex_outline_basis=T.wallpaper.hex_max_tile_width
-local hex_outline_height=hex_outline_basis*T.wallpaper.hex_tile_height_ratio
-local hex_outline_points={
-  {.25,T.wallpaper.hex_outline_inset/hex_outline_height},
-  {.75,T.wallpaper.hex_outline_inset/hex_outline_height},
-  {1-T.wallpaper.hex_outline_inset/hex_outline_basis,.5},
-  {.75,1-T.wallpaper.hex_outline_inset/hex_outline_height},
-  {.25,1-T.wallpaper.hex_outline_inset/hex_outline_height},
-  {T.wallpaper.hex_outline_inset/hex_outline_basis,.5},
-}
+table.sort(placed,function(left,right) return math.abs(left.offset)>math.abs(right.offset) end)
+local nearest=W.visible_reach
+for _,pearl in ipairs(placed) do nearest=math.min(nearest,math.abs(pearl.offset)) end
 
-local function button(id,label,active,request)
-  local line_h=math.ceil(T.palette.description_font*1.4)
-  local fill=active and "primary" or "surfaceContainerHigh"
-  if spotlight then fill=ui.alpha(fill,T.wallpaper.spotlight_pill_opacity) end
-  return kit.Button{id=id,aria_label=label,width=T.wallpaper.choice_widths[id],shrink=0,height=toolbar_h,padding=0,
-    radius=T.panel.close_radius,fill=fill,
-    hover_fill=fill,activate_on_release=true,focus_on_pointer=false,on_activate=ui.action("extras.do",request),
-    ui.Text{position="absolute",left=0,top=(toolbar_h-line_h)/2,width="fill",height=line_h,
-      text=label,font_size=T.palette.description_font,text_align="center",color=active and "onPrimary" or "onSurface"}}
-end
-local function nav_button(id,label,glyph,action,request)
-  local enabled=id=="pause" or count>0
-  local fill=enabled and "surfaceContainerHigh" or ui.alpha("surfaceContainerHigh",T.wallpaper.disabled_opacity)
-  local ink=enabled and "onSurface" or ui.alpha("onSurface",T.wallpaper.disabled_opacity)
-  if spotlight then fill=ui.alpha("surfaceContainerHigh",T.wallpaper.spotlight_pill_opacity) end
-  return kit.Button{id=id,aria_label=label,width=T.wallpaper.nav_width,height=T.wallpaper.nav_height,padding=0,
-    radius=T.panel.close_radius,fill=fill,hover_fill=fill,
-    activate_on_release=true,focus_on_pointer=false,on_activate=enabled and ui.action(action,request) or nil,
-    ui.Row{width=T.wallpaper.nav_width,height=T.wallpaper.nav_height,align="center",justify="center",
-      ui.Text{text=glyph,width=T.wallpaper.nav_icon_width,height=T.wallpaper.nav_icon_height,family="Material Symbols Rounded",font_size=T.wallpaper.nav_icon_font,color=ink}}}
-end
-
-local function card(item, card_w, card_h, x, y, selected_card, clip)
-  local hex=clip==hex_clip
-  local image_inset=hex and 0 or T.wallpaper.image_inset
-  local image_h=card_h-image_inset*2
+local function pearl_node(pearl)
+  local item,size=pearl.item,pearl.size
+  local near=math.max(0,1-math.abs(pearl.offset))
+  local edge=math.max(1.5,size*.028)
+  local path=item.thumbnail
   local kids={}
-  local path=selected_card and not carousel and item.preview~="" and item.preview or item.thumbnail
+  if math.abs(pearl.offset)<=2.5 then
+    kids[#kids+1]=ui.Image{id="shadow",position="absolute",left=-size*.12,top=-size*.04,width=size*1.24,height=size*1.24,
+      path=W.glow,tint={0,0,0,math.floor(110*math.min(1,size/(W.pearl_sizes[1]*s)+.35))}}
+  end
   if path and path~="" then
-    kids[#kids+1]=ui.Image{id="thumbnail",position="absolute",left=image_inset,top=image_inset,width=card_w-image_inset*2,height=image_h,
-      icon=path,image_fit="cover",clip_polygon=hex and hex_clip or rounded_clip(card_w-image_inset*2,image_h),aria_label=item.title or "Wallpaper"}
+    kids[#kids+1]=ui.Image{id="thumbnail",position="absolute",left=0,top=0,width=size,height=size,
+      icon=path,image_fit="cover",clip_polygon=DISC,aria_label=item.title or "Wallpaper"}
   else
-    kids[#kids+1]=ui.Text{id="missing-thumbnail",position="absolute",left=0,top=0,width=card_w,height=image_h,
-      text=item.kind=="video" and "movie" or "image",family="Material Symbols Rounded",font_size=T.wallpaper.thumbnail_fallback_icon,
+    kids[#kids+1]=ui.Box{id="missing-thumbnail",position="absolute",left=0,top=0,width=size,height=size,radius=size/2,fill="surfaceContainerHigh"}
+    kids[#kids+1]=ui.Text{id="missing-icon",position="absolute",left=0,top=size/2-W.thumbnail_fallback_icon*s/2,width=size,height=W.thumbnail_fallback_icon*s,
+      text=item.kind=="video" and "movie" or "image",family="Material Symbols Rounded",font_size=W.thumbnail_fallback_icon*s,
       color="onSurfaceVariant",text_align="center"}
   end
-  if spotlight and not selected_card then
-    local distance=math.abs(item.carousel_offset or 0)
-    kids[#kids+1]=ui.Box{id="spotlight-neighbor-dim",position="absolute",left=0,top=0,width=card_w,height=card_h,
-      radius=T.wallpaper.card_radius,fill=ui.alpha("shadow",math.min(T.wallpaper.spotlight_neighbor_dim_max,
-        math.max(T.wallpaper.spotlight_neighbor_dim_min,distance*T.wallpaper.spotlight_neighbor_dim_per_slot)))}
+  kids[#kids+1]=ui.Box{id="edge",position="absolute",left=0,top=0,width=size,height=size,radius=size/2,fill="transparent",
+    border_width=edge,border_color=W.pearl_edge}
+  if near>.3 then
+    kids[#kids+1]=ui.Box{id="sheen",position="absolute",left=size*.2,top=size*.07,width=size*.36,height=size*.12,radius=9999,
+      fill={W.pearl_sheen[1],W.pearl_sheen[2],W.pearl_sheen[3],math.floor(W.pearl_sheen[4]*near)}}
   end
-  if clip==hex_clip then
-    kids[#kids+1]=ui.Polyline{id="hex-outline",position="absolute",left=0,top=0,width=card_w,height=card_h,
-      points=hex_outline_points,closed=true,
-      stroke_width=(selected_card and T.wallpaper.hex_outline_selected_stroke or T.wallpaper.hex_outline_idle_stroke)*card_w/hex_outline_basis,
-      color=selected_card and "primary" or ui.alpha("outline",T.wallpaper.hex_outline_idle_opacity)}
-    kids[#kids+1]=ui.Text{id="hex-title",position="absolute",left=T.wallpaper.hex_caption_inset,top=card_h-T.wallpaper.hex_caption_bottom,
-      width=math.max(0,card_w-T.wallpaper.hex_caption_inset*2),height=T.wallpaper.hex_caption_height,text=item.title or "",font_size=T.palette.description_font,
-      text_align="center",color=T.wallpaper.photo_ink}
-  end
-  return ui.Button{id="wallpaper-"..tostring(item.selection_index),position="absolute",left=x,top=y,
-    width=card_w,height=card_h,padding=0,radius=T.wallpaper.card_radius,
-    fill=(hex or spotlight) and "transparent" or "surfaceContainer",
-    border_width=hex and 0 or selected_card and T.wallpaper.selected_border_width or 0,border_color=selected_card and "primary" or "outlineVariant",
-    hover_fill=hex and "transparent" or "surfaceContainer",clip_polygon=hex and hex_clip or nil,activate_on_release=true,
-    focus_on_pointer=false,on_activate=ui.action("extras.do","wallpaper:select:"..tostring(item.id)),
+  -- The chosen pearl keeps the pick; any other pearl only moves the strand.
+  local request=(math.abs(pearl.offset)<.5 and "wallpaper:commit:" or "wallpaper:select:")..tostring(item.id)
+  return ui.Button{id="pearl-"..tostring(item.selection_index),position="absolute",left=pearl.x-size/2,top=pearl.y-size/2,
+    width=size,height=size,padding=0,radius=size/2,fill="transparent",hover_fill="transparent",
+    activate_on_release=true,focus_on_pointer=false,on_activate=ui.action("extras.do",request),
     aria_label=(item.title or "Wallpaper")..(item.active and ", current" or ""),
-    ui.Box{width="fill",height="fill",radius=T.wallpaper.card_radius,
-      fill="transparent",table.unpack(kids)}}
+    ui.Box{width=size,height=size,fill="transparent",table.unpack(kids)}}
 end
 
-local body
-if layout=="carousel" then
-  local available=math.max(0,width-T.wallpaper.content_inset*2)
-  local candidate=math.min(count,math.max(1,math.floor(((available/T.wallpaper.carousel_slot_estimate-1)/2)+.5)*2+1))
-  local slots=candidate>1 and candidate%2==0 and candidate-1 or candidate
-  local card_w=math.min(T.wallpaper.carousel_card_max_width,(available-math.max(0,slots-1)*T.wallpaper.card_gap)/math.max(1,slots))
-  local card_h=math.max(0,math.min(height-body_y-T.wallpaper.carousel_body_clearance,card_w*T.wallpaper.carousel_card_height_ratio))
-  local strip_w=slots*card_w+math.max(0,slots-1)*T.wallpaper.card_gap
-  local children={}
-  for _,item in ipairs(circular_rows(math.max(2,math.ceil(slots/2)+1))) do
-    local x=(strip_w-card_w)/2+(item.carousel_offset or 0)*(card_w+T.wallpaper.card_gap)
-    children[#children+1]=card(item,card_w,card_h,x,0,item.selected,nil)
+-- Silk: a dark shadow stroke under five iridescent segments that fade at the ends.
+local thread_top=W.anchor_y*s*2
+local thread_height=height-thread_top
+local function silk(id,from,to,colour,stroke)
+  local points={}
+  for step=0,12 do
+    local x=width*(from+(to-from)*step/12)
+    points[#points+1]={x/width,(base-a*math.cosh((x-centre.x)/a)-thread_top)/thread_height}
   end
-  body=ui.Scroll{id="carousel-strip",scrollbar=false,position="absolute",left=(width-strip_w)/2,top=body_y,width=strip_w,height=card_h,
-    scroll=ui.bind("extras.wallpaper.carousel_scroll"),ui.Box{width=strip_w,height=card_h,shrink=0,table.unpack(children)}}
-elseif layout=="spotlight" then
-  local hero_width=math.min(body_w*(count>1 and T.wallpaper.spotlight_multiple_fraction or T.wallpaper.spotlight_single_fraction),T.wallpaper.spotlight_max,body_h*T.wallpaper.spotlight_aspect_ratio)
-  nav_y=math.min(nav_y,body_y+(body_h+hero_width*T.wallpaper.spotlight_card_height_ratio)/2+T.wallpaper.spotlight_nav_gap)
-  local hero_height=hero_width*T.wallpaper.spotlight_card_height_ratio
-  local hero_y=body_y+(body_h-hero_height)/2
-  local side_width=hero_width*T.wallpaper.spotlight_side_fraction
-  local area={}
-  local side_slots=math.max(0,math.min(T.wallpaper.spotlight_max_side_slots,math.ceil((count-1)/2)))
-  local visible=circular_rows(side_slots+1)
-  table.sort(visible,function(a,b) return math.abs(a.carousel_offset or 0)>math.abs(b.carousel_offset or 0) end)
-  for _,item in ipairs(visible) do
-    local offset=item.carousel_offset or 0
-    local distance=math.abs(offset)
-    local slot=math.floor(distance+.5)
-    local card_w=slot==0 and hero_width or side_width*math.max(T.wallpaper.spotlight_side_min_scale,
-      1-math.max(0,slot-1)*T.wallpaper.spotlight_side_falloff)
-    local card_h=card_w*T.wallpaper.spotlight_card_height_ratio
-    local center_distance=hero_width*T.wallpaper.spotlight_center_offset
-    local x=body_w/2+math.sign(offset)*(math.min(1,distance)*center_distance+math.max(0,distance-1)*hero_width*T.wallpaper.spotlight_travel_offset)-card_w/2
-    local y=(hero_height-card_h)/2
-    if distance<side_slots+1 then area[#area+1]=card(item,card_w,card_h,x,y,item.selected,nil) end
+  return ui.Polyline{id=id,position="absolute",left=0,top=thread_top,width=width,height=thread_height,points=points,stroke_width=stroke*s,color=colour}
+end
+local strand_nodes={silk("thread-shadow",0,1,W.silk_shadow,W.silk_stroke+2)}
+for index,colour in ipairs(W.silk) do strand_nodes[#strand_nodes+1]=silk("thread-"..index,(index-1)/#W.silk,index/#W.silk,colour,W.silk_stroke) end
+
+local knot=math.max(3,W.knot*s)
+table.sort(placed,function(left,right) return left.offset<right.offset end)
+for index=1,#placed-1 do
+  local left,right=placed[index],placed[index+1]
+  if right.offset-left.offset<1.5 then
+    local x,y=point_at(((left.arc+left.size/2)+(right.arc-right.size/2))/2)
+    strand_nodes[#strand_nodes+1]=ui.Box{id="knot-"..index,position="absolute",left=x-knot/2,top=y-knot/2,width=knot,height=knot,radius=knot/2,fill=W.knot_fill}
   end
-  body=ui.Scroll{id="spotlight-strip",scrollbar=false,position="absolute",left=T.wallpaper.content_inset,top=hero_y,width=body_w,height=hero_height,scroll=ui.bind("extras.wallpaper.carousel_scroll"),
-    ui.Box{width=body_w,height=hero_height,shrink=0,table.unpack(area)}}
-else
-  local area_w=width-T.wallpaper.content_inset*2
-  local columns=math.max(T.wallpaper.hex_min_columns,math.min(T.wallpaper.hex_max_columns,math.floor(area_w/T.wallpaper.hex_column_width)))
-  local tile_w=math.min(T.wallpaper.hex_max_tile_width,(area_w-T.wallpaper.hex_side_padding)/(1+(columns-1)*T.wallpaper.hex_column_overlap))
-  local tile_h=tile_w*T.wallpaper.hex_tile_height_ratio
-  local pitch=tile_h+T.wallpaper.hex_gap
-  local extent=count>0 and math.ceil(count/columns)*pitch+tile_h*T.wallpaper.hex_extent_tail or 0
-  local tiles={}
-  local scroll=ui.resolve_for_check(ui.bind("extras.scroll")) or 0
-  local first=math.max(0,math.floor(scroll/pitch)-1)*columns+1
-  local last=math.min(count,math.ceil((scroll+body_h)/pitch+1)*columns)
-  for index=first,last do
-    local item=rows[index]
-    local x=(area_w-(tile_w+(columns-1)*tile_w*T.wallpaper.hex_column_overlap))/2+((index-1)%columns)*tile_w*T.wallpaper.hex_column_overlap
-    local y=(index-1)//columns*pitch+((index-1)%columns%2)*tile_h*T.wallpaper.hex_extent_tail
-    tiles[#tiles+1]=card(item,tile_w,tile_h,x,y,item.selected,hex_clip)
+end
+table.sort(placed,function(left,right) return math.abs(left.offset)>math.abs(right.offset) end)
+for _,pearl in ipairs(placed) do strand_nodes[#strand_nodes+1]=pearl_node(pearl) end
+
+-- A thin conic ring (five arcs from pink round to cream) around the lowest point.
+local ring=size_at(nearest)+2*(W.ring_gap+W.ring_stroke)*s
+local stroke=math.max(1,W.ring_stroke*s)
+-- Between two pearls the ring has nothing to hold: it fades, then comes back around the next one.
+local ring_alpha=math.floor(255*math.max(0,math.min(1,1-nearest*1.6)))
+if count>0 then
+  for index,colour in ipairs(W.silk) do
+    strand_nodes[#strand_nodes+1]=ui.Arc{id="ring-"..index,position="absolute",left=centre.x-ring/2+stroke/2,top=centre.y-ring/2+stroke/2,
+      width=ring-stroke,height=ring-stroke,start_angle=-160+(index-1)*72,sweep_angle=72,stroke_width=stroke,round_caps=false,
+      color={colour[1],colour[2],colour[3],ring_alpha}}
   end
-  body=ui.Scroll{id="hexagon-scroll",position="absolute",left=T.wallpaper.content_inset,top=body_y,width=area_w,height=body_h,
-    scroll=ui.bind("extras.scroll"),ui.Box{id="hexagon-extent",width=area_w,height=extent,shrink=0,table.unpack(tiles)}}
 end
 
-local controls=ui.Row{id="wallpaper-controls",position="absolute",left=0,top=toolbar_y,width=width,height=toolbar_h,
-  gap=T.wallpaper.group_gap,align="center",justify="center",
-  ui.Row{id="media",height=toolbar_h,gap=T.wallpaper.toolbar_gap,shrink=0,
-    button("static","Static",kind=="static","wallpaper:kind:static"),
-    button("dynamic","Dynamic",kind=="dynamic","wallpaper:kind:dynamic")},
-  ui.Box{id="media-divider",width=T.wallpaper.divider_width,height=T.wallpaper.divider_height,shrink=0,fill="outline"},
-  ui.Row{id="layouts",height=toolbar_h,gap=T.wallpaper.toolbar_gap,shrink=0,
-    button("carousel","Carousel",layout=="carousel","wallpaper:layout:carousel"),
-    button("spotlight","Spotlight",layout=="spotlight","wallpaper:layout:spotlight"),
-    button("hexagons","Hexagons",layout=="hexagons","wallpaper:layout:hexagons")},
-  ui.Box{id="layout-divider",width=T.wallpaper.divider_width,height=T.wallpaper.divider_height,shrink=0,fill="outline"},
-  kit.Button{id="add",aria_label="Add wallpapers unavailable",width=T.wallpaper.add_width,height=toolbar_h,padding=0,
-    radius=T.panel.close_radius,fill=ui.alpha("surfaceContainerHigh",.4),
-    ui.Row{width=T.wallpaper.add_width,height=toolbar_h,align="center",justify="center",gap=4,
-      ui.Text{text="add",width=T.wallpaper.add_icon_width,height=T.wallpaper.add_icon_height,family="Material Symbols Rounded",font_size=T.wallpaper.add_icon_font,color=ui.alpha("onSurface",.4)},
-      ui.Text{text="Add",width=T.wallpaper.add_label_width,height=T.wallpaper.add_label_height,font_size=T.palette.description_font,color=ui.alpha("onSurface",.4)}}}}
-
-local nav_title=selected and selected.title or ""
--- Children are collected without holes: a nil in the middle of a table constructor ends the child list.
-local nav_children={nav_button("previous",ui.tr("bead.dashboard.wallpaper-previous"),"chevron_left","extras.prev")}
-if can_pause then
-  nav_children[#nav_children+1]=nav_button("pause",ui.tr(paused and "bead.dashboard.wallpaper-resume" or "bead.dashboard.wallpaper-pause"),paused and "play_arrow" or "pause","extras.do","wallpaper:pause")
+local function glyph_button(id,label,glyph,size,font,fill,action,request,left,top)
+  local props={id=id,aria_label=label,width=size,height=size,shrink=0,padding=0,radius=size/2,fill=fill,hover_fill=fill,
+    activate_on_release=true,focus_on_pointer=false,on_activate=ui.action(action,request),
+    ui.Row{width=size,height=size,align="center",justify="center",
+      ui.Text{text=glyph,width=font,height=font*1.15,family="Material Symbols Rounded",font_size=font,color=W.ink}}}
+  if left then props.position,props.left,props.top="absolute",left,top end
+  return kit.Button(props)
 end
-nav_children[#nav_children+1]=ui.Text{id="selected-title",width=math.min(T.wallpaper.nav_title_max_width,width-T.wallpaper.nav_title_reserved_width),height=T.wallpaper.nav_title_height,text=nav_title,
-    font_size=T.wallpaper.nav_font,text_align="center",color=(carousel or spotlight) and "onSurface" or T.wallpaper.photo_ink}
-nav_children[#nav_children+1]=nav_button("next",ui.tr("bead.dashboard.wallpaper-next"),"chevron_right","extras.next")
-nav_children[#nav_children+1]=nav_button("shuffle",ui.tr("bead.dashboard.wallpaper-shuffle"),"shuffle","extras.do","wallpaper:shuffle")
-local nav=ui.Row{id="wallpaper-navigation",position="absolute",left=0,
-  top=nav_y,
-  width=width,height=T.wallpaper.nav_height,gap=T.wallpaper.nav_gap,align="center",justify="center",
-  table.unpack(nav_children)}
-
-local backdrop=layout=="hexagons" and ui.Image{id="gallery-backdrop",position="absolute",left=0,top=0,width=width,height=height,
-  visible=ui.bind("extras.wallpaper.backdrop_visible"),icon=ui.bind("extras.wallpaper.backdrop"),image_fit="cover",aria_label="Selected wallpaper preview"} or nil
-local scrim=layout=="hexagons" and ui.Box{id="gallery-scrim",position="absolute",left=0,top=0,width=width,height=height,
-  fill=ui.alpha("shadow",T.wallpaper.scrim_alpha)} or nil
-local search_w=math.max(T.wallpaper.search_min_width,math.min(T.wallpaper.search_max_width,width-T.wallpaper.content_inset*2))
+local function toggle(id,label,active,request,toggle_width)
+  local size=W.button_size*s
+  return kit.Button{id=id,aria_label=label,width=toggle_width*s,shrink=0,height=size,padding=0,radius=size/2,
+    fill=active and W.toggle_active or "transparent",hover_fill=active and W.toggle_active or {255,255,255,26},
+    activate_on_release=true,focus_on_pointer=false,on_activate=ui.action("extras.do",request),
+    ui.Text{position="absolute",left=0,top=(size-T.palette.description_font*s*1.4)/2,width="fill",height=T.palette.description_font*s*1.4,
+      text=label,font_size=T.palette.description_font*s,text_align="center",color=active and W.toggle_active_ink or W.ink}}
+end
 
 local children={
-  kit.TextInput{id="search",position="absolute",left=(width-search_w)/2,top=query_y,width=search_w,height=search_h,
-    focus_ring=false,text=ui.bind("extras.query"),placeholder="Search wallpapers",padding_left=T.wallpaper.search_left_padding,padding_right=T.wallpaper.search_right_padding,
-    padding_top=T.wallpaper.search_vertical,padding_bottom=T.wallpaper.search_vertical,radius=spotlight and T.wallpaper.spotlight_pill_radius or T.wallpaper.search_radius,font_size=kit.tokens.text.body*4/3,
-    fill=spotlight and ui.alpha("surfaceContainer",T.wallpaper.spotlight_search_opacity) or "surfaceContainer",
-    border_width=search_focused and T.wallpaper.search_focus_border or 0,border_color="outline"},
-  controls,body,nav,
-  ui.Text{id="empty",position="absolute",left=T.wallpaper.content_inset,top=height/2-T.wallpaper.empty_center_offset,width=width-T.wallpaper.content_inset*2,height=T.wallpaper.empty_height,
-    text=ui.bind("extras.empty_message"),visible=#rows==0 and not ui.resolve_for_check(ui.bind("extras.status_visible")),font_size=T.panel.empty_font,
-    text_align="center",color=(carousel or spotlight) and "onSurface" or T.wallpaper.photo_ink},
-  ui.Text{id="status",position="absolute",left=T.wallpaper.content_inset,top=body_y+body_h/2+T.wallpaper.status_center_offset,width=width-T.wallpaper.content_inset*2,height=T.wallpaper.status_height,
-    text=ui.bind("extras.status_message"),visible=ui.bind("extras.status_visible"),font_size=T.panel.empty_font,
-    text_align="center",color="onSurfaceVariant"}}
-if backdrop then table.insert(children,1,scrim);table.insert(children,1,backdrop) end
-if spotlight then
-  return kit.Panel{id="extras",edge="bottom",open=ui.bind("panel.open"),width=viewport_w,height=viewport_h,shadow=false,
-    reveal=false,slide_distance=T.wallpaper.spotlight_open_slide_distance,fade=false,radius=0,
-    fill=ui.alpha("shadow",T.wallpaper.spotlight_scrim_alpha),padding=0,gap=0,
-    on_activate=ui.action("close"),aria_label="Close wallpaper picker",
-    table.unpack(children)}
+  ui.Image{id="veil",position="absolute",left=0,top=0,width=width,height=height,path=W.veil},
+  ui.Box{id="strand",position="absolute",left=0,top=-(1-entrance)*W.drop*s,width=width,height=height,fill="transparent",table.unpack(strand_nodes)},
+}
+
+if selected then
+  local name_top=centre.y+W.name_top*s
+  children[#children+1]=ui.Text{id="selected-title",position="absolute",left=0,top=name_top,width=width,height=W.name_height*s,
+    text=selected.title or "",font_size=W.name_font*s,font_weight=600,text_align="center",color=W.ink,
+    text_shadow_blur=18,text_shadow_y=2,text_shadow_color={0,0,0,115}}
+  local meta=string.format("%02d / %d",selection_index,count)
+  if resolution~="" and resolution_id==selected.id then meta=meta.." · "..resolution end
+  local meta_font=W.meta_font*s
+  local meta_row={ui.Text{id="selection-count",width=ui.text_width(meta,"JetBrains Mono NF",meta_font)+2,height=W.meta_height*s,text=meta,
+    family="JetBrains Mono NF",font_size=meta_font,color=W.ink_soft}}
+  local dots={}
+  local colours=type(selected.palette)=="table" and selected.palette.colours or nil
+  for _,role in ipairs(W.palette_roles) do
+    local r,g,b=string.match(type(colours)=="table" and tostring(colours[role] or "") or "","#(%x%x)(%x%x)(%x%x)")
+    if r then
+      dots[#dots+1]=ui.Box{id="dot-"..role,width=W.dot*s,height=W.dot*s,shrink=0,radius=W.dot*s/2,
+        fill={tonumber(r,16),tonumber(g,16),tonumber(b,16),255},border_width=1,border_color=W.dot_edge}
+    end
+  end
+  if #dots>0 then
+    meta_row[#meta_row+1]=ui.Row{id="palette-dots",gap=W.dot_gap*s,height=W.dot*s,align="center",table.unpack(dots)}
+  end
+  children[#children+1]=ui.Row{id="selection-meta",position="absolute",left=0,top=centre.y+W.meta_top*s,width=width,height=W.meta_height*s,
+    gap=W.meta_gap*s,align="center",justify="center",table.unpack(meta_row)}
+  local nav=W.nav_size*s
+  local nav_top=name_top+(W.name_height*s-nav)/2
+  children[#children+1]=glyph_button("previous",ui.tr("bead.dashboard.wallpaper-previous"),"chevron_left",nav,W.nav_font*s,W.nav_fill,
+    "extras.prev",true,centre.x-W.nav_offset*s-nav/2,nav_top)
+  children[#children+1]=glyph_button("next",ui.tr("bead.dashboard.wallpaper-next"),"chevron_right",nav,W.nav_font*s,W.nav_fill,
+    "extras.next",true,centre.x+W.nav_offset*s-nav/2,nav_top)
 end
-return kit.Panel{id="extras",edge="bottom",open=ui.bind("panel.open"),width=width,height=height,
-  reveal=false,slide_distance=height,fade=false,radius=T.panel.radius,
-  fill="surface",border_width=carousel and T.panel.border or 0,
-  border_color="outlineVariant",padding=0,gap=0,
-  on_activate=ui.action("close"),aria_label="Close wallpaper picker",table.unpack(children)}
+
+-- One bottom pill: Static | Dynamic, a divider, search, (pause while a video plays), shuffle.
+local button=W.button_size*s
+local pill_items={
+  ui.Row{id="media",height=button,gap=0,shrink=0,align="center",
+    toggle("static","Static",kind=="static","wallpaper:kind:static",W.toggle_static),
+    toggle("dynamic","Dynamic",kind=="dynamic","wallpaper:kind:dynamic",W.toggle_dynamic)},
+  ui.Box{id="media-divider",width=1,height=W.divider_height*s,shrink=0,fill=W.divider_fill},
+  ui.Box{id="search-field",width=W.search_width*s,height=button,shrink=0,fill="transparent",
+    kit.TextInput{id="search",position="absolute",left=0,top=0,width=W.search_width*s,height=button,
+      focus_ring=false,text=ui.bind("extras.query"),placeholder="Search wallpapers",
+      padding_left=(W.search_icon+22)*s,padding_right=12*s,padding_top=(button-kit.tokens.text.body*4/3*1.4)/2,padding_bottom=(button-kit.tokens.text.body*4/3*1.4)/2,
+      radius=button/2,font_size=kit.tokens.text.body*4/3,fill=W.search_fill,
+      border_width=search_focused and 1 or 0,border_color="outline"},
+    ui.Text{id="search-icon",position="absolute",left=14*s,top=(button-W.search_icon*s*1.15)/2,width=W.search_icon*s,height=W.search_icon*s*1.15,
+      text="search",family="Material Symbols Rounded",font_size=W.search_icon*s,color=W.ink_soft}}}
+if can_pause then
+  pill_items[#pill_items+1]=glyph_button("pause",ui.tr(paused and "bead.dashboard.wallpaper-resume" or "bead.dashboard.wallpaper-pause"),
+    paused and "play_arrow" or "pause",button,W.button_font*s,"transparent","extras.do","wallpaper:pause")
+end
+pill_items[#pill_items+1]=glyph_button("shuffle",ui.tr("bead.dashboard.wallpaper-shuffle"),"shuffle",button,W.button_font*s,"transparent","extras.shuffle",true)
+local pill_width=W.pill_padding*2*s+W.toggle_static*s+W.toggle_dynamic*s+1+W.search_width*s+button*(can_pause and 2 or 1)+W.pill_gap*s*(can_pause and 4 or 3)
+local pill_height=W.pill_height*s
+children[#children+1]=ui.Box{id="wallpaper-controls",position="absolute",left=(width-pill_width)/2,top=height-W.pill_bottom*s-pill_height,
+  width=pill_width,height=pill_height,radius=pill_height/2,fill=W.pill_fill,
+  ui.Row{width=pill_width,height=pill_height,padding_left=W.pill_padding*s,padding_right=W.pill_padding*s,gap=W.pill_gap*s,align="center",table.unpack(pill_items)}}
+
+children[#children+1]=ui.Text{id="empty",position="absolute",left=24,top=height/2+40*s,width=width-48,height=W.empty_height,
+  text=ui.bind("extras.empty_message"),visible=count==0 and not ui.resolve_for_check(ui.bind("extras.status_visible")),
+  font_size=T.panel.empty_font,text_align="center",color=W.ink}
+children[#children+1]=ui.Text{id="status",position="absolute",left=24,top=height/2+72*s,width=width-48,height=W.status_height,
+  text=ui.bind("extras.status_message"),visible=ui.bind("extras.status_visible"),font_size=T.panel.empty_font,
+  text_align="center",color="onSurfaceVariant"}
+
+-- The shared panel profile: a transparent root whose body grows out of the bar edge; a click on empty
+-- space closes the picker like Esc (the wallpaper goes back).
+return kit.Panel{id="extras",edge="top",open=ui.bind("panel.open"),width=width,height=height,shadow=false,reveal=true,fade=false,
+  radius=0,fill="transparent",padding=0,gap=0,body="body",on_activate=ui.action("close"),aria_label="Close wallpaper picker",
+  ui.Box{id="body",position="absolute",left=0,top=0,width=width,height=height,fill="transparent",join_edge="top",table.unpack(children)}}

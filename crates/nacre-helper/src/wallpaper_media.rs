@@ -500,9 +500,12 @@ impl Media {
     }
     fn settings_with(&self, saved: Value) -> Result<Value> {
         let prefs = self.preferences_path();
-        let mut result = json!({"kind":"static","layout":"carousel","paused":false,"motionMode":"full","pauseCovered":true,"rotationEnabled":false,"rotationMinutes":30,"rotationKind":"all","rotationShuffle":true,"palettePreset":"wallpaper","paletteMode":"dark","paletteAutoMode":false,"paletteHarmony":false,"palettePersonality":"natural"});
+        let mut result = json!({"kind":"static","paused":false,"motionMode":"full","pauseCovered":true,"rotationEnabled":false,"rotationMinutes":30,"rotationKind":"all","rotationShuffle":true,"palettePreset":"wallpaper","paletteMode":"dark","paletteAutoMode":false,"paletteHarmony":false,"palettePersonality":"natural"});
+        // `layout` belonged to the retired carousel/spotlight/hexagon pickers: dropped, never an error.
         for (key, value) in saved.as_object().ok_or("Invalid picker preferences")? {
-            result[key] = value.clone();
+            if key != "layout" {
+                result[key] = value.clone();
+            }
         }
         let personality = result["palettePersonality"].clone();
         if result.get("paletteBackgroundFromWallpaper").is_none() {
@@ -560,6 +563,9 @@ impl Media {
     }
     pub fn preference(&self, value: &Value) -> Result<Value> {
         let mut value = value.clone();
+        if let Some(object) = value.as_object_mut() {
+            object.remove("layout");
+        }
         if value["palettePersonality"] == "source" {
             value["palettePersonality"] = json!("natural");
             if value.get("paletteBackgroundFromWallpaper").is_none() {
@@ -580,10 +586,6 @@ impl Media {
             (
                 "motionMode",
                 vec![json!("full"), json!("battery"), json!("still")],
-            ),
-            (
-                "layout",
-                vec![json!("carousel"), json!("spotlight"), json!("hexagons")],
             ),
             (
                 "rotationKind",

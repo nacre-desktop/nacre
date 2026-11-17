@@ -136,12 +136,24 @@ class WallpaperMediaTests(unittest.TestCase):
             tempfile.TemporaryDirectory() as folder,
             patch.object(media, "PREFS", Path(folder) / "picker.json"),
         ):
-            media.preference({"layout": "hexagons"})
+            media.preference({"paused": True})
             media.preference({"kind": "dynamic"})
-            self.assertEqual(media.settings()["layout"], "hexagons")
+            self.assertTrue(media.settings()["paused"])
             self.assertEqual(os.stat(media.PREFS).st_mode & 0o777, 0o600)
             with self.assertRaises(ValueError):
-                media.preference({"layout": "command-line"})
+                media.preference({"kind": "command-line"})
+
+    def test_a_stale_layout_preference_is_dropped_never_an_error(self):
+        # The carousel, spotlight and hexagon pickers are gone; Strand is the only picker.
+        media.PREFS.parent.mkdir(parents=True, exist_ok=True)
+        media.PREFS.write_text(json.dumps({"layout": "carousel", "kind": "dynamic"}))
+        self.assertNotIn("layout", media.settings())
+        self.assertEqual(media.settings()["kind"], "dynamic")
+        media.preference({"layout": "hexagons", "paused": True})
+        saved = media.settings()
+        self.assertTrue(saved["paused"])
+        self.assertEqual(saved["kind"], "dynamic")
+        self.assertNotIn("layout", saved)
 
     def test_rotation_and_palette_preferences_validate_without_clobbering_picker(self):
         with (
@@ -150,7 +162,7 @@ class WallpaperMediaTests(unittest.TestCase):
         ):
             media.preference(
                 {
-                    "layout": "hexagons",
+                    "paused": True,
                     "rotationEnabled": True,
                     "rotationMinutes": 30,
                     "rotationKind": "dynamic",
@@ -160,7 +172,7 @@ class WallpaperMediaTests(unittest.TestCase):
             )
             media.preference({"rotationMinutes": 60})
             saved = media.settings()
-            self.assertEqual(saved["layout"], "hexagons")
+            self.assertTrue(saved["paused"])
             self.assertEqual(saved["palettePreset"], "ocean")
             self.assertEqual(saved["rotationMinutes"], 60)
             for value in [True, 0, 4, 1441, 2.5, "30"]:
@@ -205,7 +217,7 @@ class WallpaperMediaTests(unittest.TestCase):
                 media.preference({"rotationEnabled": True, "rotationMinutes": 30})
             self.assertEqual(media.settings()["rotationAnchorMs"], 1000000)
             with patch.object(media.time, "time", return_value=2000):
-                media.preference({"layout": "hexagons", "palettePreset": "ocean"})
+                media.preference({"paused": True, "palettePreset": "ocean"})
                 self.assertEqual(media.settings()["rotationAnchorMs"], 1000000)
                 media.preference({"rotationMinutes": 60})
                 self.assertEqual(media.settings()["rotationAnchorMs"], 2000000)
@@ -505,10 +517,10 @@ class WallpaperAccentTests(unittest.TestCase):
                 patch.object(media, "PREFS", home / "picker.json"),
                 patch.object(media.subprocess, "run") as run,
             ):
-                media.preference({"palettePreset": "ocean", "layout": "hexagons"})
+                media.preference({"palettePreset": "ocean", "paused": True})
                 result = media.theme({"paletteAccent": "aabbcc"})
                 self.assertEqual(result["palettePreset"], "wallpaper")
-                self.assertEqual(result["layout"], "hexagons")
+                self.assertTrue(result["paused"])
                 self.assertNotIn("paletteAccent", result)
                 self.assertEqual(run.call_args.args[0][-2:], ["--accent", "aabbcc"])
                 media.theme({"paletteAccent": "auto"})
@@ -578,7 +590,7 @@ class PersistentPublisherTests(unittest.TestCase):
         lines = [
             {"action": "theme", "value": {"paletteMode": "light"}},
             {"action": "unknown", "value": {}},
-            {"action": "preferences", "value": {"layout": "hexagons"}},
+            {"action": "preferences", "value": {"paused": True}},
         ]
         stream = io.StringIO("".join(json.dumps(item) + "\n" for item in lines))
         output = io.StringIO()
@@ -636,4 +648,4 @@ class PersistentPublisherTests(unittest.TestCase):
         self.assertIn("presentation", result[1], result)
         self.assertEqual(result[1]["presentation"]["mode"], "light")
         self.assertEqual([r["code"] for r in result if r.get("done")], [0, 1, 0])
-        self.assertEqual(result[-1]["result"]["layout"], "hexagons")
+        self.assertTrue(result[-1]["result"]["paused"])

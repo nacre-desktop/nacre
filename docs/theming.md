@@ -6,10 +6,10 @@ palette; the bar, frame, panels, launcher and the apps you theme all use it.
 ## 1. Pick a wallpaper
 
 Put images and videos in `~/Pictures/Wallpapers`; subfolders are fine. Press
-Super+W for the wallpaper picker. Switch between **Static** and **Dynamic**
-(animated) scenes, choose the **Carousel**, **Spotlight** or **Hexagons**
-layout, or search by name. Choosing a wallpaper applies it together with its
-palette.
+Super+W for the wallpaper picker, a strand of pearls: move along it and the
+real wallpaper and the shell colours follow once you rest; **Enter** or a click
+on the centre pearl keeps it, **Esc** puts the old wallpaper back. Switch between
+**Static** and **Dynamic** (animated) scenes, shuffle, or search by name.
 
 **Settings → Wallpaper** has **Wallpaper rotation** (a new scene at an interval,
 optionally shuffled) and **Wallpaper motion** (Full, Still on battery or Always

@@ -5484,6 +5484,7 @@ impl SceneSource for Runtime {
             hover_close,
             self.reattach_hover_grace_until,
             self.dashboard_pearl_deadline,
+            self.extras.as_ref().and_then(|extras| extras.settle_at()),
         ]
         .into_iter()
         .flatten()
@@ -6106,6 +6107,11 @@ impl SceneSource for Runtime {
         {
             dashboard.borrow().set_raster_scale(scale);
         }
+        if let Some(extras) = &self.extras
+            && let Some(scale) = scale
+        {
+            extras.set_scale(scale);
+        }
         if let Some(warmer) = &self.wallpaper_warmer
             && let Some(scale) = scale
         {
@@ -6517,19 +6523,12 @@ impl SceneSource for Runtime {
                     "enter" if self.session.focused_action().is_none() => Some("extras.choose"),
                     _ => None,
                 },
-                UiEvent::Scroll { x, y, delta }
+                UiEvent::Scroll { delta, .. }
                     if self
                         .extras
                         .as_ref()
                         .is_some_and(|e| e.kind == crate::extras::Kind::Wallpaper)
-                        && *delta != 0.
-                        && self.session.stores.get("extras.wallpaper.layout")
-                            != Some(&bead::core::Value::Text("hexagons".into()))
-                        && self.session.view_nodes().iter().any(|node| {
-                            (node.id.ends_with(".carousel-strip")
-                                || node.id.ends_with(".spotlight-strip"))
-                                && node.contains(*x, *y)
-                        }) =>
+                        && *delta != 0. =>
                 {
                     Some(if *delta > 0. {
                         "extras.next"
@@ -8182,7 +8181,7 @@ impl SceneSource for Runtime {
                     self.session
                         .action_values("extras.select", bead::core::Value::Text(id.into()))?,
                 );
-                format!("wallpaper:activate:{id}")
+                format!("wallpaper:move:{id}")
             } else {
                 request.clone()
             };
@@ -10251,11 +10250,11 @@ impl SceneSource for Runtime {
         summary
     }
     fn scroll_regions(&self) -> Vec<bead::render::Rect> {
-        if self.extras.as_ref().is_some_and(|extras| {
-            extras.kind == crate::extras::Kind::Wallpaper
-                && self.session.stores.get("extras.wallpaper.layout")
-                    != Some(&bead::core::Value::Text("hexagons".into()))
-        }) {
+        if self
+            .extras
+            .as_ref()
+            .is_some_and(|extras| extras.kind == crate::extras::Kind::Wallpaper)
+        {
             return Vec::new();
         }
         self.session.scroll_regions()

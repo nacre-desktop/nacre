@@ -569,13 +569,15 @@ pub(crate) struct Preview {
 /// A pick's grow origin only applies to the change it caused.
 const GROW_LIFETIME: Duration = Duration::from_secs(3);
 impl Preview {
-    pub(crate) fn grow_from(&self, offset: (f32, f32)) {
-        *self.grow.lock().unwrap_or_else(|p| p.into_inner()) = Some((offset, Instant::now()));
+    /// `None` clears a pending origin, so the next change fades plainly.
+    pub(crate) fn grow_from(&self, offset: Option<(f32, f32)>) {
+        *self.grow.lock().unwrap_or_else(|p| p.into_inner()) =
+            offset.map(|offset| (offset, Instant::now()));
     }
 
     /// The fade for the next change on an output of `size`: a grow from the last pick, once;
     /// `None` is Bead's default fade.
-    fn take_fade(&self, size: (u32, u32)) -> Option<bead::wayland::WallpaperFade> {
+    pub(crate) fn take_fade(&self, size: (u32, u32)) -> Option<bead::wayland::WallpaperFade> {
         let (offset, picked) = self.grow.lock().unwrap_or_else(|p| p.into_inner()).take()?;
         if picked.elapsed() > GROW_LIFETIME || size.0 == 0 || size.1 == 0 {
             return None;
@@ -2310,7 +2312,7 @@ mod tests {
             None,
             "no pick, default fade"
         );
-        preview.grow_from((288., -180.));
+        preview.grow_from(Some((288., -180.)));
         assert_eq!(
             preview.take_fade((2880, 1800)),
             Some(WallpaperFade {
@@ -2323,7 +2325,14 @@ mod tests {
             None,
             "the change after uses the default"
         );
-        preview.grow_from((1e6, 1e6));
+        preview.grow_from(Some((0., 0.)));
+        preview.grow_from(None);
+        assert_eq!(
+            preview.take_fade((2880, 1800)),
+            None,
+            "a restore clears the pick before it"
+        );
+        preview.grow_from(Some((1e6, 1e6)));
         let fade = preview.take_fade((2880, 1800)).unwrap();
         assert_eq!(fade.kind, WallpaperFadeKind::Grow { origin: (1., 1.) });
         *preview.grow.lock().unwrap() = Some(((0., 0.), Instant::now() - GROW_LIFETIME * 2));

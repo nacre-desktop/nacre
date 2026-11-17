@@ -7,7 +7,12 @@ use bead::core::{
 };
 use nacre_protocol::menu::{MenuActivated, MenuQueryResult};
 use serde_json::{Value as Json, json};
-use std::{cell::RefCell, collections::BTreeMap, sync::Arc, time::Duration};
+use std::{
+    cell::RefCell,
+    collections::BTreeMap,
+    sync::Arc,
+    time::{Duration, Instant},
+};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Kind {
@@ -61,8 +66,16 @@ struct Query {
 }
 #[derive(Default)]
 struct State {
-    /// Picker item centres from the last scene, as a pixel offset from the panel centre.
-    pick_offsets: std::collections::BTreeMap<String, (f32, f32)>,
+    /// A move waiting for the strand to settle: the id and when it previews.
+    wallpaper_pending: Option<(String, Instant)>,
+    /// The active wallpaper when the picker opened; closing without a commit restores it.
+    wallpaper_origin: Option<String>,
+    /// The last id this visit previewed; `None` while the desktop still shows the origin.
+    wallpaper_shown: Option<String>,
+    wallpaper_committed: bool,
+    /// Pixel size of the last previewed (or opening) wallpaper, for the strand's caption.
+    wallpaper_resolution: Option<(String, u32, u32)>,
+    scale: f32,
     query: Option<Query>,
     wanted: Option<(String, String, String)>,
     result: Option<(String, MenuQueryResult)>,
@@ -98,7 +111,7 @@ struct WallpaperSelection {
     id: String,
     boot: String,
     revision: u64,
-    selected_at: std::time::Instant,
+    selected_at: Instant,
     file_bytes: u64,
     source_width: u32,
     source_height: u32,
@@ -309,6 +322,14 @@ impl WallpaperActivationQueue {
         }
     }
 }
+/// How long the strand rests before its pearl previews as the real wallpaper.
+const WALLPAPER_SETTLE: Duration = Duration::from_millis(150);
+fn grow_origin(frame: &crate::placement::Frame, scale: f32) -> (f32, f32) {
+    (
+        (frame.left - frame.right) / 2. * scale,
+        (frame.top - frame.bottom) / 2. * scale,
+    )
+}
 pub struct Extras {
     pub kind: Kind,
     client: Client,
@@ -324,7 +345,6 @@ fn preload_wallpaper_catalogue(
     boot: &str,
     active_path: &str,
     kind: &str,
-    layout: &str,
 ) -> bool {
     if state.catalogue_preloaded || !state.catalogue_result.is_empty() {
         return false;
@@ -332,11 +352,7 @@ fn preload_wallpaper_catalogue(
     let Some(prepared) = crate::wallpaper_warm::prepared_catalogue() else {
         return false;
     };
-    if prepared.boot != boot
-        || prepared.active_path != active_path
-        || prepared.kind != kind
-        || prepared.layout != layout
-    {
+    if prepared.boot != boot || prepared.active_path != active_path || prepared.kind != kind {
         return false;
     }
     let entry_count = prepared.entries.len();
@@ -431,18 +447,7 @@ impl Extras {
             } else {
                 "static"
             };
-            let wallpaper_layout = match data["layout"].as_str() {
-                Some("spotlight") => "spotlight",
-                Some("hexagons") => "hexagons",
-                _ => "carousel",
-            };
-            if preload_wallpaper_catalogue(
-                &mut state,
-                &boot,
-                active_path,
-                wallpaper_kind,
-                wallpaper_layout,
-            ) {
+            if preload_wallpaper_catalogue(&mut state, &boot, active_path, wallpaper_kind) {
                 state.wallpaper_boot = Some(boot);
             }
         }
@@ -563,6 +568,10 @@ impl Extras {
             .ok()
     }
     pub fn project(&self, stores: &Stores, wake: Option<CallWake>) -> BTreeMap<String, Value> {
+        if self.kind == Kind::Wallpaper {
+            let open = matches!(stores.get("panel.open"), Some(Value::Bool(true)));
+            self.wallpaper_visit(open, &wake);
+        }
         let mut state = self.state.borrow_mut();
         let boot = self
             .client
@@ -616,7 +625,6 @@ impl Extras {
         }
         let mut wallpaper_revision = 0;
         let mut wallpaper_kind = "static";
-        let mut wallpaper_layout = "carousel";
         let mut wallpaper_opened = false;
         if self.kind == Kind::Wallpaper {
             wallpaper_opened = open && !state.wallpaper_open;
@@ -668,11 +676,6 @@ impl Extras {
                     Some("dynamic") => "dynamic",
                     _ => "static",
                 };
-                wallpaper_layout = match data["layout"].as_str() {
-                    Some("spotlight") => "spotlight",
-                    Some("hexagons") => "hexagons",
-                    _ => "carousel",
-                };
             }
             if open && let Some(boot) = boot.as_ref() {
                 preload_wallpaper_catalogue(
@@ -680,7 +683,6 @@ impl Extras {
                     boot,
                     &wallpaper_active_path,
                     wallpaper_kind,
-                    wallpaper_layout,
                 );
             }
             if open
@@ -1055,9 +1057,19 @@ impl Extras {
                 "extras.wallpaper.kind".into(),
                 Value::Text(wallpaper_kind.into()),
             );
+            let (resolution_id, resolution) = match &state.wallpaper_resolution {
+                Some((id, width, height)) if *width > 0 && *height > 0 => {
+                    (id.clone(), format!("{width} × {height}"))
+                }
+                _ => Default::default(),
+            };
             values.insert(
-                "extras.wallpaper.layout".into(),
-                Value::Text(wallpaper_layout.into()),
+                "extras.wallpaper.resolution_id".into(),
+                Value::Text(resolution_id),
+            );
+            values.insert(
+                "extras.wallpaper.resolution".into(),
+                Value::Text(resolution),
             );
             values.insert(
                 "extras.wallpaper.revision".into(),
@@ -1106,111 +1118,182 @@ impl Extras {
         }
         values
     }
-    pub fn act(&self, request: &str, stores: &Stores, wake: CallWake) {
-        if self.kind == Kind::Wallpaper && request == "wallpaper:shuffle" {
-            let boot = self.client.status().boot.clone();
-            let selected = {
-                let state = self.state.borrow();
-                (state.catalogue_boot == boot && !state.catalogue_result.is_empty()).then(|| {
-                    let now = std::time::SystemTime::now()
-                        .duration_since(std::time::UNIX_EPOCH)
-                        .unwrap_or_default()
-                        .subsec_nanos() as usize;
-                    state.catalogue_result[now % state.catalogue_result.len()]["id"]
-                        .as_str()
-                        .map(str::to_owned)
-                })
+    /// Where a preview grows from, in output pixels from the output centre: the chosen pearl rests
+    /// at the centre of the panel, which sits inside the shell frame.
+    fn grow_origin(&self) -> (f32, f32) {
+        let scale = self.state.borrow().scale.max(1.);
+        grow_origin(&crate::placement::Frame::current(), scale)
+    }
+    pub fn set_scale(&self, scale: f32) {
+        self.state.borrow_mut().scale = scale;
+    }
+    /// The deferred wake the strand needs: when the last move has settled.
+    pub fn settle_at(&self) -> Option<Instant> {
+        self.state
+            .borrow()
+            .wallpaper_pending
+            .as_ref()
+            .map(|(_, at)| *at)
+    }
+    /// The picker's visit: remember the wallpaper it opened over, preview a settled move, and let a
+    /// close that was not a commit put the original back (a plain fade, no grow).
+    fn wallpaper_visit(&self, open: bool, wake: &Option<CallWake>) {
+        let mut state = self.state.borrow_mut();
+        let mut activate = None;
+        let opening = open && !state.wallpaper_open;
+        if opening || (open && state.wallpaper_origin.is_none() && state.wallpaper_shown.is_none())
+        {
+            // Opening may beat the first topic snapshot: keep looking until nothing was previewed.
+            let origin = self.topic.as_ref().and_then(|topic| {
+                let current = &topic.snapshot().data["current"];
+                current["motion"]["path"]
+                    .as_str()
+                    .or_else(|| current["path"].as_str())
+                    .filter(|id| !id.is_empty())
+                    .map(str::to_owned)
+            });
+            state.wallpaper_resolution = origin.as_deref().map(|id| {
+                let (_, width, height) = wallpaper_source_metadata(id);
+                (id.to_owned(), width, height)
+            });
+            state.wallpaper_origin = origin;
+        }
+        if opening {
+            state.wallpaper_shown = None;
+            state.wallpaper_pending = None;
+            state.wallpaper_committed = false;
+        } else if !open && state.wallpaper_open {
+            state.wallpaper_pending = None;
+            if !state.wallpaper_committed && state.wallpaper_shown.take().is_some() {
+                activate = state.wallpaper_origin.clone().map(|id| (id, false));
             }
-            .flatten();
-            if let Some(id) = selected {
-                self.act(&format!("wallpaper:activate:{id}"), stores, wake);
-            }
+        } else if open
+            && let Some((id, _)) = state
+                .wallpaper_pending
+                .take_if(|pending| pending.1 <= Instant::now())
+        {
+            state.wallpaper_shown = Some(id.clone());
+            activate = Some((id, true));
+        }
+        drop(state);
+        if let Some((id, grow)) = activate {
+            let wake = wake.clone().unwrap_or_else(|| Arc::new(|| {}));
+            self.activate_wallpaper(&id, grow, wake);
+        }
+    }
+    fn activate_wallpaper(&self, id: &str, grow: bool, wake: CallWake) {
+        let boot = self.client.status().boot.clone();
+        let state = self.state.borrow();
+        if state.catalogue_boot != boot {
             return;
         }
-        if self.kind == Kind::Wallpaper
-            && let Some(id) = request.strip_prefix("wallpaper:activate:")
-        {
-            let boot = self.client.status().boot.clone();
-            let state = self.state.borrow();
-            if state.catalogue_boot != boot {
-                return;
-            }
-            let Some(entry) = state
-                .catalogue_result
-                .iter()
-                .find(|entry| entry["id"].as_str() == Some(id))
-                .cloned()
-            else {
-                return;
-            };
-            let pick_offset = state.pick_offsets.get(id).copied();
-            drop(state);
-            let Some(boot) = boot else { return };
-            let Some(topic) = &self.topic else { return };
-            let active = topic.snapshot();
-            if !active.connected {
-                return;
-            }
-            let active_state =
-                serde_json::from_value::<nacre_protocol::wallpaper::WallpaperActive>(
-                    (*active.data).clone(),
-                )
-                .ok()
-                .filter(|state| state.validate().is_ok());
-            let palette_template = active_state
-                .as_ref()
-                .and_then(|state| state.outputs.values().next());
-            let revision = active.data["revision"]
-                .as_u64()
-                .or_else(|| {
-                    self.wallpaper_actions.as_ref().and_then(|queue| {
-                        queue
-                            .lock()
-                            .unwrap_or_else(|poisoned| poisoned.into_inner())
-                            .confirmed_revision(&boot)
-                    })
-                })
-                .unwrap_or_default();
-            let Some(queue) = &self.wallpaper_actions else {
-                return;
-            };
-            let selected_at = std::time::Instant::now();
-            let (file_bytes, source_width, source_height) = wallpaper_source_metadata(id);
-            let selection = WallpaperSelection {
-                id: id.into(),
-                boot: boot.clone(),
-                revision,
-                selected_at,
-                file_bytes,
-                source_width,
-                source_height,
-            };
-            wallpaper_switch_phase(&selection, "selection");
-            let preview = queue
-                .lock()
-                .unwrap_or_else(|p| p.into_inner())
-                .preview
-                .clone();
-            if let (Some(preview), Some(offset)) = (&preview, pick_offset) {
-                preview.grow_from(offset);
-            }
-            let generation = preview.as_ref().map(|preview| {
-                preview.select_at_with_palette(crate::wallpaper::SelectionRequest {
-                    boot: boot.clone(),
-                    id: id.into(),
-                    kind: entry["kind"].as_str().unwrap_or("image").into(),
-                    video_predecode: serde_json::from_value(entry["video_predecode"].clone()).ok(),
-                    palette_template,
-                    palette: entry.get("palette"),
-                    requested_at: selected_at,
-                    metadata: (file_bytes, source_width, source_height),
-                })
-            });
-            let admitted = WallpaperActivationQueue::submit(queue, selection, &wake);
-            if !admitted && let (Some(preview), Some(generation)) = (preview, generation) {
-                preview.cancel(generation);
-            }
+        let Some(entry) = state
+            .catalogue_result
+            .iter()
+            .find(|entry| entry["id"].as_str() == Some(id))
+            .cloned()
+        else {
             return;
+        };
+        drop(state);
+        let Some(boot) = boot else { return };
+        let Some(topic) = &self.topic else { return };
+        let active = topic.snapshot();
+        if !active.connected {
+            return;
+        }
+        let active_state = serde_json::from_value::<nacre_protocol::wallpaper::WallpaperActive>(
+            (*active.data).clone(),
+        )
+        .ok()
+        .filter(|state| state.validate().is_ok());
+        let palette_template = active_state
+            .as_ref()
+            .and_then(|state| state.outputs.values().next());
+        let revision = active.data["revision"]
+            .as_u64()
+            .or_else(|| {
+                self.wallpaper_actions.as_ref().and_then(|queue| {
+                    queue
+                        .lock()
+                        .unwrap_or_else(|poisoned| poisoned.into_inner())
+                        .confirmed_revision(&boot)
+                })
+            })
+            .unwrap_or_default();
+        let Some(queue) = &self.wallpaper_actions else {
+            return;
+        };
+        let selected_at = std::time::Instant::now();
+        let (file_bytes, source_width, source_height) = wallpaper_source_metadata(id);
+        self.state.borrow_mut().wallpaper_resolution =
+            Some((id.into(), source_width, source_height));
+        let selection = WallpaperSelection {
+            id: id.into(),
+            boot: boot.clone(),
+            revision,
+            selected_at,
+            file_bytes,
+            source_width,
+            source_height,
+        };
+        wallpaper_switch_phase(&selection, "selection");
+        let preview = queue
+            .lock()
+            .unwrap_or_else(|p| p.into_inner())
+            .preview
+            .clone();
+        if let Some(preview) = &preview {
+            preview.grow_from(grow.then(|| self.grow_origin()));
+        }
+        let generation = preview.as_ref().map(|preview| {
+            preview.select_at_with_palette(crate::wallpaper::SelectionRequest {
+                boot: boot.clone(),
+                id: id.into(),
+                kind: entry["kind"].as_str().unwrap_or("image").into(),
+                video_predecode: serde_json::from_value(entry["video_predecode"].clone()).ok(),
+                palette_template,
+                palette: entry.get("palette"),
+                requested_at: selected_at,
+                metadata: (file_bytes, source_width, source_height),
+            })
+        });
+        let admitted = WallpaperActivationQueue::submit(queue, selection, &wake);
+        if !admitted && let (Some(preview), Some(generation)) = (preview, generation) {
+            preview.cancel(generation);
+        }
+    }
+    pub fn act(&self, request: &str, stores: &Stores, wake: CallWake) {
+        if self.kind == Kind::Wallpaper {
+            if let Some(id) = request.strip_prefix("wallpaper:move:") {
+                // Moving along the strand only queues the preview; `project` fires it once it settles.
+                self.state.borrow_mut().wallpaper_pending =
+                    Some((id.into(), Instant::now() + WALLPAPER_SETTLE));
+                return;
+            }
+            if let Some(id) = request.strip_prefix("wallpaper:commit:") {
+                let mut state = self.state.borrow_mut();
+                state.wallpaper_pending = None;
+                state.wallpaper_committed = true;
+                state.close = true;
+                let shown = state
+                    .wallpaper_shown
+                    .as_ref()
+                    .or(state.wallpaper_origin.as_ref());
+                let unchanged = shown.is_some_and(|shown| shown == id);
+                if !unchanged {
+                    state.wallpaper_shown = Some(id.into());
+                }
+                drop(state);
+                if !unchanged {
+                    self.activate_wallpaper(id, true, wake);
+                }
+                return;
+            }
+            if let Some(id) = request.strip_prefix("wallpaper:activate:") {
+                self.activate_wallpaper(id, true, wake);
+                return;
+            }
         }
         let mut state = self.state.borrow_mut();
         if state.action.is_some() {
@@ -1230,11 +1313,6 @@ impl Extras {
                     return;
                 }
                 ("kind", value)
-            } else if let Some(value) = request.strip_prefix("wallpaper:layout:") {
-                if !matches!(value, "carousel" | "spotlight" | "hexagons") {
-                    return;
-                }
-                ("layout", value)
             } else {
                 return;
             };
@@ -1349,10 +1427,8 @@ impl Extras {
             state.catalogue_settled_handles.clear();
             state.catalogue_visible_handles = scene_handles;
         }
-        let (half_w, half_h) = (state.viewport.0 as f32 / 2., state.viewport.1 as f32 / 2.);
-        state.pick_offsets.clear();
         for primitive in &mut scene.primitives {
-            let bead::render::Primitive::Image { path, rect, .. } = primitive else {
+            let bead::render::Primitive::Image { path, .. } = primitive else {
                 continue;
             };
             let Some(handle) = path
@@ -1364,10 +1440,6 @@ impl Extras {
             let Some((id, field)) = parse_wallpaper_handle(handle) else {
                 continue;
             };
-            state.pick_offsets.insert(
-                id.to_owned(),
-                (rect.x + rect.w / 2. - half_w, rect.y + rect.h / 2. - half_h),
-            );
             let Some(entry) = state
                 .catalogue_result
                 .iter()
@@ -1424,7 +1496,7 @@ impl Extras {
         });
         if self.kind == Kind::Wallpaper {
             // Luau includes the visible cards and their neighbours in this scene.
-            // Do not keep encoded files from every earlier carousel position warm.
+            // Do not keep encoded files from every earlier strand position warm.
             state
                 .images
                 .retain(|path, _| scene.asset_data.contains_key(path));

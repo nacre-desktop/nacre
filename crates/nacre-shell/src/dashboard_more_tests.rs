@@ -1336,7 +1336,7 @@ async fn today_wallpaper_controls_follow_live_state_and_published_calls() -> Res
     let wallpaper = Arc::new(FakeSource::new(active.clone())?);
     let wallpaper_settings = Arc::new(FakeSource::new(json!({
         "store":"wallpaper-picker","rev":9,
-        "data":{"version":1,"kind":"dynamic","layout":"carousel","paused":true,"future":"preserve"}
+        "data":{"version":1,"kind":"dynamic","paused":true,"future":"preserve"}
     }))?);
     let today_source = Arc::new(FakeSource::new(fixture("today"))?);
     let dashboard = Dashboard::new(Page::Today, today_source.clone(), None, false)
@@ -1410,7 +1410,7 @@ async fn today_wallpaper_controls_follow_live_state_and_published_calls() -> Res
             "wallpaper.pause",
             "settings.provider",
             json!({"store":"wallpaper-picker","rev":9,
-                "value":{"version":1,"kind":"dynamic","layout":"carousel","paused":false,"future":"preserve"}}),
+                "value":{"version":1,"kind":"dynamic","paused":false,"future":"preserve"}}),
         ),
         ("wallpaper.next", "wallpaper.next", json!({})),
     ] {
@@ -1512,7 +1512,7 @@ async fn today_wallpaper_controls_follow_live_state_and_published_calls() -> Res
         (
             "settings.provider".into(),
             json!({"store":"wallpaper-picker","rev":9,
-                "value":{"version":1,"kind":"dynamic","layout":"carousel","paused":false,"future":"preserve"}})
+                "value":{"version":1,"kind":"dynamic","paused":false,"future":"preserve"}})
         )
     );
     settle(&dashboard).await;

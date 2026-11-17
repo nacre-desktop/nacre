@@ -17,7 +17,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-type WarmIdentity = (String, String, String, String, u32, u32, u32, u32, u32);
+type WarmIdentity = (String, String, String, u32, u32, u32, u32, u32);
 type DesiredRaster = (Option<PathBuf>, Option<PathBuf>, u32, u32, ImageFit);
 const WARM_CATALOGUE_LIMIT: usize = bead::core::cache::MIB;
 
@@ -25,7 +25,6 @@ pub(crate) struct PreparedCatalogue {
     pub(crate) boot: String,
     pub(crate) active_path: String,
     pub(crate) kind: String,
-    pub(crate) layout: String,
     viewport: (u32, u32),
     pub(crate) entries: Arc<[Json]>,
     scene: bead::render::Scene,
@@ -57,10 +56,9 @@ pub(crate) fn prepared_fallback_scene(viewport: (u32, u32)) -> Option<bead::rend
         bead::core::vprintln!("WALLPAPER_FALLBACK ready=false reason=cache_missing");
         return None;
     };
-    if prepared.layout != "spotlight" || prepared.viewport != viewport {
+    if prepared.viewport != viewport {
         bead::core::vprintln!(
-            "WALLPAPER_FALLBACK ready=false reason=identity layout={} prepared={}x{} requested={}x{}",
-            prepared.layout,
+            "WALLPAPER_FALLBACK ready=false reason=identity prepared={}x{} requested={}x{}",
             prepared.viewport.0,
             prepared.viewport.1,
             viewport.0,
@@ -108,10 +106,9 @@ fn publish_catalogue(
         boot: identity.0.clone(),
         active_path: identity.1.clone(),
         kind: identity.2.clone(),
-        layout: identity.3.clone(),
         viewport: (
+            f32::from_bits(identity.3) as u32,
             f32::from_bits(identity.4) as u32,
-            f32::from_bits(identity.5) as u32,
         ),
         entries: entries.into(),
         scene,
@@ -247,11 +244,6 @@ impl Warmer {
                         } else {
                             "static"
                         };
-                        let layout = match preferences["layout"].as_str() {
-                            Some("spotlight") => "spotlight",
-                            Some("hexagons") => "hexagons",
-                            _ => "carousel",
-                        };
                         let active_path = active.data["current"]["motion"]["path"]
                             .as_str()
                             .or_else(|| active.data["current"]["path"].as_str())
@@ -261,7 +253,6 @@ impl Warmer {
                             boot.clone(),
                             active_path,
                             kind.to_owned(),
-                            layout.to_owned(),
                             w.to_bits(),
                             h.to_bits(),
                             inner_w.to_bits(),
@@ -288,7 +279,7 @@ impl Warmer {
                             scale: s,
                         };
                         let warm = |entries: &[Json]| {
-                            warm_catalogue(&root, &palette, entries, kind, layout, geometry)
+                            warm_catalogue(&root, &palette, entries, kind, geometry)
                         };
                         let Some(mut result) = warm(&catalogue) else {
                             warmed = None;
@@ -347,13 +338,12 @@ impl Warmer {
                         }
                         let cache = bead::render::large_image_cache_stats();
                         bead::core::vprintln!(
-                            "WALLPAPER_WARM ready={} rasters={} requested={} cache_bytes={} cache_limit={} layout={} viewport={:.0}x{:.0} size={:.0}x{:.0} scale={:.3}",
+                            "WALLPAPER_WARM ready={} rasters={} requested={} cache_bytes={} cache_limit={} viewport={:.0}x{:.0} size={:.0}x{:.0} scale={:.3}",
                             complete,
                             result.warmed,
                             result.requested,
                             cache.charged_bytes,
                             cache.limit_bytes,
-                            layout,
                             w,
                             h,
                             inner_w,
@@ -418,7 +408,6 @@ fn warm_catalogue(
     palette: &Palette,
     entries: &[Json],
     kind: &str,
-    layout: &str,
     geometry: WarmGeometry,
 ) -> Option<WarmResult> {
     let selectable: Vec<_> = entries
@@ -440,7 +429,8 @@ fn warm_catalogue(
         .position(|item| item["active"] == true)
         .unwrap_or(0);
     let mut selection_indices = vec![selected];
-    if layout == "spotlight" && selectable.len() > 1 {
+    // A step either way is the likeliest next frame of the strand: warm its neighbours too.
+    if selectable.len() > 1 {
         selection_indices.push((selected + selectable.len() - 1) % selectable.len());
         selection_indices.push((selected + 1) % selectable.len());
     }
@@ -477,14 +467,13 @@ fn warm_catalogue(
                 ("extras.query".into(), Value::Text(String::new())),
                 ("extras.rows".into(), Value::list(rows.clone())),
                 ("extras.wallpaper.kind".into(), Value::Text(kind.into())),
-                ("extras.wallpaper.layout".into(), Value::Text(layout.into())),
                 ("extras.wallpaper.loading".into(), Value::Bool(false)),
                 (
                     "extras.wallpaper.selection_id".into(),
                     Value::Text(selected_id.into()),
                 ),
                 (
-                    "extras.wallpaper.carousel_position".into(),
+                    "extras.wallpaper.position".into(),
                     Value::Number((selected_index + 1) as f64),
                 ),
                 (
@@ -562,14 +551,13 @@ fn warm_catalogue(
     }
     if requests.is_empty() {
         bead::core::vprintln!(
-            "WALLPAPER_WARM no_rasters entries={} selectable={} scene_images={} handles={} rows={} kind={} layout={}",
+            "WALLPAPER_WARM no_rasters entries={} selectable={} scene_images={} handles={} rows={} kind={}",
             entries.len(),
             selectable.len(),
             scene_images,
             wallpaper_handles,
             matched_rows,
-            kind,
-            layout
+            kind
         );
         return None;
     }
