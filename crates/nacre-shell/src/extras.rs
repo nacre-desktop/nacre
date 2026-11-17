@@ -866,8 +866,9 @@ impl Extras {
                     })
                     .filter(|catalogue| catalogue.validate().is_ok());
                 if let Some(catalogue) = catalogue {
-                    let mut resources_changed =
-                        request_ids.is_empty() || !state.catalogue_pending_handles.is_empty();
+                    // A reply that only brings palettes must not rename every pearl's image (a new revision
+                    // re-bakes all of them): only a full listing or a changed thumbnail/preview path does.
+                    let mut resources_changed = request_ids.is_empty();
                     let mut seen = std::collections::BTreeSet::new();
                     let mut incoming: Vec<Json> = catalogue
                         .entries
