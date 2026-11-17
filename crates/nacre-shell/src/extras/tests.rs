@@ -2323,7 +2323,14 @@ fn a_big_catalogue_renders_at_most_eleven_pearls() -> bead_test::Result<()> {
     Ok(())
 }
 async fn open_picker(lab: &mut Lab) -> (Extras, Stores, CallWake) {
+    open_picker_on(lab, None).await
+}
+async fn open_picker_on(
+    lab: &mut Lab,
+    niri_socket: Option<std::path::PathBuf>,
+) -> (Extras, Stores, CallWake) {
     let extras = Extras::new(Kind::Wallpaper, lab.client.clone()).unwrap();
+    extras.state.borrow_mut().niri_socket = niri_socket;
     start_with_empty_wallpaper_catalogue(&extras);
     let open = Stores::default()
         .reconcile(&BTreeMap::from([
@@ -2506,6 +2513,114 @@ async fn a_thumbnail_that_loads_is_never_retried() {
     }
     assert!(extras.state.borrow().thumb_retries.is_empty());
     let _ = std::fs::remove_file(file);
+}
+/// A fake nacre-niri: answers the first request with `reply`, then reports whether the connection
+/// stayed open (`true` once the client is gone, i.e. EOF).
+fn fake_niri(
+    name: &str,
+    reply: &'static str,
+) -> (
+    std::path::PathBuf,
+    std::sync::mpsc::Receiver<String>,
+    std::sync::mpsc::Receiver<bool>,
+) {
+    use std::io::{BufRead, Read, Write};
+    let path = std::env::temp_dir().join(format!("extras-peek-{name}-{}.sock", std::process::id()));
+    let _ = std::fs::remove_file(&path);
+    let listener = std::os::unix::net::UnixListener::bind(&path).unwrap();
+    let (request_tx, request_rx) = std::sync::mpsc::channel();
+    let (eof_tx, eof_rx) = std::sync::mpsc::channel();
+    std::thread::spawn(move || {
+        let Ok((mut stream, _)) = listener.accept() else {
+            return;
+        };
+        let mut line = String::new();
+        std::io::BufReader::new(stream.try_clone().unwrap())
+            .read_line(&mut line)
+            .unwrap();
+        request_tx.send(line).unwrap();
+        writeln!(stream, "{reply}").unwrap();
+        let mut byte = [0u8; 1];
+        let _ = eof_tx.send(stream.read(&mut byte).map(|n| n == 0).unwrap_or(false));
+    });
+    (path, request_rx, eof_rx)
+}
+#[tokio::test(flavor = "current_thread")]
+async fn the_peek_is_held_while_the_picker_is_open_and_dropped_on_every_close() {
+    for close in ["esc", "commit"] {
+        let mut lab = lab_with_topics(vec!["wallpaper.active".into()]).await;
+        let (socket, request, eof) = fake_niri(close, r#"{"Ok":"Handled"}"#);
+        let (extras, open, wake) = open_picker_on(&mut lab, Some(socket.clone())).await;
+        assert_eq!(
+            request.recv_timeout(Duration::from_secs(2)).unwrap().trim(),
+            r#"{"NacrePeekDesktop":{"output":null}}"#,
+            "one peek for the focused output, asked when the picker opens"
+        );
+        extras.project(&open, Some(wake.clone()));
+        assert!(
+            eof.recv_timeout(Duration::from_millis(200)).is_err(),
+            "still held while open"
+        );
+        if close == "commit" {
+            extras.act("wallpaper:commit:/fixture/current.jpg", &open, wake.clone());
+            extras.project(&open, Some(wake.clone()));
+        }
+        extras.project(&closed(&open), Some(wake));
+        assert_eq!(
+            eof.recv_timeout(Duration::from_secs(2)),
+            Ok(true),
+            "closing by {close} releases the hold"
+        );
+        let _ = std::fs::remove_file(socket);
+    }
+}
+#[tokio::test(flavor = "current_thread")]
+async fn an_error_reply_holds_nothing_and_an_empty_desktop_switches_no_workspace() {
+    let mut lab = lab_with_topics(vec!["wallpaper.active".into()]).await;
+    let (socket, request, _eof) = fake_niri("err", r#"{"Err":"unknown request"}"#);
+    let (extras, open, wake) = open_picker_on(&mut lab, Some(socket.clone())).await;
+    assert!(request.recv_timeout(Duration::from_secs(2)).is_ok());
+    assert!(extras.state.borrow().peek.is_none(), "stock niri: no hold");
+    // The fixture's focused workspace has no active flag, so there is nothing to switch away from.
+    extras.project(&closed(&open), Some(wake));
+    tokio::time::sleep(Duration::from_millis(50)).await;
+    assert!(lab.calls.try_recv().is_err(), "no workspace was switched");
+    let _ = std::fs::remove_file(socket);
+}
+#[test]
+fn the_fallback_shows_an_empty_workspace_and_leaves_an_already_empty_one_alone() {
+    let busy = json!({"focus":{"outputId":"OUT"},
+        "workspaces":{"a":{"index":1,"outputId":"OUT","active":true},"b":{"index":2,"outputId":"OUT"},"c":{"index":1,"outputId":"OTHER","active":true}},
+        "windows":{"w":{"workspaceId":"a"},"x":{"workspaceId":"c"}}});
+    assert_eq!(peek_workspace_plan(&busy), Some((json!("OUT"), 1, 2)));
+    let empty_now = json!({"focus":{"outputId":"OUT"},
+        "workspaces":{"a":{"index":1,"outputId":"OUT","active":true},"b":{"index":2,"outputId":"OUT"}},
+        "windows":{}});
+    assert_eq!(
+        peek_workspace_plan(&empty_now),
+        None,
+        "already empty: do nothing"
+    );
+    let no_spare = json!({"focus":{"outputId":"OUT"},
+        "workspaces":{"a":{"index":1,"outputId":"OUT","active":true}},
+        "windows":{"w":{"workspaceId":"a"}}});
+    assert_eq!(peek_workspace_plan(&no_spare), None);
+}
+#[tokio::test(flavor = "current_thread")]
+async fn the_fallback_returns_to_the_previous_workspace_on_close() {
+    let mut lab = lab_with_topics(vec!["wallpaper.active".into()]).await;
+    let (extras, open, wake) = open_picker(&mut lab).await;
+    extras.state.borrow_mut().peek = Some(Peek::Workspace {
+        output: json!("OUT"),
+        previous: 3,
+    });
+    extras.project(&closed(&open), Some(wake));
+    let (method, params) = tokio::time::timeout(Duration::from_secs(2), lab.calls.recv())
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(method, "workspace.activate");
+    assert_eq!(params, json!({"output":"OUT","workspace":3}));
 }
 #[tokio::test(flavor = "current_thread")]
 async fn a_move_activates_at_once_with_a_500_ms_out_quint_fade() {

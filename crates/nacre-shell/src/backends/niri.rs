@@ -388,3 +388,96 @@ pub fn spawn(transport: Transport, shared: Arc<Shared>) -> JoinHandle<()> {
         }
     })
 }
+
+/// NN0050 (nacre-niri): while this stream is open the windows of the output fade away and only the
+/// bar and wallpaper stay. The open connection is the hold; dropping it releases at once.
+#[derive(Debug)]
+pub struct PeekHold {
+    _stream: UnixStream,
+}
+
+/// Ask nacre-niri to peek at the desktop of `output` (`None` is the focused output). Stock niri
+/// does not know the request and answers an error; so does an unknown output: `None` then, and the
+/// caller falls back.
+pub fn peek_desktop(socket: &std::path::Path, output: Option<&str>) -> Option<PeekHold> {
+    let mut stream = UnixStream::connect(socket).ok()?;
+    stream
+        .set_read_timeout(Some(Duration::from_millis(100)))
+        .ok()?;
+    let request = serde_json::json!({"NacrePeekDesktop":{"output":output}});
+    writeln!(stream, "{request}").ok()?;
+    let mut reply = String::new();
+    BufReader::new(stream.try_clone().ok()?)
+        .read_line(&mut reply)
+        .ok()?;
+    let reply: serde_json::Value = serde_json::from_str(reply.trim()).ok()?;
+    (reply["Ok"] == "Handled").then_some(PeekHold { _stream: stream })
+}
+
+#[cfg(test)]
+mod peek_tests {
+    use super::*;
+    use std::os::unix::net::UnixListener;
+
+    fn socket(name: &str) -> (std::path::PathBuf, UnixListener) {
+        let path = std::env::temp_dir().join(format!("peek-{name}-{}.sock", std::process::id()));
+        let _ = std::fs::remove_file(&path);
+        let listener = UnixListener::bind(&path).unwrap();
+        (path, listener)
+    }
+
+    #[test]
+    fn a_handled_reply_holds_the_stream_until_it_is_dropped() {
+        let (path, listener) = socket("ok");
+        let server = std::thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            let mut line = String::new();
+            BufReader::new(stream.try_clone().unwrap())
+                .read_line(&mut line)
+                .unwrap();
+            writeln!(stream, r#"{{"Ok":"Handled"}}"#).unwrap();
+            stream
+                .set_read_timeout(Some(Duration::from_millis(150)))
+                .unwrap();
+            let mut byte = [0u8; 1];
+            let held = matches!(
+                std::io::Read::read(&mut stream, &mut byte),
+                Err(e) if e.kind() == std::io::ErrorKind::WouldBlock
+                    || e.kind() == std::io::ErrorKind::TimedOut
+            );
+            (line, held, stream)
+        });
+        let hold = peek_desktop(&path, Some("DP-1")).expect("a handled peek");
+        let (line, held, mut stream) = server.join().unwrap();
+        assert_eq!(line.trim(), r#"{"NacrePeekDesktop":{"output":"DP-1"}}"#);
+        assert!(held, "nothing is sent or closed while the peek is held");
+        drop(hold);
+        stream
+            .set_read_timeout(Some(Duration::from_secs(2)))
+            .unwrap();
+        let mut byte = [0u8; 1];
+        assert_eq!(
+            std::io::Read::read(&mut stream, &mut byte).unwrap(),
+            0,
+            "dropping the hold is EOF for the compositor"
+        );
+        let _ = std::fs::remove_file(path);
+    }
+
+    #[test]
+    fn an_error_reply_or_no_listener_means_no_hold() {
+        let (path, listener) = socket("err");
+        let server = std::thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            let mut line = String::new();
+            BufReader::new(stream.try_clone().unwrap())
+                .read_line(&mut line)
+                .unwrap();
+            writeln!(stream, r#"{{"Err":"no such output"}}"#).unwrap();
+        });
+        assert!(peek_desktop(&path, None).is_none());
+        server.join().unwrap();
+        let _ = std::fs::remove_file(&path);
+        assert!(peek_desktop(&path, None).is_none(), "no socket, no hold");
+    }
+}

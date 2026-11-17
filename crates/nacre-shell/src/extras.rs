@@ -58,6 +58,43 @@ fn palette_activation(result: &MenuQueryResult, id: &str) -> Option<Json> {
         .any(|row| row == id)
         .then(|| json!({"id":id,"activation":token,"catalog_rev":result.catalog_rev}))
 }
+/// What keeps the windows out of the way while the strand is open.
+enum Peek {
+    /// nacre-niri holds the peek for as long as this connection lives.
+    Held {
+        _hold: crate::backends::niri::PeekHold,
+    },
+    /// Stock niri and other compositors: the empty workspace is shown; this is the one to return to.
+    Workspace { output: Json, previous: i64 },
+}
+/// The workspace switch that clears the windows away: (output, current index, empty index) of the
+/// focused output, or `None` when its workspace is already empty or no empty one exists.
+fn peek_workspace_plan(data: &Json) -> Option<(Json, i64, i64)> {
+    let output = data["focus"]["outputId"].clone();
+    let mut rows = data["workspaces"]
+        .as_object()?
+        .iter()
+        .filter(|(_, row)| row["outputId"] == output);
+    let occupied = |id: &str| {
+        data["windows"].as_object().is_some_and(|windows| {
+            windows
+                .values()
+                .any(|w| w["workspaceId"] == id && w["hidden"] != true)
+        })
+    };
+    let current = rows
+        .clone()
+        .find(|(_, row)| row["active"] == true || row["focused"] == true)?;
+    if !occupied(current.0) {
+        return None;
+    }
+    let empty = rows.find(|(id, _)| *id != current.0 && !occupied(id))?;
+    Some((
+        output,
+        current.1["index"].as_i64()?,
+        empty.1["index"].as_i64()?,
+    ))
+}
 struct Query {
     text: String,
     route: String,
@@ -100,6 +137,12 @@ struct State {
     thumb_retries: std::collections::BTreeMap<String, (u8, Instant)>,
     catalogue_settled_handles: std::collections::BTreeSet<String>,
     wallpaper_open: bool,
+    /// The desktop peek of this visit: the compositor's hold, or the workspace switch to undo.
+    peek: Option<Peek>,
+    /// Keeps the fallback's workspace call alive until it has been sent.
+    peek_call: Option<CallTicket>,
+    /// The nacre-niri command socket, when the session runs on niri.
+    niri_socket: Option<std::path::PathBuf>,
     wallpaper_prefetched: bool,
     wallpaper_boot: Option<String>,
     images: BTreeMap<std::path::PathBuf, Arc<[u8]>>,
@@ -340,6 +383,8 @@ pub struct Extras {
     glyphs: crate::workspace_rows::Rows,
     previews: Option<Previews>,
     wallpaper_settings: Option<Arc<dyn Source>>,
+    /// The compositor snapshot the peek fallback reads; Strand only.
+    compositor: Option<Arc<dyn Source>>,
     wallpaper_actions: Option<Arc<std::sync::Mutex<WallpaperActivationQueue>>>,
 }
 fn preload_wallpaper_catalogue(
@@ -458,6 +503,20 @@ impl Extras {
                 client.clone(),
             )))
         });
+        let compositor = if kind == Kind::Wallpaper {
+            state.niri_socket = std::env::var_os("NIRI_SOCKET").map(std::path::PathBuf::from);
+            client
+                .topic("compositor")
+                .map(|topic| Arc::new(topic) as Arc<dyn Source>)
+                .or_else(|_| {
+                    client
+                        .lease_topic("compositor")
+                        .map(|topic| Arc::new(topic) as Arc<dyn Source>)
+                })
+                .ok()
+        } else {
+            None
+        };
         Ok(Self {
             kind,
             client,
@@ -467,6 +526,7 @@ impl Extras {
             previews: None,
             wallpaper_settings,
             wallpaper_actions,
+            compositor,
         })
     }
     fn wallpaper_preview(&self) -> Option<Arc<crate::wallpaper::Preview>> {
@@ -1140,6 +1200,7 @@ impl Extras {
         let mut state = self.state.borrow_mut();
         let mut activate = None;
         let opening = open && !state.wallpaper_open;
+        let closing = !open && state.wallpaper_open;
         if opening || (open && state.wallpaper_origin.is_none() && state.wallpaper_shown.is_none())
         {
             // Opening may beat the first topic snapshot: keep looking until nothing was previewed.
@@ -1169,9 +1230,59 @@ impl Extras {
             activate = state.wallpaper_origin.clone();
         }
         drop(state);
+        // The one place the desktop peek starts and the one place it ends, whatever closed the picker.
+        if opening {
+            self.peek_engage(wake);
+        } else if closing {
+            self.peek_release(wake);
+        }
         if let Some(id) = activate {
             let wake = wake.clone().unwrap_or_else(|| Arc::new(|| {}));
             self.activate_wallpaper(&id, WALLPAPER_RESTORE_MS, wake);
+        }
+    }
+    /// Clear the windows away so the real wallpaper preview is what the owner sees.
+    fn peek_engage(&self, wake: &Option<CallWake>) {
+        let socket = {
+            let state = self.state.borrow();
+            if state.peek.is_some() {
+                return;
+            }
+            state.niri_socket.clone()
+        };
+        if let Some(hold) = socket
+            .as_deref()
+            .and_then(|socket| crate::backends::niri::peek_desktop(socket, None))
+        {
+            self.state.borrow_mut().peek = Some(Peek::Held { _hold: hold });
+            return;
+        }
+        let Some(plan) = self
+            .compositor
+            .as_ref()
+            .and_then(|topic| peek_workspace_plan(&topic.snapshot().data))
+        else {
+            return;
+        };
+        let (output, previous, empty) = plan;
+        let call = self.begin(
+            "workspace.activate",
+            json!({"output":output,"workspace":empty}),
+            wake.clone(),
+        );
+        let mut state = self.state.borrow_mut();
+        state.peek_call = call;
+        state.peek = Some(Peek::Workspace { output, previous });
+    }
+    fn peek_release(&self, wake: &Option<CallWake>) {
+        let peek = self.state.borrow_mut().peek.take();
+        if let Some(Peek::Workspace { output, previous }) = peek {
+            let call = self.begin(
+                "workspace.activate",
+                json!({"output":output,"workspace":previous}),
+                wake.clone(),
+            );
+            self.state.borrow_mut().peek_call = call;
         }
     }
     fn activate_wallpaper(&self, id: &str, fade_ms: u32, wake: CallWake) {
