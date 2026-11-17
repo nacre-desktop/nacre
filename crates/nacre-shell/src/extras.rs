@@ -156,6 +156,9 @@ struct State {
     wallpaper_sizes: std::collections::BTreeMap<String, (u32, u32)>,
     /// The desktop peek of this visit: the compositor's hold, or the workspace switch to undo.
     peek: Option<Peek>,
+    /// The compositor's answer to the peek request, still being awaited on its own thread (it blocks up to
+    /// 100 ms and must never do so on the main thread while the open storyboard runs).
+    peek_pending: Option<Arc<std::sync::Mutex<Option<Option<crate::backends::niri::PeekHold>>>>>,
     /// Keeps the fallback's workspace call alive until it has been sent.
     peek_call: Option<CallTicket>,
     /// The nacre-niri command socket, when the session runs on niri.
@@ -938,7 +941,7 @@ impl Extras {
                         state.catalogue_settled_handles.extend(request_handles);
                     }
                     trim_catalogue_palette_cache(&mut state.catalogue_result, &request_ids);
-                    crate::wallpaper_catalogue_cache::store(&state.catalogue_result);
+                    crate::wallpaper_catalogue_cache::store_in_background(&state.catalogue_result);
                     if resources_changed {
                         state.image_revision = state.image_revision.wrapping_add(1);
                     }
@@ -1320,6 +1323,8 @@ impl Extras {
             self.peek_engage(wake);
         } else if closing {
             self.peek_release(wake);
+        } else if open {
+            self.peek_resolve(wake);
         }
         if let Some(id) = activate {
             let wake = wake.clone().unwrap_or_else(|| Arc::new(|| {}));
@@ -1330,18 +1335,51 @@ impl Extras {
     fn peek_engage(&self, wake: &Option<CallWake>) {
         let socket = {
             let state = self.state.borrow();
-            if state.peek.is_some() {
+            if state.peek.is_some() || state.peek_pending.is_some() {
                 return;
             }
             state.niri_socket.clone()
         };
-        if let Some(hold) = socket
-            .as_deref()
-            .and_then(|socket| crate::backends::niri::peek_desktop(socket, None))
-        {
-            self.state.borrow_mut().peek = Some(Peek::Held { _hold: hold });
-            return;
+        if let Some(socket) = socket {
+            let slot = Arc::new(std::sync::Mutex::new(None));
+            let (theirs, wake) = (slot.clone(), wake.clone());
+            let spawned = std::thread::Builder::new()
+                .name("strand-peek".into())
+                .spawn(move || {
+                    let hold = crate::backends::niri::peek_desktop(&socket, None);
+                    *theirs.lock().unwrap_or_else(|p| p.into_inner()) = Some(hold);
+                    if let Some(wake) = wake {
+                        wake();
+                    }
+                });
+            if spawned.is_ok() {
+                self.state.borrow_mut().peek_pending = Some(slot);
+                return;
+            }
         }
+        self.peek_fallback(wake);
+    }
+    /// Collect the compositor's answer once its thread has it: a hold, or the workspace fallback.
+    fn peek_resolve(&self, wake: &Option<CallWake>) {
+        let answer = {
+            let state = self.state.borrow();
+            state
+                .peek_pending
+                .as_ref()
+                .and_then(|slot| slot.lock().unwrap_or_else(|p| p.into_inner()).take())
+        };
+        let Some(answer) = answer else { return };
+        let mut state = self.state.borrow_mut();
+        state.peek_pending = None;
+        match answer {
+            Some(hold) => state.peek = Some(Peek::Held { _hold: hold }),
+            None => {
+                drop(state);
+                self.peek_fallback(wake);
+            }
+        }
+    }
+    fn peek_fallback(&self, wake: &Option<CallWake>) {
         let Some(plan) = self
             .compositor
             .as_ref()
@@ -1362,7 +1400,11 @@ impl Extras {
         state.peek = Some(Peek::Workspace { output, previous });
     }
     fn peek_release(&self, wake: &Option<CallWake>) {
-        let peek = self.state.borrow_mut().peek.take();
+        let peek = {
+            let mut state = self.state.borrow_mut();
+            state.peek_pending = None; // a late answer is dropped with its hold
+            state.peek.take()
+        };
         crate::workspace_rows::freeze_active(None);
         if let Some(Peek::Workspace { output, previous }) = peek {
             let call = self.begin(

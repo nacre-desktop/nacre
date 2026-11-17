@@ -37,9 +37,10 @@ impl Prefetch {
                     // selection finish before this cancellable raster worker.
                     libc::setpriority(libc::PRIO_PROCESS, libc::gettid() as u32, 19);
                 }
-                // Give the newly populated picker scene a frame before the first background decode.
+                // Nothing heavy while Strand's 675 ms open storyboard runs (five 4K decodes and holds took the
+                // memory bus and the main thread's frames on a busy laptop): wait for it to settle.
                 if crate::wallpaper_cache::hot_resident().0 == 0 {
-                    std::thread::sleep(std::time::Duration::from_millis(100));
+                    std::thread::sleep(std::time::Duration::from_millis(750));
                 }
                 let mut held = false;
                 for (pair, width, height, hold) in jobs {

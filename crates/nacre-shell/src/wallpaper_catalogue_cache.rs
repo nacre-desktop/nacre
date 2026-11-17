@@ -90,6 +90,14 @@ pub(crate) fn store(entries: &[Value]) {
     store_at(&path(), entries)
 }
 
+/// The picker's main thread never waits on the snapshot's fsync (tens of ms on a busy disk, mid-storyboard).
+pub(crate) fn store_in_background(entries: &[Value]) {
+    let entries = entries.to_vec();
+    let _ = std::thread::Builder::new()
+        .name("catalogue-cache".into())
+        .spawn(move || store(&entries));
+}
+
 fn store_at(destination: &Path, entries: &[Value]) {
     if entries.len() > 10_000 || entries.iter().any(|entry| !valid_entry(entry)) {
         return;
