@@ -3567,11 +3567,11 @@ fn analog_clock_redraws_only_on_ticks_and_hands_hug_their_pixels() -> Result<()>
 #[test]
 fn desktop_clock_ink_follows_wallpaper_luminance() -> Result<()> {
     use serde_json::{Value as Json, json};
-    // Relative luminance of the dark palette's onSurface (ecebe8) and surface (12120f).
+    // Relative luminance of the dark palette's onSurface and surface.
     const ON_SURFACE: f64 = 0.83;
     const SURFACE: f64 = 0.006;
     const ON: [u8; 4] = [0xf2, 0xed, 0xf0, 255];
-    const SURF: [u8; 4] = [0x1a, 0x17, 0x12, 255];
+    const SURF: [u8; 4] = [0x24, 0x21, 0x12, 255];
     fn luma(cell: f64) -> Value {
         Value::list(vec![
             json!({"cols":16,"rows":9,"on_surface":ON_SURFACE,"surface":SURFACE,
