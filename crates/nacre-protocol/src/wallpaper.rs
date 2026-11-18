@@ -335,7 +335,7 @@ impl WallpaperCatalogue {
                     || entry.palette.as_ref().is_some_and(|palette| {
                         !matches!(palette.mode, PaletteMode::Dark | PaletteMode::Light)
                             || palette.colours.len() < 3
-                            || palette.colours.len() > 128
+                            || palette.colours.len() > 256
                             || !["background", "onSurface", "primary"]
                                 .iter()
                                 .all(|role| palette.colours.contains_key(*role))
@@ -372,10 +372,10 @@ fn outputs_schema(generator: &mut schemars::SchemaGenerator) -> schemars::Schema
     schemars::json_schema!({"type":"object","maxProperties":32,"propertyNames":{"type":"string","minLength":1,"maxLength":256},"additionalProperties":value})
 }
 fn colours_schema(_: &mut schemars::SchemaGenerator) -> schemars::Schema {
-    schemars::json_schema!({"type":"object","minProperties":3,"maxProperties":128,"required":["background","onSurface","primary"],"propertyNames":{"type":"string","minLength":1,"maxLength":64},"additionalProperties":{"type":"string","pattern":"^#[0-9A-Fa-f]{6}$"}})
+    schemars::json_schema!({"type":"object","minProperties":3,"maxProperties":256,"required":["background","onSurface","primary"],"propertyNames":{"type":"string","minLength":1,"maxLength":64},"additionalProperties":{"type":"string","pattern":"^#[0-9A-Fa-f]{6}$"}})
 }
 fn catalogue_colours_schema(_: &mut schemars::SchemaGenerator) -> schemars::Schema {
-    schemars::json_schema!({"type":"object","minProperties":3,"maxProperties":128,"required":["background","onSurface","primary"],"propertyNames":{"type":"string","minLength":1,"maxLength":64},"additionalProperties":{"type":"string","pattern":"^#[0-9A-Fa-f]{6}$"}})
+    schemars::json_schema!({"type":"object","minProperties":3,"maxProperties":256,"required":["background","onSurface","primary"],"propertyNames":{"type":"string","minLength":1,"maxLength":64},"additionalProperties":{"type":"string","pattern":"^#[0-9A-Fa-f]{6}$"}})
 }
 impl WallpaperActive {
     pub fn validate(&self) -> Result<(), Failure> {
@@ -464,7 +464,7 @@ impl ActiveWallpaper {
             || self.file_identity.size > POSTER_BYTES
             || self.motion.as_ref().is_some_and(|m| !m.is_valid())
             || palette.colours.is_empty()
-            || palette.colours.len() > 128
+            || palette.colours.len() > 256
             || !["background", "onSurface", "primary"]
                 .iter()
                 .all(|role| palette.colours.contains_key(*role))
@@ -552,7 +552,7 @@ mod tests {
             .unwrap()
             .colours
             .remove("broken");
-        for index in 0..126 {
+        for index in 0..254 {
             catalogue.entries[0]
                 .palette
                 .as_mut()
@@ -562,7 +562,7 @@ mod tests {
         }
         assert!(
             catalogue.validate().is_err(),
-            "catalogue palettes are capped at 128 roles"
+            "catalogue palettes are capped at 256 roles"
         );
     }
 

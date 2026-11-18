@@ -2057,7 +2057,7 @@ fn valid_catalogue_palette(palette: &Json) -> bool {
         return false;
     };
     if colours.is_empty()
-        || colours.len() > 128
+        || colours.len() > 256
         || !["background", "onSurface", "primary"]
             .iter()
             .all(|key| colours.contains_key(*key))
