@@ -1571,7 +1571,11 @@ impl Extras {
     fn fire_move(&self, id: &str, fade_ms: u32, wake: CallWake) {
         let mut state = self.state.borrow_mut();
         state.wallpaper_fired_at = Some(Instant::now());
-        state.wallpaper_prefetched = false; // the pre-decoded window follows the pearl
+        // The pre-decoded window follows the pearl a move lands on, not every pearl a glide passes: each
+        // re-plan cost the panel worker 3-5 ms and set off 4K decodes for windows the glide had already left.
+        if fade_ms == WALLPAPER_MOVE_MS {
+            state.wallpaper_prefetched = false;
+        }
         let unchanged = state
             .wallpaper_shown
             .as_ref()

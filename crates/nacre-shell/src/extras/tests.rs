@@ -2713,7 +2713,7 @@ async fn a_three_second_hold_retargets_the_wallpaper_at_the_cap_and_ends_on_the_
     assert!(extras.state.borrow().wallpaper_pending.is_none());
 }
 #[tokio::test(flavor = "current_thread")]
-async fn the_predecode_window_is_replanned_only_when_a_move_fires() {
+async fn the_predecode_window_is_replanned_only_where_a_move_lands() {
     let mut lab = lab_with_topics(vec!["wallpaper.active".into()]).await;
     let (extras, open, wake) = open_picker(&mut lab).await;
     extras.act("wallpaper:move:/fixture/next.jpg", &open, wake.clone());
@@ -2722,16 +2722,28 @@ async fn the_predecode_window_is_replanned_only_when_a_move_fires() {
         "the first move fired"
     );
     extras.state.borrow_mut().wallpaper_prefetched = true;
-    extras.act("wallpaper:move:/fixture/animated.gif", &open, wake);
+    extras.act("wallpaper:move:/fixture/animated.gif", &open, wake.clone());
     assert!(
         extras.state.borrow().wallpaper_prefetched,
         "a held-back move leaves the plan alone"
     );
     tokio::time::sleep(WALLPAPER_RETARGET_CAP).await;
+    let fired = extras.state.borrow().wallpaper_fired_at;
+    extras.act("wallpaper:move:/fixture/next.mp4", &open, wake);
+    assert_ne!(
+        extras.state.borrow().wallpaper_fired_at,
+        fired,
+        "a glide retarget fired"
+    );
+    assert!(
+        extras.state.borrow().wallpaper_prefetched,
+        "and left the plan alone too"
+    );
+    tokio::time::sleep(WALLPAPER_RELEASE).await;
     extras.fire_pending_move();
     assert!(
         !extras.state.borrow().wallpaper_prefetched,
-        "the trailing move fired"
+        "the landing re-planned it"
     );
 }
 #[tokio::test(flavor = "current_thread")]
