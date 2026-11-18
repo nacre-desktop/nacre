@@ -1280,6 +1280,49 @@ fn bar_stack_pearls_collapse_fan_and_narrow_bars_drop_app_icons() -> Result<()> 
     bar_golden(&h.pose((0., 0.), 1.)?, "bar-stacks-fan-1")
 }
 
+/// The apply glint starts only from `bar.wallpaper_applied`; a wallpaper-luma change alone (Strand previews, login) never does.
+#[test]
+fn apply_glint_ignores_luma_changes_and_starts_on_the_applied_counter() -> Result<()> {
+    let mut values = super::initial_models()?;
+    values.extend(parity_models());
+    values.extend([
+        ("bar.frame".into(), Value::Bool(false)),
+        ("bar.height".into(), Value::Number(44.)),
+    ]);
+    let mut h = Harness::load(
+        &root(),
+        Path::new("bar/main.luau"),
+        &root().join("palette.json"),
+        values,
+        Config {
+            width: 1920,
+            height: 44,
+            scale: 1.,
+        },
+    )?;
+    settle_harness_animations(&mut h)?;
+    let glint = |h: &Harness| h.scene().layers.iter().any(|l| l.id.contains("glint"));
+    assert!(!glint(&h), "no glint at rest");
+    let grid = |v: f64| {
+        Value::list(vec![
+            serde_json::json!({"cols":2,"rows":1,"on_surface":0.8,"surface":0.02,"cells":[v,v]}),
+        ])
+    };
+    for v in [0.2, 0.7] {
+        h.update(BTreeMap::from([(
+            "bead.desktop.wallpaper.luma".into(),
+            grid(v),
+        )]))?;
+        assert!(!glint(&h), "a luma change alone must not start the glint");
+    }
+    h.update(BTreeMap::from([(
+        "bar.wallpaper_applied".into(),
+        Value::Number(1.),
+    )]))?;
+    assert!(glint(&h), "the applied counter starts the glint");
+    Ok(())
+}
+
 /// Owner 2026-11-14: Settings > Top bar > Workspace style "App icons" with the +N fold off: the active
 /// workspace lists every window. The harness has no deterministic desktop-icon fixtures, so the rows
 /// carry empty icon names and the goldens show the category-glyph fallback of that style.

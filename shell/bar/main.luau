@@ -67,16 +67,13 @@ if c.islands then
     segments[count+1]=ui.Image{id="under",position="absolute",left=0,top=1,width=width,height=1,path="bar/assets/thread-under.themed.svg",opacity=fade}
     host.fill,host.padding_left,host.padding_right,host.padding_top="transparent",13,13,2
     host[1]=ui.Row(segments)
-    -- The apply glint: when the committed wallpaper changes (its luminance grid is republished then), one soft light
-    -- (170 x 2.5, primary 40 % toward white) runs from the centre out along the thread to both edges, 2 s, behind
-    -- the islands, translate and fill only. The key carries the grid's stamp, so each change starts a fresh run;
-    -- an empty grid (no wallpaper yet) shows none.
-    local luma=ui.resolve_for_check(ui.bind("bead.desktop.wallpaper.luma"))
-    local grid=type(luma)=="table" and luma[1] or nil
-    if grid and grid.cells then
-        local stamp=0
-        for i,cell in grid.cells do stamp+=cell*(i%7+1) end
-        stamp=math.floor(stamp*1000)
+    -- The apply glint: when a wallpaper is applied (Strand Enter, the centre pearl, a rotation), `bar.wallpaper_applied`
+    -- (a counter Rust bumps on that commit; nothing bumps it yet, and a luma change alone never counts, since Strand
+    -- previews activate the real wallpaper on every glide step) starts one soft light (170 x 2.5, primary 40 % toward
+    -- white) from the centre out along the thread to both edges, 2 s, behind the islands, translate and fill only. The
+    -- key carries the counter, so each bump starts a fresh run; 0 shows none.
+    local stamp=ui.resolve_for_check(ui.bind("bar.wallpaper_applied")) or 0
+    if stamp>0 then
         local glow=ui.tint("primary",{255,255,255,255},.4)
         local slices,slice_width=9,170/9
         for _,sign in {1,-1} do
