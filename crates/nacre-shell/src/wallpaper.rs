@@ -922,6 +922,8 @@ pub(crate) struct Consumer {
     preview: Arc<Preview>,
     subscriptions: Mutex<Vec<Subscription>>,
     displayed: Mutex<BTreeMap<String, ActiveWallpaper>>,
+    /// The pair of the frame last prepared for each output, by its revision (`palette_only`).
+    prepared: Mutex<BTreeMap<String, ActiveWallpaper>>,
     motion_commits: Publisher,
     visibility: Mutex<BTreeMap<String, VisibilityRecord>>,
 }
@@ -964,6 +966,7 @@ impl Consumer {
             preview,
             subscriptions: Mutex::new(Vec::new()),
             displayed: Mutex::new(BTreeMap::new()),
+            prepared: Mutex::new(BTreeMap::new()),
             visibility: Mutex::new(BTreeMap::new()),
             motion_commits: Publisher::new(
                 "wallpaper-motion-commits".into(),
@@ -1240,6 +1243,9 @@ impl Consumer {
             optimistic,
             luma,
         });
+        if let Ok(mut prepared) = self.prepared.lock() {
+            prepared.insert(output.clone(), decoded_pair.clone());
+        }
         let frame = bead::wayland::WallpaperFrame {
             output: output.clone(),
             revision: decoded.pair.revision,
@@ -1364,6 +1370,23 @@ impl bead::wayland::WallpaperProvider for Consumer {
         decode_pair(previous, width, height)
             .ok()
             .map(|decoded| decoded.rgba)
+    }
+    /// B0341: a pick's confirmation shows the pixels its optimistic frame already committed (the image the
+    /// running fade heads to): Bead adopts it, so the fade does not start again on every output.
+    fn palette_only(&self, output: &str, revision: u64) -> bool {
+        let next = self.prepared.lock().ok().and_then(|prepared| {
+            prepared
+                .get(output)
+                .filter(|pair| pair.revision == revision)
+                .cloned()
+        });
+        let shown = self
+            .displayed
+            .lock()
+            .ok()
+            .and_then(|shown| shown.get(output).cloned());
+        next.zip(shown)
+            .is_some_and(|(next, shown)| same_pixels(&next, &shown))
     }
     fn is_current(&self, frame: &bead::wayland::WallpaperFrame) -> bool {
         let status = self.client.status();
@@ -1517,6 +1540,9 @@ impl bead::wayland::WallpaperProvider for Consumer {
         if let Ok(mut displayed) = self.displayed.lock() {
             displayed.remove(output);
         }
+        if let Ok(mut prepared) = self.prepared.lock() {
+            prepared.remove(output);
+        }
     }
 }
 
@@ -1566,6 +1592,10 @@ pub(crate) fn parse_motion(state: &serde_json::Value) -> Option<bead_wallpaper::
     })
 }
 
+/// The displayed raster depends only on the decoded file and how it is placed.
+fn same_pixels(a: &ActiveWallpaper, b: &ActiveWallpaper) -> bool {
+    a.path == b.path && a.file_identity == b.file_identity && a.presentation == b.presentation
+}
 fn pair_matches_id(pair: &ActiveWallpaper, id: &str) -> bool {
     pair.path == id || pair.motion.as_ref().is_some_and(|motion| motion.path == id)
 }
@@ -2810,6 +2840,24 @@ mod tests {
         let _ = std::fs::remove_dir_all(root);
     }
 
+    #[test]
+    fn a_confirmation_of_the_shown_pixels_is_palette_only() {
+        let (shown, mut confirmed) = (pair(1), pair(2));
+        confirmed
+            .palette
+            .colours
+            .insert("primary".into(), "#445566".into());
+        assert!(
+            same_pixels(&confirmed, &shown),
+            "a new revision and palette keep the pixels"
+        );
+        let mut moved = pair(2);
+        moved.presentation = nacre_protocol::wallpaper::Presentation::Fit;
+        assert!(!same_pixels(&moved, &shown));
+        let mut other = pair(2);
+        other.path = "/other.png".into();
+        assert!(!same_pixels(&other, &shown));
+    }
     fn pair(revision: u64) -> ActiveWallpaper {
         serde_json::from_value(serde_json::json!({"revision":revision,"palette_revision":revision,"path":"/wall.png","file_identity":{"device":"1","inode":"2","size":4,"mtime_sec":0,"mtime_nsec":0,"ctime_sec":0,"ctime_nsec":0},"presentation":"crop","palette":{"mode":"dark","colours":{"background":"#000000","onSurface":"#ffffff","primary":"#112233"}}})).unwrap()
     }
