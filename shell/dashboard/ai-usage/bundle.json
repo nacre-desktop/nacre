@@ -1,1 +1,1 @@
-{"modules":["ui/components/empty-state.luau"]}
+{"modules":["ui/components/empty-state.luau","bar/pearl.luau"]}

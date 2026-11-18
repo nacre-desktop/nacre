@@ -2100,6 +2100,8 @@ fn weather_local_photo_crops_keeps_credit_and_releases_the_asset() -> Result<()>
         &temp.join("dashboard/weather"),
     )?;
     std::fs::copy(root().join("palette.json"), temp.join("palette.json"))?;
+    std::fs::create_dir_all(temp.join("bar"))?;
+    std::fs::copy(root().join("bar/pearl.luau"), temp.join("bar/pearl.luau"))?;
     let style = temp.join("dashboard/weather/weather-style.luau");
     std::fs::write(&style, std::fs::read_to_string(&style)?.replace(
         "photos={enabled=false,city={},fallback=nil}",

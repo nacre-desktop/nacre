@@ -35,7 +35,7 @@ local function media(layout)
             state=="playing" and ui.tr("bead.dashboard.pause") or ui.tr("bead.dashboard.media-play"),op("player.play_pause","dashboard.can_toggle")),
         transport("next","skip_next",ui.tr("bead.dashboard.media-next"),op("player.next","dashboard.can_next"))}
     return ui.Box{id="media",position="absolute",left=layout.calendar+layout.host+32,top=0,
-        width=layout.media,height=layout.summary,radius=layout.cardRadius,fill="surfaceContainer",
+        width=layout.media,height=layout.summary,radius=layout.cardRadius,fill="raised",
         ui.Box{id="album-container",position="absolute",left=(layout.media-layout.artContainer)/2,top=8,
             width=layout.artContainer,height=layout.artContainer,fill="transparent",artwork,
             ui.Arc{id="progress-track",position="absolute",left=(layout.artContainer-artSize-12)/2,
@@ -47,10 +47,10 @@ local function media(layout)
                 stroke_width=5,color="primary",round_caps=true}},
         ui.Text{id="track",position="absolute",left=14,top=layout.artContainer+16,width=layout.media-28,height=layout.mediaMetadataTitleHeight,
             text=live and ui.bind("dashboard.track") or ui.tr("bead.dashboard.playback-unavailable"),
-            font_size=layout.mediaTitleSize,text_align="center",color="primary"},
+            font_size=layout.mediaTitleSize,font_weight=600,text_align="center",color="ink"},
         ui.Text{id="artist",position="absolute",left=14,top=layout.artContainer+16+layout.mediaMetadataTitleHeight+layout.mediaMetadataGap,width=layout.media-28,height=layout.mediaMetadataArtistHeight,
             text=live and ui.bind("dashboard.track_detail") or ui.tr("bead.dashboard.playback-unavailable-detail"),
-            font_size=layout.mediaArtistSize,text_align="center",color="secondary"},
+            font_size=layout.mediaArtistSize,text_align="center",color="ink2"},
         controls,
     }
 end
@@ -82,7 +82,7 @@ return function()
     local colorsText=ui.tr("bead.dashboard.colors")
     -- One builder for both hero actions so icon and label share size, gap and centring.
     local function heroAction(id,glyph,text,label,action)
-        local textWidth=math.min(l.heroActionWidth-40,math.ceil(ui.text_width(text,"IBM Plex Sans",kit.tokens.text.caption*4/3)))
+        local textWidth=math.min(l.heroActionWidth-40,math.ceil(ui.text_width(text,kit.tokens.fonts.sans,kit.tokens.text.caption*4/3)))
         return kit.Button{id=id,width=l.heroActionWidth,height=l.heroActionHeight,padding=0,radius=l.heroActionRadius,
             fill=ui.tint("surface","primary",.12),hover_fill=ui.tint(ui.tint("surface","primary",.12),"onSurface",.08),align="center",justify="center",
             aria_label=label,on_activate=action,activate_on_release=true,
@@ -96,7 +96,7 @@ return function()
             aria_label=ui.tr("bead.welcome.colors-open"),on_activate=colors,activate_on_release=true,
             ui.Box{width=19,height=19,radius=9.5,fill=role}}
     end
-    local hero=ui.Box{id="hero",width=l.width,height=l.hero,radius=l.heroRadius,fill="surfaceContainer",
+    local hero=ui.Box{id="hero",width=l.width,height=l.hero,radius=l.heroRadius,fill="raised",
         wallpaper and ui.Scroll{id="wallpaper-crop",width=l.width,height=l.hero,scroll=ui.bind("dashboard.hero.scroll"),
             ui.Row{id="wallpaper-centred",width=l.width,height=l.hero,shrink=0,justify="center",align="center",
                 ui.Image{id="wallpaper",icon=ui.bind("dashboard.wallpaper_image"),width=l.width,height=l.hero,shrink=0}}}
@@ -115,7 +115,7 @@ return function()
             heroAction("colors","palette",colorsText,ui.tr("bead.welcome.colors-open"),colors)},
         ui.Box{id="wallpaper-transport",position="absolute",right=l.wallpaperTransportRight,bottom=l.wallpaperTransportBottom,
             width=l.wallpaperTransportWidth,height=l.wallpaperTransportHeight,radius=l.wallpaperTransportRadius,clip_children=true,
-            fill=ui.tint("surface","secondary",.1),
+            fill=ui.tint("surface","onSurface",.1),
             wallpaperControl("wallpaper-previous",1,"chevron_left",ui.tr("bead.dashboard.wallpaper-previous"),
                 ui.resolve_for_check(ui.bind("dashboard.can_wallpaper_previous")),"wallpaper.previous"),
             wallpaperControl("wallpaper-pause",2,not dynamic and "image" or paused and "play_arrow" or "pause",pauseLabel,canPause,"wallpaper.pause"),
@@ -128,12 +128,12 @@ return function()
     for i,item in ipairs(host) do
         hostRows[i]=ui.Row{id="host-"..item.id,width=l.hostInfo,height=hostRowHeight,gap=6,align="center",
             ui.Text{text=item.icon,family="Material Symbols Rounded",font_size=l.hostIconSize,width=20,height=20,
-                color=i%2==0 and "onSurfaceVariant" or "primary"},
+                color="ink2"},
             ui.Text{text=item.text,width=l.hostInfo-26,height=20,font_size=l.hostTextSize,color="onSurface"}}
     end
     local updateIndex=host[#host] and host[#host].id=="memory" and #hostRows or #hostRows+1
     table.insert(hostRows,updateIndex,ui.Row{id="updates",width=l.hostInfo,height=hostRowHeight,gap=6,align="center",
-        ui.Text{text="system_update",family="Material Symbols Rounded",font_size=l.hostIconSize,width=20,height=20,color="primary"},
+        ui.Text{text="system_update",family="Material Symbols Rounded",font_size=l.hostIconSize,width=20,height=20,color="ink2"},
         ui.Text{text=ui.bind("dashboard.updates"),width=l.hostInfo-26,height=20,font_size=l.hostTextSize,color="onSurface"}})
     local hostRowsHeight=#hostRows*hostRowHeight+(#hostRows-1)*hostRowGap
     local hostCard=ui.Row{id="host",width=l.host,height=l.hostBody,padding_left=18,padding_right=14,gap=16,
@@ -157,15 +157,15 @@ return function()
                 sweep_angle=math.max(0,math.min(1,fraction))*360,
                 stroke_width=4,color="primary",round_caps=true},
             ui.Text{id="reading",position="absolute",left=0,top=(diameter-24)/2,width=w,height=24,
-                text=metric.value,font_size=14*4/3,text_align="center",color="primary"},
+                text=metric.value,font_size=14*4/3,font_weight=600,text_align="center",color="ink"},
             ui.Text{id="label",position="absolute",left=0,top=diameter+8,width=w,height=20,
-                text=metric.label,font_size=10*4/3,text_align="center",color="onSurfaceVariant"}}
+                text=metric.label,font_size=10*4/3,text_align="center",color="ink3"}}
     end
     local summary=ui.Box{id="summary",position="absolute",left=0,top=l.hero+l.gap,width=l.width,height=l.summary,
         ui.Box{id="month",position="absolute",left=0,top=0,width=l.calendar,height=l.summary,
-            radius=l.cardRadius,fill="surfaceContainer",calendarReady and calendar(l.calendar,l.summary) or ui.Text{id="unavailable",
+            radius=l.cardRadius,fill="raised",calendarReady and calendar(l.calendar,l.summary) or ui.Text{id="unavailable",
                 text=ui.tr("bead.panel.calendar-unavailable"),width=l.calendar-24,height=40,font_size=14,color="onSurfaceVariant"}},
-        ui.Column{id="host-and-gauges",position="absolute",left=l.calendar+l.summaryGap,top=0,width=l.host,height=l.summary,gap=l.hostGap,radius=l.cardRadius,fill="surfaceContainer",
+        ui.Column{id="host-and-gauges",position="absolute",left=l.calendar+l.summaryGap,top=0,width=l.host,height=l.summary,gap=l.hostGap,radius=l.cardRadius,fill="raised",
             hostCard,ui.Row{id="gauges",width=l.host,height=l.metrics,gap=0,fill="transparent",table.unpack(gaugeRow)}},
         media(l),
     }

@@ -101,7 +101,7 @@ fn views() -> Vec<(&'static str, &'static str, BTreeMap<String, Value>, Step)> {
         ),
         (
             "dashboard",
-            "dashboard/main.luau",
+            "dashboard/system/main.luau",
             BTreeMap::new(),
             Box::new(|i| {
                 BTreeMap::from([

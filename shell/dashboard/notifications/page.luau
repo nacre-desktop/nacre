@@ -25,25 +25,30 @@ return function()
             title=ui.tr("bead.dashboard.notifications-none"),detail=note}
     else
         body=VirtualList{id="items",position="absolute",left=PAD,top=listTop,scroll=ui.bind("dashboard.notifications.scroll"),
-            width=INNER,height=listHeight,gap=T.spacing.sm,row_height=notice.height,model=ui.bind("dashboard.rows"),key="id",repeat_id="items",
-            render=function(item) return notice.Row(item,{width=INNER,fill="surfaceContainerHigh",on_dismiss=act(item.act)}) end}
+            width=INNER,height=listHeight,gap=0,row_height=notice.height+1,model=ui.bind("dashboard.rows"),key="id",repeat_id="items",
+            -- Rows sit on hairlines, not boxes inside the card.
+            render=function(item)
+                return ui.Column{id="notice",width=INNER,height=notice.height+1,gap=0,shrink=0,
+                    notice.Row(item,{width=INNER,fill="transparent",on_dismiss=act(item.act)}),
+                    ui.Box{id="rule",width=INNER,height=1,shrink=0,fill=ui.alpha("onSurface",.07)}}
+            end}
     end
     local clear=ui.tr("bead.dashboard.notifications-clear")
     -- title left, the actions (count note, All | DND, Clear) as one right-aligned group
     local actions={id="actions",height=HEAD,gap=T.spacing.md,align="center"}
     if #rows>0 and note~="" then
-        actions[#actions+1]=ui.Text{id="note",text=note,width=math.min(300,math.ceil(ui.text_width(note,"IBM Plex Sans",CAPTION))+T.spacing.xs),height=18,
-            shrink=0,font_size=CAPTION,text_align="right",color="onSurfaceVariant"}
+        actions[#actions+1]=ui.Text{id="note",text=note,width=math.min(300,math.ceil(ui.text_width(note,T.fonts.sans,CAPTION))+T.spacing.xs),height=18,
+            shrink=0,font_size=CAPTION,text_align="right",color="ink2"}
     end
     actions[#actions+1]=segment.Segment{id="dnd",aria_label=ui.tr("bead.dashboard.page-notifications"),enabled=control,on_change="dashboard.do",
         options={{id="notif.all",label=ui.tr("bead.dashboard.notifications-all"),selected=not dnd},
             {id="notif.dnd",label=ui.tr("bead.panel.control-pill-dnd"),selected=dnd}}}
     if #rows>0 then
         actions[#actions+1]=kit.PillButton{id="clear",compact=true,glyph="clear_all",label=clear,
-            label_width=ui.text_width(clear,"IBM Plex Sans",CAPTION),on_activate=act("notif.clear")}
+            label_width=ui.text_width(clear,T.fonts.sans,CAPTION),on_activate=act("notif.clear")}
     end
     local header=ui.Row{id="header",position="absolute",left=PAD,top=PAD,width=INNER,height=HEAD,justify="space-between",align="center",
         ui.Text{id="title",text=ui.bind("dashboard.heading"),width=INNER*.4,height=24,font_size=T.text.body*4/3,font_weight=600,color="onSurface"},
         ui.Row(actions)}
-    return ui.Box{id="notifications",width=W,height=H,radius=T.spacing.xl,fill="surfaceContainer",header,body}
+    return ui.Box{id="notifications",width=W,height=H,radius=T.spacing.xl,fill="raised",header,body}
 end

@@ -46,12 +46,12 @@ return function()
             list("tasks","dashboard.secondary","check_box_outline_blank",tasksInner)}
     end
     return ui.Box{id="brain",width=W,height=H,
-        ui.Box{id="notes",position="absolute",left=0,top=0,width=LEFT,height=H,radius=T.spacing.xl,fill="surfaceContainer",
+        ui.Box{id="notes",position="absolute",left=0,top=0,width=LEFT,height=H,radius=T.spacing.xl,fill="raised",
             ui.Row{id="header",position="absolute",left=PAD,top=PAD,width=notesInner,height=HEAD,justify="space-between",align="center",
                 ui.Text{id="title",text=ui.tr("bead.dashboard.page-brain"),width=notesInner-200,height=24,font_size=BODY,font_weight=600,color="onSurface"},
-                kit.PillButton{id="open",compact=true,glyph="hub",label=openLabel,label_width=ui.text_width(openLabel,"IBM Plex Sans",CAPTION),on_activate=open}},
+                kit.PillButton{id="open",compact=true,glyph="hub",label=openLabel,label_width=ui.text_width(openLabel,T.fonts.sans,CAPTION),on_activate=open}},
             notesBody},
-        ui.Box{id="tasks",position="absolute",left=LEFT+GUTTER,top=0,width=RIGHT,height=H,radius=T.spacing.xl,fill="surfaceContainer",
+        ui.Box{id="tasks",position="absolute",left=LEFT+GUTTER,top=0,width=RIGHT,height=H,radius=T.spacing.xl,fill="raised",
             ui.Text{id="title",position="absolute",left=PAD,top=PAD+(HEAD-24)/2,width=tasksInner,height=24,text=ui.tr("bead.dashboard.brain-tasks"),
                 font_size=BODY,font_weight=600,color="onSurface"},
             tasksBody},

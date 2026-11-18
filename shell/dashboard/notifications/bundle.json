@@ -1,1 +1,1 @@
-{"modules":["ui/components/notice-row.luau","ui/components/empty-state.luau","widgets/segment.luau"],"assets":["notifications/fallback.themed.svg"]}
+{"modules":["ui/components/notice-row.luau","ui/components/empty-state.luau","widgets/segment.luau","bar/pearl.luau"],"assets":["notifications/fallback.themed.svg"]}

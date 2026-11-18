@@ -1,1 +1,1 @@
-{"modules":["dashboard/components.luau"]}
+{"modules":["dashboard/components.luau","bar/pearl.luau"]}

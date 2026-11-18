@@ -298,7 +298,7 @@ fn tab_navigation_keeps_runtime_open_and_releases_previous_page_sources() -> Res
             .session
             .resource_counts()
             .split_whitespace()
-            .any(|part| part == "sources=11")
+            .any(|part| part == "sources=13")
     );
     assert_eq!(
         runtime.session.stores.get("panel.open"),
@@ -982,13 +982,13 @@ fn dashboard_pages_have_deterministic_pixels_and_only_navigation_actions() -> Re
                     .split_whitespace()
                     .any(|part| part
                         == if page == Page::Today {
-                            "sources=11"
+                            "sources=13"
                         } else if page == Page::Weather {
-                            "sources=25"
+                            "sources=27"
                         } else if page == Page::Media {
-                            "sources=8"
+                            "sources=9"
                         } else {
-                            "sources=6"
+                            "sources=8"
                         }),
                 "selected-page modules and image snapshots remain lazy: {}",
                 h.session.resource_counts()
@@ -1043,6 +1043,45 @@ fn dashboard_pages_have_deterministic_pixels_and_only_navigation_actions() -> Re
                 &std::env::temp_dir().join(format!("bead-dashboard-{}-{scale}-diff", page.name())),
             )?;
         }
+    }
+    Ok(())
+}
+
+/// The lacquer standard in light mode on the floating card (rim, lit edge, short shadow).
+#[test]
+fn dashboard_light_card_matches_golden() -> Result<()> {
+    for page in [Page::System, Page::Weather] {
+        let mut model = view(
+            page,
+            fixture(page.name()),
+            (page == Page::System).then(|| fixture("updates")),
+        )
+        .project();
+        model.insert("view.detached".into(), Value::Bool(true));
+        let mut h = Harness::load(
+            &root(),
+            Path::new(&format!("dashboard/{}/main.luau", page.name())),
+            &root().join("tests/fixtures/palette-light.json"),
+            model,
+            Config {
+                width: 1048,
+                height: 714,
+                scale: 1.,
+            },
+        )?;
+        let frame = h.render()?;
+        let golden = root().join(format!(
+            "tests/goldens/dashboard-{}-light-card-1.png",
+            page.name()
+        ));
+        if std::env::var("BEAD_UPDATE_GOLDENS").as_deref() == Ok("1") {
+            frame.save(&golden)?;
+        }
+        frame.compare(
+            &golden,
+            Default::default(),
+            &std::env::temp_dir().join(format!("bead-dashboard-{}-light-diff", page.name())),
+        )?;
     }
     Ok(())
 }

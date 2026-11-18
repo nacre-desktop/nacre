@@ -9,7 +9,7 @@ local function icon(id,glyph,label,action)
 end
 return function()
     local control=ui.resolve_for_check(ui.bind("dashboard.control"))
-    return ui.Column{id="customize",width=940,height=562,padding=22,gap=12,radius=20,fill="surfaceContainer",
+    return ui.Column{id="customize",width=940,height=562,padding=22,gap=12,radius=20,fill="raised",
         C.title("title",ui.bind("dashboard.heading"),896),
         ui.Text{id="hint",text=ui.bind("dashboard.summary"),width=896,height=24,font_size=14,color="onSurfaceVariant"},
         ui.Repeat{id="items",model=ui.bind("dashboard.rows"),key="id",render=function(item)

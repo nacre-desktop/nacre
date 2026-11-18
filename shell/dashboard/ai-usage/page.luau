@@ -53,7 +53,7 @@ return function()
         if #lines>0 then col[#col+1]=ui.Column{id="lines",width=INNER,gap=T.spacing.xs,table.unpack(lines)} end
         body=ui.Column(col)
     end
-    return ui.Box{id="ai-usage",width=W,height=H,radius=T.spacing.xl,fill="surfaceContainer",
+    return ui.Box{id="ai-usage",width=W,height=H,radius=T.spacing.xl,fill="raised",
         ui.Row{id="header",position="absolute",left=PAD,top=PAD,width=INNER,height=HEAD,justify="space-between",align="center",
             ui.Text{id="title",text=ui.bind("dashboard.heading"),width=INNER-HEAD-T.spacing.md,height=24,font_size=BODY,font_weight=600,color="onSurface"},
             kit.IconButton{id="refresh",text="refresh",aria_label=ui.tr("bead.dashboard.refresh"),width=HEAD,height=HEAD,padding=0,radius=T.radii.full,

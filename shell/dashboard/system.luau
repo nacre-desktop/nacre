@@ -24,19 +24,19 @@ return function()
             or ""
         table.insert(gauges,ui.Box{id=metric.id,width=gaugeWidth,height=bandHeight,
             ui.Text{position="absolute",left=14,top=12,text=icons[metric.id] or metric.icon,family="Material Symbols Rounded",
-                font_size=20,width=24,height=24,color="primary"},
+                font_size=20,width=24,height=24,color="ink2"},
             ui.Text{position="absolute",left=40,top=13,text=metric.label,width=gaugeWidth-82,height=20,
-                font_size=13.333,color="onSurfaceVariant"},
+                font_size=13.333,font_weight=500,color="ink2"},
             ui.Arc{id="track",position="absolute",left=x+6,top=42,width=diameter-12,height=diameter-12,
                 start_angle=135,sweep_angle=270,stroke_width=9,color=ui.alpha("primary",.14),round_caps=true},
             ui.Arc{id="amount",visible=fraction~=nil,position="absolute",left=x+6,top=42,width=diameter-12,height=diameter-12,
                 start_angle=135,sweep_angle=270*math.max(0,math.min(1,fraction or 0)),stroke_width=9,color="primary",round_caps=true},
             ui.Text{id="percent",visible=fraction~=nil,position="absolute",left=x,top=36+(diameter-44)/2,width=diameter,height=44,
-                text=metric.value,font_size=32,font_weight=600,text_align="center",color="primary"},
+                text=metric.value,font_size=32,font_weight=600,text_align="center",color="ink"},
             ui.Text{id="value",visible=reading~="—",position="absolute",left=14,top=diameter+46,width=gaugeWidth-28,height=28,
                 text=reading,font_size=metric.id=="gpu" and 16 or 21.333,font_weight=600,text_align="center",color="onSurface"},
             ui.Text{id="detail",position="absolute",left=14,top=reading~="—" and diameter+77 or diameter+50,width=gaugeWidth-28,height=20,
-                text=caption,font_size=12,text_align="center",color="onSurfaceVariant"},
+                text=caption,font_size=12,text_align="center",color="ink3"},
         })
     end
     local function plot(id,model,color)
@@ -52,29 +52,29 @@ return function()
     local processesLeft,processesWidth=hasNetwork and 369 or 0,hasNetwork and 571 or 940
     local processesInner=processesWidth-32
     local network=hasNetwork and ui.Box{id="network",position="absolute",left=0,top=bandHeight+16,width=357,height=212,
-        radius=16,fill="surfaceContainer",
+        radius=16,fill="raised",
         ui.Text{id="title",position="absolute",left=16,top=14,width=325,height=22,
-            text=ui.tr("bead.dashboard.page-network"),font_size=14.667,font_weight=600,color="onSurface"},
+            text=ui.tr("bead.dashboard.page-network"),font_size=14.667,font_weight=600,color="ink"},
         ui.Row{id="rates",position="absolute",left=16,top=58,width=325,height=20,gap=16,
             ui.Text{id="down",text=ui.bind("dashboard.net_rate"),width=145,height=20,font_size=12,color="primary"},
             ui.Text{id="up",text=ui.bind("dashboard.net_up_rate"),width=145,height=20,font_size=12,color="secondary"}},
         plot("down-plot","dashboard.net_down","primary"),
         plot("up-plot","dashboard.net_up","secondary"),
-        ui.Text{id="peak",position="absolute",left=16,bottom=12,text=ui.bind("dashboard.net_peak"),width=325,height=18,font_size=12,color="onSurfaceVariant"},
+        ui.Text{id="peak",position="absolute",left=16,bottom=12,text=ui.bind("dashboard.net_peak"),width=325,height=18,font_size=12,color="ink3"},
     } or nil
     -- Host card: user, OS, compositor, uptime, kernel from `dashboard.system.host`, three per line.
     local host={{},{}}
     for i,item in ipairs(ui.resolve_for_check(ui.bind("dashboard.host"))) do
         table.insert(i<=3 and host[1] or host[2],ui.Row{id="host-"..item.id,width=144,height=24,gap=4,align="center",
-            ui.Text{text=item.icon,family="Material Symbols Rounded",font_size=16,width=20,height=20,color=i%2==0 and "onSurfaceVariant" or "primary"},
+            ui.Text{text=item.icon,family="Material Symbols Rounded",font_size=16,width=20,height=20,color="ink2"},
             ui.Text{text=item.text,width=120,height=18,font_size=12,color="onSurface"}})
     end
     local page={id="system",width=940,height=562,
-        ui.Box{id="metric-band",position="absolute",left=0,top=0,width=width,height=bandHeight,radius=20,fill="surfaceContainer",
+        ui.Box{id="metric-band",position="absolute",left=0,top=0,width=width,height=bandHeight,radius=20,fill="raised",
             ui.Row{id="metrics",width=width,height=bandHeight,gap=12,table.unpack(gauges)}}}
     -- conditional children are appended (a nil in the middle of a child list ends it)
     if network then page[#page+1]=network end
-    page[#page+1]=ui.Column{id="processes",position="absolute",left=processesLeft,top=274,width=processesWidth,height=212,padding=16,gap=4,radius=16,fill="surfaceContainer",
+    page[#page+1]=ui.Column{id="processes",position="absolute",left=processesLeft,top=274,width=processesWidth,height=212,padding=16,gap=4,radius=16,fill="raised",
             ui.Text{id="title",text=ui.bind("dashboard.heading"),width=processesInner,height=24,font_size=17.333,font_weight=600,color="onSurface"},
             ui.Text{id="empty",visible=#ui.resolve_for_check(ui.bind("dashboard.rows"))==0,
                 text=ui.tr("bead.dashboard.system-processes-none"),width=processesInner,height=24,font_size=13.333,color="onSurfaceVariant"},
@@ -85,11 +85,11 @@ return function()
                         ui.Text{text=item.value,width=189,height=21,font_size=13.333,text_align="right",color="onSurfaceVariant"}}
                 end}},
         }
-    page[#page+1]=ui.Row{id="updates",position="absolute",left=0,top=498,width=940,height=64,padding=12,gap=16,radius=16,fill="surfaceContainer",align="center",
-            ui.Text{text="package_2",family="Material Symbols Rounded",font_size=24,width=30,height=30,color="primary"},
+    page[#page+1]=ui.Row{id="updates",position="absolute",left=0,top=498,width=940,height=64,padding=12,gap=16,radius=16,fill="raised",align="center",
+            ui.Text{text="package_2",family="Material Symbols Rounded",font_size=24,width=30,height=30,color="ink2"},
             ui.Column{width=390,height=40,gap=0,
                 ui.Text{text=ui.bind("dashboard.updates"),width=390,font_size=16,height=22,color="onSurface"},
-                ui.Text{text=ui.bind("dashboard.updates_detail"),width=390,font_size=12,height=18,color="onSurfaceVariant"},
+                ui.Text{text=ui.bind("dashboard.updates_detail"),width=390,font_size=12,height=18,color="ink3"},
             },
         }
     if #host[1]>0 then

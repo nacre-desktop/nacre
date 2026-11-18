@@ -18,9 +18,9 @@ return function()
         end
         table.insert(buttons,C.button("start",ui.tr("bead.dashboard.focus-start"),control and ui.action("dashboard.do","focus.start:"..tostring(minutes)) or nil))
     end
-    return ui.Column{id="focus",width=940,height=562,padding=22,gap=18,radius=20,fill="surfaceContainer",align="center",justify="center",
+    return ui.Column{id="focus",width=940,height=562,padding=22,gap=18,radius=20,fill="raised",align="center",justify="center",
         ui.Text{id="status",text=ui.bind("dashboard.heading"),width=896,height=28,font_size=20,text_align="center",color="onSurfaceVariant"},
-        ui.Text{id="timer",text=live and ui.bind("dashboard.metric") or string.format("%02d:00",minutes),width=896,height=96,font_size=80,text_align="center",color="primary"},
+        ui.Text{id="timer",text=live and ui.bind("dashboard.metric") or string.format("%02d:00",minutes),width=896,height=96,font_size=80,font_weight=300,text_align="center",color="ink"},
         ui.Box{id="track",width=600,height=6,radius=3,fill=ui.alpha("primary",0.16),
             progress>0 and ui.Box{id="elapsed",width=math.max(1,math.floor(600*progress)),height=6,radius=3,fill="primary"} or nil},
         ui.Row{id="controls",width=896,height=40,gap=12,justify="center",table.unpack(buttons)},

@@ -5,6 +5,8 @@ local page=ui.resolve_for_check(ui.bind("dashboard.page"))
 local preview=ui.resolve_for_check(ui.bind("dashboard.preview"))
 local stale=ui.resolve_for_check(ui.bind("dashboard.stale"))
 local content=require("./page")
+local pearl=require("../../bar/pearl")
+local T=kit.tokens
 local nav={}
 local tabs=ui.resolve_for_check(ui.bind("dashboard.tabs"))
 local message=ui.resolve_for_check(ui.bind("dashboard.message"))
@@ -25,12 +27,12 @@ for _,tab in ipairs(tabs) do
     local selected=tab.id==page
     local interactive=not selected
     local Button=interactive and kit.Button or ui.Box
-    local label_width=labeled and math.ceil(ui.text_width(title,"IBM Plex Sans",13.333))+kit.tokens.spacing.hairline/2 or 0
+    local label_width=labeled and math.ceil(ui.text_width(title,T.fonts.sans,13.333*1.04))+kit.tokens.spacing.hairline/2 or 0
     local rw=19+(labeled and 7+label_width or 0)
     local face={
         ui.Row{id="label",position="absolute",left=(tw-rw)/2,top=6,width=rw,height=24,gap=7,align="center",justify="center",
             ui.Text{text=tab.icon,family="Material Symbols Rounded",width=19,height=24,font_size=18.667,color=selected and "primary" or "onSurfaceVariant"},
-            labeled and ui.Text{text=title,width=label_width,height=24,font_size=13.333,text_align="center",color=selected and "onSurface" or "onSurfaceVariant"} or nil,
+            labeled and ui.Text{text=title,width=label_width,height=24,font_size=13.333,font_weight=500,text_align="center",color=selected and "ink" or "ink2"} or nil,
         },
     }
     table.insert(nav,Button{id=tab.id,width=tw,height=44,padding=0,radius=12,
@@ -40,16 +42,21 @@ for _,tab in ipairs(tabs) do
 end
 if pearl_left then
     nav[#nav+1]=ui.Box{id="tab-halo",position="absolute",left=pearl_left,top=29,width=12,height=12,radius=6,fill=ui.alpha("primary",0.12),
-        ui.Box{id="tab-pearl",position="absolute",left=2,top=2,width=8,height=8,radius=4,fill="primary"}}
+        -- The shared pearl recipe (bar/pearl.luau): the highlight over the accent fill marks the selected page.
+        ui.Box{id="tab-pearl",position="absolute",left=2,top=2,width=8,height=8,radius=4,fill="primary",radial=T.gradients and pearl.layers(false) or nil}}
 end
-return kit.Panel{id="dashboard",edge="top",open=ui.bind("panel.open"),fade=false,reveal=not ui.resolve_for_check(ui.bind("view.detached")),
+local card=ui.resolve_for_check(ui.bind("view.detached"))==true
+-- Lacquer (locked 2026-11-17): the floating card has a 1 px rim, a lit top edge and a short contact shadow; the drawer stays flush.
+return kit.Panel{id="dashboard",edge="top",open=ui.bind("panel.open"),fade=false,reveal=not card,
     width=984,height=650,padding=0,radius=18,fill="surface",
+    border_width=card and 1 or nil,border_color=card and ui.alpha("onSurface",.05) or nil,shadow=card and {blur=4,spread=0,dy=1,alpha=.6} or nil,
+    ui.Box{id="lit-edge",visible=card,position="absolute",left=18*.6,right=18*.6,top=0,height=1,fill=ui.alpha("surfaceBright",.6)},
     ui.Row{id="navigation",position="absolute",left=24,top=12,width=936,height=44,table.unpack(nav)},
     ui.Box{id="stage",position="absolute",left=22,top=68,width=940,height=562,content()},
     ui.Text{id="state",position="absolute",left=24,top=632,width=936,height=16,font_size=12,text_align="right",
-        text=preview and (stale and ui.tr("bead.dashboard.state-preview-stale") or ui.tr("bead.dashboard.state-preview")) or stale and ui.tr("bead.dashboard.state-stale") or "",color=stale and not preview and "error" or "onSurfaceVariant"},
+        text=preview and (stale and ui.tr("bead.dashboard.state-preview-stale") or ui.tr("bead.dashboard.state-preview")) or stale and ui.tr("bead.dashboard.state-stale") or "",color=stale and not preview and "error" or "ink3"},
     message~="" and ui.Text{id="message",position="absolute",left=24,top=632,width=600,height=16,font_size=12,text=ui.bind("dashboard.message"),color="error"} or nil,
     customize and message=="" and kit.Button{id="customize",position="absolute",left=24,top=626,width=170,height=24,padding=0,radius=8,fill="transparent",
         aria_label=ui.tr("bead.dashboard.customize-pages"),on_activate=ui.action("view.open","dashboard-customize"),
-        ui.Text{id="customize-label",text=ui.tr("bead.dashboard.customize-pages"),width=170,height=16,font_size=12,color="onSurfaceVariant"}} or nil,
+        ui.Text{id="customize-label",text=ui.tr("bead.dashboard.customize-pages"),width=170,height=16,font_size=12,color="ink2"}} or nil,
 }

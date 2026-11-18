@@ -101,7 +101,7 @@ return function()
         else
             lines[#lines+1]=ui.Text{id="plain",text=ui.bind("dashboard.detail"),width=lyricsInner,height=H-2*PAD-36-T.spacing.md,font_size=BODY,color="onSurfaceVariant"}
         end
-        lyrics=ui.Column{id="lyrics",position="absolute",left=cardW+GUTTER,top=0,width=lyricsW,height=H,padding=PAD,gap=T.spacing.md,radius=RADIUS,fill="surfaceContainer",
+        lyrics=ui.Column{id="lyrics",position="absolute",left=cardW+GUTTER,top=0,width=lyricsW,height=H,padding=PAD,gap=T.spacing.md,radius=RADIUS,fill="raised",
             ui.Text{id="heading",text=ui.bind("dashboard.heading"),width=lyricsInner,height=24,font_size=BODY,font_weight=600,color="onSurface"},
             ui.Column{id="lines",width=lyricsInner,gap=T.spacing.xs,table.unpack(lines)}}
     end
