@@ -34,17 +34,22 @@ local updates_on=ui.resolve_for_check(ui.bind("bar.updates.enabled"))
 local updates_n=ui.resolve_for_check(ui.bind("bar.updates.count"))
 local badges_on=ui.resolve_for_check(ui.bind("bar.status.badges"))~=false
 local header=ui.resolve_for_check(ui.bind("bar.height"))
--- Screen border "none" (the default): islands float on a transparent bar over a thread. Islands are 96 % surface
--- with a 1 px inner highlight; the frame variant keeps today's surfaceContainer pills untouched.
+-- Lacquer surfaces (locked 2026-11-17). Screen border "none": islands float on a transparent bar over a thread,
+-- opaque "surface" with a 1 px rim, a lit top edge and a short contact shadow (B0320: tight, 13 px margin, the
+-- surface clips it at the bar zone). The frame variant keeps its pills as the "raised" role, with the same lit edge.
 local islands=ui.resolve_for_check(ui.bind("bar.frame"))==false
-local base=islands and "surface" or "surfaceContainer"
-local i_fill=islands and ui.alpha("surface",.96) or nil
+local base=islands and "surface" or "raised"
+local i_fill=islands and "surface" or nil
 local i_stroke=islands and 1 or nil
-local i_stroke_color=islands and ui.alpha("onSurface",.13) or nil
--- B0320: a tight shadow (13 px margin); the surface clips it at the bar zone.
+local i_stroke_color=islands and ui.alpha("onSurface",.05) or nil
 local i_shadow=islands and {blur=4,spread=0,dy=1,alpha=.6} or nil
+-- The lit edge: surfaceBright is a soft lift on dark lacquer and near white on the light one; a straight 1 px
+-- line inside the rounded top. unshaped or transparent pieces get none.
 local function island(p)
     if islands then p.fill,p.border_width,p.border_color,p.shadow=i_fill,i_stroke,i_stroke_color,i_shadow end
+    if p.radius and p.fill~="transparent" then
+        p[#p+1]=ui.Box{id="lit-edge",position="absolute",left=p.radius*.6,right=p.radius*.6,top=0,height=1,fill=ui.alpha("surfaceBright",.6)}
+    end
     return p
 end
 -- The title band: 30 px centred in the frame bar; a 34 px island 6 px from the top in the islands bar.
