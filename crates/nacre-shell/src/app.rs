@@ -227,6 +227,10 @@ fn open_parent_widget(socket: &Path) -> Result<bool, String> {
 }
 /// Runs a no-argument `nacre <method>` command through the shell's own socket (a tile that opens the launcher).
 pub fn command(method: &str) -> bool {
+    command_with(method, &[])
+}
+/// As [`command`], with string arguments (`nacre mode wallpaper` opens Strand).
+pub fn command_with(method: &str, args: &[&str]) -> bool {
     let Some(host) = HOST.get() else {
         return false;
     };
@@ -235,7 +239,7 @@ pub fn command(method: &str) -> bool {
         id: 1,
         target: "nacre".into(),
         method: method.into(),
-        args: Vec::new(),
+        args: args.iter().map(|a| Value::String((*a).into())).collect(),
         output: None,
     };
     ipc::call(&host.command, &call, Duration::from_millis(800))

@@ -1510,25 +1510,25 @@ fn tiles_dispatch_host_actions_and_the_detail_page_opens_in_place() -> bead_test
     };
     // D4: the Wi-Fi tile's main press toggles and its split chevron opens the page; a toggle tile toggles.
     assert_eq!(
-        action(&h, "tile-network.main"),
+        action(&h, "tile-network.row.main"),
         (
             Some("cc.do".into()),
             Some(Value::Text("toggle:network.wifi".into()))
         )
     );
     assert_eq!(
-        action(&h, "tile-network.detail-open"),
+        action(&h, "tile-network.row.detail"),
         (Some("detail".into()), Some(Value::Text("network".into())))
     );
     assert_eq!(
-        action(&h, "tile-dnd.main"),
+        action(&h, "tile-dnd.row.main"),
         (
             Some("cc.do".into()),
             Some(Value::Text("toggle:notifications.dnd".into()))
         )
     );
     assert_eq!(
-        action(&h, "tile-clipboard"),
+        action(&h, "tile-clipboard.row.main"),
         (
             Some("cc.do".into()),
             Some(Value::Text("open:clipboard".into()))
@@ -1546,7 +1546,7 @@ fn tiles_dispatch_host_actions_and_the_detail_page_opens_in_place() -> bead_test
     assert!(
         !node_ids(&h)
             .iter()
-            .any(|i| i.contains("tile-dnd.detail-open"))
+            .any(|i| i.contains("tile-dnd.row.detail"))
     );
     let (x, y) = centre(&h, "notices-title");
     h.script([Input::Click { x, y }, Input::Release])?;
@@ -1784,14 +1784,14 @@ fn the_profile_picker_and_one_shot_tiles_dispatch_their_verbs() -> bead_test::Re
         (node.action.clone(), node.action_arg.clone())
     };
     assert_eq!(
-        action(&h, "tile-screenshot"),
+        action(&h, "tile-screenshot.row.main"),
         (
             Some("cc.do".into()),
             Some(Value::Text("press:screenshot.capture".into()))
         )
     );
     // With a picker the tile opens it in place instead of the battery panel.
-    let (x, y) = centre(&h, "tile-battery");
+    let (x, y) = centre(&h, "tile-battery.row.main");
     h.script([Input::Click { x, y }, Input::Release])?;
     assert_eq!(
         h.session.stores.get("cc.page"),
@@ -2794,7 +2794,7 @@ fn the_vpn_tile_opens_its_page_and_each_row_switches_its_profile() -> bead_test:
             .unwrap_or_else(|| panic!("no node {part} in {:?}", node_ids(h)));
         (node.action.clone(), node.action_arg.clone())
     };
-    for part in ["tile-vpn.main", "tile-vpn.detail-open"] {
+    for part in ["tile-vpn.row.main", "tile-vpn.row.detail"] {
         assert_eq!(
             action(&h, part),
             (Some("detail".into()), Some(Value::Text("vpn".into())))
@@ -3471,7 +3471,7 @@ fn hover_opened_dock_shows_the_full_overview() {
         bottom >= 400.,
         "the overview is sized to its content, not a stub: {bottom}"
     );
-    for section in ["home.status", "tile-network", "tile-battery", "chips"] {
+    for section in ["home.status", "tile-network", "tile-battery", "notices"] {
         assert!(
             nodes.iter().any(|node| node.id.contains(section)),
             "overview section {section} missing among {:?}",

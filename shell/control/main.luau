@@ -115,13 +115,13 @@ local function slider_row(t,w,h,tail)
     local label=ui.tr(t.label)
     local armed=s.set==true
     local tail_w=tail and END+T.spacing.sm or 0
-    local slider_w=w-T.spacing.lg-HEAD-T.spacing.sm*2-48-tail_w-T.spacing.md
+    local slider_w=w-4-HEAD-T.spacing.sm*2-48-tail_w
     local slider_props={id="level",width=slider_w,value=s.value or 0,min=0,max=100,step=5,label=label,enabled=armed,
         on_change=armed and "cc.do" or nil,change_arg=function(n) return "set:"..t.source..":"..n end,
         echo_value=type(s.value_steps)=="number" and s.value_steps>0 and function(n) return math.floor(n/100*s.value_steps+.5)/s.value_steps*100 end or nil,
         pointer_format={prefix="set:"..t.source..":",precision=3},
         local_label=s.status and s.status~="" and {id="../value",format={prefix="",suffix="%",precision=0}} or nil}
-    return ui.Row{id="tile-"..t.id,width=w,height=h,radius=T.radii.medium,fill="surfaceContainer",padding_left=T.spacing.lg,padding_right=T.spacing.md,gap=T.spacing.sm,align="center",
+    return ui.Row{id="tile-"..t.id,width=w,height=h,padding_left=2,padding_right=2,gap=T.spacing.sm,align="center",
         kit.IconButton{id="toggle",text=s.icon or t.icon,aria_label=label,width=HEAD,height=HEAD,padding=0,radius=T.radii.full,shrink=0,font_size=17*4/3,
             fill="transparent",hover_fill=ui.alpha("onSurface",.08),color="primary",on_activate=s.toggle and act(t,"toggle") or nil},
         kit.Slider(slider_props),
@@ -134,7 +134,7 @@ local function segment(t,h)
     local modes={{"light","light_mode","bead.panel.control-mode-light"},{"dark","dark_mode","bead.panel.control-mode-dark"},
         {"auto","brightness_auto","bead.panel.control-mode-auto"}}
     local inset,between,icon=T.spacing.xs,T.spacing.hairline,T.icons.medium*4/3
-    local row={id="tile-"..t.id,height=h,padding=inset,gap=between,radius=T.radii.full,fill="surfaceContainer",align="center",shrink=0}
+    local row={id="tile-"..t.id,height=h,padding=inset,gap=between,radius=T.radii.full,fill=ui.alpha("onSurface",.045),align="center",shrink=0}
     local w=2*inset+(#modes-1)*between
     for i,m in ipairs(modes) do
         local picked=s.mode==m[1]
@@ -143,12 +143,12 @@ local function segment(t,h)
         local seg=T.spacing.compact*2+icon+T.spacing.xs+text_w
         w=w+seg
         row[i]=kit.Button{id="mode-"..m[1],width=seg,height=h-2*inset,padding=0,radius=T.radii.full,selected=picked,
-            fill=picked and "primaryContainer" or "transparent",hover_fill=picked and "primaryContainer" or ui.alpha("onSurface",.06),aria_label=name,
+            fill=picked and ui.alpha("onSurface",.12) or "transparent",hover_fill=picked and ui.alpha("onSurface",.12) or ui.alpha("onSurface",.06),aria_label=name,
             on_activate=s.toggle and ui.action("cc.do","choose:"..t.source..":"..m[1]) or nil,
             ui.Row{id="mode-row-"..m[1],width=seg,height=h-2*inset,gap=T.spacing.xs,align="center",justify="center",
-                glyph("mode-icon-"..m[1],m[2],picked and "onPrimaryContainer" or "onSurfaceVariant",icon),
+                glyph("mode-icon-"..m[1],m[2],picked and "onSurface" or "onSurfaceVariant",icon),
                 ui.Text{id="mode-label-"..m[1],text=name,width=text_w,height=18,shrink=0,font_size=CAPTION,font_weight=500,
-                    color=picked and "onPrimaryContainer" or "onSurface"}}}
+                    color=picked and "onSurface" or "onSurfaceVariant"}}}
     end
     row.width=w
     return ui.Row(row),w
@@ -177,6 +177,38 @@ local function chip(id,label,icon,action,on,count,h)
             ui.Text{id=id.."-label",text=label,width=text_w,height=18,shrink=0,font_size=CAPTION,font_weight=500,color=ink}},
         badge},w
 end
+-- A section row on a hairline: icon, name over detail, then a switch, a chevron and a count badge as given. Only the
+-- row's own button reacts to the pointer; nothing is boxed, and the hairline is part of the row's height (h + 1).
+local RULE=ui.alpha("onSurface",.07)
+local function sect_row(p,w,h)
+    local trail,n=0,1
+    for _,part in ipairs({p.switch and 46 or false,p.badge and 22 or false,p.go and HEAD or false}) do
+        if part then trail=trail+part n=n+1 end
+    end
+    local gap=T.spacing.xs
+    local main_w=w-trail-(n-1)*gap
+    local icon_px=T.icons.large*4/3
+    local text_w=main_w-2-icon_px-2-T.spacing.md
+    local lines={ui.Text{id="label",text=p.label,width=text_w,height=22,font_size=BODY,font_weight=500,color="onSurface"}}
+    if p.detail and p.detail~="" then lines[2]=ui.Text{id="detail",text=p.detail,width=text_w,height=18,font_size=CAPTION,color="onSurfaceVariant"} end
+    local row={id="row",width=w,height=h,gap=gap,align="center",
+        kit.Button{id="main",width=main_w,height=h,padding=0,padding_left=2,radius=T.radii.small,fill="transparent",hover_fill=ui.alpha("onSurface",.05),
+            aria_label=p.label,on_activate=p.main,
+            ui.Row{id="main-row",width=main_w,height=h,padding_left=2,gap=T.spacing.md,align="center",
+                glyph("icon",p.icon,p.on and "primary" or "onSurfaceVariant"),
+                ui.Column(table.move(lines,1,#lines,1,{id="text",width=text_w,height=#lines*20,shrink=0}))}}}
+    if p.switch then row[#row+1]=kit.Switch{id="switch",checked=p.on==true,aria_label=p.label,on_activate=p.toggle} end
+    if p.badge then
+        local text=tostring(p.badge)
+        row[#row+1]=ui.Box{id="badge",width=22,height=18,radius=T.radii.full,fill="error",align="center",justify="center",shrink=0,
+            ui.Text{id="count",text=text,width=22,height=18,text_align="center",font_size=T.text.caption,font_weight=600,color="onError"}}
+    end
+    if p.go then
+        row[#row+1]=kit.IconButton{id="detail",text="chevron_right",aria_label=p.go_label or p.label,width=HEAD,height=HEAD,padding=0,radius=T.radii.full,shrink=0,
+            font_size=17*4/3,fill="transparent",hover_fill=ui.alpha("onSurface",.08),color="onSurfaceVariant",on_activate=p.go}
+    end
+    return ui.Column{id=p.id,width=w,height=h+1,gap=0,shrink=0,ui.Row(row),ui.Box{id="rule",width=w,height=1,shrink=0,fill=RULE}}
+end
 local function build_tile(t,w,h,embedded)
     local s=t.source and src[t.source] or {}
     local label=ui.tr(t.label)
@@ -198,19 +230,24 @@ local function build_tile(t,w,h,embedded)
         end
         return slider_row(t,w,h,tail)
     elseif t.kind=="segmented" then
-        return segment(t,h)
+        local seg=segment(t,h-T.spacing.md)
+        return ui.Column{id="row-"..t.id,width=w,height=h+1,gap=0,shrink=0,
+            ui.Row{id="row",width=w,height=h,padding_left=2,gap=T.spacing.md,align="center",
+                glyph("icon",t.icon,"onSurfaceVariant"),
+                ui.Text{id="label",text=label,width=0,grow=1,height=22,font_size=BODY,font_weight=500,color="onSurface"},seg},
+            ui.Box{id="rule",width=w,height=1,shrink=0,fill=RULE}}
     elseif t.kind=="button" then
-        return chip("tile-"..t.id,label,t.icon,t.open and ui.action("cc.do","open:"..t.open) or s.press and act(t,"press") or opener,false,
-            t.id=="updates" and get("cc.updates") or nil,h)
-    elseif t.chip then
-        return chip("tile-"..t.id,label,s.icon or t.icon,s.toggle and act(t,"toggle") or opener,s.on==true,nil,h)
+        local action=t.open and ui.action("cc.do","open:"..t.open) or s.press and act(t,"press") or opener
+        return sect_row({id="tile-"..t.id,icon=t.icon,label=label,main=action,go=action,go_label=label,
+            badge=t.id=="updates" and get("cc.updates")>0 and get("cc.updates") or nil},w,h)
     end
-    -- A tile: the main press toggles (or opens the page when it cannot); only tiles with a detail page
-    -- (Wi-Fi, Bluetooth, Power mode) get the split chevron.
+    -- A toggle: the row's main press toggles (or opens the page when it cannot); a switch shows the state, and only
+    -- rows with a detail page (Wi-Fi, Bluetooth, VPN, Power mode) get the chevron.
     local split=(t.dock or t.navigate) and opener or nil
-    return kit.ToggleTile{id="tile-"..t.id,width=w,height=h,icon=s.icon or t.icon,label=label,detail=s.status,on=s.on==true,
-        on_activate=(t.navigate or not s.toggle) and opener or act(t,"toggle"),on_detail=split,
-        detail_label=ui.tr("bead.panel.control-details",{name=label})}
+    local toggles=s.toggle and not t.navigate
+    return sect_row({id="tile-"..t.id,icon=s.icon or t.icon,label=label,detail=s.status,on=s.on==true,
+        main=(t.navigate or not s.toggle) and opener or act(t,"toggle"),switch=toggles or nil,toggle=toggles and act(t,"toggle") or nil,
+        go=split,go_label=ui.tr("bead.panel.control-details",{name=label})},w,h)
 end
 local notice=require("../ui/components/notice-row")
 local NOTICE_H=notice.height
@@ -286,33 +323,50 @@ local function home()
         return ui.Box{id="dim-"..t.id,width=w,height=h,node,
             ui.Box{id="veil",position="absolute",left=0,top=0,width=w,height=h,radius=radius or T.radii.medium,fill=ui.alpha("surface",0.6)}}
     end
-    local sliders,tiles,chips={},{},{}
+    -- Four sections (spacing and hairlines, no boxes): each tile belongs to the group the registry names, in the
+    -- user's order. Wallpaper's two actions share one row of buttons that links to Strand.
+    local sections={conn={},sound={},wall={},system={}}
+    local wall_chips
     for _,id in ipairs(order) do
         local t=reg.by_id[id]
         if t and supported(t) then
-            if t.kind=="slider" then
-                local h=reg.layout.sizes.full.height
-                table.insert(sliders,{veiled(t,INNER,h,build_tile(t,INNER,h)),h})
-            elseif t.kind=="button" or t.kind=="segmented" or t.chip then
-                local node,w=build_tile(t,0,CHIP_H)
-                table.insert(chips,{veiled(t,w,CHIP_H,node,T.radii.full),w})
-            else
-                table.insert(tiles,{size="half",build=function(w,h) return veiled(t,w,h,build_tile(t,w,h)) end})
+            local list=sections[t.group or "system"]
+            if t.group=="wall" then
+                wall_chips=wall_chips or {}
+                local node,w=chip("tile-"..t.id,ui.tr(t.label),t.icon,t.open and ui.action("cc.do","open:"..t.open) or src[t.source] and src[t.source].press and act(t,"press") or nil,false,nil,CHIP_H)
+                table.insert(wall_chips,usable(t) and node or ui.Box{id="dim-"..t.id,width=w,height=CHIP_H,node,
+                    ui.Box{id="veil",position="absolute",left=0,top=0,width=w,height=CHIP_H,radius=T.radii.full,fill=ui.alpha("surface",0.6)}})
+            elseif t.kind=="slider" then
+                table.insert(list,{ui.Column{id="row-"..t.id,width=INNER,height=ROW+1,gap=0,shrink=0,veiled(t,INNER,ROW,build_tile(t,INNER,ROW)),
+                    ui.Box{id="rule",width=INNER,height=1,shrink=0,fill=RULE}},ROW+1})
+            elseif t.kind=="segmented" or t.kind=="button" or t.kind=="toggle" then
+                table.insert(list,{veiled(t,INNER,ROW+1,build_tile(t,INNER,ROW),0),ROW+1})
             end
         end
     end
     local items={{ui.Row(status),HEAD}}
-    if #sliders==0 and #tiles==0 and #chips==0 then
+    local any=false
+    for _,g in ipairs({{"conn","bead.panel.control-group-connectivity"},{"sound","bead.panel.control-group-sound"},
+        {"wall","bead.panel.control-group-wallpaper"},{"system","bead.panel.control-group-system"}}) do
+        local list=sections[g[1]]
+        if g[1]=="wall" and wall_chips then
+            local row_h=CHIP_H+T.spacing.sm
+            list={{ui.Row(table.move(wall_chips,1,#wall_chips,1,{id="wall-actions",width=INNER,height=row_h,gap=T.spacing.sm,align="center"})),row_h}}
+        end
+        if #list>0 then
+            any=true
+            local pad=#items==1 and T.spacing.md or T.spacing.xl
+            table.insert(items,{ui.Box{id="group-"..g[1],width=INNER,height=pad+22,padding_top=pad,shrink=0,
+                ui.Text{id="title",text=ui.tr(g[2]),width=INNER,height=22,font_size=CAPTION,font_weight=600,color="onSurfaceVariant"}},pad+22})
+            for _,item in ipairs(list) do table.insert(items,item) end
+        end
+    end
+    if not any then
         table.insert(items,{ui.Text{id="empty",text=ui.tr("bead.panel.control-empty"),width=INNER,height=CAPTION*3,font_size=CAPTION,color="onSurfaceVariant"},CAPTION*3})
     end
-    if #sliders>0 then table.insert(items,{stack("sliders",sliders,TILE_GAP)}) end
-    if #tiles>0 then
-        local grid,height=kit.TileGrid{id="tiles",width=INNER,gap=TILE_GAP,sizes=reg.layout.sizes,tiles=tiles}
-        table.insert(items,{grid,height})
-    end
-    if #chips>0 then table.insert(items,{stack("chips",chip_lines(chips),TILE_GAP)}) end
+    table.insert(items,{ui.Box{id="notices-gap",width=INNER,height=T.spacing.lg,shrink=0},T.spacing.lg})
     table.insert(items,{stack("notices",notices(2,false),TILE_GAP)})
-    return stack("home",items,T.spacing.md)
+    return stack("home",items,0)
 end
 local function row_button(id,icon,label,detail,action,sub)
     local ink=sub and "onSurfaceVariant" or "onSurface"
@@ -521,4 +575,7 @@ end
 -- The sheet enters with a 16 px slide and a fade (the AI sidebar's card); the duration is the panel profile's, panel views author none.
 return kit.Panel{id="control-center",edge=get("view.edge"),open=ui.bind("panel.open"),fade=sheet and true or false,reveal=not sheet and not ui.resolve_for_check(ui.bind("view.detached")),slide_distance=sheet and 16 or (not popup and W or nil),
     width=W,height=height,padding=PAD,padding_top=TOP,
-    gap=GAP,radius=T.radii.medium,fill="surface",inner}
+    gap=GAP,radius=T.radii.medium,fill="surface",
+    -- Lacquer sheet (locked 2026-11-17): a 1 px rim, a lit top edge and a short contact shadow on the floating card.
+    border_width=sheet and 1 or nil,border_color=sheet and ui.alpha("onSurface",.05) or nil,shadow=sheet and {blur=4,spread=0,dy=1,alpha=.6} or nil,
+    inner,sheet and ui.Box{id="lit-edge",position="absolute",left=T.radii.medium*.6,right=T.radii.medium*.6,top=0,height=1,fill=ui.alpha("surfaceBright",.6)} or nil}

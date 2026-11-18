@@ -919,6 +919,13 @@ impl ControlCenter {
             crate::app::command("clipboard");
         });
     }
+    /// The Wallpaper section's link: Strand (`nacre mode wallpaper`), with the dock closed like the clipboard tile.
+    fn open_strand(&self) {
+        self.st.borrow_mut().close = true;
+        std::thread::spawn(|| {
+            crate::app::command_with("mode", &["wallpaper"]);
+        });
+    }
     /// All retained active records followed by the daemon's newest-first history window.
     /// Only the home summary limits rows; the notification dropdown must scroll them all.
     fn notices(&self) -> Vec<(String, Value)> {
@@ -1210,6 +1217,7 @@ impl ControlCenter {
             // `open:settings[:page]` (the gear, Wallpaper) and `open:clipboard`.
             "open" if source == "settings" => self.open_settings(rest),
             "open" if source == "clipboard" => self.open_clipboard(),
+            "open" if source == "strand" => self.open_strand(),
             // The Updates page: `Update now` runs the updater tool in a terminal; `Check again` refreshes.
             "open" if source == "updates" => {
                 self.after_close("tools.launch", json!({"tool": "updates"}))
