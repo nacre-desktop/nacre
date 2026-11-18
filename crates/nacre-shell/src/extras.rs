@@ -2254,9 +2254,22 @@ pub fn panel(
         motion.duration = bead::core::animation::panel_open_duration(690.);
     }
     Ok(bead::wayland::PanelSpec {
-        position: Some(crate::placement::Frame::default().positioner(
-            crate::placement::Attachment::SceneEdge(bead::core::Edge::Bottom),
-        )),
+        position: Some(if kind == Kind::Wallpaper {
+            // Strand lies over the frame's whole opening (no-border: everything under the bar), never inside a
+            // card's insets: centred in the inset viewport it sat 13 px in from the left edge, cut off at the right.
+            Arc::new(|scene: &bead::render::Scene, _, _| {
+                let frame = crate::placement::Frame::current();
+                let body = crate::placement::body(scene);
+                (
+                    (frame.left - body.x + scene.bounds.x).round() as i32,
+                    (frame.top - body.y + scene.bounds.y).round() as i32,
+                )
+            })
+        } else {
+            crate::placement::Frame::default().positioner(crate::placement::Attachment::SceneEdge(
+                bead::core::Edge::Bottom,
+            ))
+        }),
         engages_decorations: true,
         overlay: kind == Kind::Wallpaper,
         retain_when_closed: kind == Kind::Wallpaper,

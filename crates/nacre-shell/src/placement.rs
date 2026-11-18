@@ -766,12 +766,6 @@ impl Chrome {
         for external in externals() {
             material.push(frame.panel(external.attachment, (w, h), external.size, None));
         }
-        if let Some(panel) = panel {
-            material.push(body(panel.scene).translated(
-                panel.origin.0 as f32 - panel.scene.bounds.x,
-                panel.origin.1 as f32 - panel.scene.bounds.y,
-            ));
-        }
         let Frame {
             left,
             right,
@@ -779,6 +773,20 @@ impl Chrome {
             bottom,
             ..
         } = frame;
+        if let Some(panel) = panel {
+            let rect = body(panel.scene).translated(
+                panel.origin.0 as f32 - panel.scene.bounds.x,
+                panel.origin.1 as f32 - panel.scene.bounds.y,
+            );
+            // A panel over the whole opening (Strand) lies on the frame; it does not reshape it.
+            let covers = rect.x <= left + 0.5
+                && rect.y <= top + 0.5
+                && rect.x + rect.w >= w - right - 0.5
+                && rect.y + rect.h >= h - bottom - 0.5;
+            if !covers {
+                material.push(rect);
+            }
+        }
         let side_top = if top > 0. { top + 2. } else { 0. };
         let side_bottom = if bottom > 0. { h - bottom - 2. } else { h };
         let corner = (radius - 1.).max(0.);
@@ -1685,6 +1693,39 @@ mod tests {
             assert!(bytes < 2 * 1024 * 1024, "{width}: {bytes}");
             assert!(tiles.len() <= 8);
         }
+    }
+
+    #[test]
+    fn a_panel_over_the_whole_opening_leaves_the_frame_tiles_as_they_are() {
+        let chrome = Chrome::new(Attachment::SceneEdge(Edge::Bottom), &colors()).unwrap();
+        let frame = Frame::DEFAULT;
+        let (w, h) = (1920u32, 1200u32);
+        let mut scene = crate::sound::fallback([0; 4]);
+        scene.primitives = vec![bead::render::Primitive::Rounded {
+            radial: None,
+            rect: Rect::new(0., 0., w as f32 - 20., h as f32 - 60.),
+            radius: 0.,
+            fill: [0; 4],
+            border: Some(([0; 4], 1.)),
+        }];
+        scene.bounds = Rect::new(0., 0., w as f32 - 20., h as f32 - 60.);
+        let svgs = |panel| {
+            chrome
+                .tiles(frame, (w, h), false, panel)
+                .unwrap()
+                .into_iter()
+                .map(|tile| tile.svg)
+                .collect::<Vec<_>>()
+        };
+        let over = bead::wayland::DecorationPanel {
+            scene: &scene,
+            origin: (10, 50),
+        };
+        assert_eq!(
+            svgs(Some(over)),
+            svgs(None),
+            "Strand keeps the frame's corners"
+        );
     }
 
     #[test]
