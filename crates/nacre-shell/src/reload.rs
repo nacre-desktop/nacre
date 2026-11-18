@@ -3181,9 +3181,8 @@ impl Runtime {
         self.routes = Some(std::rc::Rc::new(crate::bar_routes::Routes::new(
             client.clone(),
         )));
-        let prefs: std::sync::Arc<dyn bead::core::source::Source> =
-            std::sync::Arc::new(client.lease_topic(crate::prefs::DESKTOP)?);
-        self = self.with_prefs(prefs)?;
+        // The UI provider follows the desktop settings permanently; leasing them fails the open.
+        self = self.with_prefs(client.view_topic(crate::prefs::DESKTOP)?)?;
         let topic = client.view_topic("compositor")?;
         self.with_origins_topic(topic)
     }

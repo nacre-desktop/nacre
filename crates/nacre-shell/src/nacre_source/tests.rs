@@ -1963,6 +1963,21 @@ async fn pearl_motion_watch_reuses_notices_topic_or_releases_its_own_lease() {
         client.stop().await.unwrap();
     }
 }
+/// Live freeze 2026-11-18: the switcher leased the UI provider's permanent desktop settings,
+/// so its factory failed and the dead panel's click-catcher swallowed the output's pointer.
+#[tokio::test(flavor = "current_thread")]
+async fn collection_switcher_opens_on_the_ui_providers_permanent_topics() {
+    let lab = Lab::new();
+    let topics = vec![crate::prefs::DESKTOP.into(), "compositor".into()];
+    let client = Client::start(Config::new(lab.socket(), topics)).unwrap();
+    let palette = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../shell/palette.json");
+    let colors = bead::render::Palette::read(&palette).unwrap();
+    let spec = crate::popouts::collection_switcher(client.clone(), palette, colors, false).unwrap();
+    let runtime = (spec.factory)(true).expect("the switcher shares the permanent topics");
+    assert!(client.0.shared.leases.wanted().is_empty());
+    drop(runtime);
+    client.stop().await.unwrap();
+}
 #[tokio::test(flavor = "current_thread")]
 async fn permissions_and_peer_identity_are_required() {
     let lab = Lab::new();
