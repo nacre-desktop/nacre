@@ -8,8 +8,8 @@ local status_glyph=c.status_glyph
 local visual=require("../desktop-visuals")
 local function bar(props,settings,_data)
     local label=props.form_style=="icon+text"
-    -- D1: a 34 px round button outside the pill; its own role (t.power_tone, owner 2026-11-14).
-    local tone=t.power_tone
+    -- A 34 px round button outside the pill: ink at rest, error on hover (calm ink, locked 2026-11-17).
+    local tone=string.find(ui.resolve_for_check(ui.bind("bead.hovered")) or "",".kpower.",1,true) and t.power_hover_tone or t.power_tone
     return (popouts and kit.Button or ui.Row){id="power",height=t.power_size,radius=t.power_size/2,width=label and 92 or t.power_size,justify="center",direction=popouts and "row" or nil,gap=label and t.item_gap or nil,align="center",padding=0,fill=c.i_fill or "transparent",border_width=c.i_stroke,border_color=c.i_stroke_color,shadow=c.i_shadow,hover_fill="surfaceContainer",
         aria_label=popouts and ui.tr("bead.bar.open-session") or nil,on_activate=popouts and ui.action("view.open","session") or nil,
         status_glyph("glyph","power_settings_new","power",tone),label and ui.Text{id="label",text="Power",font_size=t.detail_font,color=tone} or nil,
