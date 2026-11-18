@@ -10,12 +10,12 @@ local function get(name) return ui.resolve_for_check(ui.bind(name)) end
 local function metric(name,fallback) local value=get(name) return type(value)=="number" and value>0 and value or fallback end
 local px=function(pt) return pt*4/3 end
 local BODY,CAPTION=px(T.text.body),px(T.text.caption)
-local MONO=CAPTION-T.spacing.hairline
 local TITLE_H,META_H=math.ceil(BODY*1.4),math.ceil(CAPTION*1.4)
 local HEADER_H=TITLE_H+META_H+T.spacing.xs/4
 local H=metric("chat.height",T.spacing.huge*20)
 local section=get("chat.section")
 local launcher=require("bead.widgets.kit.virtual-list")
+local pearl=require("../bar/pearl")
 local E=metric("chat.edge",T.spacing.md+T.spacing.xs)
 local BTN=metric("chat.button",2*T.spacing.md+2.5*T.spacing.xs)
 local INNER=metric("chat.inner",T.spacing.huge*14)
@@ -216,34 +216,35 @@ else
     local GROUP_H=META_H+T.spacing.sm+T.spacing.hairline
     local DOT=T.spacing.sm
     local HALO=DOT+2*(T.spacing.xs-T.spacing.hairline/2)
-    local chip_pad=T.spacing.xs+T.spacing.hairline
     add(launcher{id="recent-chats",scroll=ui.bind("launcher.scroll"),position="absolute",left=E,top=rows_top,width=INNER,height=list_h,
         gap=T.spacing.xs,row_height=function(item) return ROW+((item.group or "")~="" and GROUP_H or 0) end,model=ui.bind("launcher.chats"),key="key",render=function(item)
             local active=item.state=="running"
             local pulse=active and ui.animate("chat.running-pulse:"..item.key,get("launcher.pulse") or 0,.2,"out-cubic") or 0
-            local prov=string.lower(item.provider or "")
-            local prov_w=ui.text_width(prov,T.fonts.mono,MONO)+2*chip_pad+T.spacing.hairline
+            local prov=string.upper(string.sub(item.provider or "",1,1))..string.sub(item.provider or "",2)
+            local prov_w=ui.text_width(prov,T.fonts.sans,CAPTION)+T.spacing.xs
             local open_label=ui.tr("bead.panel.launcher-open")
             local open_w=ui.text_width(open_label,T.fonts.sans,CAPTION)+2*T.spacing.xs
             local text_w=INNER-2*PAD_X-HALO-prov_w-2*T.spacing.compact-(active and open_w+T.spacing.compact or 0)
-            local row=kit.Button{id="chat-row",width=INNER,height=ROW,padding=PAD_X,padding_top=PAD_Y,padding_bottom=PAD_Y,radius=T.spacing.md,fill="surface",
-                hover_fill="surfaceContainerHigh",selected_fill="surfaceContainerHigh",selected=item.key==get("launcher.selected"),aria_label=item.title,
+            local row=kit.Button{id="chat-row",width=INNER,height=ROW,padding=PAD_X,padding_top=PAD_Y,padding_bottom=PAD_Y,radius=T.spacing.md,fill="transparent",
+                hover_fill="raised",selected_fill="raised",selected=item.key==get("launcher.selected"),aria_label=item.title,
                 on_activate=get("launcher.can_open") and action("launcher:open:"..item.key) or nil,
                 ui.Row{id="line",width=INNER-2*PAD_X,height=ROW-2*PAD_Y,gap=T.spacing.compact,align="center",
+                    -- The shared pearl recipe (bar/pearl.luau): idle is the whole pearl, running the highlight over a pulsing success fill.
                     ui.Box{id="halo",width=HALO,height=HALO,radius=T.radii.full,fill=active and ui.alpha("success",.25*(.55+.45*pulse)) or "transparent",align="center",justify="center",
-                        ui.Box{id="running-dot",width=DOT,height=DOT,radius=T.radii.full,fill=active and ui.alpha("success",.55+.45*pulse) or "outlineVariant"}},
+                        ui.Box{id="running-dot",width=DOT,height=DOT,radius=T.radii.full,fill=active and ui.alpha("success",.55+.45*pulse) or "transparent",
+                            radial=kit.tokens.gradients and pearl.layers(not active) or nil}},
                     ui.Column{id="chat-detail",width=text_w,height=ROW-2*PAD_Y,gap=0,
                         ui.Row{id="title-row",width=text_w,height=TITLE_H,
                             ui.Text{id="title",text=item.title,width=text_w,height=TITLE_H,font_size=BODY,font_weight=500,color="onSurface"}},
                         ui.Row{id="meta",width=text_w,height=META_H,
                             ui.Text{id="details",text=((item.project or "")~="" and item.project.." · " or "")..item.lastActivityLabel,width=text_w,height=META_H,font_size=CAPTION,color="onSurfaceVariant"}}},
-                    ui.Box{id="provider-chip",width=prov_w,height=META_H+T.spacing.xs,radius=T.spacing.xs+T.spacing.hairline,border_color="outlineVariant",border_width=1,align="center",justify="center",
-                        ui.Text{text=prov,width=prov_w-2*chip_pad,height=META_H,font_size=MONO,family=T.fonts.mono,text_align="center",color="onSurfaceVariant"}},
-                    active and ui.Text{id="open",text=open_label,width=open_w,height=META_H,font_size=CAPTION,font_weight=500,text_align="center",color="primary"} or nil}}
+                    ui.Text{id="provider-chip",text=prov,width=prov_w,height=META_H,font_size=CAPTION,text_align="right",color="onSurfaceVariant"},
+                    active and ui.Text{id="open",text=open_label,width=open_w,height=META_H,font_size=CAPTION,font_weight=500,text_align="center",color="primary"} or nil},
+                ui.Box{id="rule",position="absolute",left=PAD_X,right=PAD_X,bottom=0,height=1,fill=ui.alpha("onSurface",.07)}}
             if (item.group or "")=="" then return row end
             return ui.Column{id="group",width=INNER,height=ROW+GROUP_H,gap=0,
                 ui.Box{id="heading",width=INNER,height=GROUP_H,padding_left=PAD_X,padding_top=T.spacing.sm,
-                    ui.Text{text=item.group,width=INNER-PAD_X,height=META_H,font_size=MONO,family=T.fonts.mono,color="onSurfaceVariant"}},
+                    ui.Text{text=item.group,width=INNER-PAD_X,height=META_H,font_size=CAPTION,font_weight=600,color="onSurfaceVariant"}},
                 row}
         end})
     local empty=get("launcher.empty_state")
@@ -265,5 +266,10 @@ end
 if cued("header.terminal") then tooltip("header-tooltip",terminal_label,terminal_right,header_bottom) end
 -- Motion (design review "Timings for 120 Hz", edge slide): open 240 ms ease-out, close 160 ms
 -- (Bead closes with its accelerate curve, at most return_duration). D16: out-quint once the kit has it.
+local card=get("view.detached")==true
+if card then add(ui.Box{id="lit-edge",position="absolute",left=T.radii.medium*.6,right=T.radii.medium*.6,top=0,height=1,fill=ui.alpha("surfaceBright",.6)}) end
 return kit.Panel{id="chat",edge=get("view.edge"),open=ui.bind("panel.open"),fade=false,reveal=not ui.resolve_for_check(ui.bind("view.detached")),
-    width=W,height=H,padding=0,radius=T.radii.medium+T.spacing.hairline,fill="surface",table.unpack(kids)}
+    width=W,height=H,padding=0,radius=T.radii.medium+T.spacing.hairline,fill="surface",
+    -- Lacquer card (locked 2026-11-17): a 1 px rim, a lit top edge and a short contact shadow; the drawer stays flush.
+    border_width=card and 1 or nil,border_color=card and ui.alpha("onSurface",.05) or nil,shadow=card and {blur=4,spread=0,dy=1,alpha=.6} or nil,
+    table.unpack(kids)}

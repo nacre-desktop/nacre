@@ -15,7 +15,6 @@ local function line(size) return math.ceil(size*1.35) end
 local W=get("ai.win_w")
 local PAGE=get("ai.page")
 local BODY,CAPTION,TITLE=M.text.body,M.text.caption,M.text.title
-local MONO=CAPTION-1
 local ICON=T.icons.large
 local RAIL=sp.huge*6+sp.sm
 local ITEM=sp.huge+sp.xs
@@ -100,9 +99,9 @@ local function settings_row(id,name,title,detail,trailing,on,action,ink)
 end
 local function chip(id,s,ink,border)
     local pad=sp.xs+sp.hairline
-    local w=math.ceil(ui.text_width(s,T.fonts.mono,MONO))+2*pad+sp.hairline
-    return {w=w,node=ui.Box{id=id,width=w,height=line(MONO)+sp.xs,radius=sp.xs+sp.hairline,shrink=0,border_color=border or "outlineVariant",border_width=1,
-        align="center",justify="center",ui.Text{text=s,width=w-2*pad,height=line(MONO),font_size=MONO,family=T.fonts.mono,text_align="center",color=ink or "onSurfaceVariant"}}}
+    local w=math.ceil(ui.text_width(s,T.fonts.sans,CAPTION))+2*pad+sp.hairline
+    return {w=w,node=ui.Box{id=id,width=w,height=line(CAPTION)+sp.xs,radius=sp.xs+sp.hairline,shrink=0,border_color=border or "outlineVariant",border_width=1,
+        align="center",justify="center",ui.Text{text=s,width=w-2*pad,height=line(CAPTION),font_size=CAPTION,text_align="center",color=ink or "onSurfaceVariant"}}}
 end
 local function page(kids)
     kids.id="page";kids.width=CW;kids.padding_left=PAD_X;kids.padding_right=PAD_X;kids.padding_top=PAD_Y;kids.padding_bottom=PAD_Y;kids.gap=sp.md;kids.shrink=0
@@ -127,7 +126,7 @@ local function new_chat()
 end
 local DOT=sp.sm
 local HALO=DOT+2*(sp.xs-sp.hairline/2)
-local GROUP_H=line(MONO)+sp.sm+sp.hairline
+local GROUP_H=line(CAPTION)+sp.sm+sp.hairline
 local function chat_row(item)
     local chipped=chip("provider",string.lower(item.provider or ""))
     local open=ui.tr("bead.panel.launcher-open")
@@ -147,7 +146,7 @@ local function chat_row(item)
     if (item.group or "")=="" then return row end
     return ui.Column{id="group",width=IW,height=ROW+GROUP_H,gap=0,shrink=0,
         ui.Box{id="heading",width=IW,height=GROUP_H,padding_left=ROW_X,padding_top=sp.sm,
-            ui.Text{text=item.group,width=IW-ROW_X,height=line(MONO),font_size=MONO,family=T.fonts.mono,color="onSurfaceVariant"}},
+            ui.Text{text=item.group,width=IW-ROW_X,height=line(CAPTION),font_size=CAPTION,font_weight=600,color="onSurfaceVariant"}},
         row}
 end
 local function chats()
@@ -195,7 +194,7 @@ local function accounts_page()
     for i,a in ipairs(rows) do
         if a.group~="" then
             table.insert(kids,ui.Box{id="group-"..i,width=IW,height=GROUP_H,padding_left=ROW_X,padding_top=sp.sm,shrink=0,
-                ui.Text{text=a.group,width=IW-ROW_X,height=line(MONO),font_size=MONO,family=T.fonts.mono,color="onSurfaceVariant"}})
+                ui.Text{text=a.group,width=IW-ROW_X,height=line(CAPTION),font_size=CAPTION,font_weight=600,color="onSurfaceVariant"}})
         end
         table.insert(kids,settings_row("account-"..i,"person",a.label,a.status,a.active and chip("active",ui.tr("bead.panel.ai-active"),"primary","primary") or nil,
             false,nil,a.tone))
