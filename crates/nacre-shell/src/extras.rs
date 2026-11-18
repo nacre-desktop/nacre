@@ -1372,6 +1372,9 @@ impl Extras {
             ) = (None, None, false);
         }
         if opening {
+            // A visit starts its own STRAND_FRAMES burst: a close cut short by this open left its last frame time,
+            // and the first interval spanned the whole closed time (the live "220 ms hitch" after a reopen).
+            state.frames = FrameLog::default();
             state.wallpaper_shown = None;
             state.wallpaper_focus = None;
             state.wallpaper_committed = false;
