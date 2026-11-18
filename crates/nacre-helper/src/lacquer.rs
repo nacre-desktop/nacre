@@ -6,7 +6,7 @@
 use crate::Result;
 use orient_core::{
     accessibility::{audit, BACKGROUNDS, TEXT_ROLES},
-    colour::{clean, contrast, foreground},
+    colour::{clean, color as oklch, contrast, foreground, lch, luminance},
 };
 use serde_json::{json, Map, Value};
 
@@ -114,6 +114,23 @@ pub fn reach(color: &str, backgrounds: &[&str], down: bool, ratio: f64) -> Strin
         out = from_hls([h, l, s]);
     }
     out
+}
+
+/// The accent's hue and chroma at a fixed CIE L* (40 dark, 82 light), found by bisecting OKLab L.
+fn mid_ground(accent: &str, light: bool) -> String {
+    let [_, chroma, hue] = lch(accent).unwrap_or([0.5, 0.0, 0.0]);
+    let (l_star, chroma) = (if light { 82.0 } else { 40.0_f64 }, chroma.max(0.06));
+    let target = ((l_star + 16.0) / 116.0).powi(3);
+    let (mut lo, mut hi) = (0.0, 1.0);
+    for _ in 0..30 {
+        let mid = (lo + hi) / 2.0;
+        if luminance(&oklch(mid, chroma, hue)).is_ok_and(|y| y < target) {
+            lo = mid;
+        } else {
+            hi = mid;
+        }
+    }
+    oklch(lo, chroma, hue)
 }
 
 /// The MEDIUM tint (Final's `tinted`): the first of `hues` with real saturation sets the hue;
@@ -285,10 +302,15 @@ pub fn recolour(colours: &mut Map<String, Value>, light: bool, highlight: &str, 
         if let Some(value) = role(colours, accent) {
             let on = format!("on{}{}", accent[..1].to_uppercase(), &accent[1..]);
             let fg = foreground(&value).unwrap_or_else(|_| ink.into());
-            // Final's ON switch/chip fill is the accent itself: a container must sit past the
-            // raised surfaces, not take Orient's tonal (darker in dark) container.
-            put(colours, &format!("{accent}Container"), &value);
-            put(colours, &format!("{on}Container"), &fg);
+            // A mid-tone ground in the accent's hue (L* 40 dark, 82 light): past the raised
+            // surfaces, yet the mode's ink still reads on it (switch track, chat bubble, buttons).
+            let ground = mid_ground(&value, light);
+            put(colours, &format!("{accent}Container"), &ground);
+            put(
+                colours,
+                &format!("{on}Container"),
+                &reach(ink, &[&ground], light, TEXT_RATIO),
+            );
             put(colours, &on, &fg);
         }
     }
@@ -383,13 +405,13 @@ mod tests {
                         format!("on{}{}Container", a[..1].to_uppercase(), &a[1..]),
                     );
                     assert!(ratio(&c, &on, &cont) >= 4.6, "{on}: {tag}");
-                    let (high, surf) = (
-                        ratio(&c, &cont, "surfaceContainerHighest"),
-                        ratio(&c, &cont, "surface"),
+                    assert!(ratio(&c, "onSurface", &cont) >= 4.5, "ink on {cont}: {tag}");
+                    assert!(
+                        ratio(&c, &cont, "surface") >= 1.3,
+                        "{cont} on surface: {tag}"
                     );
-                    assert!(surf >= 1.6 && high > 1.0, "{cont} vs surfaces: {tag}");
                     // lighter than the highest surface in dark, darker in light
-                    let lum = |n: &str| contrast(&get(&c, n), "000000").unwrap();
+                    let lum = |n: &str| luminance(&get(&c, n)).unwrap();
                     assert_eq!(
                         lum(&cont) > lum("surfaceContainerHighest"),
                         !light,
