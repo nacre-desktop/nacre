@@ -281,11 +281,12 @@ pub fn recolour(colours: &mut Map<String, Value>, light: bool, highlight: &str) 
     for accent in ["primary", "secondary", "tertiary", "error", "success"] {
         if let Some(value) = role(colours, accent) {
             let on = format!("on{}{}", accent[..1].to_uppercase(), &accent[1..]);
-            put(
-                colours,
-                &on,
-                &foreground(&value).unwrap_or_else(|_| ink.into()),
-            );
+            let fg = foreground(&value).unwrap_or_else(|_| ink.into());
+            // Final's ON switch/chip fill is the accent itself: a container must sit past the
+            // raised surfaces, not take Orient's tonal (darker in dark) container.
+            put(colours, &format!("{accent}Container"), &value);
+            put(colours, &format!("{on}Container"), &fg);
+            put(colours, &on, &fg);
         }
     }
 }
@@ -373,6 +374,25 @@ mod tests {
                 };
                 assert!(ratio(&c, "ink3", on) >= floor, "ink3: {tag}");
                 assert!(ratio(&c, "onPrimary", "primary") >= 4.5, "onPrimary: {tag}");
+                for a in ["primary", "secondary", "tertiary", "error", "success"] {
+                    let (cont, on) = (
+                        format!("{a}Container"),
+                        format!("on{}{}Container", a[..1].to_uppercase(), &a[1..]),
+                    );
+                    assert!(ratio(&c, &on, &cont) >= 4.6, "{on}: {tag}");
+                    let (high, surf) = (
+                        ratio(&c, &cont, "surfaceContainerHighest"),
+                        ratio(&c, &cont, "surface"),
+                    );
+                    assert!(surf >= 1.6 && high > 1.0, "{cont} vs surfaces: {tag}");
+                    // lighter than the highest surface in dark, darker in light
+                    let lum = |n: &str| contrast(&get(&c, n), "000000").unwrap();
+                    assert_eq!(
+                        lum(&cont) > lum("surfaceContainerHighest"),
+                        !light,
+                        "{cont} order: {tag}"
+                    );
+                }
             }
         }
     }
