@@ -434,11 +434,18 @@ mod tests {
             "signal",
             "frame",
         ];
+        // apply() runs Orient's audit, which reads every text pair.
+        let mut colours = roles(&["9ED37A", "CDB8E6", "E9B7CB"]);
+        for (fg, bg) in orient_core::accessibility::text_pairs() {
+            for name in [fg, bg] {
+                colours.entry(name).or_insert_with(|| json!("808080"));
+            }
+        }
         for light in [false, true] {
             let mut palette = json!({
                 "mode": if light { "light" } else { "dark" },
                 "source": {"body": {"dark": {"hex": "3a3448"}, "light": {"hex": "eee8f2"}}},
-                "colours": roles(&["9ED37A", "CDB8E6", "E9B7CB"]),
+                "colours": colours.clone(),
             });
             apply(&mut palette).unwrap();
             for name in TOKENS {
