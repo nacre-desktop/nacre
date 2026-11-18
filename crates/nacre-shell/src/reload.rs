@@ -8787,14 +8787,7 @@ impl SceneSource for Runtime {
             UiEvent::WallpaperPalette(values) => {
                 let palette =
                     bead::render::Palette(std::sync::Arc::new(values.into_iter().collect()));
-                if self.session.stores.get("launcher.icon_tint").is_some()
-                    && let Some(amount) = crate::theme::launcher_icon_tint(&palette)
-                {
-                    self.session.stores = self.session.stores.reconcile(&BTreeMap::from([(
-                        "launcher.icon_tint".into(),
-                        bead::core::Value::Number(amount),
-                    )]))?;
-                }
+                crate::theme::follow_palette(&mut self.session.stores, &palette)?;
                 self.session.set_runtime_palette(palette)?
             }
             UiEvent::Model(mut values) => {

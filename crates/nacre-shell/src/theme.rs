@@ -42,6 +42,22 @@ pub(crate) fn launcher_icon_tint(palette: &bead::render::Palette) -> Option<f64>
         })
 }
 
+/// Stores keep existing values on reconcile, so the tint is committed on every palette.
+pub(crate) fn follow_palette(
+    stores: &mut bead::core::Stores,
+    palette: &bead::render::Palette,
+) -> Result<(), String> {
+    if stores.get("launcher.icon_tint").is_some()
+        && let Some(amount) = launcher_icon_tint(palette)
+    {
+        stores.commit(std::collections::BTreeMap::from([(
+            "launcher.icon_tint".into(),
+            bead::core::Value::Number(amount),
+        )]))?;
+    }
+    Ok(())
+}
+
 fn icon_contrast(a: [u8; 4], b: [u8; 4]) -> f64 {
     let luma = |color: [u8; 4]| {
         let linear = color.map(|channel| {
@@ -110,5 +126,32 @@ mod tests {
                 ("surface".into(), [255, 255, 255, 255]),
             ])));
         assert!(launcher_icon_tint(&palette).unwrap() < 0.35);
+    }
+
+    #[test]
+    fn icon_tint_follows_each_new_palette() {
+        let palette = |surface: u8| {
+            bead::render::Palette(std::sync::Arc::new(std::collections::HashMap::from([
+                ("onSurfaceVariant".into(), [120, 120, 120, 255]),
+                ("primary".into(), [255, 255, 255, 255]),
+                ("surface".into(), [surface, surface, surface, 255]),
+            ])))
+        };
+        let (a, b) = (palette(0), palette(255));
+        let mut stores = bead::core::Stores::default()
+            .reconcile(&std::collections::BTreeMap::from([(
+                "launcher.icon_tint".into(),
+                bead::core::Value::Number(0.),
+            )]))
+            .unwrap();
+        for next in [&a, &b, &a] {
+            follow_palette(&mut stores, next).unwrap();
+            let want = launcher_icon_tint(next).unwrap();
+            assert_eq!(
+                stores.get("launcher.icon_tint"),
+                Some(&bead::core::Value::Number(want))
+            );
+        }
+        assert_ne!(launcher_icon_tint(&a), launcher_icon_tint(&b));
     }
 }
