@@ -14,6 +14,9 @@ fn harness(query: &str, scroll: f64) -> Result<Harness> {
     harness_at_scale(query, scroll, 1.5)
 }
 fn harness_at_scale(query: &str, scroll: f64, scale: f32) -> Result<Harness> {
+    harness_in(query, scroll, scale, &root().join("palette.json"))
+}
+fn harness_in(query: &str, scroll: f64, scale: f32, palette: &Path) -> Result<Harness> {
     crate::i18n::init();
     let update = std::env::var("BEAD_UPDATE_GOLDENS").as_deref() == Ok("1");
     let selected = std::env::var_os("BEAD_ROW_REFERENCE_BUNDLE");
@@ -25,7 +28,7 @@ fn harness_at_scale(query: &str, scroll: f64, scale: f32) -> Result<Harness> {
     Harness::load_with_icons(
         &root,
         Path::new("ui/main.luau"),
-        &root.join("palette.json"),
+        palette,
         BTreeMap::from([
             ("launcher.apps".into(), Value::list(rows)),
             ("launcher.groups".into(), crate::launcher::fixture_groups()),
@@ -861,6 +864,56 @@ fn launcher_prefix_caret_stays_inside_the_search_input() -> Result<()> {
             caret.y >= rect.y && caret.y + caret.h <= rect.y + rect.h,
             "{text:?}: caret must remain inside input bounds: {caret:?} vs {rect:?}"
         );
+    }
+    Ok(())
+}
+
+/// Light results and the "no results" state, at both scales, beside the dark goldens above.
+#[test]
+fn launcher_light_and_no_results_goldens() -> Result<()> {
+    let light = root().join("tests/fixtures/palette-light.json");
+    for scale in [1., 1.5] {
+        for (name, palette, empty) in [
+            ("light", &light, false),
+            ("none", &root().join("palette.json"), true),
+        ] {
+            let mut h = harness_in("a", 0., scale, palette)?;
+            if empty {
+                h.update(BTreeMap::from([
+                    ("launcher.apps".into(), Value::list(Vec::new())),
+                    ("launcher.result_count".into(), Value::Number(0.)),
+                    ("launcher.total_count".into(), Value::Number(0.)),
+                ]))?;
+            }
+            let source = h.render()?;
+            let width = (h.scene().bounds.w * scale).ceil() as u32;
+            let height = (h.scene().bounds.h * scale).ceil() as u32;
+            let pixels = source
+                .pixels
+                .chunks_exact(source.width as usize * 4)
+                .take(height as usize)
+                .flat_map(|row| row[..width as usize * 4].iter().copied())
+                .collect();
+            let frame = bead_test::Frame {
+                width,
+                height,
+                pixels,
+            };
+            let golden = root()
+                .join("tests/goldens")
+                .join(format!("launcher-{name}-{scale}.png"));
+            if std::env::var("BEAD_UPDATE_GOLDENS").as_deref() == Ok("1") {
+                frame.save(&golden)?;
+            }
+            frame.compare(
+                &golden,
+                bead_test::Tolerance {
+                    channel: 0,
+                    changed_fraction: 0.,
+                },
+                &std::env::temp_dir().join("bead-launcher-states"),
+            )?;
+        }
     }
     Ok(())
 }
