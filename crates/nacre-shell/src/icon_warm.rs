@@ -51,7 +51,8 @@ impl IconWarmer {
     pub(crate) fn set_scale(&self, scale: f32) {
         if scale.is_finite() && scale > 0.0 {
             let bits = scale.to_bits();
-            if self.scale.swap(bits, Ordering::Relaxed) != bits
+            // Largest scale of any output, as in wallpaper_warm: two outputs must not flip it.
+            if self.scale.fetch_max(bits, Ordering::Relaxed) < bits
                 && let Some(wake) = &self.wake
             {
                 notify(wake);

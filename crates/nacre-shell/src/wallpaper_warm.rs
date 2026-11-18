@@ -372,6 +372,14 @@ impl Warmer {
         inner_width: f32,
         inner_height: f32,
     ) {
+        // Every output's runtime reports into this one warmer: keep the largest, so two outputs
+        // cannot flip it and re-warm the whole catalogue on each report.
+        // shortcut: unplugging the larger output keeps its geometry until a restart; key by output if that matters.
+        let current = f32::from_bits(self.width.load(Ordering::Relaxed))
+            * f32::from_bits(self.height.load(Ordering::Relaxed));
+        if width * height < current {
+            return;
+        }
         self.width.store(width.to_bits(), Ordering::Relaxed);
         self.height.store(height.to_bits(), Ordering::Relaxed);
         self.inner_width
@@ -384,7 +392,9 @@ impl Warmer {
     pub(crate) fn set_scale(&self, scale: f32) {
         if scale.is_finite()
             && scale > 0.
-            && self.scale.swap(scale.to_bits(), Ordering::Relaxed) != scale.to_bits()
+            // The largest scale of any output (1.5 and 1.0 used to alternate on every stage job); positive
+            // finite f32 bits order like their values.
+            && self.scale.fetch_max(scale.to_bits(), Ordering::Relaxed) < scale.to_bits()
         {
             notify(&self.wake);
         }
