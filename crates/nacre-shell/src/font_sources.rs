@@ -109,6 +109,16 @@ impl Face {
             .map_err(Into::into)
     }
 }
+/// Writes every bundled face at startup: the lock screen loads them from the installed path even
+/// when no shell scene has used a face yet (Commissioner Display).
+pub fn provision_installed() {
+    let _fontconfig = FONTCONFIG.lock().unwrap_or_else(|p| p.into_inner());
+    for face in [&COMMISSIONER, &COMMISSIONER_DISPLAY] {
+        if face.path().is_err() {
+            eprintln!("UI_ERROR font provision family={}", face.family);
+        }
+    }
+}
 type Selection = (BTreeSet<(String, u16)>, BTreeSet<char>);
 #[link(name = "fontconfig")]
 unsafe extern "C" {

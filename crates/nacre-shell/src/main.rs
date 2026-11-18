@@ -545,6 +545,7 @@ fn start(
             }
         });
     migrate_before_startup(state::migrate);
+    font_sources::provision_installed();
     *ui_started = true;
     let mut forced_safe_mode = false;
     if let Ok(path) = state::File::path()
