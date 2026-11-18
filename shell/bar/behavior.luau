@@ -1,5 +1,5 @@
 -- SPDX-License-Identifier: GPL-3.0-only
-return {stores={["bar.wallpaper_applied"]=0,["bead.desktop.wallpaper.luma"]={},["widgets.undo"]={},["widgets.error"]="",["widgets.message"]="",["widgets.preview"]={},["widgets.draft"]={},["widgets.geometry"]={},["widgets.editing"]=false,["widgets.selected"]="",["widgets.canvas.width"]=0,["widgets.canvas.height"]=0,["widgets.drag.active"]=false,["widgets.drag.source"]={},["widgets.drag.phase"]="",["widgets.drag.epoch"]=0,
+return {stores={["bar.wallpaper_applied"]=0,["bar.stack.fan"]=0,["bead.desktop.wallpaper.luma"]={},["widgets.undo"]={},["widgets.error"]="",["widgets.message"]="",["widgets.preview"]={},["widgets.draft"]={},["widgets.geometry"]={},["widgets.editing"]=false,["widgets.selected"]="",["widgets.canvas.width"]=0,["widgets.canvas.height"]=0,["widgets.drag.active"]=false,["widgets.drag.source"]={},["widgets.drag.phase"]="",["widgets.drag.epoch"]=0,
     ["widgets.app.open"]=false,["widgets.drag.layout"]={},["widgets.drag.base"]={},["widgets.drag.original"]={},["widgets.drag.destination"]="",
     ["widgets.drag.x"]=0,["widgets.drag.y"]=0,["widgets.drag.start_x"]=0,["widgets.drag.start_y"]=0,
     ["widgets.drag.width"]=1,["widgets.drag.height"]=1,["widgets.drag.grab_x"]=0,["widgets.drag.grab_y"]=0,
@@ -15,7 +15,7 @@ return {stores={["bar.wallpaper_applied"]=0,["bead.desktop.wallpaper.luma"]={},[
     ["bead.desktop.network.vpn"]=false,["bead.desktop.battery.plugged"]=false,["bead.desktop.bluetooth.value"]="",
     ["status.hovered"]="",["status.peek.visible"]=false,["status.peek.kind"]="",
     ["status.panel.kind"]=""},actions={["launcher.open"]=function(_) end,["bar.recording.stop"]=function(_) end,["widgets.edit"]=function(_) end,["widgets.drag"]=function(_) end,
-    ["collection.switcher.open"]=function(_) end,["collection.switch"]=function(_) end,["collection.begin-create"]=function(_) end,["collection.begin-rename"]=function(_) end,["collection.commit"]=function(_) end,["collection.cancel"]=function(_) end,["collection.wallpaper.set"]=function(_) end,["collection.accent.use"]=function(_) end,["collection.accent.clear"]=function(_) end},computed={
+    ["collection.switcher.open"]=function(_) end,["collection.fan"]=function(s) s["bar.stack.fan"]=s["bar.stack.fan"]+1 end,["collection.switch"]=function(_) end,["collection.begin-create"]=function(_) end,["collection.begin-rename"]=function(_) end,["collection.commit"]=function(_) end,["collection.cancel"]=function(_) end,["collection.wallpaper.set"]=function(_) end,["collection.accent.use"]=function(_) end,["collection.accent.clear"]=function(_) end},computed={
     -- desktop.clockFormat: the daemon clock is "HH:MM"; 12-hour shows "h:MM AM/PM".
     ["bar.clock.text"]=function(s)
         local c=s["bead.desktop.clock"]

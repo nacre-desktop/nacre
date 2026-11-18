@@ -1256,28 +1256,53 @@ fn bar_stack_pearls_collapse_fan_and_narrow_bars_drop_app_icons() -> Result<()> 
         );
         bar_golden(&narrow.pose((0., 0.), 1.)?, &format!("bar-narrow-{tag}-1"))?;
     }
-    // Hover fans the five stacks out (the 400 ms wait is the animation); each other pearl goes to its stack.
+    // Hover fans the five stacks out (the 400 ms wait is the animation; a click fans at once); each other pearl goes to its stack.
     let mut h = bar(false, "palette.json", 1920, 5, 1.)?;
     let strand = h
         .session
         .view_nodes()
         .iter()
-        .find(|node| node.action.as_deref() == Some("collection.switcher.open"))
+        .find(|node| node.action.as_deref() == Some("collection.fan"))
         .map(|node| bead::ui::rect(&node.draw))
         .ok_or("stack strand missing")?;
     h.script([Input::Pointer {
         x: strand.x + strand.w / 2.,
         y: strand.y + strand.h / 2.,
     }])?;
+    // The fan opens when the hover animation passes 1: wait a clear margin past its 400 ms from the pointer, then
+    // render once (settling alone ended a frame short of it under load).
+    std::thread::sleep(std::time::Duration::from_millis(500));
+    h.update(BTreeMap::new())?;
     settle_harness_animations(&mut h)?;
-    let goes = h
-        .session
-        .view_nodes()
-        .iter()
-        .filter(|node| node.action.as_deref() == Some("collection.switch"))
-        .count();
-    assert_eq!(goes, 4, "fanned, each other stack has its own pearl button");
-    bar_golden(&h.pose((0., 0.), 1.)?, "bar-stacks-fan-1")
+    let goes = |h: &Harness| {
+        h.session
+            .view_nodes()
+            .iter()
+            .filter(|node| node.action.as_deref() == Some("collection.switch"))
+            .count()
+    };
+    assert_eq!(
+        goes(&h),
+        4,
+        "fanned, each other stack has its own pearl button"
+    );
+    bar_golden(&h.pose((0., 0.), 1.)?, "bar-stacks-fan-1")?;
+    // A click counts on the strand's store and fans it at once (the 3 s pin), no hover wait.
+    let mut h = bar(false, "palette.json", 1920, 5, 1.)?;
+    h.script([
+        Input::Click {
+            x: strand.x + strand.w / 2.,
+            y: strand.y + strand.h / 2.,
+        },
+        Input::Release,
+    ])?;
+    assert_eq!(
+        h.session.stores.get("bar.stack.fan"),
+        Some(&Value::Number(1.))
+    );
+    h.update(BTreeMap::new())?;
+    assert_eq!(goes(&h), 4, "a click fans without the hover wait");
+    Ok(())
 }
 
 /// The apply glint starts only from `bar.wallpaper_applied`; a wallpaper-luma change alone (Strand previews, login) never does.
@@ -2046,18 +2071,21 @@ fn collection_switcher_badge_and_bounded_rename_menu_render() -> Result<()> {
             )?;
             settle_harness_animations(&mut bar)?;
             let nodes = bar.session.view_nodes();
-            let badge = nodes
-                .iter()
-                .find(|node| node.action.as_deref() == Some("collection.switcher.open"));
+            let badge = nodes.iter().find(|node| {
+                matches!(
+                    node.action.as_deref(),
+                    Some("collection.switcher.open" | "collection.fan")
+                )
+            });
             assert!(badge.is_some(), "stack segment visible at {scale}: {name}");
             if let Some(badge) = badge {
                 let rect = bead::ui::rect(&badge.draw);
-                assert_eq!(
+                assert!(matches!(
                     bar.session
                         .action_at(rect.x + rect.w / 2., rect.y + rect.h / 2.)
                         .map(|(_, action, _)| action),
-                    Some("collection.switcher.open".into())
-                );
+                    Some(a) if a == "collection.switcher.open" || a == "collection.fan"
+                ));
                 // D2: the strand of pearls replaces the chip; no icon, name or chevron in the pill.
                 let texts: Vec<_> = bar
                     .scene()
@@ -2135,7 +2163,12 @@ fn collection_switcher_badge_and_bounded_rename_menu_render() -> Result<()> {
                 let nodes = bar.session.view_nodes();
                 let badge = nodes
                     .iter()
-                    .find(|node| node.action.as_deref() == Some("collection.switcher.open"))
+                    .find(|node| {
+                        matches!(
+                            node.action.as_deref(),
+                            Some("collection.switcher.open" | "collection.fan")
+                        )
+                    })
                     .ok_or("desk badge missing")?;
                 let rect = bead::ui::rect(&badge.draw);
                 bar.script([Input::Pointer {
@@ -2153,11 +2186,13 @@ fn collection_switcher_badge_and_bounded_rename_menu_render() -> Result<()> {
                     "hover must show the full desk name at {scale}; hovered={:?}",
                     bar.session.stores.get("bead.hovered")
                 );
-                assert_eq!(
-                    bar.session
-                        .action_at(rect.x + rect.w / 2., rect.y + rect.h / 2.)
-                        .map(|(_, action, _)| action),
-                    Some("collection.switcher.open".into()),
+                assert!(
+                    matches!(
+                        bar.session
+                            .action_at(rect.x + rect.w / 2., rect.y + rect.h / 2.)
+                            .map(|(_, action, _)| action),
+                        Some(a) if a == "collection.switcher.open" || a == "collection.fan"
+                    ),
                     "hover tooltip must preserve menu click"
                 );
                 let hover = bar.pose((0., 0.), 1.)?;

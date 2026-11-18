@@ -3166,6 +3166,7 @@ impl Runtime {
     ) -> Result<Self, Box<dyn Error>> {
         for name in [
             "collection.switch",
+            "collection.fan",
             "collection.begin-create",
             "collection.begin-rename",
             "collection.commit",
@@ -4216,6 +4217,48 @@ impl Runtime {
                     output,
                     action: nacre_protocol::shell_actions::CollectionOperation::Activate {
                         collection: text.into(),
+                    },
+                })
+            }
+            // Scrolling the stack strand (collapsed or fanned) steps this output's stacks, without wrapping.
+            ("collection.fan" | "collection.switch", UiEvent::Scroll { delta, .. }) => {
+                if self.session.stores.get("bar.collection.enabled")
+                    != Some(&bead::core::Value::Bool(true))
+                {
+                    return None;
+                }
+                let Some(bead::core::Value::List(rows)) =
+                    self.session.stores.get("bar.collections")
+                else {
+                    return None;
+                };
+                let Some(bead::core::Value::Text(output)) =
+                    self.session.stores.get("bar.collection.output")
+                else {
+                    return None;
+                };
+                let Some(bead::core::Value::Text(current)) =
+                    self.session.stores.get("bar.collection.current")
+                else {
+                    return None;
+                };
+                if output.is_empty() {
+                    return None;
+                }
+                let mut mine: Vec<_> = rows.iter().filter(|row| row["output"] == *output).collect();
+                if mine.is_empty() {
+                    mine = rows.iter().collect();
+                }
+                let at = mine.iter().position(|row| row["id"] == *current)?;
+                let next = if wheel_up(*delta) {
+                    at.checked_sub(1)?
+                } else {
+                    at + 1
+                };
+                Some(Route::CollectionAction {
+                    output: output.clone(),
+                    action: nacre_protocol::shell_actions::CollectionOperation::Activate {
+                        collection: mine.get(next)?["id"].as_str()?.into(),
                     },
                 })
             }
@@ -6642,6 +6685,10 @@ impl SceneSource for Runtime {
                         &self.session.stores,
                         std::sync::Arc::new(move || wakeup(UiEvent::Model(BTreeMap::new()))),
                     );
+                    // Strand's Enter or centre pearl: the bars play their apply glint once.
+                    if request.starts_with("wallpaper:commit:") {
+                        crate::wallpaper_luma::applied();
+                    }
                     values.insert(
                         "extras.request".into(),
                         bead::core::Value::Text(String::new()),
@@ -8674,6 +8721,7 @@ impl SceneSource for Runtime {
                 || name == "collection.wallpaper.set"
                 || name == "collection.accent.use"
                 || name == "collection.accent.clear"
+                || (name == "collection.fan" && matches!(event, UiEvent::Scroll { .. }))
                 || (name == "status.pill.open"
                     && matches!(
                         event,

@@ -103,6 +103,9 @@ type Watcher = Arc<dyn Fn() + Send + Sync>;
 #[derive(Default)]
 struct State {
     committed: BTreeMap<String, Arc<Luma>>,
+    /// How many wallpapers the owner committed (Strand Enter / centre pearl): the bars' apply glint. Strand's panel
+    /// does not know its output, so every bar counts it.
+    applied: u64,
     watchers: Vec<(u64, Watcher)>,
     next: u64,
 }
@@ -130,6 +133,18 @@ pub(crate) fn publish(output: &str, luma: Arc<Luma>) {
     }
 }
 
+/// The owner committed a wallpaper: bumps `bar.wallpaper_applied` and wakes the watchers.
+pub(crate) fn applied() {
+    let watchers: Vec<Watcher> = {
+        let mut state = state().lock().unwrap_or_else(|p| p.into_inner());
+        state.applied += 1;
+        state.watchers.iter().map(|(_, w)| w.clone()).collect()
+    };
+    for watcher in watchers {
+        watcher();
+    }
+}
+
 pub(crate) fn remove(output: &str) {
     state()
         .lock()
@@ -138,13 +153,20 @@ pub(crate) fn remove(output: &str) {
         .remove(output);
 }
 
-/// Store values for one output; empty until its first wallpaper is committed.
+/// Store values for one output; the luma is empty until its first wallpaper is committed.
 pub(crate) fn values(output: Option<&str>) -> BTreeMap<String, Value> {
     let state = state().lock().unwrap_or_else(|p| p.into_inner());
-    output
-        .and_then(|output| state.committed.get(output))
-        .map(|luma| BTreeMap::from([(STORE.to_owned(), luma.store_value())]))
-        .unwrap_or_default()
+    let mut values = BTreeMap::new();
+    if let Some(luma) = output.and_then(|output| state.committed.get(output)) {
+        values.insert(STORE.to_owned(), luma.store_value());
+    }
+    if state.applied > 0 {
+        values.insert(
+            "bar.wallpaper_applied".to_owned(),
+            Value::Number(state.applied as f64),
+        );
+    }
+    values
 }
 
 /// Call `changed` (from the committing thread) after any output's luminance changed.
@@ -195,5 +217,23 @@ mod tests {
             panic!("list")
         };
         assert_eq!(row[0]["cells"].as_array().map(Vec::len), Some(COLS * ROWS));
+    }
+
+    #[test]
+    fn applied_counts_commits_and_wakes_watchers() {
+        let woke = Arc::new(std::sync::atomic::AtomicU32::new(0));
+        let seen = woke.clone();
+        let _watch = watch(Arc::new(move || {
+            seen.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        }));
+        let count = || match values(None).get("bar.wallpaper_applied") {
+            Some(Value::Number(n)) => *n,
+            _ => 0.,
+        };
+        let before = count();
+        applied();
+        applied();
+        assert!(count() >= before + 2.);
+        assert!(woke.load(std::sync::atomic::Ordering::SeqCst) >= 2);
     }
 }

@@ -603,6 +603,53 @@ fn collection_popout_rebinds_output_and_tracks_later_topic_updates() {
         runtime.session.stores.get("bar.collection.current"),
         Some(&bead::core::Value::Text("niri-collection:28".into()))
     );
+
+    // Scrolling the stack strand steps this output's stacks (up = previous), clamped at both ends.
+    let rows = |current: &str| {
+        let row = |id: &str, output: &str| serde_json::json!({"id":id,"output":output});
+        std::collections::BTreeMap::from([
+            (
+                "bar.collections".into(),
+                bead::core::Value::list(vec![
+                    row("a", "DP-2"),
+                    row("other", "DP-1"),
+                    row("b", "DP-2"),
+                    row("c", "DP-2"),
+                ]),
+            ),
+            (
+                "bar.collection.current".into(),
+                bead::core::Value::Text(current.into()),
+            ),
+        ])
+    };
+    let scroll = |runtime: &Runtime, name: &str, delta: f64| {
+        runtime.bar_route(
+            &UiEvent::Scroll {
+                x: 0.,
+                y: 0.,
+                delta,
+            },
+            "stack",
+            name,
+            &bead::core::Value::Bool(true),
+        )
+    };
+    let activate = |id: &str| {
+        Some(crate::bar_routes::Route::CollectionAction {
+            output: "DP-2".into(),
+            action: nacre_protocol::shell_actions::CollectionOperation::Activate {
+                collection: id.into(),
+            },
+        })
+    };
+    runtime.session.stores.commit(rows("b")).unwrap();
+    assert_eq!(scroll(&runtime, "collection.fan", 1.), activate("a"));
+    assert_eq!(scroll(&runtime, "collection.switch", -1.), activate("c"));
+    runtime.session.stores.commit(rows("a")).unwrap();
+    assert_eq!(scroll(&runtime, "collection.fan", 1.), None);
+    runtime.session.stores.commit(rows("c")).unwrap();
+    assert_eq!(scroll(&runtime, "collection.fan", -1.), None);
 }
 
 #[tokio::test(flavor = "current_thread")]

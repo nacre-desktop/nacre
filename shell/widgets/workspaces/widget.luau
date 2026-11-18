@@ -52,7 +52,11 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
             local stack_hovered=string.find(hovered,"collection-badge",1,true)~=nil or string.find(hovered,"stack-strand",1,true)~=nil
             -- The open waits for the 400 ms hover; the close is at once.
             local fan=ui.animate("workspaces.stack.fan:"..props.instance.iid,stack_hovered and 1 or 0,.4,"linear")
-            local fanned=not cap_style and #collections>1 and fan>=.999
+            -- A click on the strand (bar.stack.fan counts them) fans at once and keeps it out for 3 s after the pointer leaves.
+            local clicks=c.popouts and ui.resolve_for_check(ui.bind("bar.stack.fan")) or 0
+            -- The counter ramps in 3 s on a stable key (a fresh key snaps), so the fan is pinned until it catches up.
+            local pinned=ui.animate("workspaces.stack.pin:"..props.instance.iid,clicks,3,"linear")<clicks-.001
+            local fanned=not cap_style and #collections>1 and (fan>=.999 or pinned)
             local limit=fanned and t.stack_fan_max or t.stack_collapsed_max
             local first=#collections>limit and math.clamp(cur-limit//2,1,#collections-limit+1) or 1
             local last=math.min(#collections,first+limit-1)
@@ -135,7 +139,7 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
                 end
             end
             local collection_control=show_collections and (fanned and ui.Row{id="stack-fan",width=stack_control_width,height=t.workspace_height,padding_left=t.strand_pad,shrink=0,table.unpack(fan_buttons)} or kit.Button{id="collection-badge",width=stack_control_width,height=cap_style and t.cap_height or t.workspace_height,padding=0,radius=cap_style and t.cap_radius or t.workspace_radius,shrink=0,
-                    fill=cap_style and "surfaceContainerHighest" or "transparent",hover_fill=cap_style and "surfaceBright" or "transparent",aria_label=current_collection_label,on_activate=c.popouts and ui.action("collection.switcher.open") or nil,
+                    fill=cap_style and "surfaceContainerHighest" or "transparent",hover_fill=cap_style and "surfaceBright" or "transparent",aria_label=current_collection_label,on_activate=c.popouts and ui.action((cap_style or #collections<2) and "collection.switcher.open" or "collection.fan") or nil,
                     cap_style and ui.Row{id="collection-content",width=stack_control_width,height=t.cap_height,padding_left=t.cap_pad_left,padding_right=t.cap_pad_right,gap=t.cap_gap,align="center",
                         ui.Text{id="collection-icon",text="stacks",width=t.cap_icon,height=t.cap_icon,shrink=0,family=kit.tokens.fonts.icon,font_size=t.cap_icon,color="onSurfaceVariant",text_align="center"},
                         ui.Text{id="collection-name",text=cap_name,width=cap_name_width,height=math.ceil(ui.text_line_height(stack_family,t.cap_font)),shrink=0,font_size=t.cap_font,family=stack_family,color="onSurface"}}

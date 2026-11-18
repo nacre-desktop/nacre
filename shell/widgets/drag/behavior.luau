@@ -18,7 +18,7 @@ return {stores={
     ["bar.height"]=50,["bar.frame"]=true,["bar.panel.open"]=false,["bar.launcher"]=false,["bar.popouts"]=false,["bar.reconnecting"]=false,
     ["bar.workspace.enabled"]=true,["bar.tray.enabled"]=true,["bar.window.focus.enabled"]=true,
     ["bar.workspace.origins"]={},["bar.dashboard.enabled"]=true,["bar.tray.visible"]=false,
-    ["bar.collections"]={},["bar.collection.current"]="",["bar.collection.output"]="",
+    ["bar.collections"]={},["bar.collection.current"]="",["bar.collection.output"]="",["bar.stack.fan"]=0,
     ["bar.workspace.count"]=0,["bar.workspace.icons"]={},["bar.workspace.hints"]=true,["bar.workspace.style"]="pearls",["bar.workspace.overflow"]=true,
     ["bar.clock.twelve"]=false,["bar.updates.count"]=0,["bar.updates.enabled"]=true,
     ["bar.notifications.count"]=0,
