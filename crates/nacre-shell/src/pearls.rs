@@ -362,7 +362,7 @@ fn native_motions(
 
 /// The palette entries the art is drawn from (NacreTokens: body, accent,
 /// orientSecondary, orientHighlight, outline).
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Ink {
     pub body: [u8; 4],
     pub accent: [u8; 4],

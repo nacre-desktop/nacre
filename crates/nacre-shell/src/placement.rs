@@ -98,8 +98,16 @@ pub fn set_live_palette(palette: &std::collections::BTreeMap<String, [u8; 4]>) -
     };
     let next = Some([*fill, *primary, *secondary]);
     let mut live = LIVE_COLORS.lock().unwrap_or_else(|p| p.into_inner());
-    std::mem::replace(&mut *live, next) != next
+    let colors_changed = std::mem::replace(&mut *live, next) != next;
+    let ink = crate::pearls::Ink::new(&bead::render::Palette(Arc::new(
+        palette.clone().into_iter().collect(),
+    )))
+    .ok();
+    let mut live_ink = LIVE_INK.lock().unwrap_or_else(|p| p.into_inner());
+    colors_changed | (std::mem::replace(&mut *live_ink, ink) != ink)
 }
+/// The live card ink (no-border sheets and pearls): body, rim and shadow follow every palette.
+static LIVE_INK: std::sync::Mutex<Option<crate::pearls::Ink>> = std::sync::Mutex::new(None);
 /// B0056: a panel another process draws (the AI sidebar app) still takes its place in the frame.
 /// The host describes it (edge attachment and body size); the frame tiles then leave it out.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -831,7 +839,8 @@ impl Chrome {
     ) -> Result<(), Box<dyn std::error::Error>> {
         use bead::render::Primitive;
         use std::hash::{Hash, Hasher};
-        let ink = self.ink.ok_or("pearl chrome without ink")?;
+        let live = *LIVE_INK.lock().unwrap_or_else(|p| p.into_inner());
+        let ink = live.or(self.ink).ok_or("pearl chrome without ink")?;
         let is_piece = |path: &std::path::Path| path.to_string_lossy().starts_with("@pearl-edge-");
         while matches!(scene.primitives.last(), Some(Primitive::Image { path, .. }) if is_piece(path))
         {
@@ -1178,6 +1187,33 @@ mod tests {
             &std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../shell/palette.json"),
         )
         .unwrap()
+    }
+    /// The no-border card (sheets, pearls) wears the live palette, not the one the chrome was built with.
+    #[test]
+    fn card_ink_follows_every_live_palette() {
+        let colors = colors();
+        let chrome = Chrome::new(Attachment::ControlCenter, &colors).unwrap();
+        let frame = Frame {
+            bordered: false,
+            ..Frame::DEFAULT
+        };
+        let mut seen = Vec::new();
+        for surface in [[10, 40, 40, 255], [60, 50, 10, 255]] {
+            let mut map: std::collections::BTreeMap<_, _> =
+                colors.0.iter().map(|(k, v)| (k.clone(), *v)).collect();
+            map.insert("surface".into(), surface);
+            assert!(set_live_palette(&map));
+            let mut scene = crate::sound::fallback(colors.get("surface").unwrap());
+            chrome.decorate_with(frame, &mut scene).unwrap();
+            let body = body(&scene);
+            seen.push(scene.primitives.iter().find_map(|p| match p {
+                bead::render::Primitive::Rounded { rect, fill, .. } if *rect == body => Some(*fill),
+                _ => None,
+            }));
+            assert_eq!(seen.last().unwrap(), &Some(surface));
+        }
+        *LIVE_INK.lock().unwrap() = None;
+        *LIVE_COLORS.lock().unwrap() = None;
     }
     #[test]
     fn attached_position_and_chrome_follow_the_luau_edge() {
