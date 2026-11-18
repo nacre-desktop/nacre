@@ -26,7 +26,7 @@ local function bar(props,settings,_data)
         status_glyph("glyph",ui.bind("bead.desktop.battery"),"battery",tone,nil,glyph~="battery_unknown"),
         -- Round 4: the level glyph keeps its fill in every state; the charger is a small bolt over its corner, in its own accent.
         ui.Text{id="bolt",position="absolute",left=t.status_padding+t.icon_width-10,top=(t.status_height-box)/2+box-13,width=12,height=12,visible=ui.bind("bead.desktop.battery.plugged"),text="bolt",family="Material Symbols Rounded",font_size=11,text_align="center",color=t.charge_tone},
-        content and status_text{id="battery-value",text=content,width=width,font_size=t.detail_font,color=tone or "onSurface"} or nil,
+        content and status_text{id="battery-value",text=content,width=width,font_size=t.detail_font,color=tone or t.status_tone} or nil,
     }
 end
 local function desktop(props,_settings,_data)

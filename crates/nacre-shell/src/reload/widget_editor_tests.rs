@@ -481,7 +481,7 @@ fn the_owner_layout_migrates_pixel_identically() {
     });
     assert_eq!(
         (actual, hash),
-        (expected.to_vec(), 11982980954113111336),
+        (expected.to_vec(), 8611465041795366170),
         "N0237 bar geometry and pixels"
     );
 }

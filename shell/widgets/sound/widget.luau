@@ -17,7 +17,7 @@ local function bar(props,settings,_data)
     local width=content and math.ceil(ui.text_width(number and value or content,"IBM Plex Sans",t.detail_font)) or 0
     return kit.StatusIcon{id="audio",direction="row",height=t.status_height,radius=t.status_radius,gap=content and t.item_gap or 0,padding=0,padding_left=t.status_padding,padding_right=t.status_padding,align="center",justify="center",fill="transparent",hover_fill=ui.alpha("onSurface",t.status_hover),aria_label=popouts and ui.tr("bead.bar.open-sound") or ui.tr("bead.bar.audio-hint"),on_activate=popouts and ui.action("status.pill.open","audio") or ui.action("services.audio"),
         status_glyph("glyph",ui.bind("bead.desktop.audio"),"audio",nil,nil,active),
-        content and status_text{id="value",text=content,width=width,font_size=t.detail_font,color="onSurfaceVariant"} or nil,
+        content and status_text{id="value",text=content,width=width,font_size=t.detail_font,color=t.status_tone} or nil,
     }
 end
 local function desktop(props,_settings,_data)

@@ -8,8 +8,8 @@ return {
     -- The 7 px padding is each item's half of the gap, so the buttons tile with no seam.
     status_gap=12, power_gap=9, status_padding=7, status_count_padding=7, status_hit_pad=0, status_end_padding=5,
     -- Owner 2026-11-18 (live, overrides the locked calm ink): back to the 2026-11-14 scheme, one role per group:
-    -- icons secondary, the clock tertiary, the power button error; badges stay red (error). Hover is an onSurface wash.
-    status_tone="secondary", charge_tone="primary", clock_tone="tertiary", power_tone="error", power_hover_tone="error", status_hover=.1,
+    -- icons secondary, the clock primary (tertiary is near the ink on a quarter of the palettes), the power button error; badges stay red (error). Hover is an onSurface wash.
+    status_tone="secondary", charge_tone="primary", clock_tone="primary", power_tone="error", power_hover_tone="error", status_hover=.1,
     badge_size=15, badge_font=10, badge_pad=4, badge_lift=5, badge_overhang=7, separator_height=16,
     status_text_offset=0, clock_text_offset=2/3,
     pill_height=34, pill_radius=17, pill_gap=0, power_size=34,

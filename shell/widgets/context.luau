@@ -68,7 +68,7 @@ local i_shadow=islands and {blur=4,spread=0,dy=1,alpha=.6} or nil
 -- The lit edge: surfaceBright is a soft lift on dark lacquer and near white on the light one; a straight 1 px
 -- line inside the rounded top. unshaped or transparent pieces get none.
 local function lit_edge(radius,visible)
-    return ui.Box{id="lit-edge",position="absolute",left=radius*.6,right=radius*.6,top=0,height=1,visible=visible,fill=ui.alpha("surfaceBright",.6)}
+    return ui.Box{id="lit-edge",position="absolute",left=radius,right=radius,top=0,height=1,visible=visible,fill=ui.alpha("surfaceBright",.6)}
 end
 local function island(p)
     if islands then p.fill,p.border_width,p.border_color,p.shadow=i_fill,i_stroke,i_stroke_color,i_shadow end

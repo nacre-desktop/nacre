@@ -22,7 +22,7 @@ local function bar(props,settings,_data)
     return (popouts and kit.StatusIcon or ui.Row){id="notifications",width=text and props.available_width or nil,direction="row",height=t.status_height,radius=t.status_radius,gap=text and t.item_gap or 0,padding=0,padding_left=t.status_padding,padding_right=t.status_count_padding,fill="transparent",hover_fill=ui.alpha("onSurface",t.status_hover),align="center",justify=text and "start" or "center",
         aria_label=ui.tr("bead.bar.open-notifications"),on_activate=popouts and ui.action("status.pill.open","notifications") or nil,
         status_glyph("glyph",dnd and "do_not_disturb_on" or "notifications","notifications",nil,badge,false),
-        text and status_text{id="notifications-label",text=text,width=width,font_size=t.detail_font,color="onSurfaceVariant"} or nil,
+        text and status_text{id="notifications-label",text=text,width=width,font_size=t.detail_font,color=t.status_tone} or nil,
     }
 end
 local function desktop(props,_settings,_data)
