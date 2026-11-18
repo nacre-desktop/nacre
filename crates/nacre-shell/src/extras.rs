@@ -10,6 +10,7 @@ use serde_json::{Value as Json, json};
 use std::{
     cell::RefCell,
     collections::BTreeMap,
+    rc::Rc,
     sync::Arc,
     time::{Duration, Instant},
 };
@@ -122,6 +123,7 @@ struct State {
     wallpaper_gliding: bool,
     /// Pixel size of the last previewed (or opening) wallpaper, for the strand's caption.
     wallpaper_resolution: Option<(String, u32, u32)>,
+    frames: FrameLog,
     query: Option<Query>,
     wanted: Option<(String, String, String)>,
     result: Option<(String, MenuQueryResult)>,
@@ -177,6 +179,67 @@ impl State {
             WALLPAPER_WHEEL_RELEASE
         } else {
             WALLPAPER_RELEASE
+        }
+    }
+}
+/// STRAND_FRAMES, for live audits: the Strand panel's own pacing over one burst of motion (the open, a move, a
+/// glide): the scenes its worker builds (one per frame it shows) and the Shell's stage cost (Luau and layout, not
+/// Bead's bake).
+#[derive(Default)]
+struct FrameLog {
+    last: Option<Instant>,
+    intervals: Vec<f32>,
+    stages: Vec<f32>,
+    /// Set by a stage that built a scene: whether an animation still runs after it.
+    built: Option<bool>,
+}
+impl FrameLog {
+    /// One built scene; the first one at rest after motion closes the burst and returns its line.
+    fn frame(&mut self, now: Instant, moving: bool) -> Option<String> {
+        if let Some(last) = self.last
+            && self.intervals.len() < 4096
+        {
+            self.intervals
+                .push(now.saturating_duration_since(last).as_secs_f32() * 1000.);
+        }
+        self.last = moving.then_some(now);
+        if moving || self.intervals.is_empty() {
+            return None;
+        }
+        let mut gaps = std::mem::take(&mut self.intervals);
+        let stages = std::mem::take(&mut self.stages);
+        gaps.sort_by(f32::total_cmp);
+        let mean = |v: &[f32]| v.iter().sum::<f32>() / v.len().max(1) as f32;
+        Some(format!(
+            "STRAND_FRAMES frames={} duration_ms={:.0} interval_mean={:.1} p95={:.1} max={:.1} stages={} stage_mean_ms={:.1} stage_max_ms={:.1}",
+            gaps.len(),
+            gaps.iter().sum::<f32>(),
+            mean(&gaps),
+            gaps[(gaps.len() * 95).div_ceil(100) - 1],
+            gaps[gaps.len() - 1],
+            stages.len(),
+            mean(&stages),
+            stages.iter().copied().fold(0., f32::max),
+        ))
+    }
+}
+/// Times one Strand stage for STRAND_FRAMES and records it, with the frame it built, when dropped.
+pub struct StageTimer(Rc<Extras>, Instant);
+impl Drop for StageTimer {
+    fn drop(&mut self) {
+        let now = Instant::now();
+        let mut state = self.0.state.borrow_mut();
+        let frames = &mut state.frames;
+        let built = frames.built.take();
+        if (frames.last.is_some() || built == Some(true)) && frames.stages.len() < 4096 {
+            frames
+                .stages
+                .push(now.saturating_duration_since(self.1).as_secs_f32() * 1000.);
+        }
+        let line = built.and_then(|moving| frames.frame(now, moving));
+        drop(state);
+        if let Some(line) = line {
+            eprintln!("{line}");
         }
     }
 }
@@ -1885,6 +1948,16 @@ impl Extras {
                     state.message = "Wallpaper catalogue unavailable".into();
                 }
             }
+        }
+    }
+    /// The Strand's stage timer (STRAND_FRAMES); other extras keep none.
+    pub fn stage_timer(extras: &Rc<Self>) -> Option<StageTimer> {
+        (extras.kind == Kind::Wallpaper).then(|| StageTimer(extras.clone(), Instant::now()))
+    }
+    /// This stage built a Strand scene; `moving` while any of its animations still runs.
+    pub fn frame_built(&self, moving: bool) {
+        if self.kind == Kind::Wallpaper {
+            self.state.borrow_mut().frames.built = Some(moving);
         }
     }
     /// When the next thumbnail retry is due, so the runtime wakes without polling.

@@ -4974,6 +4974,11 @@ impl Runtime {
         Ok(self)
     }
     fn finish_scene(&mut self, mut scene: Option<Scene>) -> Result<Option<Scene>, Box<dyn Error>> {
+        if scene.is_some()
+            && let Some(extras) = &self.extras
+        {
+            extras.frame_built(self.session.preview_deadline().is_some());
+        }
         if std::mem::take(&mut self.host_release_pending) {
             // Native host handlers own this release. Re-stage from their
             // latest candidate so the final scene includes both the side
@@ -6230,6 +6235,10 @@ impl SceneSource for Runtime {
     }
     fn stage(&mut self, mut event: UiEvent) -> Result<Option<Scene>, Box<dyn Error>> {
         let now = std::time::Instant::now();
+        let _strand_stage = self
+            .extras
+            .as_ref()
+            .and_then(crate::extras::Extras::stage_timer);
         if self.launcher.is_some()
             && matches!(self.session.stores.get("launcher.chooser"), Some(bead::core::Value::Text(id)) if !id.is_empty())
             && matches!(&event, UiEvent::Command { command, .. } if matches!(command.as_str(), "escape" | "up" | "down" | "tab" | "backtab"))
