@@ -105,7 +105,7 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
                     nodes[2]=ui.Box{id="stack-accent",position="absolute",left=cx-outer/2,top=cy-outer/2,width=outer,height=outer,radius=outer/2,fill="primary"}
                     nodes[3]=ui.Box{id="stack-white",position="absolute",left=cx-white/2,top=cy-white/2,width=white,height=white,radius=white/2,fill=t.pearl_white}
                 end
-                for _,node in c.pearl{id="stack-pearl-"..k,key=tostring(k),left=cx-size/2,top=cy-size/2,size=size,fill=on and t.pearl_cream or t.pearl_dim,opacity=not on and t.stack_other_alpha or nil,
+                for _,node in c.pearl{id="stack-pearl-"..k,key=tostring(k),left=cx-size/2,top=cy-size/2,size=size,fill=t.pearl_cream,body=true,opacity=not on and t.stack_other_alpha or nil,
                     ring=not on and ui.alpha("ink",.35) or nil,ring_width=1,
                     label=fanned and tostring(collections[i].index or i) or nil,font_size=10,font_weight=600,label_color=t.pearl_dark} do nodes[#nodes+1]=node end
                 return nodes
@@ -210,7 +210,7 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
                     local function add(node) parts[#parts+1]=node end
                     -- The one pearl style: accent when current, cream when occupied, an ink ring when empty.
                     for _,node in c.pearl{id="pearl",key="",left=16-size/2,top=t.workspace_height/2-size/2,size=size,
-                        fill=on and accent or lit and t.pearl_cream or nil,
+                        fill=on and accent or lit and t.pearl_cream or nil,body=not on and lit,
                         ring=on and ui.alpha("onSurface",.5) or lit and ui.alpha("ink",.2) or ui.alpha("ink",.55),ring_width=lit and 1 or t.pearl_empty_border,
                         label=label,font_size=#label<2 and t.pearl_number_font or t.pearl_number_font-2,font_weight=on and 700 or 600,label_color=on and "onPrimary" or lit and t.pearl_dark or "ink"} do add(node) end
                     add(ui.Row{id="apps",position="absolute",left=33,top=0,width=math.max(0,width-33),height=t.workspace_height,gap=3,align="center",visible=#apps>0,table.unpack(apps)})

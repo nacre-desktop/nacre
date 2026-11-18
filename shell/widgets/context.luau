@@ -18,22 +18,21 @@ if sample then
 end
 local kit=require("bead.kit")
 local t=require("../bar/tokens")
+local pearl_recipe=require("../ui/components/pearl")
 local function centered_text(p)
     local lift=p.family=="Material Symbols Rounded" and 0 or t.text_lift
     p.height=p.font_size*t.line_height+2*lift
     if p.position=="absolute" then p.top=(p.top or 0)-lift end
     return ui.Text(p)
 end
--- THE pearl recipe (workspace and stack pearls): a flat fill under one radial gloss image, an optional inset ring
--- and an optional centred number, all absolute in the parent. Bead's radial fills (B0331) replace the image here
--- and nowhere else. `key` keeps the sibling ids unique; the base node keeps `id`.
+-- THE pearl (workspace and stack pearls): one box, a flat fill under the shared recipe's radial layers (ui/components/
+-- pearl: `body` true draws the whole pearl, else just the highlight over `fill`), an optional inset ring and an
+-- optional centred number, all absolute in the parent. `key` keeps the sibling ids unique; the base node keeps `id`.
 local function pearl(p)
     local size,out=p.size,{}
     if p.fill then
-        out[1]=ui.Box{id=p.id,position="absolute",left=p.left,top=p.top,width=size,height=size,radius=size/2,fill=p.fill}
-        if kit.tokens.gradients then
-            out[2]=ui.Image{id="gloss"..p.key,position="absolute",left=p.left,top=p.top,width=size,height=size,path="bar/assets/pearl.themed.svg",opacity=p.opacity}
-        end
+        out[1]=ui.Box{id=p.id,position="absolute",left=p.left,top=p.top,width=size,height=size,radius=size/2,fill=p.fill,opacity=p.opacity,
+            radial=kit.tokens.gradients and pearl_recipe.layers(p.body) or nil}
     end
     if p.ring then
         -- Bead strokes straddle their path, so the ring box sits half a stroke inside.

@@ -21,12 +21,12 @@
     "widgets/wifi/widget.luau",
     "widgets/workspaces/widget.luau",
     "bar/tokens.luau",
+    "ui/components/pearl.luau",
     "widgets/desktop-visuals.luau"
   ],
   "assets": [
     "widgets/clock/assets/analog-ticks.themed.svg",
     "bar/assets/nacre-logo.themed.svg",
-    "bar/assets/pearl.themed.svg",
     "bar/assets/workspace-thread.themed.svg",
     "widgets/app/assets/nacre-widgets.themed.svg"
   ]
