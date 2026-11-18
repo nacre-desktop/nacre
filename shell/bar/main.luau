@@ -62,8 +62,33 @@ if c.islands then
         local colour=at<=.5 and ui.tint("primary","secondary",at*2) or ui.tint("secondary","tertiary",(at-.5)*2)
         segments[i]=ui.Box{id="s"..i,width=0,grow=1,height=1,fill=ui.alpha(colour,.6*fade*math.min(1,at/.09,(1-at)/.22))}
     end
+    -- The 1 px dark under-line (a fuller orient thread over a dark under-stroke reads on bright skies), fading
+    -- with the thread, 220 ms.
+    segments[count+1]=ui.Image{id="under",position="absolute",left=0,top=1,width=width,height=1,path="bar/assets/thread-under.themed.svg",opacity=fade}
     host.fill,host.padding_left,host.padding_right,host.padding_top="transparent",13,13,2
     host[1]=ui.Row(segments)
+    -- The apply glint: when the committed wallpaper changes (its luminance grid is republished then), one soft light
+    -- (170 x 2.5, primary 40 % toward white) runs from the centre out along the thread to both edges, 2 s, behind
+    -- the islands, translate and fill only. The key carries the grid's stamp, so each change starts a fresh run;
+    -- an empty grid (no wallpaper yet) shows none.
+    local luma=ui.resolve_for_check(ui.bind("bead.desktop.wallpaper.luma"))
+    local grid=type(luma)=="table" and luma[1] or nil
+    if grid and grid.cells then
+        local stamp=0
+        for i,cell in grid.cells do stamp+=cell*(i%7+1) end
+        stamp=math.floor(stamp*1000)
+        local glow=ui.tint("primary",{255,255,255,255},.4)
+        local slices,slice_width=9,170/9
+        for _,sign in {1,-1} do
+            local run={id="glint"..sign,position="absolute",left=width/2-13-85,top=22,width=170,height=2.5,direction="row",
+                translate_x=ui.animated("bar.glint.x"..sign.."."..stamp,sign*(width/2+85),2,"in-out-cubic",0)}
+            for i=1,slices do
+                run[i]=ui.Box{id="g"..i,width=slice_width,height=2.5,radius=1.25,
+                    fill=ui.alpha(glow,ui.animated("bar.glint.a"..sign.."."..i.."."..stamp,0,2,"in-cubic",.85*math.sin(math.pi*(i-.5)/slices)))}
+            end
+            host[#host+1]=ui.Row(run)
+        end
+    end
     -- Clicks in the gaps between the islands reach the windows below (B0321).
     host.input="children"
 end
