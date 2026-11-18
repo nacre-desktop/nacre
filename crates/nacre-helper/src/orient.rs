@@ -47,7 +47,7 @@ fn cache_identity(path: &Path, settings: &Value) -> Result<String> {
 /// The shipped palette: Orient's roles with the lacquer recipe applied on top.
 pub fn from_image(path: &Path, options: &Value) -> Result<Value> {
     let mut palette = from_image_legacy(path, options)?;
-    crate::lacquer::apply(&mut palette)?;
+    crate::lacquer::apply(&mut palette, options["background_from_wallpaper"] == false)?;
     Ok(palette)
 }
 

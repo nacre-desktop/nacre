@@ -153,7 +153,7 @@ fn role(colours: &Map<String, Value>, name: &str) -> Option<String> {
 }
 
 /// Rewrites the surface, ink and accent roles of `colours` in place.
-pub fn recolour(colours: &mut Map<String, Value>, light: bool, highlight: &str) {
+pub fn recolour(colours: &mut Map<String, Value>, light: bool, highlight: &str, neutral: bool) {
     let accent = |name| role(colours, name);
     let mut hues: Vec<String> = ["primary", "secondary"]
         .iter()
@@ -162,6 +162,9 @@ pub fn recolour(colours: &mut Map<String, Value>, light: bool, highlight: &str) 
     hues.extend(accent("tertiary"));
     if light {
         hues.insert(0, highlight.into());
+    }
+    if neutral {
+        hues.clear(); // backgroundFromWallpaper off: grey ground, no wallpaper hue
     }
     let (surface, frame) = tint(&hues, light);
     let raise = mix(&surface, WHITE, if light { 0.5 } else { 0.10 });
@@ -292,7 +295,7 @@ pub fn recolour(colours: &mut Map<String, Value>, light: bool, highlight: &str) 
 }
 
 /// The post-step on a whole Orient palette document (`mode`, `source`, `colours`).
-pub fn apply(palette: &mut Value) -> Result<()> {
+pub fn apply(palette: &mut Value, neutral: bool) -> Result<()> {
     let Some((_, highlight)) = tones(&palette["source"]) else {
         return Ok(());
     };
@@ -300,7 +303,7 @@ pub fn apply(palette: &mut Value) -> Result<()> {
     let colours = palette["colours"]
         .as_object_mut()
         .ok_or("Invalid palette colors")?;
-    recolour(colours, light, &highlight);
+    recolour(colours, light, &highlight, neutral);
     palette["accessibility"] = audit(colours)?;
     Ok(())
 }
@@ -355,7 +358,7 @@ mod tests {
         for p in DESIGNER {
             for light in [false, true] {
                 let mut c = roles(&p[..3]);
-                recolour(&mut c, light, &p[4].to_lowercase());
+                recolour(&mut c, light, &p[4].to_lowercase(), false);
                 let tag = format!("{p:?} light={light}");
                 for bg in BACKGROUNDS {
                     for fg in TEXT_ROLES {
@@ -398,11 +401,23 @@ mod tests {
     }
 
     #[test]
+    fn a_neutral_ground_ignores_the_wallpaper_hue_but_keeps_the_contrast() {
+        for light in [false, true] {
+            let (mut tinted, mut grey) = (roles(&DESIGNER[1][..3]), roles(&DESIGNER[1][..3]));
+            recolour(&mut tinted, light, "e6d9c4", false);
+            recolour(&mut grey, light, "e6d9c4", true);
+            assert_ne!(get(&tinted, "surface"), get(&grey, "surface"));
+            assert_eq!(get(&grey, "surface"), if light { "f8f5f6" } else { "141215" });
+            assert!(ratio(&grey, "primary", "surface") >= 4.6, "light={light}");
+        }
+    }
+
+    #[test]
     fn accents_keep_their_hue_and_output_is_deterministic() {
         let mut a = roles(&["67BAFB", "9CC3F0", "E6C9A5"]);
-        recolour(&mut a, true, "e6d9c4");
+        recolour(&mut a, true, "e6d9c4", false);
         let mut b = roles(&["67BAFB", "9CC3F0", "E6C9A5"]);
-        recolour(&mut b, true, "e6d9c4");
+        recolour(&mut b, true, "e6d9c4", false);
         assert_eq!(a, b);
         let hue = |hex: &str| to_hls(hex)[0];
         assert!((hue(&get(&a, "primary")) - hue("67bafb")).abs() < 0.02);
@@ -414,7 +429,7 @@ mod tests {
         for p in DESIGNER {
             for (light, want) in [(false, 0.105), (true, 0.952)] {
                 let mut c = roles(&p[..3]);
-                recolour(&mut c, light, &p[4].to_lowercase());
+                recolour(&mut c, light, &p[4].to_lowercase(), false);
                 let l = to_hls(&get(&c, "surface"))[1];
                 assert!(
                     (l - want).abs() < 0.01,
@@ -429,7 +444,7 @@ mod tests {
         }
         // the surface carries the wallpaper's hue: blue accents tint blue
         let mut c = roles(&["67BAFB", "9CC3F0", "E6C9A5"]);
-        recolour(&mut c, false, "e6d9c4");
+        recolour(&mut c, false, "e6d9c4", false);
         assert!((to_hls(&get(&c, "surface"))[0] - to_hls("67bafb")[0]).abs() < 0.02);
     }
 
@@ -467,7 +482,7 @@ mod tests {
                 "source": {"body": {"dark": {"hex": "3a3448"}, "light": {"hex": "eee8f2"}}},
                 "colours": colours.clone(),
             });
-            apply(&mut palette).unwrap();
+            apply(&mut palette, false).unwrap();
             for name in TOKENS {
                 let hex = palette["colours"][name].as_str().unwrap_or_default();
                 assert!(
