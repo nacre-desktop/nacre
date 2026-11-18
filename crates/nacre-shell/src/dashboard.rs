@@ -833,7 +833,20 @@ impl Dashboard {
             subscriptions.push(settings.subscribe(callback.clone())?);
         }
         if let Some(clock) = &self.clock {
-            subscriptions.push(clock.subscribe(callback)?);
+            // The desktop service revises on every sensor tick; wake only when the minute or date changes.
+            let last = std::sync::Mutex::new(None::<(Arc<Json>, bool)>);
+            subscriptions.push(clock.subscribe(Arc::new(move |snapshot| {
+                let key = (snapshot.data.clone(), snapshot.connected);
+                let mut last = last.lock().unwrap_or_else(|e| e.into_inner());
+                if last
+                    .as_ref()
+                    .is_none_or(|prev| *prev.0 != *key.0 || prev.1 != key.1)
+                {
+                    *last = Some(key);
+                    drop(last);
+                    callback(snapshot);
+                }
+            }))?);
         }
         Ok(subscriptions)
     }
