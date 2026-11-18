@@ -290,9 +290,10 @@ For custom bindings and the trash opt-in, see [configuration](configuration.md).
 | Super + Tab | Window overview |
 | Super + V | Clipboard history |
 | Super + W | Wallpaper picker |
+| Super + C | Control centre |
+| Super + D / Super + O | Dashboard |
 | Super + Shift + W | Widgets |
 | Super + Z | Hide or show the shell frame and panels |
-| Super + O | Toggle the main panel |
 | Super + I | Nacre Settings |
 | Super + Ctrl + C | Capture menu |
 | Super + X / Super + Escape | Power menu |
@@ -358,9 +359,10 @@ Number keys select existing workspaces on the focused output; their numbers can 
 | Super + Tab | Window overview |
 | Super + V | Clipboard history |
 | Super + W | Wallpaper picker |
+| Super + C | Control centre |
+| Super + D / Super + O | Dashboard |
 | Super + Shift + W | Widgets |
 | Super + Z | Hide or show the shell frame and panels |
-| Super + O | Toggle the main panel |
 | Super + I | Nacre Settings |
 | Super + Ctrl + C | Capture menu |
 | Super + X / Super + Escape | Power menu |

@@ -32,6 +32,8 @@ LABELS = {
     "overview": "Window overview",
     "clipboard": "Clipboard history",
     "wallpaper": "Wallpaper picker",
+    "control-centre": "Control centre",
+    "dashboard": "Dashboard",
     "widgets": "Widgets",
     "settings": "Nacre Settings",
     "power": "Power menu",

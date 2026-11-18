@@ -919,6 +919,7 @@ fn translated_collection_description(description: &str) -> String {
         "browser" => "Open browser".into(),
         "clipboard" => "Open clipboard history".into(),
         "close" => "Close window".into(),
+        "control-centre" => "Open the control centre".into(),
         "cycle-window" => "Cycle windows".into(),
         "dashboard" => "Open the dashboard".into(),
         "detach-panel" => "Detach panel".into(),
