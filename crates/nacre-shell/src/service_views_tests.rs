@@ -1192,6 +1192,94 @@ fn no_border_bar_floats_islands_on_a_thread_that_fades_with_windows() -> Result<
     )
 }
 
+/// Styling phase 1: the stack pearls at 2 and 5 stacks (collapsed to three around the current one and "+2", then fanned
+/// with numbers on hover), in both bar variants and both schemes, and the narrow 1366 px bar that drops the app icons.
+#[test]
+fn bar_stack_pearls_collapse_fan_and_narrow_bars_drop_app_icons() -> Result<()> {
+    let bar = |frame: bool, palette: &str, width, stacks: usize, scale| -> Result<Harness> {
+        let mut values = super::initial_models()?;
+        values.extend(parity_models());
+        let rows: Vec<_> = (1..=stacks)
+            .map(|i| serde_json::json!({"id":format!("stack:{i}"),"label":i.to_string(),"index":i,"output":"eDP-1","active":i == 3.min(stacks)}))
+            .collect();
+        values.extend([
+            ("bar.frame".into(), Value::Bool(frame)),
+            (
+                "bar.height".into(),
+                Value::Number(if frame { 50. } else { 44. }),
+            ),
+            ("bar.collections".into(), Value::list(rows)),
+            ("bar.collection.output".into(), Value::Text("eDP-1".into())),
+            (
+                "bar.collection.current".into(),
+                Value::Text(format!("stack:{}", 3.min(stacks))),
+            ),
+        ]);
+        let mut h = Harness::load(
+            &root(),
+            Path::new("bar/main.luau"),
+            &root().join(palette),
+            values,
+            Config {
+                width,
+                height: if frame { 50 } else { 44 },
+                scale,
+            },
+        )?;
+        settle_harness_animations(&mut h)?;
+        Ok(h)
+    };
+    let has_icons = |h: &Harness| bar_texts(h).iter().any(|(text, _)| text == "terminal");
+    let more = |h: &Harness| bar_texts(h).iter().any(|(text, _)| text == "+2");
+    for (frame, tag) in [(false, "a"), (true, "b")] {
+        for scale in [1., 1.5] {
+            let mut h = bar(frame, "palette.json", 1920, 5, scale)?;
+            assert!(
+                has_icons(&h),
+                "the 1920 px bar shows the active pearl's app icon"
+            );
+            assert!(more(&h), "5 stacks fold to three pearls and +2");
+            bar_golden(
+                &h.pose((0., 0.), 1.)?,
+                &format!("bar-stacks-{tag}5-{scale}"),
+            )?;
+        }
+        let mut two = bar(frame, "tests/fixtures/palette-light.json", 1920, 2, 1.)?;
+        bar_golden(
+            &two.pose((0., 0.), 1.)?,
+            &format!("bar-stacks-{tag}2-light-1"),
+        )?;
+        let mut narrow = bar(frame, "palette.json", 1366, 2, 1.)?;
+        assert!(
+            !has_icons(&narrow),
+            "under 1600 px the pearls carry no app icons"
+        );
+        bar_golden(&narrow.pose((0., 0.), 1.)?, &format!("bar-narrow-{tag}-1"))?;
+    }
+    // Hover fans the five stacks out (the 400 ms wait is the animation); each other pearl goes to its stack.
+    let mut h = bar(false, "palette.json", 1920, 5, 1.)?;
+    let strand = h
+        .session
+        .view_nodes()
+        .iter()
+        .find(|node| node.action.as_deref() == Some("collection.switcher.open"))
+        .map(|node| bead::ui::rect(&node.draw))
+        .ok_or("stack strand missing")?;
+    h.script([Input::Pointer {
+        x: strand.x + strand.w / 2.,
+        y: strand.y + strand.h / 2.,
+    }])?;
+    settle_harness_animations(&mut h)?;
+    let goes = h
+        .session
+        .view_nodes()
+        .iter()
+        .filter(|node| node.action.as_deref() == Some("collection.switch"))
+        .count();
+    assert_eq!(goes, 4, "fanned, each other stack has its own pearl button");
+    bar_golden(&h.pose((0., 0.), 1.)?, "bar-stacks-fan-1")
+}
+
 /// Owner 2026-11-14: Settings > Top bar > Workspace style "App icons" with the +N fold off: the active
 /// workspace lists every window. The harness has no deterministic desktop-icon fixtures, so the rows
 /// carry empty icon names and the goldens show the category-glyph fallback of that style.
@@ -1957,17 +2045,24 @@ fn collection_switcher_badge_and_bounded_rename_menu_render() -> Result<()> {
                         .ok_or_else(|| "stack geometry missing".into())
                 };
                 let active_rect = bounds("active-capsule")?;
-                let bright = bounds("stack-pearl-1")?;
+                // Pearls follow the switcher order; the current one is 10 px, the others 7.5 px, and the
+                // active workspace capsule comes after the last of them.
+                let current = if name == "number" { 2 } else { 1 };
+                let bright = bounds(&format!("stack-pearl-{current}"))?;
+                let last = bounds(if single {
+                    "stack-pearl-1"
+                } else {
+                    "stack-pearl-3"
+                })?;
                 assert!(
-                    (bright.1 - 12.5).abs() <= 1. && active_rect.0 > bright.0 + bright.1,
-                    "the current pearl follows the strand: {scale}: {active_rect:?} after {bright:?}"
+                    (bright.1 - 10.).abs() <= 1. && active_rect.0 > last.0 + last.1,
+                    "the current pearl leads the active capsule: {scale}: {active_rect:?} after {bright:?}"
                 );
                 if !single {
-                    // The second pearl peeks out of the current one by its 9 px minus the 4 px overlap.
-                    let dim = bounds("stack-pearl-2")?;
+                    let other = bounds(&format!("stack-pearl-{}", 3 - current))?;
                     assert!(
-                        dim.0 + dim.1 - (bright.0 + bright.1) >= 4. && (dim.1 - 10.5).abs() <= 1.,
-                        "second pearl visible at {scale}: {dim:?} after {bright:?}"
+                        (other.1 - 7.5).abs() <= 1.,
+                        "other pearls are small at {scale}: {other:?}"
                     );
                 }
                 let pearls = (1..=3)
