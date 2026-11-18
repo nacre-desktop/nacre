@@ -23,6 +23,7 @@ const CORE: [&str; 4] = ["today", "media", "weather", "system"];
 /// `NacreTokens.qml` defaults: families and the body size `textSize` is relative to.
 pub const INTERFACE_FONT: &str = "Commissioner";
 /// Family names older Luau markup and Rust scenes still write; they resolve to the interface font.
+pub const DISPLAY_FONT: &str = "Commissioner Display";
 const LEGACY_FONTS: [&str; 2] = ["IBM Plex Sans", "JetBrainsMono Nerd Font"];
 const BODY_SIZE: i32 = 12;
 const LEGACY: [&str; 5] = ["today", "weather", "media", "system", "focus"];
@@ -310,7 +311,8 @@ impl Prefs {
         let alias =
             |from: &str, to: &str| (!to.is_empty() && to != from).then(|| (from.into(), to.into()));
         bead::ui::text_style::TextStyle {
-            aliases: std::iter::once(INTERFACE_FONT)
+            aliases: [INTERFACE_FONT, DISPLAY_FONT]
+                .into_iter()
                 .chain(LEGACY_FONTS)
                 .filter_map(|from| {
                     let to = if self.interface_font.is_empty() {
@@ -654,6 +656,7 @@ mod tests {
         assert_eq!(style.size_offset, 2.);
         assert_eq!(style.aliases[INTERFACE_FONT], "DejaVu Sans");
         assert_eq!(style.aliases[LEGACY_FONTS[1]], "DejaVu Sans");
+        assert_eq!(style.aliases[DISPLAY_FONT], "DejaVu Sans");
         // `textSize: 0` is falsy in QML and means the body size; a family equal to the
         // default needs no alias.
         let zero = Prefs::decode(

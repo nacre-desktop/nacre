@@ -4,16 +4,35 @@ use bead::render::{Primitive, Result, Scene};
 use skrifa::MetadataProvider;
 use std::{
     collections::BTreeSet,
-    ffi::CString,
-    path::PathBuf,
+    ffi::{CString, OsString},
+    path::{Path, PathBuf},
     sync::{LazyLock, Mutex, MutexGuard},
     time::Instant,
 };
-const COMMISSIONER: &[u8] = include_bytes!("../assets/fonts/Commissioner-Variable.ttf");
-static COMMISSIONER_PATH: std::sync::OnceLock<std::result::Result<PathBuf, String>> =
-    std::sync::OnceLock::new();
-static COMMISSIONER_REGISTERED: std::sync::OnceLock<std::result::Result<(), String>> =
-    std::sync::OnceLock::new();
+/// The instanced Commissioner faces (FLAR/VOLM pinned, wght variable), shipped in the binary and
+/// provisioned at a stable per-user path so the lock screen loads the same files.
+struct Face {
+    family: &'static str,
+    file: &'static str,
+    bytes: &'static [u8],
+    path: std::sync::OnceLock<std::result::Result<PathBuf, String>>,
+}
+static COMMISSIONER: Face = Face::new(
+    "Commissioner",
+    "Commissioner.ttf",
+    include_bytes!("../assets/fonts/Commissioner.ttf"),
+);
+static COMMISSIONER_DISPLAY: Face = Face::new(
+    "Commissioner Display",
+    "Commissioner-Display.ttf",
+    include_bytes!("../assets/fonts/Commissioner-Display.ttf"),
+);
+fn bundled(family: &str) -> Option<&'static Face> {
+    [&COMMISSIONER, &COMMISSIONER_DISPLAY]
+        .into_iter()
+        .find(|face| face.family.eq_ignore_ascii_case(family))
+}
+
 #[link(name = "fontconfig")]
 unsafe extern "C" {
     fn FcConfigGetCurrent() -> *mut std::ffi::c_void;
@@ -23,47 +42,72 @@ unsafe extern "C" {
 /// the process-wide current config under a concurrent match (SIGSEGV on 2026-11-15).
 static FONTCONFIG: Mutex<()> = Mutex::new(());
 
-fn bundled_commissioner_path() -> Result<PathBuf> {
-    COMMISSIONER_PATH
-        .get_or_init(|| -> std::result::Result<PathBuf, String> {
-            let cache = std::env::var_os("XDG_CACHE_HOME")
-                .map(PathBuf::from)
-                .or_else(|| std::env::var_os("HOME").map(|home| PathBuf::from(home).join(".cache")))
-                .unwrap_or_else(std::env::temp_dir)
-                .join("bead/fonts");
-            std::fs::create_dir_all(&cache).map_err(|error| error.to_string())?;
-            let path = cache.join("Commissioner-Variable.ttf");
-            if std::fs::metadata(&path)
-                .is_ok_and(|metadata| metadata.len() == COMMISSIONER.len() as u64)
-            {
-                return Ok(path);
-            }
-            let temporary = cache.join(format!(".Commissioner-{}.ttf", std::process::id()));
-            std::fs::write(&temporary, COMMISSIONER).map_err(|error| error.to_string())?;
-            std::fs::rename(&temporary, &path).map_err(|error| error.to_string())?;
-            Ok(path)
-        })
-        .clone()
-        .map_err(|error| error.into())
-        .and_then(|path| {
-            COMMISSIONER_REGISTERED
-                .get_or_init(|| {
-                    let filename = std::ffi::CString::new(path.to_string_lossy().as_bytes())
-                        .map_err(|error| error.to_string())?;
-                    // Register this bundled family only in the shell process; never install a
-                    // system font or alter the host Fontconfig configuration.
-                    let config = unsafe { FcConfigGetCurrent() };
-                    if config.is_null()
-                        || unsafe { FcConfigAppFontAddFile(config, filename.as_ptr().cast()) } == 0
-                    {
-                        return Err("Fontconfig rejected bundled Commissioner".to_owned());
-                    }
-                    Ok(())
-                })
-                .clone()
-                .map(|()| path)
-                .map_err(Into::into)
-        })
+/// `$XDG_DATA_HOME/nacre/fonts`, the path the lock screen reads.
+fn installed_dir(data_home: Option<OsString>, home: Option<OsString>) -> Option<PathBuf> {
+    let base = data_home
+        .filter(|path| !path.is_empty())
+        .map(PathBuf::from)
+        .or_else(|| home.map(|home| PathBuf::from(home).join(".local/share")))?;
+    Some(base.join("nacre/fonts"))
+}
+
+/// Writes `bytes` as `dir/file` unless a file of the same size is already there.
+fn provision(dir: &Path, file: &str, bytes: &[u8]) -> std::io::Result<PathBuf> {
+    std::fs::create_dir_all(dir)?;
+    let path = dir.join(file);
+    if std::fs::metadata(&path).is_ok_and(|metadata| metadata.len() == bytes.len() as u64) {
+        return Ok(path);
+    }
+    let temporary = dir.join(format!(".{file}.{}", std::process::id()));
+    std::fs::write(&temporary, bytes)?;
+    std::fs::rename(&temporary, &path)?;
+    Ok(path)
+}
+
+impl Face {
+    const fn new(family: &'static str, file: &'static str, bytes: &'static [u8]) -> Self {
+        Self {
+            family,
+            file,
+            bytes,
+            path: std::sync::OnceLock::new(),
+        }
+    }
+
+    /// The installed file, written from the embedded copy when absent; the cache is the fallback
+    /// when the data directory is not writable.
+    fn path(&self) -> Result<PathBuf> {
+        self.path
+            .get_or_init(|| {
+                let cache = std::env::var_os("XDG_CACHE_HOME")
+                    .map(PathBuf::from)
+                    .or_else(|| {
+                        std::env::var_os("HOME").map(|home| PathBuf::from(home).join(".cache"))
+                    })
+                    .unwrap_or_else(std::env::temp_dir)
+                    .join("bead/fonts");
+                let path =
+                    installed_dir(std::env::var_os("XDG_DATA_HOME"), std::env::var_os("HOME"))
+                        .and_then(|dir| provision(&dir, self.file, self.bytes).ok())
+                        .map_or_else(
+                            || provision(&cache, self.file, self.bytes).map_err(|e| e.to_string()),
+                            Ok,
+                        )?;
+                let filename = CString::new(path.to_string_lossy().as_bytes())
+                    .map_err(|error| error.to_string())?;
+                // Register this bundled family only in the shell process; never install a
+                // system font or alter the host Fontconfig configuration.
+                let config = unsafe { FcConfigGetCurrent() };
+                if config.is_null()
+                    || unsafe { FcConfigAppFontAddFile(config, filename.as_ptr().cast()) } == 0
+                {
+                    return Err(format!("Fontconfig rejected bundled {}", self.family));
+                }
+                Ok(path)
+            })
+            .clone()
+            .map_err(Into::into)
+    }
 }
 type Selection = (BTreeSet<(String, u16)>, BTreeSet<char>);
 #[link(name = "fontconfig")]
@@ -173,13 +217,8 @@ fn select_chars(scene: &Scene, ascii: bool) -> Result<Vec<PathBuf>> {
     let mut paths = BTreeSet::new();
     let mut db = fontdb::Database::new();
     for (family, weight) in &families {
-        if family.eq_ignore_ascii_case("Commissioner") {
-            load(
-                &mut db,
-                &mut paths,
-                bundled_commissioner_path()?,
-                &mut needed,
-            )?;
+        if let Some(face) = bundled(family) {
+            load(&mut db, &mut paths, face.path()?, &mut needed)?;
             continue;
         }
         let mut pattern = fontconfig::Pattern::new(&fc)?;
@@ -198,7 +237,7 @@ fn select_chars(scene: &Scene, ascii: bool) -> Result<Vec<PathBuf>> {
         let fallback_family = families
             .iter()
             .map(|family| family.0)
-            .find(|family| !family.eq_ignore_ascii_case("Commissioner"))
+            .find(|family| bundled(family).is_none())
             .unwrap_or("sans-serif");
         pattern.add_string(fontconfig::FC_FAMILY, &CString::new(fallback_family)?)?;
         let mut charset = fontconfig::CharSet::new(&fc)?;
@@ -304,6 +343,31 @@ mod tests {
         );
         // A fallback face would make every weight look alike; Commissioner is not the system sans.
         assert_ne!(ink(&a), ink(&render("Nacre", "sans-serif", 450)));
+    }
+
+    #[test]
+    fn display_face_resolves_by_its_own_family_with_flare_and_volume() {
+        let display = render("Nacre", "Commissioner Display", 300);
+        let plain = render("Nacre", "Commissioner", 300);
+        assert!(display != plain, "Commissioner Display falls back to plain");
+        assert_ne!(ink(&display), ink(&render("Nacre", "sans-serif", 300)));
+    }
+
+    #[test]
+    fn faces_install_at_the_stable_data_path_and_embedded_bytes_restore_it() {
+        let dir = installed_dir(Some("/data".into()), Some("/home/u".into())).unwrap();
+        assert_eq!(dir, Path::new("/data/nacre/fonts"));
+        let dir = installed_dir(Some("".into()), Some("/home/u".into())).unwrap();
+        assert_eq!(dir, Path::new("/home/u/.local/share/nacre/fonts"));
+        let temp = std::env::temp_dir().join(format!("nacre-fonts-{}", std::process::id()));
+        for face in [&COMMISSIONER, &COMMISSIONER_DISPLAY] {
+            let path = provision(&temp, face.file, face.bytes).unwrap();
+            assert_eq!(std::fs::read(&path).unwrap(), face.bytes);
+            std::fs::write(&path, b"stale").unwrap();
+            provision(&temp, face.file, face.bytes).unwrap();
+            assert_eq!(std::fs::read(&path).unwrap(), face.bytes);
+        }
+        std::fs::remove_dir_all(&temp).unwrap();
     }
 
     #[test]
