@@ -21,37 +21,28 @@ if math.floor(position-1)%math.max(1,count)+1~=selection_index then position=sel
 local animation_query=tostring(ui.resolve_for_check(ui.bind("extras.query")) or "")
 local animation_key=2166136261
 for index=1,#animation_query do animation_key=(animation_key*33+string.byte(animation_query,index))%2147483647 end
--- The entry/exit storyboard, in one place: a linear 0..1 clock over the whole 675 ms (260 ms on the way back, the prototype's reverse; the panel's `return_duration` keeps the surface until it ends), and every part below reads its own span of `ms`. `extras.wallpaper.entry_ms` pins it
--- for goldens. Bead has no node opacity: the veil, ring, texts and pill fade through colour alpha (pearls scale and fade through Image opacity).
+-- The entrance (owner, round 4: no staged overlay): everything arrives together in one out-cubic, opacity and a small
+-- drop; the exit is the same in reverse, shorter (the panel's `return_duration` keeps the surface until it ends).
+-- `extras.wallpaper.entry_ms` pins it for goldens. Bead has no node opacity: the veil, thread, ring and texts fade through
+-- colour alpha, the pearls through Image opacity.
 local opening=ui.resolve_for_check(ui.bind("panel.open"))~=false
 local pinned=ui.resolve_for_check(ui.bind("extras.wallpaper.entry_ms")) or -1 -- only goldens pin it (>= 0)
-local ms=pinned>=0 and pinned or ui.animate("wallpaper-strand-open",opening and 1 or 0,(opening and W.open_ms or W.close_ms)/1000,"linear")*W.open_ms
+local appear=pinned>=0 and 1-(1-math.min(1,pinned/W.open_ms))^3
+  or ui.animate("wallpaper-strand-open",opening and 1 or 0,(opening and W.open_ms or W.close_ms)/1000,"out-cubic")
 -- One continuous value drives the whole strand: pearls slide along the thread to a fractional slot.
 -- A held key or a fast scroll (`glide`) follows its moving target at a steady pace instead of restarting the
 -- out-quint for every repeat; a single tap keeps the full 500 ms out-quint.
 local glide=ui.resolve_for_check(ui.bind("extras.wallpaper.glide"))==true
--- Until the first pearl drops (120 ms) the strand rests on its pearl: a new visit never spins in from where the last one left off.
-local strand=ui.animate("wallpaper-strand:"..tostring(count)..":"..tostring(animation_key),position,ms<120 and 0 or glide and W.glide_duration or W.move_duration,glide and "linear" or "out-quint")
-local function span(from,to) return math.max(0,math.min(1,(ms-from)/(to-from))) end
--- cubic-bezier(.3,.75,.3,1) exactly (Bead has no such named curve): bisect x(u)=t, return y(u).
-local function bezier(t)
-  local lo,hi=0,1
-  for _=1,24 do
-    local u=(lo+hi)/2
-    if 3*(1-u)*(1-u)*u*.3+3*(1-u)*u*u*.3+u*u*u<t then lo=u else hi=u end
-  end
-  local u=(lo+hi)/2
-  return 3*(1-u)*(1-u)*u*.75+3*(1-u)*u*u+u*u*u
-end
-local scrim,dropping,chrome,footer=span(0,240),bezier(span(0,520)),span(380,560),span(420,600)
-local ga=1 -- alpha of the glyph buttons and toggles built next (chrome, then footer)
+-- While it arrives the strand rests on its pearl: a new visit never spins in from where the last one left off.
+local strand=ui.animate("wallpaper-strand:"..tostring(count)..":"..tostring(animation_key),position,opening and appear<1 and 0 or glide and W.glide_duration or W.move_duration,glide and "linear" or "out-quint")
+local ga=appear -- alpha of the glyph buttons and toggles built next
 local function fade(colour,alpha) return type(colour)=="table" and {colour[1],colour[2],colour[3],math.floor(colour[4]*alpha)} or colour end
 local function ga_fade(colour) return fade(colour,ga) end
 
 local s=math.min(width/W.art_width,height/W.art_height)
 local centre={x=width/2,y=height/2}
 local gap=W.pearl_gap*s
-local thread_y=W.thread_y -- the bar thread, in panel pixels
+local lift=(1-appear)*W.entry_drop*s -- the small drop: everything comes down into place
 
 -- True catenary through the two off-screen anchors with its lowest point at the centre: a*(cosh(half/a)-1)=sag.
 local half=centre.x-W.anchor_x*s
@@ -103,13 +94,9 @@ local function pearl_node(pearl)
   -- B0328: every image is baked once at its largest slot size and the draw scales it, so sliding never re-bakes.
   local bake=math.abs(pearl.offset)<=2.5 and size_at(0) or size_at(3)
   local item=pearl.item
-  -- Drop: from the thread line, scale .15 -> 1 (out-cubic), 120 ms + 35 ms per slot out, 380 ms each.
-  local from=120+35*math.min(5,math.floor(math.abs(pearl.offset)+.5))
-  local loc=span(from,from+380)
-  local drop=1-(1-loc)^3
-  -- Fades in with the drop; the outer pair rests at 50 % (offset 4 -> 5), also while the strand moves.
-  local alpha=math.min(1,loc*1.6)*(1-.5*math.max(0,math.min(1,math.abs(pearl.offset)-4)))
-  local size,cy=pearl.size*(.15+.85*drop),thread_y+(pearl.y-thread_y)*drop
+  -- The outer pair rests at 50 % (offset 4 -> 5), also while the strand moves.
+  local alpha=appear*(1-.5*math.max(0,math.min(1,math.abs(pearl.offset)-4)))
+  local size,cy=pearl.size,pearl.y-lift
   local near=math.max(0,1-math.abs(pearl.offset))
   local edge=math.max(1,s)
   local path=item.thumbnail
@@ -155,7 +142,7 @@ local function silk(id,from,to,colour,stroke)
   local curve={}
   for step=0,12 do
     local x=x0+(x1-x0)*step/12
-    local y=thread_y+(base-a*math.cosh((x-centre.x)/a)-thread_y)*dropping
+    local y=base-a*math.cosh((x-centre.x)/a)-lift
     curve[#curve+1]={x,y}
     top,bottom=math.min(top,y),math.max(bottom,y)
   end
@@ -163,7 +150,7 @@ local function silk(id,from,to,colour,stroke)
   local left,box_width,box_height=x0-pad,x1-x0+2*pad,bottom-top+2*pad
   local points={}
   for _,point in ipairs(curve) do points[#points+1]={(point[1]-left)/box_width,(point[2]-top+pad)/box_height} end
-  return ui.Polyline{id=id,position="absolute",left=left,top=top-pad,width=box_width,height=box_height,points=points,stroke_width=stroke*s,color=colour}
+  return ui.Polyline{id=id,position="absolute",left=left,top=top-pad,width=box_width,height=box_height,points=points,stroke_width=stroke*s,color=fade(colour,appear)}
 end
 local strand_nodes={}
 for index in ipairs(W.silk) do strand_nodes[#strand_nodes+1]=silk("thread-shadow-"..index,(index-1)/#W.silk,index/#W.silk,W.silk_shadow,W.silk_stroke+2) end
@@ -175,7 +162,7 @@ for index=1,#placed-1 do
   local left,right=placed[index],placed[index+1]
   if right.offset-left.offset<1.5 then
     local x,y=point_at(((left.arc+left.size/2)+(right.arc-right.size/2))/2)
-    strand_nodes[#strand_nodes+1]=ui.Box{id="knot-"..index,position="absolute",left=x-knot/2,top=y-knot/2,width=knot,height=knot,radius=knot/2,fill=fade(W.knot_fill,span(350,650))}
+    strand_nodes[#strand_nodes+1]=ui.Box{id="knot-"..index,position="absolute",left=x-knot/2,top=y-lift-knot/2,width=knot,height=knot,radius=knot/2,fill=fade(W.knot_fill,appear)}
   end
 end
 table.sort(placed,function(left,right) return math.abs(left.offset)>math.abs(right.offset) end)
@@ -185,10 +172,10 @@ for _,pearl in ipairs(placed) do strand_nodes[#strand_nodes+1]=pearl_node(pearl)
 local ring=size_at(nearest)+2*(W.ring_gap+W.ring_stroke)*s
 local stroke=math.max(1,W.ring_stroke*s)
 -- Between two pearls the ring has nothing to hold: it fades, then comes back around the next one.
-local ring_alpha=math.floor(255*chrome*math.max(0,math.min(1,1-nearest*1.6)))
+local ring_alpha=math.floor(255*appear*math.max(0,math.min(1,1-nearest*1.6)))
 if count>0 then
   for index,colour in ipairs(W.silk) do
-    strand_nodes[#strand_nodes+1]=ui.Arc{id="ring-"..index,position="absolute",left=centre.x-ring/2+stroke/2,top=centre.y-ring/2+stroke/2,
+    strand_nodes[#strand_nodes+1]=ui.Arc{id="ring-"..index,position="absolute",left=centre.x-ring/2+stroke/2,top=centre.y-lift-ring/2+stroke/2,
       width=ring-stroke,height=ring-stroke,start_angle=-160+(index-1)*72,sweep_angle=72,stroke_width=stroke,round_caps=false,
       color={colour[1],colour[2],colour[3],ring_alpha}}
   end
@@ -205,22 +192,23 @@ local function glyph_button(id,label,glyph,size,font,fill,action,request,left,to
   return kit.Button(props)
 end
 
--- Veil: flat translucent bands that follow the design gradient (.40 top, .12 at 40 %, .60 bottom). A stretched
--- SVG would be rasterised at the full panel size, which overruns Bead's retained raster budget at 2880x1800.
-local function veil_alpha(at) return at<.4 and .40-(.40-.12)*at/.4 or .12+(.60-.12)*(at-.4)/.6 end
+-- Veil: only what the name, caption and pill need to read (owner, round 4: no dim that makes Strand an overlay):
+-- nothing over the upper part, then flat translucent bands to `veil_max` at the bottom. A stretched SVG would be
+-- rasterised at the full panel size, which overruns Bead's retained raster budget at 2880x1800.
+local function veil_alpha(at) return W.veil_max*math.max(0,at-W.veil_from)/(1-W.veil_from) end
 local children={}
 for band=0,W.veil_bands-1 do
   -- Even edges land on whole physical pixels at scale 1, 1.5 and 2, so the bands leave no antialiased seams.
   local function edge(index) return index==W.veil_bands and height or 2*math.floor(height*index/W.veil_bands/2) end
   local top,bottom=edge(band),edge(band+1)
-  children[#children+1]=ui.Box{id="veil-"..band,position="absolute",left=0,top=top,width=width,height=bottom-top,radius=0,fill={6,7,10,math.floor(255*scrim*veil_alpha((band+.5)/W.veil_bands))}}
+  children[#children+1]=ui.Box{id="veil-"..band,position="absolute",left=0,top=top,width=width,height=bottom-top,radius=0,fill={6,7,10,math.floor(255*appear*veil_alpha((band+.5)/W.veil_bands))}}
 end
 -- Wheel or trackpad: at most one step per 60 ms (Bead drops the rest); extras.rs lands it 240 ms after the last step.
 children[#children+1]=ui.Box{id="strand",position="absolute",left=0,top=0,width=width,height=height,fill="transparent",
   scroll=ui.action("strand_wheel"),scroll_steps={min_interval_ms=60},table.unpack(strand_nodes)}
 
 if selected then
-  local name_top=centre.y+W.name_top*s
+  local name_top=centre.y+W.name_top*s-lift
   -- A long name ends in an ellipsis inside the span between the arrows (they sit a fixed gap outside it).
   local name_max,name_size=2*(W.nav_offset-W.nav_size/2-W.nav_gap)*s,W.name_font*s
   local title=selected.title or ""
@@ -232,8 +220,8 @@ if selected then
     until chars<=1 or ui.text_width(title,ui.default_font_family,name_size)<=name_max
   end
   children[#children+1]=ui.Text{id="selected-title",position="absolute",left=(width-name_max)/2,top=name_top,width=name_max,height=W.name_height*s,
-    text=title,font_size=W.name_font*s,font_weight=300,text_align="center",color=fade(W.ink,chrome),
-    text_shadow_blur=18,text_shadow_y=2,text_shadow_color={0,0,0,math.floor(115*chrome)}}
+    text=title,font_size=W.name_font*s,font_weight=300,text_align="center",color=fade(W.ink,appear),
+    text_shadow_blur=18,text_shadow_y=2,text_shadow_color={0,0,0,math.floor(115*appear)}}
   -- The prototype's caption: "3 of 47, 3840 x 2560" for a still, "3 of 47, video, 24 s loop, plays muted" for a video;
   -- "3 of 5 matches" while a search narrows the strand.
   local meta=animation_query~="" and ui.tr("bead.dashboard.wallpaper-meta-matches",{index=selection_index,count=count})
@@ -242,23 +230,22 @@ if selected then
   elseif resolution~="" and resolution_id==selected.id then meta=ui.tr("bead.dashboard.wallpaper-meta-size",{meta=meta,size=resolution}) end
   local meta_font=W.meta_font*s
   local meta_row={ui.Text{id="selection-count",width=ui.text_width(meta,ui.default_font_family,meta_font)+12*s,height=W.meta_height*s,text=meta,
-    font_weight=500,font_size=meta_font,color=fade(W.ink_soft,chrome)}}
+    font_weight=500,font_size=meta_font,color=fade(W.ink_soft,appear)}}
   local dots={}
   local colours=selected.swatch or (type(selected.palette)=="table" and selected.palette.colours or nil)
   for _,role in ipairs(W.palette_roles) do
     local r,g,b=string.match(type(colours)=="table" and tostring(colours[role] or "") or "","#(%x%x)(%x%x)(%x%x)")
     if r then
       dots[#dots+1]=ui.Box{id="dot-"..role,width=W.dot*s,height=W.dot*s,shrink=0,radius=W.dot*s/2,
-        fill={tonumber(r,16),tonumber(g,16),tonumber(b,16),math.floor(255*chrome)},border_width=1,border_color=fade(W.dot_edge,chrome)}
+        fill={tonumber(r,16),tonumber(g,16),tonumber(b,16),math.floor(255*appear)},border_width=1,border_color=fade(W.dot_edge,appear)}
     end
   end
   if #dots>0 then
     meta_row[#meta_row+1]=ui.Row{id="palette-dots",gap=W.dot_gap*s,height=W.dot*s,align="center",table.unpack(dots)}
   end
-  children[#children+1]=ui.Row{id="selection-meta",position="absolute",left=0,top=centre.y+W.meta_top*s,width=width,height=W.meta_height*s,
+  children[#children+1]=ui.Row{id="selection-meta",position="absolute",left=0,top=centre.y+W.meta_top*s-lift,width=width,height=W.meta_height*s,
     gap=W.meta_gap*s,align="center",justify="center",table.unpack(meta_row)}
   local nav=W.nav_size*s
-  ga=chrome
   local nav_top=name_top+(W.name_height*s-nav)/2
   children[#children+1]=glyph_button("previous",ui.tr("bead.dashboard.wallpaper-previous"),"chevron_left",nav,W.nav_font*s,W.nav_fill,
     "extras.prev",true,centre.x-W.nav_offset*s-nav/2,nav_top)
@@ -266,23 +253,22 @@ if selected then
     "extras.next",true,centre.x+W.nav_offset*s-nav/2,nav_top)
 end
 
-ga=footer
 -- One pill, centred under the name and meta: search and shuffle (the prototype has no pause).
 local button=W.button_size*s
 local pill_items={
   ui.Box{id="search-field",width=W.search_width*s,height=button,shrink=0,fill="transparent",
     kit.TextInput{id="search",position="absolute",left=0,top=0,width=W.search_width*s,height=button,
-      focus_ring=false,text=ui.bind("extras.query"),placeholder=footer>.5 and "Search wallpapers" or "",
+      focus_ring=false,text=ui.bind("extras.query"),placeholder=appear>.5 and "Search wallpapers" or "",
       padding_left=(W.search_icon+19)*s,padding_right=12*s,padding_top=(button-kit.tokens.text.body*4/3*1.4)/2,padding_bottom=(button-kit.tokens.text.body*4/3*1.4)/2,
-      radius=button/2,font_size=kit.tokens.text.body*4/3,fill=fade(W.search_fill,footer),
+      radius=button/2,font_size=kit.tokens.text.body*4/3,fill=fade(W.search_fill,appear),
       border_width=search_focused and 1 or 0,border_color="outline"},
     ui.Text{id="search-icon",position="absolute",left=10*s,top=(button-W.search_icon*s*1.15)/2,width=W.search_icon*s,height=W.search_icon*s*1.15,
-      text="search",family="Material Symbols Rounded",font_size=W.search_icon*s,color=fade(W.ink_soft,footer)}}}
+      text="search",family="Material Symbols Rounded",font_size=W.search_icon*s,color=fade(W.ink_soft,appear)}}}
 pill_items[#pill_items+1]=glyph_button("shuffle",ui.tr("bead.dashboard.wallpaper-shuffle"),"shuffle",button,W.button_font*s,"transparent","extras.shuffle",true)
 local pill_width=W.pill_padding*2*s+W.search_width*s+button+W.pill_gap*s
 local pill_height=W.pill_height*s
-children[#children+1]=ui.Box{id="wallpaper-controls",position="absolute",left=(width-pill_width)/2,top=centre.y+W.pill_top*s,
-  width=pill_width,height=pill_height,radius=pill_height/2,fill=fade(W.pill_fill,footer),
+children[#children+1]=ui.Box{id="wallpaper-controls",position="absolute",left=(width-pill_width)/2,top=centre.y+W.pill_top*s-lift,
+  width=pill_width,height=pill_height,radius=pill_height/2,fill=fade(W.pill_fill,appear),
   ui.Row{width=pill_width,height=pill_height,padding_left=W.pill_padding*s,padding_right=W.pill_padding*s,gap=W.pill_gap*s,align="center",table.unpack(pill_items)}}
 
 children[#children+1]=ui.Text{id="empty",position="absolute",left=24,top=height/2+40*s,width=width-48,height=W.empty_height,
@@ -298,7 +284,9 @@ children[#children+1]=ui.Text{id="status",position="absolute",left=24,top=height
 -- panel on its CPU renderer while the panel motion runs, which at full screen held the strand's first GL frame
 -- back ~200 ms behind 10-20 ms CPU frames. `palette_tween=false`: Strand's look takes nothing from the palette, so a
 -- wallpaper's palette tween re-staged the whole strand ~30 times per move; it now takes the tween's final palette only.
+-- The invisible edge makes the root the scene's first box, which the shell places as the panel body (otherwise the
+-- first veil band or pearl was taken for it). `view.frame=false` (behavior.luau) keeps the frame art out of Strand.
 return kit.Panel{id="extras",edge="top",open=ui.bind("panel.open"),width=width,height=height,shadow=false,reveal=false,fade=false,slide_distance=0,
   duration=0,return_duration=W.close_ms/1000,palette_tween=false,key_repeat={delay=260,interval=95,min_interval=62,ramp_ms=800}, -- the held-arrow glide clock (spec v5f)
-  radius=0,fill="transparent",padding=0,gap=0,body="body",on_activate=ui.action("close"),aria_label="Close wallpaper picker",
+  radius=0,fill="transparent",border_width=1,border_color="transparent",padding=0,gap=0,body="body",on_activate=ui.action("close"),aria_label="Close wallpaper picker",
   ui.Box{id="body",position="absolute",left=0,top=0,width=width,height=height,fill="transparent",join_edge="top",table.unpack(children)}}

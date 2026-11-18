@@ -2100,30 +2100,27 @@ fn wallpaper_strand_goldens() -> bead_test::Result<()> {
     let _ = std::fs::remove_dir_all(&thumbnails);
     Ok(())
 }
-/// The entry storyboard pinned at two instants (`extras.wallpaper.entry_ms`): the thread partly sagged with only
-/// the centre pearls dropped, then the pearls out to the sides and the name still fading in.
+/// The entrance pinned mid-way (`extras.wallpaper.entry_ms`): everything together, part faded and part dropped.
 #[test]
 fn wallpaper_strand_entry_goldens() -> bead_test::Result<()> {
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../shell");
     let thumbnails = std::env::temp_dir().join(format!("strand-entry-{}", std::process::id()));
-    for ms in [200., 450.] {
-        let mut harness = strand_harness(12, "mixed", "", 6., (1440, 900), 1., &thumbnails)?;
-        harness.update(BTreeMap::from([(
-            "extras.wallpaper.entry_ms".into(),
-            Value::Number(ms),
-        )]))?;
-        let frame = harness.render()?;
-        let file = format!("wallpaper-strand-open-{ms}-1.png");
-        let path = root.join("tests/goldens").join(&file);
-        if std::env::var("BEAD_UPDATE_GOLDENS").as_deref() == Ok("1") {
-            frame.save(&path)?;
-        }
-        frame.compare(
-            &path,
-            Default::default(),
-            &std::env::temp_dir().join(format!("{file}-diff")),
-        )?;
+    let mut harness = strand_harness(12, "mixed", "", 6., (1440, 900), 1., &thumbnails)?;
+    harness.update(BTreeMap::from([(
+        "extras.wallpaper.entry_ms".into(),
+        Value::Number(100.),
+    )]))?;
+    let frame = harness.render()?;
+    let file = "wallpaper-strand-open-100-1.png";
+    let path = root.join("tests/goldens").join(file);
+    if std::env::var("BEAD_UPDATE_GOLDENS").as_deref() == Ok("1") {
+        frame.save(&path)?;
     }
+    frame.compare(
+        &path,
+        Default::default(),
+        &std::env::temp_dir().join(format!("{file}-diff")),
+    )?;
     let _ = std::fs::remove_dir_all(&thumbnails);
     Ok(())
 }
@@ -2454,6 +2451,14 @@ async fn the_peek_is_held_while_the_picker_is_open_and_dropped_on_every_close() 
         );
         let _ = std::fs::remove_file(socket);
     }
+}
+#[test]
+fn the_peek_asks_every_output_or_else_the_focused_one() {
+    assert_eq!(
+        peek_outputs(&json!({"outputs":{"DP-1":{},"eDP-1":{}}})),
+        vec![Some("DP-1".to_owned()), Some("eDP-1".to_owned())]
+    );
+    assert_eq!(peek_outputs(&json!({"outputs":{}})), vec![None]);
 }
 /// A busy compositor answers the peek late: opening must not wait for it (it blocked the main thread up to 100 ms).
 #[tokio::test(flavor = "current_thread")]

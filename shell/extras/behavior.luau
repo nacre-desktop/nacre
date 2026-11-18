@@ -202,6 +202,8 @@ local exports = {
     ["extras.do"] = "",
   },
   computed = {
+    -- Strand draws its own full-screen composition: no joined frame art (it took a veil band for the panel body).
+    ["view.frame"] = function(s) return s["extras.kind"] ~= "wallpaper" end,
     ["extras.filtered"] = filtered,
     ["extras.groups"] = groups,
     ["extras.empty"] = function(s)

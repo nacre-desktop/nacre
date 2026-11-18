@@ -61,9 +61,9 @@ fn palette_activation(result: &MenuQueryResult, id: &str) -> Option<Json> {
 }
 /// What keeps the windows out of the way while the strand is open.
 enum Peek {
-    /// nacre-niri holds the peek for as long as this connection lives.
+    /// nacre-niri holds the peek for as long as these connections (one per output) live.
     Held {
-        _hold: crate::backends::niri::PeekHold,
+        _holds: Vec<crate::backends::niri::PeekHold>,
     },
     /// Stock niri and other compositors: the empty workspace is shown; this is the one to return to.
     Workspace { output: Json, previous: i64 },
@@ -97,6 +97,15 @@ fn peek_workspace_plan(data: &Json) -> Option<(Json, i64, i64, String)> {
         empty.1["index"].as_i64()?,
         current.0.to_owned(),
     ))
+}
+/// The outputs whose windows the peek clears: every output the compositor reports, or the focused one (`None`).
+fn peek_outputs(data: &Json) -> Vec<Option<String>> {
+    let names: Vec<_> = data["outputs"]
+        .as_object()
+        .into_iter()
+        .flat_map(|outputs| outputs.keys().cloned().map(Some))
+        .collect();
+    if names.is_empty() { vec![None] } else { names }
 }
 struct Query {
     text: String,
@@ -160,7 +169,7 @@ struct State {
     peek: Option<Peek>,
     /// The compositor's answer to the peek request, still being awaited on its own thread (it blocks up to
     /// 100 ms and must never do so on the main thread while the open storyboard runs).
-    peek_pending: Option<Arc<std::sync::Mutex<Option<Option<crate::backends::niri::PeekHold>>>>>,
+    peek_pending: Option<Arc<std::sync::Mutex<Option<Vec<crate::backends::niri::PeekHold>>>>>,
     /// Keeps the fallback's workspace call alive until it has been sent.
     peek_call: Option<CallTicket>,
     /// The nacre-niri command socket, when the session runs on niri.
@@ -504,7 +513,7 @@ const SWATCH_ROLES: [&str; 5] = [
     "primaryContainer",
     "onSurface",
 ];
-const STRAND_SETTLE: Duration = Duration::from_millis(675);
+const STRAND_SETTLE: Duration = Duration::from_millis(250);
 pub struct Extras {
     pub kind: Kind,
     client: Client,
@@ -1411,13 +1420,33 @@ impl Extras {
             state.niri_socket.clone()
         };
         if let Some(socket) = socket {
+            let outputs = peek_outputs(
+                &self
+                    .compositor
+                    .as_ref()
+                    .map(|topic| topic.snapshot().data.clone())
+                    .unwrap_or_default(),
+            );
             let slot = Arc::new(std::sync::Mutex::new(None));
             let (theirs, wake) = (slot.clone(), wake.clone());
             let spawned = std::thread::Builder::new()
                 .name("strand-peek".into())
                 .spawn(move || {
-                    let hold = crate::backends::niri::peek_desktop(&socket, None);
-                    *theirs.lock().unwrap_or_else(|p| p.into_inner()) = Some(hold);
+                    // A hold covers only the output it names: one connection per output, all asked at once.
+                    let asks: Vec<_> = outputs
+                        .into_iter()
+                        .map(|output| {
+                            let socket = socket.clone();
+                            std::thread::spawn(move || {
+                                crate::backends::niri::peek_desktop(&socket, output.as_deref())
+                            })
+                        })
+                        .collect();
+                    let holds = asks
+                        .into_iter()
+                        .filter_map(|ask| ask.join().ok().flatten())
+                        .collect();
+                    *theirs.lock().unwrap_or_else(|p| p.into_inner()) = Some(holds);
                     if let Some(wake) = wake {
                         wake();
                     }
@@ -1442,8 +1471,8 @@ impl Extras {
         let mut state = self.state.borrow_mut();
         state.peek_pending = None;
         match answer {
-            Some(hold) => state.peek = Some(Peek::Held { _hold: hold }),
-            None => {
+            holds if !holds.is_empty() => state.peek = Some(Peek::Held { _holds: holds }),
+            _ => {
                 drop(state);
                 self.peek_fallback(wake);
             }
