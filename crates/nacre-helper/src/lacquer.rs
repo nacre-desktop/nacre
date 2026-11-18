@@ -1,7 +1,8 @@
 //! Lacquer and inlay colour recipe: a pure post-step on Orient's role map (ported from the
-//! design prototype's `themeVars`/`reach`, Prototype.dc.html). Surfaces take the wallpaper's own
-//! shadow (dark) or highlight (light) tone, ink is pearl or plum, and every text accent keeps its
-//! hue while its lightness moves until it reads on all nine surfaces.
+//! design prototype's `themeVars`/`reach`, Final.dc.html). Surfaces take the wallpaper's main hue
+//! at the locked MEDIUM tint (about 10 % lightness in dark, 95 % in light), ink is pearl or plum,
+//! and every text accent keeps its hue while its lightness moves until it reads on all nine
+//! surfaces.
 use crate::Result;
 use orient_core::{
     accessibility::{audit, BACKGROUNDS, TEXT_ROLES},
@@ -9,12 +10,8 @@ use orient_core::{
 };
 use serde_json::{json, Map, Value};
 
-const URUSHI: &str = "0d0b0e";
-const FRAME_DARK: &str = "0b0a0c";
 const PEARL: &str = "f2edf0";
 const PLUM: &str = "2a1f2b";
-const PALE: &str = "fcfafb";
-const FRAME_LIGHT: &str = "f3eef1";
 const WHITE: &str = "ffffff";
 const SIGNAL: &str = "ff8a80";
 const SIGNAL_LIGHT: &str = "e0485b";
@@ -119,6 +116,27 @@ pub fn reach(color: &str, backgrounds: &[&str], down: bool, ratio: f64) -> Strin
     out
 }
 
+/// The MEDIUM tint (Final's `tinted`): the first of `hues` with real saturation sets the hue;
+/// returns (surface, frame) at fixed lightness, saturation scaled by the wallpaper's own.
+fn tint(hues: &[String], light: bool) -> (String, String) {
+    let hue = hues.iter().map(|hex| to_hls(hex)).find(|q| q[2] >= 0.12);
+    let Some([h, _, s]) = hue else {
+        let grey = if light {
+            ("f8f5f6", "efeaed")
+        } else {
+            ("141215", "100e11")
+        };
+        return (grey.0.into(), grey.1.into());
+    };
+    let (l, sat, drop) = if light {
+        (0.952, 0.42, 0.035)
+    } else {
+        (0.105, 0.34, 0.02)
+    };
+    let sat = sat * (s / 0.35).min(1.0);
+    (from_hls([h, l, sat]), from_hls([h, l - drop, sat * 0.9]))
+}
+
 /// The wallpaper's shadow and highlight tones: Orient's dominant colours of the darkest and the
 /// lightest quarter of the image.
 pub fn tones(source: &Value) -> Option<(String, String)> {
@@ -135,16 +153,18 @@ fn role(colours: &Map<String, Value>, name: &str) -> Option<String> {
 }
 
 /// Rewrites the surface, ink and accent roles of `colours` in place.
-pub fn recolour(colours: &mut Map<String, Value>, light: bool, shadow: &str, highlight: &str) {
-    let (surface, frame, raise) = if light {
-        let surface = mix(PALE, highlight, 0.42);
-        let raise = mix(&surface, WHITE, 0.5);
-        (surface, mix(FRAME_LIGHT, highlight, 0.5), raise)
-    } else {
-        let surface = mix(URUSHI, shadow, 0.42);
-        let raise = mix(&surface, WHITE, 0.10);
-        (surface, mix(FRAME_DARK, shadow, 0.36), raise)
-    };
+pub fn recolour(colours: &mut Map<String, Value>, light: bool, highlight: &str) {
+    let accent = |name| role(colours, name);
+    let mut hues: Vec<String> = ["primary", "secondary"]
+        .iter()
+        .filter_map(|n| accent(n))
+        .collect();
+    hues.extend(accent("tertiary"));
+    if light {
+        hues.insert(0, highlight.into());
+    }
+    let (surface, frame) = tint(&hues, light);
+    let raise = mix(&surface, WHITE, if light { 0.5 } else { 0.10 });
     let ink = if light { PLUM } else { PEARL };
     let ink2 = mix(&surface, ink, 0.76);
     let ink3 = mix(&surface, ink, if light { 0.66 } else { 0.70 });
@@ -221,6 +241,7 @@ pub fn recolour(colours: &mut Map<String, Value>, light: bool, shadow: &str, hig
         ("ink2", &ink2),
         ("ink3", &ink3),
         ("signal", &signal),
+        ("raised", &raise),
         ("icon", &icon),
         ("clock", &clock),
     ] {
@@ -271,14 +292,14 @@ pub fn recolour(colours: &mut Map<String, Value>, light: bool, shadow: &str, hig
 
 /// The post-step on a whole Orient palette document (`mode`, `source`, `colours`).
 pub fn apply(palette: &mut Value) -> Result<()> {
-    let Some((shadow, highlight)) = tones(&palette["source"]) else {
+    let Some((_, highlight)) = tones(&palette["source"]) else {
         return Ok(());
     };
     let light = palette["mode"] == "light";
     let colours = palette["colours"]
         .as_object_mut()
         .ok_or("Invalid palette colors")?;
-    recolour(colours, light, &shadow, &highlight);
+    recolour(colours, light, &highlight);
     palette["accessibility"] = audit(colours)?;
     Ok(())
 }
@@ -333,7 +354,7 @@ mod tests {
         for p in DESIGNER {
             for light in [false, true] {
                 let mut c = roles(&p[..3]);
-                recolour(&mut c, light, &p[3].to_lowercase(), &p[4].to_lowercase());
+                recolour(&mut c, light, &p[4].to_lowercase());
                 let tag = format!("{p:?} light={light}");
                 for bg in BACKGROUNDS {
                     for fg in TEXT_ROLES {
@@ -359,9 +380,9 @@ mod tests {
     #[test]
     fn accents_keep_their_hue_and_output_is_deterministic() {
         let mut a = roles(&["67BAFB", "9CC3F0", "E6C9A5"]);
-        recolour(&mut a, true, "1f3f5a", "e6d9c4");
+        recolour(&mut a, true, "e6d9c4");
         let mut b = roles(&["67BAFB", "9CC3F0", "E6C9A5"]);
-        recolour(&mut b, true, "1f3f5a", "e6d9c4");
+        recolour(&mut b, true, "e6d9c4");
         assert_eq!(a, b);
         let hue = |hex: &str| to_hls(hex)[0];
         assert!((hue(&get(&a, "primary")) - hue("67bafb")).abs() < 0.02);
@@ -369,11 +390,72 @@ mod tests {
     }
 
     #[test]
-    fn dark_surface_is_urushi_plus_forty_two_percent_of_the_shadow_tone() {
+    fn medium_tint_lands_near_ten_percent_dark_and_ninety_five_light() {
+        for p in DESIGNER {
+            for (light, want) in [(false, 0.105), (true, 0.952)] {
+                let mut c = roles(&p[..3]);
+                recolour(&mut c, light, &p[4].to_lowercase());
+                let l = to_hls(&get(&c, "surface"))[1];
+                assert!(
+                    (l - want).abs() < 0.01,
+                    "{p:?} light={light}: surface L {l}"
+                );
+                assert!(
+                    (to_hls(&get(&c, "frame"))[1] - (want - if light { 0.035 } else { 0.02 }))
+                        .abs()
+                        < 0.01
+                );
+            }
+        }
+        // the surface carries the wallpaper's hue: blue accents tint blue
         let mut c = roles(&["67BAFB", "9CC3F0", "E6C9A5"]);
-        recolour(&mut c, false, "1f3f5a", "e6d9c4");
-        assert_eq!(get(&c, "surface"), mix(URUSHI, "1f3f5a", 0.42));
-        assert_eq!(get(&c, "ink"), PEARL);
+        recolour(&mut c, false, "e6d9c4");
+        assert!((to_hls(&get(&c, "surface"))[0] - to_hls("67bafb")[0]).abs() < 0.02);
+    }
+
+    #[test]
+    fn export_carries_the_v6_tokens_in_both_modes() {
+        const TOKENS: [&str; 17] = [
+            "surface",
+            "raised",
+            "ink",
+            "ink2",
+            "ink3",
+            "orientChampagne",
+            "orientRose",
+            "orientLilac",
+            "orientIce",
+            "orientMint",
+            "primary",
+            "secondary",
+            "tertiary",
+            "icon",
+            "clock",
+            "signal",
+            "frame",
+        ];
+        for light in [false, true] {
+            let mut palette = json!({
+                "mode": if light { "light" } else { "dark" },
+                "source": {"body": {"dark": {"hex": "3a3448"}, "light": {"hex": "eee8f2"}}},
+                "colours": roles(&["9ED37A", "CDB8E6", "E9B7CB"]),
+            });
+            apply(&mut palette).unwrap();
+            for name in TOKENS {
+                let hex = palette["colours"][name].as_str().unwrap_or_default();
+                assert!(
+                    u32::from_str_radix(hex, 16).is_ok() && hex.len() == 6,
+                    "{name} light={light}: {hex:?}"
+                );
+            }
+            let c = palette["colours"].as_object().unwrap();
+            let raised = if light {
+                "surfaceContainerLow"
+            } else {
+                "surfaceContainer"
+            };
+            assert_eq!(get(c, "raised"), get(c, raised));
+        }
     }
 
     #[test]
