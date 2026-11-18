@@ -296,8 +296,9 @@ children[#children+1]=ui.Text{id="status",position="absolute",left=24,top=height
 -- slide: the shared profile would fight it); a click on empty
 -- space closes the picker like Esc (the wallpaper goes back). No open motion either (`duration=0`): Bead keeps a
 -- panel on its CPU renderer while the panel motion runs, which at full screen held the strand's first GL frame
--- back ~200 ms behind 10-20 ms CPU frames.
+-- back ~200 ms behind 10-20 ms CPU frames. `palette_tween=false`: Strand's look takes nothing from the palette, so a
+-- wallpaper's palette tween re-staged the whole strand ~30 times per move; it now takes the tween's final palette only.
 return kit.Panel{id="extras",edge="top",open=ui.bind("panel.open"),width=width,height=height,shadow=false,reveal=false,fade=false,slide_distance=0,
-  duration=0,return_duration=W.close_ms/1000,key_repeat={delay=260,interval=95,min_interval=62,ramp_ms=800}, -- the held-arrow glide clock (spec v5f)
+  duration=0,return_duration=W.close_ms/1000,palette_tween=false,key_repeat={delay=260,interval=95,min_interval=62,ramp_ms=800}, -- the held-arrow glide clock (spec v5f)
   radius=0,fill="transparent",padding=0,gap=0,body="body",on_activate=ui.action("close"),aria_label="Close wallpaper picker",
   ui.Box{id="body",position="absolute",left=0,top=0,width=width,height=height,fill="transparent",join_edge="top",table.unpack(children)}}
