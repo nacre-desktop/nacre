@@ -114,9 +114,11 @@ local function pearl_node(pearl)
   local edge=math.max(1,s)
   local path=item.thumbnail
   local kids={}
+  -- The shadow and the sheen keep one tint and fade through opacity: a tint is part of the baked image's key, so a
+  -- tint that changed every frame re-baked both images on every frame of a glide or the drop.
   if math.abs(pearl.offset)<=2.5 then
     kids[#kids+1]=ui.Image{id="shadow",position="absolute",left=-size*.12,top=-size*.04,width=size*1.24,height=size*1.24,
-      path=W.glow,bake_size={w=bake*1.24,h=bake*1.24},tint={0,0,0,math.floor(110*alpha*math.min(1,size/(W.pearl_sizes[1]*s)+.35))}}
+      path=W.glow,bake_size={w=bake*1.24,h=bake*1.24},tint={0,0,0,110},opacity=alpha*math.min(1,size/(W.pearl_sizes[1]*s)+.35)}
   end
   if path and path~="" then
     kids[#kids+1]=ui.Image{id="thumbnail",position="absolute",left=0,top=0,width=size,height=size,
@@ -135,7 +137,7 @@ local function pearl_node(pearl)
     border_width=edge,border_color=fade(W.pearl_edge,alpha)}
   if near>.3 then
     kids[#kids+1]=ui.Image{id="sheen",position="absolute",left=0,top=0,width=size,height=size,path=W.sheen,bake_size={w=bake,h=bake},
-      tint={W.pearl_sheen[1],W.pearl_sheen[2],W.pearl_sheen[3],math.floor(W.pearl_sheen[4]*near*alpha)}}
+      tint=W.pearl_sheen,opacity=near*alpha}
   end
   -- The chosen pearl keeps the pick; any other pearl only moves the strand.
   local request=(math.abs(pearl.offset)<.5 and "wallpaper:commit:" or "wallpaper:select:")..tostring(item.id)
