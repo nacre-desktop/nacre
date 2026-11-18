@@ -381,6 +381,7 @@ impl Gate {
             frame: Mutex::new(FrameState {
                 ai: true,
                 delay: 350,
+                click: true,
                 ..Default::default()
             }),
             watchers: Mutex::new(Vec::new()),
@@ -770,7 +771,7 @@ mod tests {
         assert_eq!(gate.bar_thickness(), Some(50));
         // The assistant lip is hidden: no such view exists yet.
         assert_eq!(ids(&chrome), [("dashboard", 50.), ("controls", 10.)]);
-        assert_eq!((chrome.hover_delay_ms, chrome.click_to_open), (350, false));
+        assert_eq!((chrome.hover_delay_ms, chrome.click_to_open), (350, true));
         // Lengths come from the frame config (the old `lipSize` override is gone).
         let lengths: Vec<f32> = chrome.lips.iter().map(|l| l.length).collect();
         assert_eq!(lengths, [208., 144.]);
@@ -951,6 +952,11 @@ mod tests {
             },
             ["assistant".into(), "status".into()],
         );
+        // The hover dwell is the explicit `clickEdgeMenus=false` choice.
+        gate.apply(&Prefs::decode(
+            &json!({"clickEdgeMenus":false}),
+            &json!(null),
+        ));
         gate.set_native_edge_source(true);
         assert!(gate.edge_chrome().external_source);
         assert!(gate.edge_input_regions((1000, 800)).is_empty());

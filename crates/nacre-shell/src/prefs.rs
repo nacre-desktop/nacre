@@ -60,7 +60,7 @@ pub struct Prefs {
     pub interface_gradients: bool,
     /// B0047 frame: `frameWidth` (`?? 10`), `frameRounding` (`?? 25`), the four side
     /// toggles (`!== false`), `aiSidebarEnabled`, `lipHoverDelay` (integer 0..800, else
-    /// 350) and `clickEdgeMenus` (`=== true`).
+    /// 350) and `clickEdgeMenus` (`!== false`: edge tabs open on click).
     pub frame_width: i32,
     pub frame_rounding: i32,
     pub frame_left: bool,
@@ -236,7 +236,7 @@ impl Prefs {
                 .and_then(Json::as_f64)
                 .filter(|v| v.fract() == 0.)
                 .map_or(350, |v| v.clamp(0., 800.) as u32),
-            click_edge_menus: flag("clickEdgeMenus") == Some(true),
+            click_edge_menus: flag("clickEdgeMenus") != Some(false),
             edge_arrows: desktop.get("edgeHandleStyle").and_then(Json::as_str) == Some("arrows"),
             top_tab: flag("edgeHandleTopVisible") == Some(true),
             edge_handles: EdgeHandles {
@@ -677,7 +677,7 @@ mod tests {
         let d = Prefs::default();
         assert_eq!((d.frame_width, d.frame_rounding), (10, 25));
         assert!(d.frame_left && d.frame_right && d.frame_bottom && d.frame_top);
-        assert!(d.ai_sidebar_enabled && !d.click_edge_menus);
+        assert!(d.ai_sidebar_enabled && d.click_edge_menus);
         assert_eq!(d.lip_hover_delay, 350);
         assert!(!d.edge_arrows && d.status_badges && !d.status_percent);
         assert_eq!(d.edge_handles, EdgeHandles::default());
@@ -692,14 +692,14 @@ mod tests {
         let set = Prefs::decode(
             &json!({"frameWidth": 14.4, "frameRounding": 0, "frameLeftEnabled": false,
                     "frameRightEnabled": false, "frameBottomEnabled": false,
-                    "frameTopEnabled": false, "lipHoverDelay": 0, "clickEdgeMenus": true,
+                    "frameTopEnabled": false, "lipHoverDelay": 0, "clickEdgeMenus": false,
                     "aiSidebarEnabled": false}),
             &Json::Null,
         );
         assert_eq!((set.frame_width, set.frame_rounding), (14, 0));
         assert!(!set.frame_left && !set.frame_right && !set.frame_bottom && !set.frame_top);
         assert_eq!(set.lip_hover_delay, 0);
-        assert!(set.click_edge_menus && !set.ai_sidebar_enabled);
+        assert!(!set.click_edge_menus && !set.ai_sidebar_enabled);
         let handles = Prefs::decode(
             &json!({"edgeHandleStyle": "arrows", "edgeHandleRight": false, "edgeHandleTop": 0, "statusBadges": false, "statusPercentages": true}),
             &Json::Null,

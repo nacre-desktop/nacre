@@ -16,7 +16,7 @@
     "workspaceWindowHints": true,
     "detachablePanels": true,
     "dragPanels": true,
-    "clickEdgeMenus": false,
+    "clickEdgeMenus": true,
     "livePreviews": true,
     "nativePalette": true,
     "nativeOverview": true,

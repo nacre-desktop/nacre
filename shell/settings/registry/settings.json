@@ -592,7 +592,7 @@
           "clickEdgeMenus"
         ]
       },
-      "default": false,
+      "default": true,
       "apply": "instant",
       "synonyms": [
         "lip",

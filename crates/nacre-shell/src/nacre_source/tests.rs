@@ -444,6 +444,11 @@ async fn native_edge_source_falls_back_when_daemon_socket_closes() {
     ))
     .unwrap();
     let gate = crate::shell_control::Gate::new();
+    // The native hover source serves the explicit `clickEdgeMenus=false` choice.
+    gate.apply(&crate::prefs::Prefs::decode(
+        &serde_json::json!({"clickEdgeMenus": false}),
+        &serde_json::Value::Null,
+    ));
     gate.configure_frame(
         crate::frame_config::FrameConfig {
             lips: vec![
