@@ -6,7 +6,7 @@ local Entry = ui.component("NavigationEntry", {item={id="string",name="string",i
     return ui.Button {
         id="entry", height=37, radius=9, padding=0, color="onSurface",
         activate_on_release=p.item.id=="widgets",
-        selected=p.item.selected, fill="transparent", selected_fill=ui.tint("surface","onSurface",.12),
+        selected=p.item.selected, fill="transparent", selected_fill=ui.tint("surface","primary",.13),
         hover_fill=ui.tint("surface","onSurface",.04), border_color="transparent",
         on_activate=p.item.id=="widgets" and ui.action("launcher.app","widgets") or ui.action("navigate",p.item.id),
         -- Enamel pearl: a rounded tab with a faint pale rim.

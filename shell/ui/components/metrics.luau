@@ -25,10 +25,9 @@ M.grid_gap_x=6
 M.grid_gap_y=5
 M.quick_width=S.xl*13
 M.quick_gap=S.xl
--- D11: the card's top lines up with the page title (the panel's 16 px top padding); its bottom edge is unchanged.
-M.quick_top=S.md+S.xs
-M.quick_height=S.huge*15-S.compact+S.xs
-M.quick_radius=T.radii.small+S.compact/2
+-- The search field sits above, so the column starts below it (16 padding + 49 field + 15 gap) and runs to the panel's 18 px bottom padding.
+M.quick_top=S.md+S.xs+49+15
+M.quick_height=590-M.quick_top-18
 M.quick_padding=S.md+S.hairline/2
 M.button_radius=T.radii.small+S.hairline/2
 M.row_height=S.huge+S.xl

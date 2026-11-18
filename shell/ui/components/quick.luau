@@ -24,9 +24,8 @@ local function row(item)
     local row_height=math.max(M.row_height,reason_top+reason.props.height+S.sm-S.hairline)
     return kit.Button{id=item.id,width=width,height=row_height,padding=0,radius=M.button_radius,
         activate_on_release=true,focus_on_pointer=false,
-        fill=item.on and ui.tint("surfaceContainerHigh","primary",.12) or ui.alpha("surfaceContainerHigh",opacity),
-        border_width=item.on and 1 or 0,border_color=ui.alpha("primary",.45*opacity),
-        hover_fill=ui.tint("surfaceContainerHigh","onSurface",ui.resolve_for_check(ui.bind("bead.pressed")) and M.pressed_opacity or M.hover_opacity),
+        fill="transparent",
+        hover_fill=ui.tint("surface","onSurface",ui.resolve_for_check(ui.bind("bead.pressed")) and M.pressed_opacity or M.hover_opacity),
         aria_label=item.label..". "..item.status..". "..item.reason,
         on_activate=(item.enabled or item.pending) and ui.resolve_for_check(ui.bind("panel.open")) and ui.action("launcher.quick",item.id) or nil,
         ui.Text{id="icon",position="absolute",left=S.compact+S.hairline/2,top=S.sm-S.hairline,width=S.xxl,height=S.xxl,
@@ -41,6 +40,7 @@ local function row(item)
             ui.Box{id="thumb",position="absolute",left=item.on and indicator_width-thumb-thumb_pad or thumb_pad,top=thumb_pad,
                 width=thumb,height=thumb,radius=thumb/2,fill=ui.alpha(item.on and "onPrimary" or "onSurfaceVariant",opacity)}},
         reason,
+        ui.Box{id="rule",position="absolute",left=0,right=0,bottom=0,height=1,fill=ui.alpha("onSurface",.07)},
     }
 end
 return ui.component("LauncherQuick",{},function(_)
@@ -51,11 +51,12 @@ return ui.component("LauncherQuick",{},function(_)
         if by_id[id] then table.insert(controls,row(by_id[id])) end
     end
     return kit.Card{id="quick",position="absolute",right=S.xl,top=M.quick_top,width=M.quick_width,height=M.quick_height,
-        padding=pad,gap=S.sm,radius=M.quick_radius,fill=ui.tint("surface","onSurface",.025),
+        padding=pad,gap=0,radius=0,fill="transparent",
+        ui.Box{id="edge",position="absolute",left=0,top=0,width=1,height=M.quick_height,fill=ui.alpha("onSurface",.07)},
         ui.Text{id="title",text=ui.tr("bead.launcher.quick-title"),font_size=body,height=S.xl,color="onSurface"},
-        ui.Column{id="controls",gap=S.sm,table.unpack(controls)},
+        ui.Column{id="controls",gap=0,table.unpack(controls)},
         count>=0 and ui.Row{id="updates",width=width,height=S.huge,gap=S.sm,padding_left=S.compact,align="center",
-            radius=M.button_radius,fill="surfaceContainerHigh",
+            radius=0,fill="transparent",
             ui.Text{id="icon",text="system_update",width=S.xl,height=S.xxl,family="Material Symbols Rounded",font_size=T.icons.small*4/3},
             ui.Text{id="count",text=count==0 and ui.tr("bead.dashboard.updates-current") or ui.tr("bead.dashboard.updates-count",{count=count}),
                 width=width-S.compact-S.xl-S.sm,height=S.xl,font_size=body,color="onSurface"}}

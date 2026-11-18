@@ -21,10 +21,10 @@ local function HintRow()
     end
     local chips={}
     for index,label in ipairs(hints) do
-        chips[index]=ui.Box{id="hint"..index,width=math.floor(#label*6.1+14),height=24,radius=6,fill=ui.alpha("onSurface",0.045),
+        chips[index]=ui.Box{id="hint"..index,width=math.floor(#label*6.1+14),height=24,radius=6,border_width=1,border_color=ui.alpha("onSurface",.12),
             ui.Text{position="absolute",left=0,top=3,width=math.floor(#label*6.1+14),height=18,text=label,font_size=11.333,text_align="center",color="onSurfaceVariant"}}
     end
-    return ui.Row{id="hints",position="absolute",right=34,top=535,height=24,gap=6,visible=ui.bind("launcher.hints"),table.unpack(chips)}
+    return ui.Row{id="hints",position="absolute",right=34,top=29,height=24,gap=6,visible=ui.bind("launcher.hints"),table.unpack(chips)}
 end
 local function Chooser()
     local id=ui.resolve_for_check(ui.bind("launcher.chooser"))
@@ -64,9 +64,11 @@ if has_detail then
         ui.Text{id="engine-guidance",text=message,visible=message~="" and ui.resolve_for_check(ui.bind("launcher.result_count"))==0,font_size=13.333,height=40,color="onSurfaceVariant"},
     }
 end
+local card=ui.resolve_for_check(ui.bind("view.detached"))==true
 local panel={edge="bottom",id="launcher",width=1100,height=590,max_width="90%",max_height="90%",
     open=ui.bind("panel.open"),fade=false,reveal=not ui.resolve_for_check(ui.bind("view.detached")),slide_distance=590,
-    radius=12,fill="surface",border_width=1,border_color="outlineVariant",
+    -- Lacquer (locked 2026-11-17): the floating card has a 1 px rim, a lit top edge and a short contact shadow; the drawer stays flush.
+    radius=12,fill="surface",border_width=card and 1 or nil,border_color=card and ui.alpha("onSurface",.05) or nil,shadow=card and {blur=4,spread=0,dy=1,alpha=.6} or nil,
     padding_left=12,padding_right=20,padding_top=16,padding_bottom=18,gap=15}
 -- An inline form (reminder, TUI/web app, imports, recording sound, confirmations) covers the whole launcher, as in QML.
 if ui.resolve_for_check(ui.bind("launcher.form.kind"))~="" then
@@ -75,7 +77,7 @@ if ui.resolve_for_check(ui.bind("launcher.form.kind"))~="" then
     return kit.Panel(panel)
 end
 local content={
-    ui.Text{text=ui.bind("launcher.route_title"),font_size=16,height=32},
+    ui.Text{text=ui.bind("launcher.route_title"),font_size=16,font_weight=600,height=32},
     ui.Text{text=ui.bind("launcher.subtitle"),color="onSurfaceVariant",font_size=13.333,height=20},
     ui.Text{id="source-error",text=ui.bind("launcher.error"),visible=ui.bind("launcher.failed"),color="error",font_size=13.333,height=20},
     detail,
@@ -91,6 +93,8 @@ if ui.resolve_for_check(ui.bind("launcher.subtitle"))==ui.resolve_for_check(ui.b
     table.remove(content,2)
 end
 local body={
+    kit.TextInput{id="search",text=ui.bind("launcher.search.text"),placeholder=ui.tr("bead.launcher.search-placeholder"),
+        height=49,padding=15,radius=12,font_size=16,width="fill",fill="raised",border_width=1.5,border_color=ui.alpha("primary",.55)},
     ui.Row{grow=1,
         ui.memo("launcher.sidebar",{},function() return Sidebar{} end),
         ui.Box{width=18,height="fill",
@@ -100,9 +104,8 @@ local body={
         show_quick and ui.Box{width=M.quick_width+M.quick_gap,height=0,shrink=0} or nil,
     },
     show_quick and ui.memo("launcher.quick",{},function() return Quick{} end) or ui.Box{id="quick",position="absolute",visible=false,width=0,height=0},
-    kit.TextInput{id="search",text=ui.bind("launcher.search.text"),placeholder=ui.tr("bead.launcher.search-placeholder"),
-        height=49,padding=15,radius=10,font_size=16,width="fill"},
     ui.memo("launcher.hints",{},HintRow),
 }
 for index,child in ipairs(body) do panel[index]=child end
+if card then panel[#panel+1]=ui.Box{id="lit-edge",position="absolute",left=7,right=7,top=0,height=1,fill=ui.alpha("surfaceBright",.6)} end
 return kit.Panel(panel)
