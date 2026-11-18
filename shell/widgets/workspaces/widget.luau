@@ -106,7 +106,7 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
                     nodes[3]=ui.Box{id="stack-white",position="absolute",left=cx-white/2,top=cy-white/2,width=white,height=white,radius=white/2,fill=t.pearl_white}
                 end
                 for _,node in c.pearl{id="stack-pearl-"..k,key=tostring(k),left=cx-size/2,top=cy-size/2,size=size,fill=on and t.pearl_cream or t.pearl_dim,opacity=not on and t.stack_other_alpha or nil,
-                    ring=not on and ui.alpha("ink",.16) or nil,ring_width=.75,
+                    ring=not on and ui.alpha("ink",.35) or nil,ring_width=1,
                     label=fanned and tostring(collections[i].index or i) or nil,font_size=10,font_weight=600,label_color=t.pearl_dark} do nodes[#nodes+1]=node end
                 return nodes
             end
@@ -146,6 +146,8 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
             thread and kit.tokens.gradients and ui.Image{id="thread",position="absolute",left=21+collection_width,right=21,top=(t.pill_height-1)/2,height=1,path="bar/assets/workspace-thread.themed.svg"} or ui.Box{id="thread",width=0,height=0,shrink=0,visible=false},
             active_left and ui.Box{id="active-capsule",position="absolute",left=ui.animate("workspaces.active.left:"..props.instance.iid,active_left,.18,"out-cubic"),top=(t.pill_height-t.active_height)/2,width=ui.animate("workspaces.active.width:"..props.instance.iid,active_width,.16,"out-cubic"),height=t.active_height,radius=t.active_radius,
                 fill=active_icon_mode and active_accent or ui.tint(c.base,active_accent,.15),border_width=1,border_color=ui.alpha(active_accent,.24)} or ui.Box{id="active-capsule",width=0,height=0,visible=false,shrink=0},
+            -- The frame variant's own lacquer pill gets its lit edge here (the no-border island draws it).
+            c.lit_edge(t.pill_radius,not c.islands),
             -- Keep the child list dense when no stack is advertised, so Repeat still renders.
             collection_control or ui.Box{id="collection-segment",width=0,height=0,visible=false,shrink=0},
             ui.Repeat{id="workspaces",model=ui.bind("bead.workspaces"),key="id",render=function(item)
@@ -210,7 +212,7 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
                     for _,node in c.pearl{id="pearl",key="",left=16-size/2,top=t.workspace_height/2-size/2,size=size,
                         fill=on and accent or lit and t.pearl_cream or nil,
                         ring=on and ui.alpha("onSurface",.5) or lit and ui.alpha("ink",.2) or ui.alpha("ink",.55),ring_width=lit and 1 or t.pearl_empty_border,
-                        label=label,font_size=#label<2 and t.pearl_number_font or t.pearl_number_font-2,font_weight=on and 700 or 600,label_color=lit and t.pearl_dark or "ink"} do add(node) end
+                        label=label,font_size=#label<2 and t.pearl_number_font or t.pearl_number_font-2,font_weight=on and 700 or 600,label_color=on and "onPrimary" or lit and t.pearl_dark or "ink"} do add(node) end
                     add(ui.Row{id="apps",position="absolute",left=33,top=0,width=math.max(0,width-33),height=t.workspace_height,gap=3,align="center",visible=#apps>0,table.unpack(apps)})
                     button=kit.Button{id="workspace",position="absolute",left=gs,top=0,width=animated_width,height=t.workspace_height,radius=t.workspace_radius,padding=0,fill="transparent",hover_fill=ui.alpha(accent,.1),shrink=0,
                         on_activate=activate,

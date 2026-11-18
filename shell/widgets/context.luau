@@ -46,7 +46,7 @@ local function pearl(p)
     return out
 end
 -- Calm left island: app icons only on outputs at least t.hints_min_width logical px wide (unknown width counts as wide).
-local wide=(ui.resolve_for_check(ui.bind("bead.viewport.width")) or t.hints_min_width)>=t.hints_min_width
+local wide=sample~=nil or (ui.resolve_for_check(ui.bind("bead.viewport.width")) or t.hints_min_width)>=t.hints_min_width
 local launcher=ui.resolve_for_check(ui.bind("bar.launcher"))
 local popouts=ui.resolve_for_check(ui.bind("bar.popouts"))
 local ws_on=ui.resolve_for_check(ui.bind("bar.workspace.enabled"))
@@ -68,11 +68,12 @@ local i_stroke_color=islands and ui.alpha("onSurface",.05) or nil
 local i_shadow=islands and {blur=4,spread=0,dy=1,alpha=.6} or nil
 -- The lit edge: surfaceBright is a soft lift on dark lacquer and near white on the light one; a straight 1 px
 -- line inside the rounded top. unshaped or transparent pieces get none.
+local function lit_edge(radius,visible)
+    return ui.Box{id="lit-edge",position="absolute",left=radius*.6,right=radius*.6,top=0,height=1,visible=visible,fill=ui.alpha("surfaceBright",.6)}
+end
 local function island(p)
     if islands then p.fill,p.border_width,p.border_color,p.shadow=i_fill,i_stroke,i_stroke_color,i_shadow end
-    if p.radius and p.fill~="transparent" then
-        p[#p+1]=ui.Box{id="lit-edge",position="absolute",left=p.radius*.6,right=p.radius*.6,top=0,height=1,fill=ui.alpha("surfaceBright",.6)}
-    end
+    if p.radius and p.fill~="transparent" then p[#p+1]=lit_edge(p.radius,true) end
     return p
 end
 -- The title band: 30 px centred in the frame bar; a 34 px island 6 px from the top in the islands bar.
@@ -126,4 +127,4 @@ local function status_text(p)
     p.max_width=whole_width(p.max_width)
     return ui.Text(p)
 end
-return {pearl=pearl,wide=wide,i_shadow=i_shadow,i_fill=i_fill,i_stroke=i_stroke,i_stroke_color=i_stroke_color,islands=islands,base=base,island=island,band_top=band_top,band_height=band_height,ui=ui,kit=kit,t=t,centered_text=centered_text,launcher=launcher,popouts=popouts,ws_on=ws_on,tray_on=tray_on,dash_on=dash_on,focus_on=focus_on,updates_on=updates_on,updates_n=updates_n,header=header,title=title,title_width=title_width,cue_extent=cue_extent,dwell=dwell,ws_count=ws_count,ws_icons=ws_icons,thread=thread,pearl_accent=pearl_accent,glyph=glyph,status_glyph=status_glyph,status_text=status_text,whole_width=whole_width}
+return {lit_edge=lit_edge,pearl=pearl,wide=wide,i_shadow=i_shadow,i_fill=i_fill,i_stroke=i_stroke,i_stroke_color=i_stroke_color,islands=islands,base=base,island=island,band_top=band_top,band_height=band_height,ui=ui,kit=kit,t=t,centered_text=centered_text,launcher=launcher,popouts=popouts,ws_on=ws_on,tray_on=tray_on,dash_on=dash_on,focus_on=focus_on,updates_on=updates_on,updates_n=updates_n,header=header,title=title,title_width=title_width,cue_extent=cue_extent,dwell=dwell,ws_count=ws_count,ws_icons=ws_icons,thread=thread,pearl_accent=pearl_accent,glyph=glyph,status_glyph=status_glyph,status_text=status_text,whole_width=whole_width}
