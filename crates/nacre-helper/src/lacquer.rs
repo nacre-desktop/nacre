@@ -407,7 +407,10 @@ mod tests {
             recolour(&mut tinted, light, "e6d9c4", false);
             recolour(&mut grey, light, "e6d9c4", true);
             assert_ne!(get(&tinted, "surface"), get(&grey, "surface"));
-            assert_eq!(get(&grey, "surface"), if light { "f8f5f6" } else { "141215" });
+            assert_eq!(
+                get(&grey, "surface"),
+                if light { "f8f5f6" } else { "141215" }
+            );
             assert!(ratio(&grey, "primary", "surface") >= 4.6, "light={light}");
         }
     }
