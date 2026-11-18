@@ -40,7 +40,11 @@ fn the_exported_palette_must_pass_the_protocols_active_wallpaper_validation_with
             },
             presentation: Presentation::Crop,
             palette: WallpaperPalette {
-                mode: if mode == "light" { PaletteMode::Light } else { PaletteMode::Dark },
+                mode: if mode == "light" {
+                    PaletteMode::Light
+                } else {
+                    PaletteMode::Dark
+                },
                 colours,
             },
             motion: None,
