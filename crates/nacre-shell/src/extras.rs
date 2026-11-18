@@ -1069,29 +1069,32 @@ impl Extras {
                 rows = state
                     .catalogue_result
                     .iter()
-                    .cloned()
-                    .map(|mut entry| {
-                        if let Some(id) = entry["id"]
-                            .as_str()
-                            .filter(|id| !id.is_empty())
-                            .map(str::to_owned)
-                        {
+                    .map(|source| {
+                        // Luau gets the five caption colours, not the 80+ entry palette of every row: the
+                        // palette is never cloned (this runs on every Strand frame).
+                        let Some(object) = source.as_object() else {
+                            return source.clone();
+                        };
+                        let mut entry: serde_json::Map<String, Json> = object
+                            .iter()
+                            .filter(|(key, _)| key.as_str() != "palette")
+                            .map(|(key, value)| (key.clone(), value.clone()))
+                            .collect();
+                        if let Some(id) = source["id"].as_str().filter(|id| !id.is_empty()) {
                             for field in ["thumbnail", "preview"] {
-                                entry[field] =
+                                entry.insert(
+                                    field.into(),
                                     format!("wallpaper:{field}:{}:{id}", state.image_revision)
-                                        .into();
+                                        .into(),
+                                );
                             }
                         }
-                        // Luau gets the five caption colours, not the 80+ entry palette of every row.
-                        if entry["swatch"].is_null()
-                            && let Some(swatch) = swatch_of(&entry["palette"]["colours"])
+                        if source["swatch"].is_null()
+                            && let Some(swatch) = swatch_of(&source["palette"]["colours"])
                         {
-                            entry["swatch"] = swatch;
+                            entry.insert("swatch".into(), swatch);
                         }
-                        if let Some(object) = entry.as_object_mut() {
-                            object.remove("palette");
-                        }
-                        entry
+                        Json::Object(entry)
                     })
                     .collect();
                 available = true;
