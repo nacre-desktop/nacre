@@ -19,6 +19,7 @@ pub fn calendar(
     fallback.width = 310.;
     fallback.bounds = Rect::new(-32., -32., 374., 376.);
     fallback.primitives = vec![Primitive::Rounded {
+        radial: None,
         rect: Rect::new(0., 0., 310., 312.),
         radius: 12.,
         fill,
@@ -79,6 +80,7 @@ pub fn collection_switcher(
     fallback.width = 300.;
     fallback.bounds = Rect::new(-32., -32., 364., 500.);
     fallback.primitives = vec![Primitive::Rounded {
+        radial: None,
         rect: Rect::new(0., 0., 300., 390.),
         radius: 12.,
         fill,
@@ -180,6 +182,7 @@ pub(crate) fn core_sound_with_root(
     fallback.width = 382.;
     fallback.bounds = Rect::new(-32., -32., 446., 350.);
     fallback.primitives = vec![Primitive::Rounded {
+        radial: None,
         rect: Rect::new(0., 0., 382., 286.),
         radius: 16.,
         fill,
@@ -248,6 +251,7 @@ pub fn session(
     fallback.width = width;
     fallback.bounds = Rect::new(-32., -32., width + 64., height + 64.);
     fallback.primitives = vec![Primitive::Rounded {
+        radial: None,
         rect: Rect::new(0., 0., width, height),
         radius: 16.,
         fill,
@@ -382,6 +386,7 @@ fn status_at_root_mode(
     fallback.width = panel_width;
     fallback.bounds = Rect::new(-32., -32., panel_width + 64., panel_height + 64.);
     fallback.primitives = vec![Primitive::Rounded {
+        radial: None,
         rect: Rect::new(0., 0., panel_width, panel_height),
         radius,
         fill,
@@ -527,6 +532,7 @@ pub fn chat(
     fallback.width = width;
     fallback.bounds = Rect::new(-32., -32., width + 64., height + 64.);
     fallback.primitives = vec![Primitive::Rounded {
+        radial: None,
         rect: Rect::new(0., 0., width, height),
         radius: 18.,
         fill,
@@ -604,6 +610,7 @@ pub fn control_center(
     fallback.width = width;
     fallback.bounds = Rect::new(-32., -32., width + 64., height + 64.);
     fallback.primitives = vec![Primitive::Rounded {
+        radial: None,
         rect: Rect::new(0., 0., width, height),
         radius: 16.,
         fill,
@@ -704,6 +711,7 @@ fn notification_panel(
     fallback.width = width;
     fallback.bounds = Rect::new(-32., -32., width + 64., height + 64.);
     fallback.primitives = vec![Primitive::Rounded {
+        radial: None,
         rect: Rect::new(0., 0., width, height),
         radius: 12.,
         fill,

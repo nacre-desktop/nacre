@@ -224,6 +224,7 @@ pub fn spec(
     // frame art is prepared; that decorator leaves scene bounds and offset intact.
     fallback.bounds = Rect::new(-32., -32., 1048., 714.);
     fallback.primitives = vec![Primitive::Rounded {
+        radial: None,
         rect: Rect::new(0., 0., 984., 650.),
         radius: 18.,
         fill,

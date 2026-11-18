@@ -30,6 +30,7 @@ pub fn fallback(fill: [u8; 4]) -> Scene {
         // a second SHM geometry as soon as the script becomes ready.
         bounds: Rect::new(-32., -32., 464., 350.),
         primitives: vec![Primitive::Rounded {
+            radial: None,
             rect: Rect::new(0., 0., 400., 286.),
             radius: 16.,
             fill,

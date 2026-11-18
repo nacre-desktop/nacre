@@ -143,6 +143,7 @@ fn all_popout_and_launcher_placement_masks_match_qml() -> Result<()> {
             };
             let mut scene = crate::sound::fallback(palette.get("surface")?);
             scene.primitives = vec![bead::render::Primitive::Rounded {
+                radial: None,
                 rect: Rect::new(0., 0., size.0, size.1),
                 radius: 16.,
                 fill: palette.get("surface")?,
@@ -284,6 +285,7 @@ fn compose(
     chrome.center = Some(w / 2.);
     let mut scene = crate::sound::fallback(fill);
     scene.primitives = vec![bead::render::Primitive::Rounded {
+        radial: None,
         rect: Rect::new(0., 0., 310., 222.),
         radius: 16.,
         fill,

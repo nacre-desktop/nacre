@@ -845,6 +845,7 @@ impl Chrome {
             .find(|p| matches!(p, Primitive::Rounded { rect, .. } if *rect == body))
             .ok_or("Panel root background missing")?;
         *root = Primitive::Rounded {
+            radial: None,
             rect: body,
             radius,
             fill: ink.body,
@@ -928,6 +929,7 @@ impl Chrome {
         for primitive in &mut scene.primitives {
             if !replaced && matches!(primitive, Primitive::Shadow { .. }) {
                 *primitive = Primitive::Rounded {
+                    radial: None,
                     rect: Rect::new(0., 0., 0., 0.),
                     radius: 0.,
                     fill: [0; 4],
@@ -1680,6 +1682,7 @@ mod tests {
         assert_eq!(position(&scene, None, (1920, 1200)), (1478, 445));
         let mut scene = scene;
         scene.primitives = vec![bead::render::Primitive::Rounded {
+            radial: None,
             rect: Rect::new(0., 0., 310., 222.),
             radius: 16.,
             fill: [0; 4],

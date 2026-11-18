@@ -133,6 +133,7 @@ pub fn spec(
     fallback.width = 300.;
     fallback.bounds = bead::render::Rect::new(-32., -32., 364., 160.);
     fallback.primitives = vec![bead::render::Primitive::Rounded {
+        radial: None,
         rect: bead::render::Rect::new(0., 0., 300., 96.),
         radius: 12.,
         fill: colors.get("surface")?,

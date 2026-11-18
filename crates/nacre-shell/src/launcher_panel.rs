@@ -52,6 +52,7 @@ pub fn spec(
     // Match the final content geometry; layout uses output logical dimensions.
     fallback.bounds = Rect::new(-32., -32., 1164., 654.);
     fallback.primitives = vec![Primitive::Rounded {
+        radial: None,
         rect: Rect::new(0., 0., 1100., 590.),
         radius: 12.,
         fill,
@@ -136,6 +137,7 @@ mod tests {
         let mut scene = bead::render::Scene::empty(1164., 654.);
         scene.bounds = Rect::new(-32., -32., 1164., 654.);
         scene.primitives = vec![Primitive::Rounded {
+            radial: None,
             rect: Rect::new(0., 0., 1100., 590.),
             radius: 12.,
             fill: [0; 4],

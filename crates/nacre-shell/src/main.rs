@@ -445,6 +445,7 @@ fn start(
             offset: (32., 32.),
             bounds: Rect::new(-32., -32., 1164., 654.),
             primitives: vec![Primitive::Rounded {
+                radial: None,
                 rect: Rect::new(0., 0., 1100., 590.),
                 radius: 12.,
                 fill: colors.get("surface")?,
@@ -457,6 +458,7 @@ fn start(
     } else {
         Scene {
             primitives: vec![Primitive::Rounded {
+                radial: None,
                 rect: Rect::new(0., 0., 20000., 32.),
                 radius: 0.,
                 fill: [32, 32, 32, 255],
@@ -467,6 +469,7 @@ fn start(
     };
     if options.debug_progress {
         scene.primitives.push(Primitive::Rounded {
+            radial: None,
             rect: Rect::new(64., 540., 300., 12.),
             radius: 6.,
             fill: colors.get("primary")?,
@@ -1341,18 +1344,21 @@ fn panel(p: &Palette, assets: &Path) -> Result<Scene, Box<dyn std::error::Error>
             alpha: 1.,
         },
         Primitive::Rounded {
+            radial: None,
             rect: Rect::new(0., 0., 1100., 590.),
             radius: 12.,
             fill: body,
             border: Some((outline, 1.)),
         },
         Primitive::Rounded {
+            radial: None,
             rect: Rect::new(182., 20., 898., 48.),
             radius: 13.,
             fill: raised,
             border: None,
         },
         Primitive::Rounded {
+            radial: None,
             rect: Rect::new(12., 84., 150., 40.),
             radius: 10.,
             fill: raised,

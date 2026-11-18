@@ -268,6 +268,7 @@ pub fn panel(
     fallback.width = 1100.;
     fallback.bounds = Rect::new(-32., -32., 1164., 654.);
     fallback.primitives = vec![Primitive::Rounded {
+        radial: None,
         rect: Rect::new(0., 0., 1100., 590.),
         radius: 12.,
         fill,
