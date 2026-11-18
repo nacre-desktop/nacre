@@ -1,0 +1,5 @@
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+<defs><radialGradient id="gloss" cx=".33" cy=".27" r=".99"><stop offset="0" stop-color="#fff"/><stop offset=".08" stop-color="#fff" stop-opacity=".8"/><stop offset=".3" stop-color="#fff" stop-opacity="0"/></radialGradient></defs>
+<circle cx="50" cy="50" r="50" fill="url(#gloss)"/>
+</svg>

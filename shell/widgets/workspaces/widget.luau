@@ -12,6 +12,11 @@ local pearl_accent=c.pearl_accent
 return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",data={topics={},actions={}},settings={},defaults={},budget={fps_active=0,fps_idle=0,pause_on={"fullscreen","lock","battery_saver"}},
     forms={bar={default_style="pearls",styles={pearls={title="Workspaces",min_span=1,max_span=60,preferred_span=1,render=function(props,settings,data)
             local workspaces=ui.resolve_for_check(ui.bind("bead.workspaces")) or {}
+            -- Calm left island: app icons ride only in the active pearl, and only on a wide enough output.
+            local function hints(item)
+                if not (item.active and c.wide) then return 0,"",false end
+                return item.shown or 0,item.overflow or "",item.hinted==true
+            end
             local collections={}
             local collection_current=""
             if c.popouts then
@@ -24,32 +29,45 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
                 for _,collection in ipairs(collections) do if collection.output==here then mine[#mine+1]=collection end end
                 if #mine>0 then collections=mine end
             end
-            -- D2 (spec 0237): the stack folds into the pill as a strand of tiny pearls (default) or a
-            -- named 28 px cap (Settings > Panels > Top bar > Stack style). Tier 2 advertises no
+            -- Stack pearls (locked 2026-11-17): one enamel pearl per stack on this output, in switcher order. The
+            -- current one is larger, in a white ring, an accent ring and a glow. At rest 1-3 stacks show whole and
+            -- 4+ show three around the current one and "+N"; hovering 400 ms fans out numbered pearls (up to 8).
+            -- A named 28 px cap (Settings > Panels > Top bar > Stack style) replaces them. Tier 2 advertises no
             -- collections, so neither appears and the pill starts at the current pearl.
             local show_collections=#collections>0
-            -- This output's current stack leads the strand (its bright pearl); the rest follow in switcher order.
-            local ordered={}
-            for _,collection in ipairs(collections) do if collection.id==collection_current then ordered[1]=collection end end
-            for _,collection in ipairs(collections) do if collection~=ordered[1] then ordered[#ordered+1]=collection end end
-            collections=ordered
             local cap_style=ui.resolve_for_check(ui.bind("bar.stack.style"))=="name"
+            local cur=1
+            for i,collection in ipairs(collections) do if collection.id==collection_current then cur=i end end
             local current_collection_name=""
-            for i,collection in ipairs(collections) do
-                if collection.id==collection_current then
-                    current_collection_name=collection.name or collection.label or tostring(collection.index or i)
-                end
-            end
-            if current_collection_name=="" and #collections>0 then
-                local first=collections[1]
-                current_collection_name=first.name or first.label or tostring(first.index or 1)
+            if collections[cur] then
+                local current=collections[cur]
+                current_collection_name=current.name or current.label or tostring(current.index or cur)
             end
             local current_collection_label=show_collections and ui.tr("bead.bar.collection-open",{desk=current_collection_name}) or "Collection"
             local spacing=kit.tokens.spacing
             local stack_family=kit.tokens.fonts.sans
             local capsule_gap=spacing.xs/2
-            local strand_count=math.min(t.strand_max,#collections)
-            local strand_width=t.strand_current+(strand_count-1)*(t.strand_other-t.strand_overlap)
+            local pressed=ui.resolve_for_check(ui.bind("bead.pressed"))==true
+            local hovered=ui.resolve_for_check(ui.bind("bead.hovered")) or ""
+            local stack_hovered=string.find(hovered,"collection-badge",1,true)~=nil or string.find(hovered,"stack-strand",1,true)~=nil
+            -- The open waits for the 400 ms hover; the close is at once.
+            local fan=ui.animate("workspaces.stack.fan:"..props.instance.iid,stack_hovered and 1 or 0,.4,"linear")
+            local fanned=not cap_style and #collections>1 and fan>=.999
+            local limit=fanned and t.stack_fan_max or t.stack_collapsed_max
+            local first=#collections>limit and math.clamp(cur-limit//2,1,#collections-limit+1) or 1
+            local last=math.min(#collections,first+limit-1)
+            local more=#collections-(last-first+1)
+            local more_text="+"..more
+            local more_width=more>0 and math.ceil(ui.text_width(more_text,stack_family,t.cap_font))+t.stack_gap or 0
+            local ring_total=t.stack_ring+t.stack_accent_ring
+            -- Size, outer diameter (with the rings) and slot (outer + gap) of stack i's pearl.
+            local function stack_size(i)
+                local size=fanned and t.stack_fan_size or i==cur and t.stack_current or t.stack_other
+                local outer=i==cur and size+2*ring_total or size
+                return size,outer,outer+t.stack_gap
+            end
+            local strand_width=more_width
+            for i=first,last do strand_width+=select(3,stack_size(i)) end
             local cap_name=cap_style and measure.ellipsize(current_collection_name,math.ceil(ui.text_width(string.rep("n",t.cap_chars),stack_family,t.cap_font)),stack_family,t.cap_font) or ""
             local cap_name_width=cap_style and math.ceil(ui.text_width(cap_name,stack_family,t.cap_font)) or 0
             local stack_control_width=cap_style and t.cap_pad_left+t.cap_icon+t.cap_gap+cap_name_width+t.cap_pad_right or strand_width+2*t.strand_pad
@@ -63,9 +81,8 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
                 if item.icon_mode then
                     width=46
                 else
-                    local shown=item.shown or 0
-                    local more=item.overflow or ""
-                    width=32+shown*18+(more~="" and 20 or 0)+(item.hinted==true and 4 or 0)
+                    local shown,overflow,hinted=hints(item)
+                    width=32+shown*18+(overflow~="" and 20 or 0)+(hinted and 4 or 0)
                 end
                 if item.active then
                     active_left=5+collection_width+cursor+gs
@@ -77,27 +94,52 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
             end
             local natural_width=10+cursor-(#workspaces>0 and capsule_gap or 0)+collection_width
             local pill_width=ui.animate("workspaces.pill.width:"..props.instance.iid,natural_width,.16,"out-cubic")
-            local pressed=ui.resolve_for_check(ui.bind("bead.pressed"))==true
-            local hovered=ui.resolve_for_check(ui.bind("bead.hovered")) or ""
-            local stack_hovered=string.find(hovered,"collection-badge",1,true)~=nil
-            local pearls={}
-            -- The bright pearl is the current stack and leads the strand; the dim ones follow,
-            -- overlapping it, and it paints last so it stays whole.
-            -- Bead strokes straddle the box edge, so each box grows by the ring to keep the fill at 9/11 px.
-            for i=strand_count,1,-1 do
-                local on=i==1
-                local size=on and t.strand_current or t.strand_other
-                local box=size+t.strand_border
-                local left=on and 0 or (t.strand_current-t.strand_overlap)+(i-2)*(t.strand_other-t.strand_overlap)
-                pearls[#pearls+1]=ui.Box{id="stack-pearl-"..i,position="absolute",left=left-t.strand_border/2,top=(t.workspace_height-box)/2,width=box,height=box,radius=box/2,
-                    fill=on and ui.tint(pearl_accent(0),t.pearl_cream,.4) or "outline",border_width=t.strand_border,border_color=c.base}
+            -- One stack's pearl layers, centred in a slot that starts at x.
+            local function stack_nodes(i,k,x)
+                local size,outer,slot=stack_size(i)
+                local cx,cy,on=x+slot/2,t.workspace_height/2,i==cur
+                local nodes={}
+                if on then
+                    local glow,white=outer+2*t.stack_glow,size+2*t.stack_ring
+                    nodes[1]=ui.Box{id="stack-glow",position="absolute",left=cx-glow/2,top=cy-glow/2,width=glow,height=glow,radius=glow/2,fill=ui.alpha("primary",.3)}
+                    nodes[2]=ui.Box{id="stack-accent",position="absolute",left=cx-outer/2,top=cy-outer/2,width=outer,height=outer,radius=outer/2,fill="primary"}
+                    nodes[3]=ui.Box{id="stack-white",position="absolute",left=cx-white/2,top=cy-white/2,width=white,height=white,radius=white/2,fill=t.pearl_white}
+                end
+                for _,node in c.pearl{id="stack-pearl-"..k,key=tostring(k),left=cx-size/2,top=cy-size/2,size=size,fill=on and t.pearl_cream or t.pearl_dim,opacity=not on and t.stack_other_alpha or nil,
+                    ring=not on and ui.alpha("ink",.16) or nil,ring_width=.75,
+                    label=fanned and tostring(collections[i].index or i) or nil,font_size=10,font_weight=600,label_color=t.pearl_dark} do nodes[#nodes+1]=node end
+                return nodes
             end
-            local collection_control=show_collections and kit.Button{id="collection-badge",width=stack_control_width,height=cap_style and t.cap_height or t.workspace_height,padding=0,radius=cap_style and t.cap_radius or t.workspace_radius,shrink=0,
+            local strand_nodes,fan_buttons={},{}
+            if show_collections and not cap_style then
+                local x=0
+                for i=first,last do
+                    local slot=select(3,stack_size(i))
+                    local k=i-first+1
+                    if not fanned then for _,node in stack_nodes(i,k,x) do strand_nodes[#strand_nodes+1]=node end end
+                    if fanned then
+                        -- Fanned, each pearl is its own button: the current one opens the switcher, the others go.
+                        fan_buttons[k]=kit.Button{id="stack-strand-"..k,width=slot,height=t.workspace_height,padding=0,radius=t.workspace_radius,shrink=0,fill="transparent",hover_fill="transparent",
+                            aria_label=tostring(collections[i].name or collections[i].label or collections[i].index or i),
+                            on_activate=c.popouts and (i==cur and ui.action("collection.switcher.open") or ui.action("collection.switch",collections[i].id)) or nil,
+                            table.unpack(stack_nodes(i,k,0))}
+                    end
+                    x+=slot
+                end
+                if more>0 then
+                    local chip=ui.Text{id="stack-more",position="absolute",left=x,top=(t.workspace_height-t.cap_font*t.line_height)/2,text=more_text,width=more_width,height=t.cap_font*t.line_height,font_size=t.cap_font,family=stack_family,color="ink2"}
+                    strand_nodes[#strand_nodes+1]=chip
+                    fan_buttons[#fan_buttons+1]=kit.Button{id="stack-strand-more",width=more_width,height=t.workspace_height,padding=0,radius=t.workspace_radius,shrink=0,fill="transparent",hover_fill="transparent",
+                        aria_label=current_collection_label,on_activate=c.popouts and ui.action("collection.switcher.open") or nil,
+                        ui.Text{id="stack-more-text",position="absolute",left=0,top=(t.workspace_height-t.cap_font*t.line_height)/2,text=more_text,width=more_width,height=t.cap_font*t.line_height,font_size=t.cap_font,family=stack_family,color="ink2"}}
+                end
+            end
+            local collection_control=show_collections and (fanned and ui.Row{id="stack-fan",width=stack_control_width,height=t.workspace_height,padding_left=t.strand_pad,shrink=0,table.unpack(fan_buttons)} or kit.Button{id="collection-badge",width=stack_control_width,height=cap_style and t.cap_height or t.workspace_height,padding=0,radius=cap_style and t.cap_radius or t.workspace_radius,shrink=0,
                     fill=cap_style and "surfaceContainerHighest" or "transparent",hover_fill=cap_style and "surfaceBright" or "transparent",aria_label=current_collection_label,on_activate=c.popouts and ui.action("collection.switcher.open") or nil,
                     cap_style and ui.Row{id="collection-content",width=stack_control_width,height=t.cap_height,padding_left=t.cap_pad_left,padding_right=t.cap_pad_right,gap=t.cap_gap,align="center",
                         ui.Text{id="collection-icon",text="stacks",width=t.cap_icon,height=t.cap_icon,shrink=0,family=kit.tokens.fonts.icon,font_size=t.cap_icon,color="onSurfaceVariant",text_align="center"},
                         ui.Text{id="collection-name",text=cap_name,width=cap_name_width,height=math.ceil(ui.text_line_height(stack_family,t.cap_font)),shrink=0,font_size=t.cap_font,family=stack_family,color="onSurface"}}
-                    or ui.Box{id="strand",position="absolute",left=t.strand_pad,top=0,width=strand_width,height=t.workspace_height,table.unpack(pearls)}}
+                    or ui.Box{id="strand",position="absolute",left=t.strand_pad,top=0,width=strand_width,height=t.workspace_height,table.unpack(strand_nodes)}})
                 or nil
             return ui.Row{id="capsule",width=pill_width,height=t.pill_height,padding_left=5,padding_right=5,gap=capsule_gap,radius=t.pill_radius,fill=c.islands and "transparent" or c.base,clip_children=false,align="center",
             -- QML workspaceThread: a 1 px primary -> secondary -> tertiary line at 12 % behind the pearls, inset 16 px.
@@ -134,13 +176,11 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
                     }
                 else
                     -- workspaceWindowHints: category glyphs of the active workspace's windows beside its pearl.
-                    local shown=item.shown or 0
-                    local more=item.overflow or ""
-                    local hinted=item.hinted==true
+                    local shown,more,hinted=hints(item)
                     local apps={}
                     -- Owner 2026-11-14: Settings > Top bar > Workspace style "App icons" shows the real app icons
                     -- (the title's lookup, category glyph when an app has none); "Show all" lifts the three-hint cap.
-                    for slot=1,math.max(3,shown) do
+                    for slot=1,(shown>0 or hinted) and math.max(3,shown) or 0 do
                         local glyph_name=item["app"..slot]
                         local icon_name=item["icon"..slot] or ""
                         if icon_name~="" then
@@ -163,25 +203,14 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
                     width=32+shown*18+(more~="" and 20 or 0)+(hinted and 4 or 0)
                     animated_width=ui.animate("workspace.cell.width:"..props.instance.iid..":"..item.id,width,.16,"out-cubic")
                     local lit=on or item.occupied==true
-                    local size=on and t.pearl_current or lit and t.pearl_occupied or t.pearl_empty
+                    local size=lit and t.pearl_size or t.pearl_ring_size
                     local parts={}
                     local function add(node) parts[#parts+1]=node end
-                    -- QML NacreWorkspacePearl: 22 px current / 20 occupied / 18 empty. The enamel is a flat accent warmed toward
-                    -- cream with a neutral cream/secondary shading and specular highlight over it, so any blended accent works.
-                    -- Gradients on: the plain accent under the shading; off: the flat warmed colour (QML numberSurface).
-                    local shaded=lit and kit.tokens.gradients
-                    add(ui.Box{id="pearl",position="absolute",left=16-size/2,top=t.workspace_height/2-size/2,width=size,height=size,radius=size/2,fill=lit and (shaded and accent or ui.tint(accent,t.pearl_cream,on and .4 or .1)) or c.base})
-                    if shaded then
-                        add(ui.Image{id="enamel-gradient",position="absolute",left=16-size/2,top=t.workspace_height/2-size/2,width=size,height=size,
-                            path="bar/assets/pearl-"..(on and "current" or "occupied")..".themed.svg"})
-                    end
-                    local stroke=on and t.pearl_current_border or not lit and t.pearl_empty_border or 0
-                    if stroke>0 then
-                        -- Bead strokes straddle their path; Qt's Rectangle border stays inside its box.
-                        add(ui.Box{id="ring",position="absolute",left=16-size/2+stroke/2,top=t.workspace_height/2-size/2+stroke/2,width=size-stroke,height=size-stroke,radius=(size-stroke)/2,
-                            fill="transparent",border_width=stroke,border_color=on and ui.alpha("onSurface",.5) or ui.alpha(accent,.9)})
-                    end
-                    add(centered_text{id="number",position="absolute",left=16-size/2,top=t.workspace_height/2-(#label<2 and t.workspace_number_font or 9)*t.line_height/2,text=label,width=size,font_size=#label<2 and t.workspace_number_font or 9,font_weight=on and 600 or 500,family="IBM Plex Sans",text_align="center",color=lit and t.pearl_dark or "onSurfaceVariant"})
+                    -- The one pearl style: accent when current, cream when occupied, an ink ring when empty.
+                    for _,node in c.pearl{id="pearl",key="",left=16-size/2,top=t.workspace_height/2-size/2,size=size,
+                        fill=on and accent or lit and t.pearl_cream or nil,
+                        ring=on and ui.alpha("onSurface",.5) or lit and ui.alpha("ink",.2) or ui.alpha("ink",.55),ring_width=lit and 1 or t.pearl_empty_border,
+                        label=label,font_size=#label<2 and t.pearl_number_font or t.pearl_number_font-2,font_weight=on and 700 or 600,label_color=lit and t.pearl_dark or "ink"} do add(node) end
                     add(ui.Row{id="apps",position="absolute",left=33,top=0,width=math.max(0,width-33),height=t.workspace_height,gap=3,align="center",visible=#apps>0,table.unpack(apps)})
                     button=kit.Button{id="workspace",position="absolute",left=gs,top=0,width=animated_width,height=t.workspace_height,radius=t.workspace_radius,padding=0,fill="transparent",hover_fill=ui.alpha(accent,.1),shrink=0,
                         on_activate=activate,
@@ -201,7 +230,7 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
                 return ui.Box{id="cell",width=gs+animated_width,height=t.workspace_height,shrink=0,table.unpack(kids)}
             end},
             -- The stack name is one hover away: a tooltip on the strand (or on an ellipsized cap).
-            show_collections and kit.Tooltip{id="collection-tooltip",edge="top",bar_size=-spacing.sm,left=0,width=math.ceil(ui.text_width(current_collection_name,stack_family,t.cap_font))+spacing.sm*2,height=t.workspace_height,padding=spacing.sm,visible=stack_hovered and (not cap_style or cap_name~=current_collection_name),
+            show_collections and kit.Tooltip{id="collection-tooltip",edge="top",bar_size=-spacing.sm,left=0,width=math.ceil(ui.text_width(current_collection_name,stack_family,t.cap_font))+spacing.sm*2,height=t.workspace_height,padding=spacing.sm,visible=stack_hovered and not fanned and (not cap_style or cap_name~=current_collection_name),
                 ui.Text{text=current_collection_name,height=t.workspace_height-spacing.sm*2,width="fill",font_size=t.cap_font,family=stack_family,color="onSurface"}} or nil,
         }
     end}}}}}
