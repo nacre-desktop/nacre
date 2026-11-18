@@ -206,8 +206,9 @@ impl Warmer {
                     notify(&wake_signal);
 
                     let mut warmed: Option<(WarmIdentity, Instant)> = None;
+                    let mut deferred = false;
                     while !stop.load(Ordering::Relaxed) {
-                        let timeout = if warmed.is_some() {
+                        let timeout = if warmed.is_some() && !deferred {
                             Duration::from_secs(90)
                         } else {
                             Duration::from_secs(2)
@@ -219,6 +220,12 @@ impl Warmer {
                         while receiver.try_recv().is_ok() {}
                         if stop.load(Ordering::Relaxed) {
                             break;
+                        }
+                        // Strand open: every move changes the active wallpaper, and warming for each one re-built
+                        // the picker three times per move under the open picker. Warm once it has closed.
+                        deferred = crate::wallpaper_motion::picker_open();
+                        if deferred {
+                            continue;
                         }
 
                         let w = f32::from_bits(width.load(Ordering::Relaxed));

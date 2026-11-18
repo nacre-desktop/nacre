@@ -35,6 +35,9 @@ static PICKER_OPEN: AtomicBool = AtomicBool::new(false);
 pub(crate) fn set_picker_open(open: bool) {
     PICKER_OPEN.store(open, Ordering::Release);
 }
+pub(crate) fn picker_open() -> bool {
+    PICKER_OPEN.load(Ordering::Acquire)
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Mode {

@@ -135,9 +135,8 @@ pub(crate) fn load_or_decode(
     {
         return Err("output dimensions exceed wallpaper bound".into());
     }
-    if pair.motion.is_some() {
-        return decode();
-    }
+    // A video pair's raster is its poster's (`path`), keyed like a still: the confirmation of a pick and
+    // every later prepare of it are cache hits instead of another decode per output.
     if let Some(rgba) = hot_get(pair, width, height) {
         return Ok(rgba.to_vec());
     }
@@ -197,7 +196,7 @@ pub(crate) fn load_cached(pair: &ActiveWallpaper, width: u32, height: u32) -> Op
 }
 
 fn load_cached_at(root: &Path, pair: &ActiveWallpaper, width: u32, height: u32) -> Option<Vec<u8>> {
-    if pair.motion.is_some() || pair.validate().is_err() {
+    if pair.validate().is_err() {
         return None;
     }
     load_from(root, pair, width, height)

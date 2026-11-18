@@ -128,6 +128,8 @@ struct PredecodeState {
     pending: Option<PredecodeJob>,
     active: Option<PredecodeKey>,
     cached: Option<CachedPredecode>,
+    /// The pick whose optimistic frame this output has made: later prepares wait for the confirmation.
+    shown: Option<u64>,
     running: bool,
     stopping: bool,
 }
@@ -281,8 +283,9 @@ impl Predecoder {
         {
             return None;
         }
-        let cached = state.cached.take()?;
-        Some((cached.pair, cached.rgba))
+        // The daemon's confirmation of this pick shows the same pixels: they stay for `take_confirmed`
+        // (until it, the next pick or PREDECODE_LIFETIME) instead of being decoded a second time.
+        Some((cached.pair.clone(), cached.rgba.clone()))
     }
 
     fn clear_generation(&self, generation: u64) {
@@ -1151,13 +1154,21 @@ impl Consumer {
             width,
             height,
         );
-        let cached = selection_waiting.and_then(|selection| {
-            known_pair.as_ref().and_then(|known_pair| {
-                predecoder
-                    .take_optimistic(selection, known_pair, width, height)
-                    .or_else(|| Preview::cached_pair_raster(known_pair, width, height))
-            })
-        });
+        // One optimistic frame per pick and output: a second one (each repaint or topic change asked again)
+        // re-faded the same pixels before the confirmation re-faded them once more.
+        let cached = selection_waiting
+            .filter(|selection| predecoder.signal.lock().shown != Some(selection.generation))
+            .and_then(|selection| {
+                let cached = known_pair.as_ref().and_then(|known_pair| {
+                    predecoder
+                        .take_optimistic(selection, known_pair, width, height)
+                        .or_else(|| Preview::cached_pair_raster(known_pair, width, height))
+                });
+                if cached.is_some() {
+                    predecoder.signal.lock().shown = Some(selection.generation);
+                }
+                cached
+            });
         if selection_waiting.is_some() && cached.is_none() {
             // A cold click must wait for the daemon's matching pair and palette.
             return Ok(None);
@@ -2485,6 +2496,11 @@ mod tests {
             .unwrap();
         assert_eq!(predecoded_pair.palette, active.palette);
         assert_eq!(predecoded_rgba, [255, 255, 255, 255].repeat(2));
+        assert_eq!(
+            optimistic.take_confirmed(&selection, "boot-a", &active, 2, 1),
+            Some(predecoded_rgba),
+            "the confirmation reuses the optimistic pixels instead of decoding again"
+        );
         assert!(optimistic.signal.lock().cached.is_none());
         drop(optimistic);
 
