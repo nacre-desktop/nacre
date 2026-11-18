@@ -1377,8 +1377,8 @@ fn sheet_pages_match_goldens() -> bead_test::Result<()> {
                 motion.reveal,
                 motion.slide_distance
             ),
-            (bead::core::Edge::Right, true, false, Some(16.)),
-            "the sheet enters with a 16 px slide and a fade"
+            (bead::core::Edge::Right, false, false, Some(480.)),
+            "the sheet slides in its whole width, like the cold fallback it replaces"
         );
         golden(&format!("sheet-{name}"), &mut h, 1.)?;
     }

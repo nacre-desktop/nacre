@@ -572,8 +572,8 @@ if sheet then
     local offset=math.floor(28*math.abs(flip-ui.animate("cc.slide",flip,.22,"out-cubic"))+.5)
     if offset>0 then inner=ui.Column{id="slide",width=INNER,height=inner_height,padding_left=offset,shrink=0,inner} end
 end
--- The sheet enters with a 16 px slide and a fade (the AI sidebar's card); the duration is the panel profile's, panel views author none.
-return kit.Panel{id="control-center",edge=get("view.edge"),open=ui.bind("panel.open"),fade=sheet and true or false,reveal=not sheet and not ui.resolve_for_check(ui.bind("view.detached")),slide_distance=sheet and 16 or (not popup and W or nil),
+-- The sheet slides in its whole width from the right edge, no fade (the AI sidebar's card, and the cold fallback it replaces mid-slide); the duration is the panel profile's, panel views author none.
+return kit.Panel{id="control-center",edge=get("view.edge"),open=ui.bind("panel.open"),fade=false,reveal=not sheet and not ui.resolve_for_check(ui.bind("view.detached")),slide_distance=not popup and W or nil,
     width=W,height=height,padding=PAD,padding_top=TOP,
     gap=GAP,radius=T.radii.medium,fill="surface",
     -- Lacquer sheet (locked 2026-11-17): a 1 px rim, a lit top edge and a short contact shadow on the floating card.
