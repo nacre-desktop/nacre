@@ -21,7 +21,7 @@
     "widgets/wifi/widget.luau",
     "widgets/workspaces/widget.luau",
     "bar/tokens.luau",
-    "ui/components/pearl.luau",
+    "bar/pearl.luau",
     "widgets/desktop-visuals.luau"
   ],
   "assets": [

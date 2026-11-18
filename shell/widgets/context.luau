@@ -18,15 +18,15 @@ if sample then
 end
 local kit=require("bead.kit")
 local t=require("../bar/tokens")
-local pearl_recipe=require("../ui/components/pearl")
+local pearl_recipe=require("../bar/pearl")
 local function centered_text(p)
     local lift=p.family=="Material Symbols Rounded" and 0 or t.text_lift
     p.height=p.font_size*t.line_height+2*lift
     if p.position=="absolute" then p.top=(p.top or 0)-lift end
     return ui.Text(p)
 end
--- THE pearl (workspace and stack pearls): one box, a flat fill under the shared recipe's radial layers (ui/components/
--- pearl: `body` true draws the whole pearl, else just the highlight over `fill`), an optional inset ring and an
+-- THE pearl (workspace and stack pearls): one box, a flat fill under the shared recipe's radial layers (bar/pearl.luau;
+-- `body` true draws the whole pearl, else just the highlight over `fill`), an optional inset ring and an
 -- optional centred number, all absolute in the parent. `key` keeps the sibling ids unique; the base node keeps `id`.
 local function pearl(p)
     local size,out=p.size,{}
