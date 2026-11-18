@@ -81,6 +81,9 @@ pub enum Presentation {
     Centre,
 }
 
+/// The most roles a wallpaper palette may carry (validation and schemas).
+pub const PALETTE_ROLES_MAX: usize = 256;
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct ActiveWallpaper {
     #[schemars(range(min = 1, max = 9007199254740991_u64))]
@@ -335,7 +338,7 @@ impl WallpaperCatalogue {
                     || entry.palette.as_ref().is_some_and(|palette| {
                         !matches!(palette.mode, PaletteMode::Dark | PaletteMode::Light)
                             || palette.colours.len() < 3
-                            || palette.colours.len() > 256
+                            || palette.colours.len() > PALETTE_ROLES_MAX
                             || !["background", "onSurface", "primary"]
                                 .iter()
                                 .all(|role| palette.colours.contains_key(*role))
@@ -372,10 +375,10 @@ fn outputs_schema(generator: &mut schemars::SchemaGenerator) -> schemars::Schema
     schemars::json_schema!({"type":"object","maxProperties":32,"propertyNames":{"type":"string","minLength":1,"maxLength":256},"additionalProperties":value})
 }
 fn colours_schema(_: &mut schemars::SchemaGenerator) -> schemars::Schema {
-    schemars::json_schema!({"type":"object","minProperties":3,"maxProperties":256,"required":["background","onSurface","primary"],"propertyNames":{"type":"string","minLength":1,"maxLength":64},"additionalProperties":{"type":"string","pattern":"^#[0-9A-Fa-f]{6}$"}})
+    schemars::json_schema!({"type":"object","minProperties":3,"maxProperties":PALETTE_ROLES_MAX,"required":["background","onSurface","primary"],"propertyNames":{"type":"string","minLength":1,"maxLength":64},"additionalProperties":{"type":"string","pattern":"^#[0-9A-Fa-f]{6}$"}})
 }
 fn catalogue_colours_schema(_: &mut schemars::SchemaGenerator) -> schemars::Schema {
-    schemars::json_schema!({"type":"object","minProperties":3,"maxProperties":256,"required":["background","onSurface","primary"],"propertyNames":{"type":"string","minLength":1,"maxLength":64},"additionalProperties":{"type":"string","pattern":"^#[0-9A-Fa-f]{6}$"}})
+    schemars::json_schema!({"type":"object","minProperties":3,"maxProperties":PALETTE_ROLES_MAX,"required":["background","onSurface","primary"],"propertyNames":{"type":"string","minLength":1,"maxLength":64},"additionalProperties":{"type":"string","pattern":"^#[0-9A-Fa-f]{6}$"}})
 }
 impl WallpaperActive {
     pub fn validate(&self) -> Result<(), Failure> {
@@ -464,7 +467,7 @@ impl ActiveWallpaper {
             || self.file_identity.size > POSTER_BYTES
             || self.motion.as_ref().is_some_and(|m| !m.is_valid())
             || palette.colours.is_empty()
-            || palette.colours.len() > 256
+            || palette.colours.len() > PALETTE_ROLES_MAX
             || !["background", "onSurface", "primary"]
                 .iter()
                 .all(|role| palette.colours.contains_key(*role))

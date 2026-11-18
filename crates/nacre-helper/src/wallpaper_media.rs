@@ -1037,7 +1037,7 @@ impl Media {
                 json!(format!("#{}", value.to_ascii_lowercase())),
             );
         }
-        if colours.len() > 256
+        if colours.len() > nacre_protocol::wallpaper::PALETTE_ROLES_MAX
             || colours
                 .keys()
                 .any(|name| name.is_empty() || name.len() > 64)
