@@ -94,7 +94,7 @@ if ui.resolve_for_check(ui.bind("launcher.subtitle"))==ui.resolve_for_check(ui.b
 end
 local body={
     kit.TextInput{id="search",text=ui.bind("launcher.search.text"),placeholder=ui.tr("bead.launcher.search-placeholder"),
-        height=49,padding=15,radius=12,font_size=16,width="fill",fill="raised",border_width=1.5,border_color=ui.alpha("primary",.55)},
+        height=49,padding=15,radius=12,font_size=16,width="fill",fill=ui.tint("surface","onSurface",.07),border_width=1.5,border_color=ui.alpha("primary",.55)},
     ui.Row{grow=1,
         ui.memo("launcher.sidebar",{},function() return Sidebar{} end),
         ui.Box{width=18,height="fill",
