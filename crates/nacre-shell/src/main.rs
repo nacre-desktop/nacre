@@ -588,6 +588,7 @@ fn start(
     let panel_trace = options.trace_state;
     if core_views && options.bar {
         options.edge_art = Some(frame_art::art(&colors)?);
+        options.edge_tip = Some(frame_art::tip(&colors)?);
         options.decorations = Some(
             placement::Chrome::new(
                 placement::Attachment::Attached(bead::core::Edge::Top),

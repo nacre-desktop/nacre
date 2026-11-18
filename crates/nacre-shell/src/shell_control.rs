@@ -466,6 +466,7 @@ impl Gate {
             frame.handles = p.edge_handles;
             frame.arrows = p.edge_arrows;
             crate::frame_art::ARROWS.store(p.edge_arrows, SeqCst);
+            crate::frame_art::CLICK.store(p.click_edge_menus, SeqCst);
             // The top handle also sets the top lip's docked input band.
             let top_tab = crate::frame_art::TOP_TAB.swap(p.top_tab, SeqCst) != p.top_tab;
             changed |= lips || top_tab;
@@ -527,6 +528,7 @@ impl ShellControl for Gate {
     }
     fn palette_changed(&self, palette: &std::collections::BTreeMap<String, [u8; 4]>) {
         crate::app::set_live_palette(palette);
+        crate::frame_art::set_tip_palette(palette);
         if crate::placement::set_live_palette(palette) {
             self.variant.fetch_add(1, SeqCst);
             for watcher in self

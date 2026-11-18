@@ -2,7 +2,8 @@
 //! B0047: artwork for the frame's edge lips, ported from `NacreEdgeTab.qml`. The framework
 //! blits the SVG; this is Nacre's look (accent cue that fills while the pointer dwells, a
 //! chevron that points into or out of the panel).
-use bead::wayland::{EdgeArt, LipState, intent::Lip};
+use bead::render::{Primitive, Rect, Scene, text_width_styled};
+use bead::wayland::{EdgeArt, EdgeTip, LipState, intent::Lip};
 use bead::{core::Edge, render::Palette};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering::SeqCst};
@@ -10,6 +11,10 @@ use std::sync::atomic::{AtomicBool, Ordering::SeqCst};
 /// D6 (spec 0237): `desktop.edgeHandleStyle` `"arrows"` draws the chevron tab; the default is the
 /// pearl grabber. Set by the shell gate when the preference changes.
 pub static ARROWS: AtomicBool = AtomicBool::new(false);
+
+/// `desktop.clickEdgeMenus`: tabs open on click, so hover alone grows the pill (9 x 72 from 5 x 56)
+/// and lights it, instead of the dwell fill being the cue.
+pub static CLICK: AtomicBool = AtomicBool::new(false);
 
 /// `desktop.edgeHandleTopVisible` (opt-in): the top lip draws its handle under the bar title.
 pub static TOP_TAB: AtomicBool = AtomicBool::new(false);
@@ -57,6 +62,25 @@ pub fn grabber(
     surface: [u8; 4],
     top_tab: bool,
 ) -> Option<String> {
+    grabber_mode(
+        lip,
+        (width, height),
+        state,
+        accent,
+        surface,
+        top_tab,
+        CLICK.load(SeqCst),
+    )
+}
+fn grabber_mode(
+    lip: &Lip,
+    (width, height): (f32, f32),
+    state: LipState,
+    accent: [u8; 4],
+    surface: [u8; 4],
+    top_tab: bool,
+    click: bool,
+) -> Option<String> {
     let top = lip.edge == Edge::Top;
     if !(top && top_tab || matches!(lip.edge, Edge::Left | Edge::Right)) {
         return None;
@@ -71,7 +95,7 @@ pub fn grabber(
     let charging = !state.active && state.progress > 0. && state.progress < 1.;
     // The tab keeps its swollen pill for the whole ride, even when `active` lags the close; so does a
     // completed dwell while its open is pending, so the pill grows once and flings open at that size.
-    let charge = if state.active || attach > 0. || state.progress >= 1. {
+    let charge = if state.active || attach > 0. || state.progress >= 1. || click && state.hovered {
         1.
     } else if !charging {
         0.
@@ -80,8 +104,13 @@ pub fn grabber(
     } else {
         state.progress
     };
-    let (thick, long) = (6. + 2. * charge, 56. + 16. * charge);
-    let thick = thick.min((w - 2.).max(2.));
+    let thick = if click {
+        5. + 4. * charge
+    } else {
+        6. + 2. * charge
+    };
+    let long = 56. + 16. * charge;
+    let thick = thick.min((w - if click { 1. } else { 2. }).max(2.));
     // At rest the pill sits mid-strip: the lip's thickness past the bar (all of it without a bar).
     // Docked it slides onto the join so it meets the panel with no gap (owner 2026-11-16): x = w
     // for the right and top lips; x = 0 for the left lip, whose panel opens from the left.
@@ -112,10 +141,10 @@ pub fn grabber(
     } else {
         String::new()
     };
-    // Hover lights the docked tab only: on the free bar the dwell fill stays the visible cue.
+    // Hover lights the docked tab, and the free one in click mode; otherwise the dwell fill is the cue.
     let glow = if charging {
         charge
-    } else if state.hovered && attach > 0. {
+    } else if state.hovered && (attach > 0. || click) {
         1.
     } else {
         0.
@@ -259,6 +288,85 @@ pub fn art(colors: &Palette) -> Result<EdgeArt, Box<dyn std::error::Error>> {
     }))
 }
 
+/// The live `[raised, onSurface]` roles the tip is drawn from; set on every palette commit, so the
+/// next tip wears the wallpaper's colours (the tip is drawn per show, nothing to rebuild).
+static TIP_COLORS: std::sync::Mutex<Option<[[u8; 4]; 2]>> = std::sync::Mutex::new(None);
+pub fn set_tip_palette(palette: &std::collections::BTreeMap<String, [u8; 4]>) {
+    if let (Some(fill), Some(ink)) = (palette.get("raised"), palette.get("onSurface")) {
+        *TIP_COLORS.lock().unwrap_or_else(|p| p.into_inner()) = Some([*fill, *ink]);
+    }
+}
+/// The edge tab tooltip (B0340): a lacquer plate, two lines, drawn only in click mode (hover-open
+/// tabs already open on hover) and only for the two side tabs.
+pub fn tip(colors: &Palette) -> Result<EdgeTip, Box<dyn std::error::Error>> {
+    let startup = [colors.get("raised")?, colors.get("onSurface")?];
+    Ok(Arc::new(move |lip| {
+        if !CLICK.load(SeqCst) {
+            return None;
+        }
+        let (title, detail) = match lip.id.as_str() {
+            "assistant" => (
+                "bead.panel.edge-tip-ai-title",
+                "bead.panel.edge-tip-ai-detail",
+            ),
+            "controls" => (
+                "bead.panel.edge-tip-controls-title",
+                "bead.panel.edge-tip-controls-detail",
+            ),
+            _ => return None,
+        };
+        let colors = TIP_COLORS.lock().ok().and_then(|c| *c).unwrap_or(startup);
+        let (title, detail) = (crate::i18n::tr(title, &[]), crate::i18n::tr(detail, &[]));
+        tip_scene(&title, &detail, colors).ok()
+    }))
+}
+/// Spec: 9 px radius, inset 12 % rim, 11 px Commissioner (title 600, detail 400), 7 x 11 padding.
+/// Bead places the scene; its 22 px margin is transparent room for the shadow.
+fn tip_scene(title: &str, detail: &str, [fill, ink]: [[u8; 4]; 2]) -> bead::render::Result<Scene> {
+    const MARGIN: f32 = 22.;
+    let run = |y, text: &str, weight, w| Primitive::Text {
+        weight,
+        align: None,
+        rect: Rect::new(MARGIN + 11., MARGIN + y, w, 14.),
+        text: text.into(),
+        family: "Commissioner".into(),
+        size: 11.,
+        color: ink,
+        shadow: None,
+        features: Default::default(),
+    };
+    let mut scene = Scene::empty(1., 1.);
+    scene.primitives = vec![run(7., title, 600, 1e4), run(21., detail, 400, 1e4)];
+    scene.font_files = crate::font_sources::select(&scene)?;
+    let wide = |text, weight| text_width_styled(&scene, text, ("Commissioner", weight, &[]), 11.);
+    let text_w = wide(title, 600)?.max(wide(detail, 400)?).ceil() + 1.;
+    let (w, h) = (text_w + 22., 42.);
+    scene = Scene {
+        font_files: scene.font_files,
+        ..Scene::empty(w + 2. * MARGIN, h + 2. * MARGIN)
+    };
+    scene.primitives = vec![
+        Primitive::Shadow {
+            rect: Rect::new(MARGIN - 15., MARGIN - 9., w + 30., h + 30.),
+            radius: 9.,
+            blur: 5.,
+            spread: 0.,
+            dy: 6.,
+            alpha: 0.45,
+        },
+        Primitive::Rounded {
+            rect: Rect::new(MARGIN, MARGIN, w, h),
+            radius: 9.,
+            fill,
+            border: Some(([ink[0], ink[1], ink[2], 31], 1.)),
+            radial: None,
+        },
+        run(7., title, 600, text_w),
+        run(21., detail, 400, text_w),
+    ];
+    Ok(scene)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -332,13 +440,30 @@ mod tests {
             lit.contains(r#"width="10" height="80" rx="5" fill="rgb(10,20,30)" opacity="0.3""#),
             "{lit}"
         );
-        // The free bar ignores hover so the dwell fill stays the cue.
+        // In hover-open mode the free bar ignores hover so the dwell fill stays the cue.
         let free_hover = LipState {
             hovered: true,
             ..idle()
         };
         let hovered = grabber(&lip(Edge::Right), (10., 144.), free_hover, A, S, false).unwrap();
         assert_eq!(hovered, free);
+        // In click mode hover alone grows the free pill from 5 x 56 to 9 x 72 and lights it.
+        let click =
+            |state| grabber_mode(&lip(Edge::Right), (10., 144.), state, A, S, false, true).unwrap();
+        assert!(
+            click(idle()).contains(r#"x="2.5" y="44" width="5" height="56""#),
+            "{}",
+            click(idle())
+        );
+        let grown = click(free_hover);
+        assert!(
+            grown.contains(r#"width="9" height="72" rx="4.5" fill="rgb(10,20,30)""#),
+            "{grown}"
+        );
+        assert!(
+            grown.contains(r#"width="10" height="80" rx="5" fill="rgb(10,20,30)" opacity="0.3""#),
+            "{grown}"
+        );
         // While its panel is open a lip's rest box keeps only its plate: its pill rides the tab.
         let rest = grabber(
             &lip(Edge::Right),
@@ -379,6 +504,22 @@ mod tests {
             left_idle.contains(r#"width="6" height="56""#),
             "{left_idle}"
         );
+    }
+    #[test]
+    fn the_edge_tip_is_a_sized_two_line_plate_for_the_side_tabs_only() {
+        let scene = tip_scene("Nacre AI", "Super A · click or drag", [S, A]).unwrap();
+        assert!(scene.width > 44. + 60. && scene.bounds.h == 42. + 44.);
+        assert!(!scene.font_files.is_empty());
+        let texts = scene
+            .primitives
+            .iter()
+            .filter(|p| matches!(p, Primitive::Text { .. }));
+        assert_eq!(texts.count(), 2);
+        let colors = Palette(
+            std::collections::HashMap::from([("raised".into(), S), ("onSurface".into(), A)]).into(),
+        );
+        let offer = tip(&colors).unwrap();
+        assert!(offer(&lip(Edge::Top)).is_none(), "no tip for the bar's lip");
     }
     #[test]
     fn a_docked_tab_leaves_the_corner_pixel_clear_for_the_wallpaper() {
