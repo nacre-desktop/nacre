@@ -81,8 +81,22 @@ class BindingContractTests(unittest.TestCase):
                 row["action"]["args"][0] = "nacrectl ui " + shlex.join(arguments)
                 changed += 1
         self.assertEqual(changed, 10)
+        # Super+C (control centre) and Super+D (dashboard) are new since the frozen defaults.
+        for row in compositor_contract["outputs"]["hypr/conf/keybinding.lua"]:
+            if row.get("keys") in ("SUPER + C", "SUPER + D"):
+                migrated.append(
+                    {
+                        "action": {
+                            "method": "exec_cmd",
+                            "args": [row["parameters"]["command"]],
+                        },
+                        "flags": dict(row["options"]),
+                        "keys": row["keys"],
+                        "submap": "",
+                    }
+                )
         self.assertEqual(normalize(actual), normalize(migrated))
-        self.assertEqual(len(actual), 94)
+        self.assertEqual(len(actual), 96)
 
     def test_defaults_have_no_conflicts_or_personal_app_commands(self):
         root = TOOLS.parent
