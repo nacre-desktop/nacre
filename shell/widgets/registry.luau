@@ -286,8 +286,9 @@ end
 function M.bar_regions(layout)
     local regions={}
     for name,region in layout.regions do regions[name]=table.clone(region) end
+    -- Islands: 6 px before the icon = the 1 px island padding + the workspace capsule's 5 px after the last pearl.
     regions.left.props=context.island{id="left",height=34,gap=context.islands and 4 or 12,shrink=1,align="center",radius=context.islands and 17 or nil,
-        padding_left=context.islands and 1 or nil,padding_right=context.islands and 1 or nil}
+        padding_left=context.islands and 6 or nil,padding_right=context.islands and 1 or nil}
     regions.centre.inline=true
     -- Owner 2026-11-14: the right strip (tray, pill, power) packs a little tighter (t.power_gap).
     regions.right.props={id="right",height=34,gap=context.t.power_gap or 12,shrink=0,align="center"}

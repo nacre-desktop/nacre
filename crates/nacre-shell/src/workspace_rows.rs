@@ -103,10 +103,8 @@ pub fn collection_stores(topic: &Json, output: Option<&str>) -> BTreeMap<String,
         .unwrap_or(360.);
     let current = rows
         .iter()
-        .find(|row| match output {
-            Some(output) => row["output"].as_str() == Some(output),
-            None => row["active"] == true,
-        })
+        .filter(|row| output.is_none_or(|output| row["output"].as_str() == Some(output)))
+        .min_by_key(|row| row["active"] != true)
         .and_then(|row| row["id"].as_str())
         .unwrap_or_default()
         .to_owned();
@@ -465,6 +463,8 @@ impl Rows {
             .filter(|o| o.scale > 0.)
             .map_or(1920., |o| f64::from(o.width) / o.scale);
         let available = 170f64.max(720f64.min(width / 2. - 130.).min(width - RIGHT - 220.));
+        // Every occupied pearl carries its app icons, sharing one width budget left to right.
+        let mut spent = 0.;
         shown
             .iter()
             .enumerate()
@@ -479,11 +479,12 @@ impl Rows {
                         || shown.get(at - 1).and_then(|p| origin(p)).map(|o| &o.output)
                             != origin(w).map(|o| &o.output));
                 let selected = active.as_ref() == Some(&w.id);
-                let hinted = selected && view.hints && !icon_mode;
+                let hinted = view.hints && !icon_mode && !windows.is_empty();
                 let count = windows.len();
                 let base = shown.len() as f64 * CELL
                     + shown.len().saturating_sub(1) as f64 * 2.
-                    + if count > 0 { 4. } else { 0. };
+                    + if count > 0 { 4. } else { 0. }
+                    + spent;
                 let cap = if view.show_all { count } else { MAX_HINTS };
                 let mut fit = cap
                     .min(count)
@@ -496,6 +497,7 @@ impl Rows {
                     fit -= 1;
                 }
                 let fit = if hinted { fit } else { 0 };
+                spent += fit as f64 * HINT + if hinted && fit < count { OVERFLOW } else { 0. };
                 let mut row = serde_json::to_value(w).unwrap_or(Json::Null);
                 if held.is_some() {
                     row["active"] = json!(selected);

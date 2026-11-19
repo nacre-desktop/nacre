@@ -12,9 +12,16 @@ local pearl_accent=c.pearl_accent
 return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",data={topics={},actions={}},settings={},defaults={},budget={fps_active=0,fps_idle=0,pause_on={"fullscreen","lock","battery_saver"}},
     forms={bar={default_style="pearls",styles={pearls={title="Workspaces",min_span=1,max_span=60,preferred_span=1,render=function(props,settings,data)
             local workspaces=ui.resolve_for_check(ui.bind("bead.workspaces")) or {}
-            -- Calm left island: app icons ride only in the active pearl, and only on a wide enough output.
+            -- Enamel pearl: the accent fill under the themed gloss (tinted from the wallpaper's palette); no gradients, the flat fill.
+            local function enamel(id,left,top,size,fill,current,opacity)
+                local out={ui.Box{id=id,position="absolute",left=left,top=top,width=size,height=size,radius=size/2,fill=fill,opacity=opacity}}
+                if kit.tokens.gradients then
+                    out[2]=ui.Image{id=id.."-gradient",position="absolute",left=left,top=top,width=size,height=size,opacity=opacity,path="bar/assets/pearl-"..(current and "current" or "occupied")..".themed.svg"}
+                end
+                return out
+            end
+            -- App icons ride in every occupied pearl at every output width (the rows budget their room).
             local function hints(item)
-                if not (item.active and c.wide) then return 0,"",false end
                 return item.shown or 0,item.overflow or "",item.hinted==true
             end
             local collections={}
@@ -22,14 +29,21 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
             if c.popouts then
                 collections=ui.resolve_for_check(ui.bind("bar.collections")) or {}
                 collection_current=ui.resolve_for_check(ui.bind("bar.collection.current")) or ""
-                -- Stacks belong to an output (nacre-niri): this bar's strand shows only its own; the
-                -- switcher still lists every stack, detached ones included. No output: all of them.
-                local here=ui.resolve_for_check(ui.bind("bar.collection.output")) or ""
-                local mine={}
-                for _,collection in ipairs(collections) do if collection.output==here then mine[#mine+1]=collection end end
-                if #mine>0 then collections=mine end
+                -- Stacks belong to an output (nacre-niri). Every bar shows all of them, ordered by screen (left to right)
+                -- then stack; only the current stack of THIS bar's output is highlighted, the rest are dim pearls.
+                local origin={}
+                for _,output in ipairs(ui.resolve_for_check(ui.bind("widgets.outputs")) or {}) do origin[output.name]=output.x or 0 end
+                local rows={}
+                for i,collection in ipairs(collections) do rows[i]={collection=collection,at=i,x=origin[collection.output] or math.huge} end
+                table.sort(rows,function(a,b)
+                    if a.x~=b.x then return a.x<b.x end
+                    if a.collection.output~=b.collection.output then return tostring(a.collection.output)<tostring(b.collection.output) end
+                    return a.at<b.at
+                end)
+                collections={}
+                for i,row in ipairs(rows) do collections[i]=row.collection end
             end
-            -- Stack pearls (locked 2026-11-17): one enamel pearl per stack on this output, in switcher order. The
+            -- Stack pearls (locked 2026-11-17): one enamel pearl per stack on every screen, by screen then stack. The
             -- current one is larger, in a white ring, an accent ring and a glow. At rest 1-3 stacks show whole and
             -- 4+ show three around the current one and "+N"; hovering 400 ms fans out numbered pearls (up to 8).
             -- A named 28 px cap (Settings > Panels > Top bar > Stack style) replaces them. Tier 2 advertises no
@@ -80,7 +94,7 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
             local active_left,active_width,active_accent,active_icon_mode
             local cursor=0
             for _,item in workspaces do
-                local gs=item.group_start==true and 48 or 0
+                local gs=item.group_start==true and 12 or 0
                 local width
                 if item.icon_mode then
                     width=46
@@ -109,9 +123,10 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
                     nodes[2]=ui.Box{id="stack-accent",position="absolute",left=cx-outer/2,top=cy-outer/2,width=outer,height=outer,radius=outer/2,fill="primary"}
                     nodes[3]=ui.Box{id="stack-white",position="absolute",left=cx-white/2,top=cy-white/2,width=white,height=white,radius=white/2,fill=t.pearl_white}
                 end
-                for _,node in c.pearl{id="stack-pearl-"..k,key=tostring(k),left=cx-size/2,top=cy-size/2,size=size,fill=t.pearl_cream,body=true,opacity=not on and t.stack_other_alpha or nil,
-                    ring=not on and ui.alpha("ink",.35) or nil,ring_width=1,
-                    label=fanned and tostring(collections[i].index or i) or nil,font_size=10,font_weight=600,label_color=t.pearl_dark} do nodes[#nodes+1]=node end
+                for _,node in enamel("stack-pearl-"..k,cx-size/2,cy-size/2,size,pearl_accent(i-1),on,not on and t.stack_other_alpha or nil) do nodes[#nodes+1]=node end
+                if fanned then
+                    nodes[#nodes+1]=centered_text{id="stack-number-"..k,position="absolute",left=cx-size/2,top=cy-10*t.line_height/2,text=tostring(i),width=size,font_size=10,font_weight=600,family="IBM Plex Sans",text_align="center",color=t.pearl_dark}
+                end
                 return nodes
             end
             local strand_nodes,fan_buttons={},{}
@@ -122,10 +137,10 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
                     local k=i-first+1
                     if not fanned then for _,node in stack_nodes(i,k,x) do strand_nodes[#strand_nodes+1]=node end end
                     if fanned then
-                        -- Fanned, each pearl is its own button: the current one opens the switcher, the others go.
+                        -- Fanned, each pearl is its own button: the current one keeps the fan out, the others go. Only "+N" (and the cap style) opens the switcher.
                         fan_buttons[k]=kit.Button{id="stack-strand-"..k,width=slot,height=t.workspace_height,padding=0,radius=t.workspace_radius,shrink=0,fill="transparent",hover_fill="transparent",
                             aria_label=tostring(collections[i].name or collections[i].label or collections[i].index or i),
-                            on_activate=c.popouts and (i==cur and ui.action("collection.switcher.open") or ui.action("collection.switch",collections[i].id)) or nil,
+                            on_activate=c.popouts and (i==cur and ui.action("collection.fan") or ui.action("collection.switch",collections[i].id)) or nil,
                             table.unpack(stack_nodes(i,k,0))}
                     end
                     x+=slot
@@ -160,8 +175,8 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
                 local on=item.active
                 local pressed_workspace=pressed and string.find(hovered,".k"..item.id..".",1,true)~=nil
                 local activate=ws_on and ui.action("backend.workspace.switch",item.id) or nil
-                -- A visiting workspace group starts with its home output's name (QML groupSpace, 48 px).
-                local gs=item.group_start==true and 48 or 0
+                -- A visiting workspace group starts with a thin rule (no raw connector name, owner 2026-11-18).
+                local gs=item.group_start==true and 12 or 0
                 local button
                 local width
                 local animated_width
@@ -209,14 +224,22 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
                     width=32+shown*18+(more~="" and 20 or 0)+(hinted and 4 or 0)
                     animated_width=ui.animate("workspace.cell.width:"..props.instance.iid..":"..item.id,width,.16,"out-cubic")
                     local lit=on or item.occupied==true
-                    local size=lit and t.pearl_size or t.pearl_ring_size
+                    local size=on and t.pearl_current or lit and t.pearl_occupied or t.pearl_empty
                     local parts={}
                     local function add(node) parts[#parts+1]=node end
-                    -- The one pearl style: accent when current, cream when occupied, an ink ring when empty.
-                    for _,node in c.pearl{id="pearl",key="",left=16-size/2,top=t.workspace_height/2-size/2,size=size,
-                        fill=on and accent or lit and t.pearl_cream or nil,body=not on and lit,
-                        ring=on and ui.alpha("onSurface",.5) or lit and ui.alpha("ink",.2) or ui.alpha("ink",.55),ring_width=lit and 1 or t.pearl_empty_border,
-                        label=label,font_size=#label<2 and t.pearl_number_font or t.pearl_number_font-2,font_weight=on and 700 or 600,label_color=on and "onPrimary" or lit and t.pearl_dark or "ink"} do add(node) end
+                    -- QML NacreWorkspacePearl: 22 px current / 20 occupied / 18 empty; the enamel is the accent warmed toward cream
+                    -- under the themed shading (gradients off: the flat warmed colour; QML numberSurface).
+                    local shaded=lit and kit.tokens.gradients
+                    for _,node in enamel("pearl",16-size/2,t.workspace_height/2-size/2,size,lit and (shaded and accent or ui.tint(accent,t.pearl_cream,on and .4 or .1)) or c.base,on) do
+                        if lit or node.id=="pearl" then add(node) end
+                    end
+                    local stroke=on and t.pearl_current_border or not lit and t.pearl_empty_border or 0
+                    if stroke>0 then
+                        -- Bead strokes straddle their path; Qt's Rectangle border stays inside its box.
+                        add(ui.Box{id="ring",position="absolute",left=16-size/2+stroke/2,top=t.workspace_height/2-size/2+stroke/2,width=size-stroke,height=size-stroke,radius=(size-stroke)/2,
+                            fill="transparent",border_width=stroke,border_color=on and ui.alpha("onSurface",.5) or ui.alpha(accent,.9)})
+                    end
+                    add(centered_text{id="number",position="absolute",left=16-size/2,top=t.workspace_height/2-(#label<2 and t.workspace_number_font or 9)*t.line_height/2,text=label,width=size,font_size=#label<2 and t.workspace_number_font or 9,font_weight=on and 600 or 500,family="IBM Plex Sans",text_align="center",color=lit and t.pearl_dark or "onSurfaceVariant"})
                     add(ui.Row{id="apps",position="absolute",left=33,top=0,width=math.max(0,width-33),height=t.workspace_height,gap=3,align="center",visible=#apps>0,table.unpack(apps)})
                     button=kit.Button{id="workspace",position="absolute",left=gs,top=0,width=animated_width,height=t.workspace_height,radius=t.workspace_radius,padding=0,fill="transparent",hover_fill=ui.alpha(accent,.1),shrink=0,
                         on_activate=activate,
@@ -226,7 +249,6 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
                 local kids={}
                 if gs>0 then
                     kids[#kids+1]=ui.Box{id="group-rule",position="absolute",left=5,top=5,width=1,height=18,fill="outlineVariant"}
-                    kids[#kids+1]=ui.Text{id="group-origin",position="absolute",left=10,top=5,width=36,height=18,text="▣ "..(item.origin or ""),font_size=11,color="onSurfaceVariant"}
                 end
                 kids[#kids+1]=button
                 for _,overlay in ipairs(overlays) do kids[#kids+1]=overlay end

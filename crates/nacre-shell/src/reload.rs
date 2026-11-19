@@ -4201,9 +4201,16 @@ impl Runtime {
                 else {
                     return None;
                 };
-                let _collection = rows.iter().find(|row| row["id"] == text)?;
-                let output = match self.session.stores.get("bar.collection.output") {
-                    Some(bead::core::Value::Text(output)) if !output.is_empty() => output.clone(),
+                let collection = rows.iter().find(|row| row["id"] == text)?;
+                // A stack on another screen is activated on its own output.
+                let output = match (
+                    collection["output"].as_str(),
+                    self.session.stores.get("bar.collection.output"),
+                ) {
+                    (Some(output), _) if !output.is_empty() => output.to_owned(),
+                    (_, Some(bead::core::Value::Text(output))) if !output.is_empty() => {
+                        output.clone()
+                    }
                     _ => return None,
                 };
                 Some(Route::CollectionAction {

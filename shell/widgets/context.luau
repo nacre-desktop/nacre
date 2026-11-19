@@ -18,34 +18,12 @@ if sample then
 end
 local kit=require("bead.kit")
 local t=require("../bar/tokens")
-local pearl_recipe=require("../bar/pearl")
 local function centered_text(p)
     local lift=p.family=="Material Symbols Rounded" and 0 or t.text_lift
     p.height=p.font_size*t.line_height+2*lift
     if p.position=="absolute" then p.top=(p.top or 0)-lift end
     return ui.Text(p)
 end
--- THE pearl (workspace and stack pearls): one box, a flat fill under the shared recipe's radial layers (bar/pearl.luau;
--- `body` true draws the whole pearl, else just the highlight over `fill`), an optional inset ring and an
--- optional centred number, all absolute in the parent. `key` keeps the sibling ids unique; the base node keeps `id`.
-local function pearl(p)
-    local size,out=p.size,{}
-    if p.fill then
-        out[1]=ui.Box{id=p.id,position="absolute",left=p.left,top=p.top,width=size,height=size,radius=size/2,fill=p.fill,opacity=p.opacity,
-            radial=kit.tokens.gradients and pearl_recipe.layers(p.body) or nil}
-    end
-    if p.ring then
-        -- Bead strokes straddle their path, so the ring box sits half a stroke inside.
-        local w=p.ring_width
-        out[#out+1]=ui.Box{id="ring"..p.key,position="absolute",left=p.left+w/2,top=p.top+w/2,width=size-w,height=size-w,radius=(size-w)/2,fill="transparent",border_width=w,border_color=p.ring}
-    end
-    if p.label then
-        out[#out+1]=centered_text{id="number"..p.key,position="absolute",left=p.left,top=p.top+size/2-p.font_size*t.line_height/2,text=p.label,width=size,font_size=p.font_size,font_weight=p.font_weight,family="IBM Plex Sans",text_align="center",color=p.label_color}
-    end
-    return out
-end
--- Calm left island: app icons only on outputs at least t.hints_min_width logical px wide (unknown width counts as wide).
-local wide=sample~=nil or (ui.resolve_for_check(ui.bind("bead.viewport.width")) or t.hints_min_width)>=t.hints_min_width
 local launcher=ui.resolve_for_check(ui.bind("bar.launcher"))
 local popouts=ui.resolve_for_check(ui.bind("bar.popouts"))
 local ws_on=ui.resolve_for_check(ui.bind("bar.workspace.enabled"))
@@ -126,4 +104,4 @@ local function status_text(p)
     p.max_width=whole_width(p.max_width)
     return ui.Text(p)
 end
-return {lit_edge=lit_edge,pearl=pearl,wide=wide,i_shadow=i_shadow,i_fill=i_fill,i_stroke=i_stroke,i_stroke_color=i_stroke_color,islands=islands,base=base,island=island,band_top=band_top,band_height=band_height,ui=ui,kit=kit,t=t,centered_text=centered_text,launcher=launcher,popouts=popouts,ws_on=ws_on,tray_on=tray_on,dash_on=dash_on,focus_on=focus_on,updates_on=updates_on,updates_n=updates_n,header=header,title=title,title_width=title_width,cue_extent=cue_extent,dwell=dwell,ws_count=ws_count,ws_icons=ws_icons,thread=thread,pearl_accent=pearl_accent,glyph=glyph,status_glyph=status_glyph,status_text=status_text,whole_width=whole_width}
+return {lit_edge=lit_edge,i_shadow=i_shadow,i_fill=i_fill,i_stroke=i_stroke,i_stroke_color=i_stroke_color,islands=islands,base=base,island=island,band_top=band_top,band_height=band_height,ui=ui,kit=kit,t=t,centered_text=centered_text,launcher=launcher,popouts=popouts,ws_on=ws_on,tray_on=tray_on,dash_on=dash_on,focus_on=focus_on,updates_on=updates_on,updates_n=updates_n,header=header,title=title,title_width=title_width,cue_extent=cue_extent,dwell=dwell,ws_count=ws_count,ws_icons=ws_icons,thread=thread,pearl_accent=pearl_accent,glyph=glyph,status_glyph=status_glyph,status_text=status_text,whole_width=whole_width}

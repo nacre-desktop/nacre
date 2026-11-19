@@ -1193,9 +1193,9 @@ fn no_border_bar_floats_islands_on_a_thread_that_fades_with_windows() -> Result<
 }
 
 /// Styling phase 1: the stack pearls at 2 and 5 stacks (collapsed to three around the current one and "+2", then fanned
-/// with numbers on hover), in both bar variants and both schemes, and the narrow 1366 px bar that drops the app icons.
+/// with numbers on hover), in both bar variants and both schemes, and the narrow 1366 px bar that keeps the app icons.
 #[test]
-fn bar_stack_pearls_collapse_fan_and_narrow_bars_drop_app_icons() -> Result<()> {
+fn bar_stack_pearls_collapse_fan_and_narrow_bars_keep_app_icons() -> Result<()> {
     let bar = |frame: bool, palette: &str, width, stacks: usize, scale| -> Result<Harness> {
         let mut values = super::initial_models()?;
         values.extend(parity_models());
@@ -1251,8 +1251,8 @@ fn bar_stack_pearls_collapse_fan_and_narrow_bars_drop_app_icons() -> Result<()> 
         )?;
         let mut narrow = bar(frame, "palette.json", 1366, 2, 1.)?;
         assert!(
-            !has_icons(&narrow),
-            "under 1600 px the pearls carry no app icons"
+            has_icons(&narrow),
+            "the 1366 px bar keeps the active pearl's app icon"
         );
         bar_golden(&narrow.pose((0., 0.), 1.)?, &format!("bar-narrow-{tag}-1"))?;
     }
@@ -1285,6 +1285,13 @@ fn bar_stack_pearls_collapse_fan_and_narrow_bars_drop_app_icons() -> Result<()> 
         goes(&h),
         4,
         "fanned, each other stack has its own pearl button"
+    );
+    assert!(
+        !h.session
+            .view_nodes()
+            .iter()
+            .any(|node| node.action.as_deref() == Some("collection.switcher.open")),
+        "a fanned strand never opens the desk switcher on a click"
     );
     bar_golden(&h.pose((0., 0.), 1.)?, "bar-stacks-fan-1")?;
     // A click counts on the strand's store and fans it at once (the 3 s pin), no hover wait.
@@ -2116,7 +2123,7 @@ fn collection_switcher_badge_and_bounded_rename_menu_render() -> Result<()> {
                         .ok_or_else(|| "stack geometry missing".into())
                 };
                 let active_rect = bounds("active-capsule")?;
-                // Pearls follow the switcher order; the current one is 10 px, the others 7.5 px, and the
+                // Pearls follow the switcher order; the current one is 13 px, the others 8 px, and the
                 // active workspace capsule comes after the last of them.
                 let current = if name == "number" { 2 } else { 1 };
                 let bright = bounds(&format!("stack-pearl-{current}"))?;
@@ -2126,13 +2133,13 @@ fn collection_switcher_badge_and_bounded_rename_menu_render() -> Result<()> {
                     "stack-pearl-3"
                 })?;
                 assert!(
-                    (bright.1 - 10.).abs() <= 1. && active_rect.0 > last.0 + last.1,
+                    (bright.1 - 13.).abs() <= 1. && active_rect.0 > last.0 + last.1,
                     "the current pearl leads the active capsule: {scale}: {active_rect:?} after {bright:?}"
                 );
                 if !single {
                     let other = bounds(&format!("stack-pearl-{}", 3 - current))?;
                     assert!(
-                        (other.1 - 7.5).abs() <= 1.,
+                        (other.1 - 8.).abs() <= 1.,
                         "other pearls are small at {scale}: {other:?}"
                     );
                 }
@@ -4039,17 +4046,29 @@ fn bar_counts_stay_whole_on_every_output_scale_and_after_hotplug() -> Result<()>
     Ok(())
 }
 
-/// Stacks belong to an output on nacre-niri: each bar's strand shows only that output's stacks
-/// (owner 2026-11-16: "both still show the same circles"); without outputs it shows them all.
+/// Stacks belong to an output on nacre-niri: every bar shows all of them (owner 2026-11-18: "the laptop and the
+/// external monitor should have different ones"), ordered by screen position, and only the current stack of the
+/// bar's own output carries the white ring.
 #[test]
-fn each_output_strand_shows_only_its_own_stacks() -> Result<()> {
-    let pearls = |collections: Value, output: &str, current: &str| -> Result<usize> {
+fn every_output_strand_shows_all_stacks_with_its_own_highlighted() -> Result<()> {
+    let pearls = |collections: Value,
+                  output: &str,
+                  current: &str,
+                  shot: Option<&str>|
+     -> Result<(usize, Option<usize>)> {
         let mut values = super::initial_models()?;
         values.extend(parity_models());
         values.extend(BTreeMap::from([
             ("bar.collections".into(), collections),
             ("bar.collection.current".into(), Value::Text(current.into())),
             ("bar.collection.output".into(), Value::Text(output.into())),
+            (
+                "widgets.outputs".into(),
+                Value::list(vec![
+                    serde_json::json!({"name":"DP-1","x":1920.,"y":0.,"width":2560.,"height":1440.,"scale":1.}),
+                    serde_json::json!({"name":"eDP-1","x":0.,"y":0.,"width":1920.,"height":1200.,"scale":1.}),
+                ]),
+            ),
         ]));
         let mut h = Harness::load(
             &root(),
@@ -4063,24 +4082,74 @@ fn each_output_strand_shows_only_its_own_stacks() -> Result<()> {
             },
         )?;
         settle_harness_animations(&mut h)?;
-        Ok(h.scene()
-            .layers
+        if let Some(name) = shot {
+            bar_golden(&h.pose((0., 0.), 1.)?, name)?;
+        }
+        if let Some(name) = shot {
+            bar_golden(&h.pose((0., 0.), 1.)?, name)?;
+        }
+        let x_of = |own: std::ops::Range<usize>| {
+            h.scene().primitives[own]
+                .iter()
+                .find_map(|primitive| match primitive {
+                    bead::render::Primitive::Rounded { rect, .. } => Some(rect.x),
+                    _ => None,
+                })
+        };
+        let layers = &h.scene().layers;
+        let white = layers
+            .iter()
+            .find(|layer| layer.id.ends_with("stack-white"))
+            .and_then(|layer| x_of(layer.own.clone()));
+        let pearls: Vec<f32> = layers
             .iter()
             .filter(|layer| layer.id.contains("stack-pearl-"))
-            .count())
+            .filter_map(|layer| x_of(layer.own.clone()))
+            .collect();
+        // The highlighted pearl's place in the strand, left to right (pearl x is its left edge, the white ring's is wider).
+        Ok((
+            pearls.len(),
+            white.map(|white| pearls.iter().filter(|x| **x < white).count()),
+        ))
     };
     let live = Value::list(vec![
         serde_json::json!({"id":"niri-collection:1","label":"1","index":1,"active":true,"output":"DP-1"}),
         serde_json::json!({"id":"niri-collection:4","label":"2","index":2,"active":false,"output":"eDP-1"}),
-        serde_json::json!({"id":"niri-collection:5","label":"3","index":3,"active":false}),
     ]);
-    assert_eq!(pearls(live.clone(), "eDP-1", "niri-collection:4")?, 1);
-    assert_eq!(pearls(live.clone(), "DP-1", "niri-collection:1")?, 1);
-    let global = Value::list(vec![
-        serde_json::json!({"id":"a","label":"1","index":1,"active":true}),
-        serde_json::json!({"id":"b","label":"2","index":2,"active":false}),
-        serde_json::json!({"id":"c","label":"3","index":3,"active":false}),
+    // eDP-1 sits left of DP-1, so its stack comes first; each bar highlights its own.
+    assert_eq!(
+        pearls(
+            live.clone(),
+            "eDP-1",
+            "niri-collection:4",
+            Some("bar-screens-edp")
+        )?,
+        (2, Some(0))
+    );
+    assert_eq!(
+        pearls(live, "DP-1", "niri-collection:1", Some("bar-screens-dp"))?,
+        (2, Some(1))
+    );
+    let more = Value::list(vec![
+        serde_json::json!({"id":"d1","label":"1","index":1,"output":"DP-1"}),
+        serde_json::json!({"id":"d2","label":"2","index":2,"output":"DP-1"}),
+        serde_json::json!({"id":"d3","label":"3","index":3,"output":"DP-1"}),
+        serde_json::json!({"id":"e1","label":"1","index":1,"output":"eDP-1"}),
+        serde_json::json!({"id":"e2","label":"2","index":2,"output":"eDP-1"}),
     ]);
-    assert_eq!(pearls(global, "eDP-1", "a")?, 3, "no outputs: every stack");
+    assert_eq!(
+        pearls(more.clone(), "DP-1", "d2", None)?.0,
+        3,
+        "five stacks collapse to three around the current one"
+    );
+    assert_eq!(pearls(more, "eDP-1", "e2", None)?, (3, Some(1)));
+    let single = Value::list(vec![
+        serde_json::json!({"id":"a","label":"1","index":1,"output":"eDP-1"}),
+    ]);
+    assert_eq!(
+        pearls(single, "eDP-1", "a", None)?,
+        (1, Some(0)),
+        "one output, one stack"
+    );
     Ok(())
 }

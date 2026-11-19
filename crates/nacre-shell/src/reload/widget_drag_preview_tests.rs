@@ -2237,7 +2237,7 @@ fn passive_workspace_ghost_has_collection_defaults_and_accepts_projection() {
     assert!(!texts.contains(&"B"), "{texts:?}");
     assert!(
         scene.primitives.iter().any(|primitive| matches!(primitive,
-            bead::render::Primitive::Rounded { rect, .. } if rect.w <= 11. && (rect.w - rect.h).abs() < 0.01
+            bead::render::Primitive::Rounded { rect, .. } if rect.w <= 13. && (rect.w - rect.h).abs() < 0.01
         )),
         "strand pearl missing: {:?}",
         scene
