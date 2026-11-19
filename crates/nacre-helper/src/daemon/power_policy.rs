@@ -46,9 +46,9 @@ fn idle_listeners(data: &Value, helper: &Path) -> String {
     text
 }
 
-/// The power menu cannot open over the lock screen; a locked press suspends instead.
+/// The power menu cannot open over the lock screen (Hyprlock or Clasp); a locked press suspends instead.
 const MENU: &str =
-    "if pidof hyprlock >/dev/null; then systemctl suspend; else nacrectl ui nacre menu power ''; fi";
+    "if pidof hyprlock >/dev/null || pidof clasp >/dev/null; then systemctl suspend; else nacrectl ui nacre menu power ''; fi";
 
 fn shell_action(action: &str) -> &'static str {
     match action {
@@ -293,6 +293,13 @@ mod tests {
     use serde_json::json;
 
     #[test]
+    fn a_locked_power_press_suspends_under_either_lock_screen() {
+        for lock in ["pidof hyprlock", "pidof clasp"] {
+            assert!(MENU.contains(lock), "{lock}");
+        }
+        assert!(MENU.contains("then systemctl suspend;"));
+    }
+    #[test]
     fn idle_values_generate_dim_then_sleep_and_zero_never() {
         let text = idle_listeners(
             &json!({"idle":{"dim":5.0,"sleep":30.0}}),
@@ -334,7 +341,7 @@ mod tests {
             for (button, button_command) in [
                 ("lock", "loginctl lock-session"),
                 ("suspend", "systemctl suspend"),
-                ("menu", "if pidof hyprlock >/dev/null; then systemctl suspend; else nacrectl ui nacre menu power ''; fi"),
+                ("menu", MENU),
             ] {
                 let data = json!({"lid":lid,"button":button});
                 let hyprland = power_lua(&data);
