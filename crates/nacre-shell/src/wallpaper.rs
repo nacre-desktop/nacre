@@ -2423,7 +2423,10 @@ mod tests {
     #[test]
     fn a_strand_visit_holds_the_palette_and_closing_asks_for_the_real_one_once() {
         let palette = |red: u8| {
-            bead::render::Palette(Arc::new(std::collections::HashMap::from([("primary".to_owned(), [red, 0, 0, 255])])))
+            bead::render::Palette(Arc::new(std::collections::HashMap::from([(
+                "primary".to_owned(),
+                [red, 0, 0, 255],
+            )])))
         };
         let preview = Preview::default();
         let asked = Arc::new(std::sync::atomic::AtomicU32::new(0));
@@ -2432,31 +2435,61 @@ mod tests {
             counter.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
         }));
         assert_eq!(
-            preview.frame_palette("DP-1", palette(9), Some(palette(1))).0,
+            preview
+                .frame_palette("DP-1", palette(9), Some(palette(1)))
+                .0,
             palette(9).0,
             "no visit: the frame's own palette"
         );
         let visit = preview.hold_palette();
         for own in [9, 8, 7] {
             assert_eq!(
-                preview.frame_palette("DP-1", palette(own), Some(palette(1))).0,
+                preview
+                    .frame_palette("DP-1", palette(own), Some(palette(1)))
+                    .0,
                 palette(1).0,
                 "every pick of the visit carries the palette the desktop had"
             );
         }
         preview.release_palette(visit + 1);
-        assert_eq!(asked.load(std::sync::atomic::Ordering::SeqCst), 0, "not this visit's");
+        assert_eq!(
+            asked.load(std::sync::atomic::Ordering::SeqCst),
+            0,
+            "not this visit's"
+        );
         let again = preview.hold_palette();
         preview.release_palette(visit);
-        assert_eq!(asked.load(std::sync::atomic::Ordering::SeqCst), 0, "an old visit's release leaves a new hold");
-        assert_eq!(preview.frame_palette("DP-1", palette(5), None).0, palette(5).0, "a new hold starts from the frame it first sees");
+        assert_eq!(
+            asked.load(std::sync::atomic::Ordering::SeqCst),
+            0,
+            "an old visit's release leaves a new hold"
+        );
+        assert_eq!(
+            preview.frame_palette("DP-1", palette(5), None).0,
+            palette(5).0,
+            "a new hold starts from the frame it first sees"
+        );
         preview.release_palette(again);
-        assert_eq!(asked.load(std::sync::atomic::Ordering::SeqCst), 0, "a visit that never differed asks for nothing");
+        assert_eq!(
+            asked.load(std::sync::atomic::Ordering::SeqCst),
+            0,
+            "a visit that never differed asks for nothing"
+        );
         let visit = preview.hold_palette();
         preview.frame_palette("DP-1", palette(9), Some(palette(1)));
         preview.release_palette(visit);
-        assert_eq!(asked.load(std::sync::atomic::Ordering::SeqCst), 1, "a held palette differing from the real one asks once");
-        assert_eq!(preview.frame_palette("DP-1", palette(9), Some(palette(1))).0, palette(9).0, "released");
+        assert_eq!(
+            asked.load(std::sync::atomic::Ordering::SeqCst),
+            1,
+            "a held palette differing from the real one asks once"
+        );
+        assert_eq!(
+            preview
+                .frame_palette("DP-1", palette(9), Some(palette(1)))
+                .0,
+            palette(9).0,
+            "released"
+        );
     }
 
     #[test]

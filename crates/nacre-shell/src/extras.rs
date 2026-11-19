@@ -1422,7 +1422,9 @@ impl Extras {
     }
     /// The desktop keeps its palette while Strand is open (no palette steps on the bar and other panels per pick).
     fn hold_palette(&self) {
-        let visit = self.wallpaper_preview().map(|preview| preview.hold_palette());
+        let visit = self
+            .wallpaper_preview()
+            .map(|preview| preview.hold_palette());
         self.state.borrow_mut().palette_visit = visit;
     }
     /// Closing hands the real palette back: one palette-only tween, started with the exit animation.
