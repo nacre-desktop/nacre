@@ -856,6 +856,14 @@ fn refresh_tree(source: &Path, target: &Path) -> Result<()> {
         if entry.file_type()?.is_dir() {
             refresh_tree(&entry.path(), &destination)?;
         } else {
+            // niri reloads when an included file's mtime changes, even with identical bytes.
+            if fs::read(&destination)
+                .is_ok_and(|old| old == fs::read(entry.path()).unwrap_or_default())
+                && fs::metadata(&destination)?.permissions()
+                    == fs::metadata(entry.path())?.permissions()
+            {
+                continue;
+            }
             let temporary = tempfile::NamedTempFile::new_in(target)?;
             crate::niri_session_stage::copied(&entry.path(), temporary.path())?;
             temporary.persist(&destination)?;
@@ -1525,6 +1533,23 @@ mod tests {
             "include \"{}/config/bindings.kdl\"",
             destination.display()
         )));
+        Ok(())
+    }
+
+    #[test]
+    fn refresh_tree_leaves_unchanged_files_alone() -> Result<()> {
+        let root = tempfile::tempdir()?;
+        let (source, target) = (root.path().join("s"), root.path().join("t"));
+        fs::create_dir_all(&source)?;
+        fs::write(source.join("same"), "a")?;
+        fs::write(source.join("diff"), "a")?;
+        refresh_tree(&source, &target)?;
+        let old = fs::metadata(target.join("same"))?.modified()?;
+        std::thread::sleep(Duration::from_millis(20));
+        fs::write(source.join("diff"), "b")?;
+        refresh_tree(&source, &target)?;
+        assert_eq!(fs::metadata(target.join("same"))?.modified()?, old);
+        assert_eq!(fs::read_to_string(target.join("diff"))?, "b");
         Ok(())
     }
 

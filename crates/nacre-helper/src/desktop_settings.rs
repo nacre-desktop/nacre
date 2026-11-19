@@ -906,6 +906,11 @@ impl Native<'_> {
                     saved = state::read(&self.paths.config.join("desktop.json"), json!({}))?;
                     &saved
                 };
+                let before = self
+                    .backend
+                    .config_path("palette")
+                    .ok()
+                    .and_then(|path| std::fs::read_to_string(path).ok());
                 let text = Value::String(classic_state::publish_compositor_palette_with(
                     &self.paths.assets(),
                     self.backend,
@@ -915,7 +920,7 @@ impl Native<'_> {
                 if self.backend.name() == "hyprland" {
                     self.backend
                         .module_call("apply_config", &[text], &json!({"timeout":8}))?;
-                } else {
+                } else if before.as_deref() != text.as_str() {
                     self.backend.module_call("reload", &[], &json!({}))?;
                 }
                 Ok(())

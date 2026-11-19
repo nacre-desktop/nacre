@@ -121,6 +121,7 @@ pub fn call(module: &str, operation: &str, request: &Request) -> Result<Value> {
                     request.argument(0, "data")?,
                     request.text(1, "icon_theme")?,
                     request.text(2, "lua")?,
+                    true,
                     Some(&connection),
                 )?;
             }

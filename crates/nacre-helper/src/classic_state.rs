@@ -123,7 +123,7 @@ pub fn validated_colors(data: &Value, assets: &Path) -> Result<Map<String, Value
         .collect())
 }
 pub fn atomic_write(path: &Path, text: &str) -> Result<()> {
-    if !state::write_text(path, text)? {
+    if !state::write_text(path, text)? && fs::read(path).ok().as_deref() != Some(text.as_bytes()) {
         files::atomic(path, text.as_bytes())?;
     }
     if path
@@ -1187,7 +1187,13 @@ impl Publisher {
                 .join("\n")
                 + "\n"),
         )?;
+        let before = self
+            .backend
+            .config_path("palette")
+            .ok()
+            .and_then(|path| fs::read_to_string(path).ok());
         let config = self.publish_compositor_palette(&colors)?;
+        let palette_changed = before.as_deref() != Some(config.as_str());
         if theme_target_enabled(paths, "rofi")? {
             atomic_write(
                 &paths.config.join("rofi.rasi"),
@@ -1232,7 +1238,13 @@ impl Publisher {
             refresh_spicetify(&self.paths, live);
         }
         if live {
-            self.reload_desktop_consumers(&data, &icon_theme, &config, connection.as_ref())?;
+            self.reload_desktop_consumers(
+                &data,
+                &icon_theme,
+                &config,
+                palette_changed,
+                connection.as_ref(),
+            )?;
         }
         Ok(())
     }
@@ -1350,6 +1362,7 @@ impl Publisher {
         data: &Value,
         icon_theme: &str,
         config: &str,
+        palette_changed: bool,
         connection: Option<&zbus::blocking::Connection>,
     ) -> Result<()> {
         reload_terminals(&self.paths.home);
@@ -1389,7 +1402,8 @@ impl Publisher {
                 }
                 Err(error) => eprintln!("Palette saved; live window-border update failed: {error}"),
             }
-        } else {
+        } else if palette_changed {
+            // niri reloads on every include change and on every reload request alike.
             self.backend.module_call("reload", &[], &json!({}))?;
         }
         Ok(())
@@ -1729,4 +1743,23 @@ pub(crate) fn publish_compositor_palette_with(
     let text = render_template(assets, backend.name(), "compositor-palette", &values)?;
     atomic_write(&backend.config_path("palette")?, &text)?;
     Ok(text)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn identical_text_is_not_rewritten() -> Result<()> {
+        let dir = tempfile::tempdir()?;
+        let path = dir.path().join("palette.kdl");
+        atomic_write(&path, "a")?;
+        let old = fs::metadata(&path)?.modified()?;
+        std::thread::sleep(std::time::Duration::from_millis(20));
+        atomic_write(&path, "a")?;
+        assert_eq!(fs::metadata(&path)?.modified()?, old);
+        atomic_write(&path, "b")?;
+        assert_eq!(fs::read_to_string(&path)?, "b");
+        Ok(())
+    }
 }

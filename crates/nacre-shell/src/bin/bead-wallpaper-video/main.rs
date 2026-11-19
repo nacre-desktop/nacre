@@ -129,6 +129,15 @@ fn draw_due(stale: bool, pending: bool, shown: bool, callback: bool) -> bool {
     stale && !pending && (!shown || callback)
 }
 
+/// Every frame commit costs the compositor a full output render, so playback is capped near
+/// 30 fps (a 60 fps source shows every other frame; slower sources pass untouched). The
+/// margin keeps a 30 fps source's timing jitter from dropping frames.
+const MIN_FRAME_GAP: Duration = Duration::from_millis(30);
+
+fn frame_due(last: Option<Instant>, now: Instant) -> bool {
+    last.is_none_or(|last| now.duration_since(last) >= MIN_FRAME_GAP)
+}
+
 /// Empty callbacks do not advance video; only undrawn work needs another slot. A GL
 /// opacity fade step is undrawn work even while the decoder is paused.
 fn request_due(stale: bool, pending: bool, playing: bool, fading: bool, wanted: bool) -> bool {
@@ -203,6 +212,8 @@ struct Engine {
     /// Suppress the previous source frame until mpv confirms the replacement loaded.
     source_loaded: bool,
     frame_after_load: bool,
+    /// When the last frame was accepted for drawing (the playback fps cap).
+    last_frame: Option<Instant>,
     /// Where to restart after the decoder was released.
     resume_s: f64,
     /// Failed to start or crashed; no retry until a new source.
@@ -445,6 +456,12 @@ impl Engine {
                 player.skip();
                 return;
             }
+            let now = Instant::now();
+            if self.frame_after_load && !frame_due(self.last_frame, now) {
+                player.skip();
+                return;
+            }
+            self.last_frame = Some(now);
             self.frame_after_load = true;
             for out in &mut self.outs {
                 if wants(&self.render, &out.name) {
@@ -1132,6 +1149,7 @@ fn run(
         player: None,
         source_loaded: false,
         frame_after_load: false,
+        last_frame: None,
         resume_s: 0.0,
         failed: false,
         starved: false,
@@ -1239,6 +1257,17 @@ mod tests {
         assert!(draw_due(true, false, true, true));
         // An unchanged frame neither draws nor requests another callback.
         assert!(!draw_due(false, false, true, true));
+    }
+
+    #[test]
+    fn playback_is_capped_near_30_fps() {
+        let t = Instant::now();
+        let at = |ms| t + Duration::from_millis(ms);
+        assert!(frame_due(None, t));
+        assert!(!frame_due(Some(t), at(17)), "60 fps: every other frame");
+        assert!(frame_due(Some(t), at(34)));
+        assert!(frame_due(Some(t), at(31)), "30 fps with jitter passes");
+        assert!(frame_due(Some(t), at(42)), "24 fps passes");
     }
 
     #[test]
