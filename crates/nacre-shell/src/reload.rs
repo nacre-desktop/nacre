@@ -10762,8 +10762,16 @@ fn backend_values(
                     .windows
                     .iter()
                     .filter(window_matches)
-                    .map(serde_json::to_value)
-                    .collect::<Result<Vec<_>, _>>()?,
+                    .map(|window| {
+                        let mut window = serde_json::to_value(window)?;
+                        // The bar shows only the focused title (bead.focused_title); keeping every
+                        // window's title here re-staged the bar on any window's title churn.
+                        if let Some(object) = window.as_object_mut() {
+                            object.remove("title");
+                        }
+                        Ok(window)
+                    })
+                    .collect::<Result<Vec<_>, serde_json::Error>>()?,
             ),
         ),
     ]);
@@ -10781,13 +10789,7 @@ fn backend_title_only(
         if id == "bead.focused_title" {
             return true;
         }
-        let Some(old) = current(id) else {
-            return false;
-        };
-        if id == "bead.windows" {
-            return same_windows_except_titles(value, &old);
-        }
-        old == *value
+        current(id).is_some_and(|old| old == *value)
     })
 }
 
@@ -10960,25 +10962,6 @@ mod overview_title_projection_tests {
     }
 }
 
-fn same_windows_except_titles(new: &bead::core::Value, old: &bead::core::Value) -> bool {
-    let (bead::core::Value::List(new), bead::core::Value::List(old)) = (new, old) else {
-        return new == old;
-    };
-    let without_titles = |items: &[serde_json::Value]| {
-        items
-            .iter()
-            .map(|item| {
-                let mut item = item.clone();
-                if let Some(object) = item.as_object_mut() {
-                    object.remove("title");
-                }
-                item
-            })
-            .collect::<Vec<_>>()
-    };
-    without_titles(new) == without_titles(old)
-}
-
 #[cfg(test)]
 mod backend_title_update_tests {
     use super::*;
@@ -11015,7 +10998,7 @@ mod backend_title_update_tests {
         )
         .unwrap();
         assert!(backend_title_only(&after, |id| before.get(id).cloned()));
-        assert_ne!(before.get("bead.windows"), after.get("bead.windows"));
+        assert_eq!(before.get("bead.windows"), after.get("bead.windows"));
 
         let changed_identity = BTreeMap::from([(
             "bead.windows".into(),
