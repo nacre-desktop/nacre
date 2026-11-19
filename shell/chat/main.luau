@@ -26,10 +26,6 @@ local labels={}
 for _,item in get("chat.labels") do labels[item.text]=item end
 local kids={}
 local function add(node) table.insert(kids,node) end
-local function button(id,x,y,w,h,label,icon,action,selected,size,aria)
-    return kit.PillButton{id=id,position=x and "absolute" or nil,left=x,top=y,width=w,height=h,
-        label=label,label_width=labels[label] and (size==CAPTION and labels[label].caption or labels[label].body) or nil,glyph=icon,on_activate=action,selected=selected,compact=size==CAPTION,aria_label=aria or label}
-end
 -- Round icon button (the review's `ib`): transparent at rest, container-high on hover, primary while selected.
 local function icon_button(id,icon,action,aria,selected,x,y)
     return kit.PillButton{id=id,position=x and "absolute" or nil,left=x,top=y,width=BTN,height=BTN,shrink=0,glyph=icon,on_activate=action,compact=true,aria_label=aria,focus_ring=true,selected=selected,
@@ -69,7 +65,6 @@ local busy=get("chat.busy")
 -- Owner 2026-11-14: New terminal chat is one click at the top of both the launcher and a quick chat
 -- (the panel reopens on the quick chat it left), a round icon button like the pin.
 local terminal_label=ui.tr("bead.panel.launcher-terminal")
-local terminal=icon_button("terminal","terminal",get("launcher.can_new") and action("launcher:new") or nil,terminal_label)
 local terminal_right,header_bottom
 if quick then
     terminal_right,header_bottom=E+INNER-BTN-T.spacing.xs,E+HEADER_H
@@ -81,20 +76,23 @@ if quick then
                 -- D16: the review's 1.6 s attention pulse waits on the kit (N0237 kit ask 3).
                 ui.Box{id="working-dot",width=T.spacing.sm-T.spacing.hairline/2,height=T.spacing.sm-T.spacing.hairline/2,radius=T.radii.full,fill="success",visible=busy},
                 ui.Text{id="subtitle",text=ui.bind("chat.subtitle"),width=0,grow=1,font_size=CAPTION,color="onSurfaceVariant",height=META_H}}},
-        terminal,
+        icon_button("terminal","terminal",get("launcher.can_new") and action("launcher:new") or nil,terminal_label),
         icon_button("overflow","more_vert",ui.action("chat.menu.toggle",""),ui.tr("bead.launcher.actions"))})
 else
-    local pin=not get("view.detached")
-    terminal_right,header_bottom=E+INNER-(pin and BTN+T.spacing.sm or 0),E+BTN
+    terminal_right,header_bottom=E+INNER,E+BTN
+    local codex=get("launcher.provider")=="codex"
+    local other=codex and "claude" or "codex"
+    local prov_label=ui.tr(codex and "bead.panel.chat-codex" or "bead.panel.chat-claude")
+    local CHIP_H=META_H+2*T.spacing.xs
     add(ui.Row{id="header",position="absolute",left=E,top=E,width=INNER,height=BTN,gap=T.spacing.sm,align="center",
         ui.Image{id="logo",width=T.icons.xlarge,height=T.icons.xlarge,path="chat/assets/nacre-ai.themed.svg",aria_label=ui.tr("bead.panel.chat-title")},
-        ui.Text{id="title",width=0,grow=1,text=ui.tr("bead.panel.chat-title"),font_size=BODY,font_weight=600,color="onSurface"},
-        -- Segmented provider switch: one pill, the chosen provider filled.
-        ui.Row{id="provider",height=BTN,gap=T.spacing.hairline,padding=T.spacing.hairline+1,radius=T.radii.full,fill="surfaceContainerHigh",align="center",visible=not missing,
-            button("codex",nil,nil,nil,BTN-2*(T.spacing.hairline+1),ui.tr("bead.panel.chat-codex"),"",action("launcher:provider:codex"),get("launcher.provider")=="codex",CAPTION),
-            button("claude",nil,nil,nil,BTN-2*(T.spacing.hairline+1),ui.tr("bead.panel.chat-claude"),"",action("launcher:provider:claude"),get("launcher.provider")=="claude",CAPTION)},
-        terminal,
-        pin and icon_button("pin","push_pin",action("pin"),ui.tr("bead.panel.chat-pin"),get("chat.pinned")==true) or nil})
+        ui.Text{id="title",text=ui.tr("bead.panel.chat-title"),width=ui.text_width(ui.tr("bead.panel.chat-title"),T.fonts.sans,BODY)+T.spacing.sm,font_size=BODY,font_weight=600,color="onSurface"},
+        -- The active provider; a click switches to the other one.
+        kit.PillButton{id="provider",height=CHIP_H,label=prov_label,label_width=labels[prov_label] and labels[prov_label].caption or nil,compact=true,visible=not missing,
+            on_activate=action("launcher:provider:"..other),aria_label=prov_label},
+        ui.Box{id="spacer",width=0,grow=1,height=1},
+        -- Round "+" (new chat): the terminal chat the old header button made.
+        kit.PillButton{id="terminal",width=BTN,height=BTN,shrink=0,glyph="add",on_activate=get("launcher.can_new") and action("launcher:new") or nil,compact=true,aria_label=terminal_label,focus_ring=true}})
 end
 if missing then
     local top=(H-TITLE_H-T.spacing.xs-META_H)/2
@@ -190,77 +188,64 @@ elseif quick then
                 ui.Text{text=ui.tr("bead.panel.chat-new"),width=menu_width-T.spacing.sm,height=BTN,font_size=CAPTION,color="onSurface"}}})
     end
 else
-    -- Launcher: composer first, then the grouped chat list, then "New chat in project" + Brain/Settings.
-    local provider=get("launcher.provider")
-    local ask=ui.tr("bead.panel.chat-ask",{provider=ui.tr(provider=="claude" and "bead.panel.chat-claude" or "bead.panel.chat-codex")})
+    -- Launcher (design 2026-11-17): search pill, grouped chat list, the message input pinned at the bottom.
     local FIELD=TITLE_H+2*T.spacing.xs
-    local COMPOSE_H=T.spacing.sm+FIELD+T.spacing.xs+BTN+T.spacing.sm
-    local compose_top=E+BTN+GAP
-    -- Owner 2026-11-14: send opens the quick chat even with an empty draft (the terminal chat moved to the header).
-    compose(compose_top,FIELD,ask,action("launcher:quick-chat"),true,{icon_button("attach","attach_file",nil,ui.tr("bead.panel.chat-attach"))},{})
-    local search_top=compose_top+COMPOSE_H+GAP
+    local PILL_H=BTN+2*T.spacing.xs
+    local footer_top=H-E-PILL_H
+    local search_top=E+BTN+GAP
     add(kit.TextInput{id="search",position="absolute",left=E,top=search_top,width=INNER,height=BTN,
-        text=ui.bind("launcher.search"),placeholder=ui.tr("bead.panel.launcher-search"),padding=T.spacing.sm,padding_left=T.spacing.lg,padding_right=BTN,
+        text=ui.bind("launcher.search"),placeholder=ui.tr("bead.panel.launcher-search"),padding=T.spacing.sm,padding_left=T.spacing.lg+T.icons.small+T.spacing.sm,padding_right=T.spacing.lg,
         radius=T.radii.full,font_size=CAPTION,fill="surfaceContainerHigh",focus_ring=true})
-    local refresh_label=ui.tr("bead.panel.chat-refresh")
-    add(icon_button("refresh","refresh",action("launcher:refresh"),refresh_label,false,E+INNER-BTN,search_top))
+    add(ui.Text{id="search-icon",position="absolute",left=E+T.spacing.md,top=search_top,width=T.icons.small,height=BTN,text="search",font_size=px(T.icons.small),family=T.fonts.icon,text_align="center",color="onSurfaceVariant"})
     local warning=get("launcher.warning")
     local rows_top=search_top+BTN+T.spacing.sm
     local warning_h=warning~="" and META_H+T.spacing.xs or 0
     if warning_h>0 then add(ui.Text{id="launcher-warning",position="absolute",left=E,top=rows_top,width=INNER,height=warning_h,text=warning,font_size=CAPTION,color="onSurfaceVariant"}) end
     rows_top+=warning_h
-    local footer_top=H-E-BTN
     local list_h=math.max(0,footer_top-rows_top-GAP)
     local PAD_Y,PAD_X=T.spacing.sm+T.spacing.hairline/2,T.spacing.compact
     local ROW=TITLE_H+META_H+2*PAD_Y
     local GROUP_H=META_H+T.spacing.sm+T.spacing.hairline
     local DOT=T.spacing.sm
     local HALO=DOT+2*(T.spacing.xs-T.spacing.hairline/2)
+    local running_count=0
+    for _,chat in get("launcher.chats") do if chat.state=="running" then running_count+=1 end end
+    local running_sub=string.lower(ui.tr("bead.panel.launcher-running"))
     add(launcher{id="recent-chats",scroll=ui.bind("launcher.scroll"),position="absolute",left=E,top=rows_top,width=INNER,height=list_h,
         gap=T.spacing.xs,row_height=function(item) return ROW+((item.group or "")~="" and GROUP_H or 0) end,model=ui.bind("launcher.chats"),key="key",render=function(item)
             local active=item.state=="running"
             local pulse=active and ui.animate("chat.running-pulse:"..item.key,get("launcher.pulse") or 0,.2,"out-cubic") or 0
-            local prov=string.upper(string.sub(item.provider or "",1,1))..string.sub(item.provider or "",2)
-            local prov_w=ui.text_width(prov,T.fonts.sans,CAPTION)+T.spacing.xs
-            local open_label=ui.tr("bead.panel.launcher-open")
-            local open_w=ui.text_width(open_label,T.fonts.sans,CAPTION)+2*T.spacing.xs
-            local text_w=INNER-2*PAD_X-HALO-prov_w-2*T.spacing.compact-(active and open_w+T.spacing.compact or 0)
+            local ws=item.workspace or ""
+            local ws_w=ws~="" and ui.text_width(ws,T.fonts.sans,CAPTION)+2*T.spacing.sm or 0
+            local text_w=INNER-2*PAD_X-HALO-T.spacing.compact-(ws_w>0 and ws_w+T.spacing.compact or 0)
+            local sub=item.provider..(active and " · "..running_sub or "").." · "..item.lastActivityLabel
             local row=kit.Button{id="chat-row",width=INNER,height=ROW,padding=PAD_X,padding_top=PAD_Y,padding_bottom=PAD_Y,radius=T.spacing.md,fill="transparent",
                 hover_fill="raised",selected_fill="raised",selected=item.key==get("launcher.selected"),aria_label=item.title,
                 on_activate=get("launcher.can_open") and action("launcher:open:"..item.key) or nil,
                 ui.Row{id="line",width=INNER-2*PAD_X,height=ROW-2*PAD_Y,gap=T.spacing.compact,align="center",
-                    -- The shared pearl recipe (bar/pearl.luau): idle is the whole pearl, running the highlight over a pulsing success fill.
+                    -- Running: the shared pearl recipe (bar/pearl.luau) over a pulsing success fill; idle: a dim dot.
                     ui.Box{id="halo",width=HALO,height=HALO,radius=T.radii.full,fill=active and ui.alpha("success",.25*(.55+.45*pulse)) or "transparent",align="center",justify="center",
-                        ui.Box{id="running-dot",width=DOT,height=DOT,radius=T.radii.full,fill=active and ui.alpha("success",.55+.45*pulse) or "transparent",
-                            radial=kit.tokens.gradients and pearl.layers(not active) or nil}},
+                        ui.Box{id="running-dot",width=DOT,height=DOT,radius=T.radii.full,fill=active and ui.alpha("success",.55+.45*pulse) or ui.alpha("onSurface",.3),
+                            radial=active and kit.tokens.gradients and pearl.layers(false) or nil}},
                     ui.Column{id="chat-detail",width=text_w,height=ROW-2*PAD_Y,gap=0,
-                        ui.Row{id="title-row",width=text_w,height=TITLE_H,
-                            ui.Text{id="title",text=item.title,width=text_w,height=TITLE_H,font_size=BODY,font_weight=500,color="onSurface"}},
-                        ui.Row{id="meta",width=text_w,height=META_H,
-                            ui.Text{id="details",text=((item.project or "")~="" and item.project.." · " or "")..item.lastActivityLabel,width=text_w,height=META_H,font_size=CAPTION,color="onSurfaceVariant"}}},
-                    ui.Text{id="provider-chip",text=prov,width=prov_w,height=META_H,font_size=CAPTION,text_align="right",color="onSurfaceVariant"},
-                    active and ui.Text{id="open",text=open_label,width=open_w,height=META_H,font_size=CAPTION,font_weight=500,text_align="center",color="primary"} or nil},
-                ui.Box{id="rule",position="absolute",left=PAD_X,right=PAD_X,bottom=0,height=1,fill=ui.alpha("onSurface",.07)}}
+                        ui.Text{id="title",text=item.title,width=text_w,height=TITLE_H,font_size=BODY,font_weight=500,color="onSurface"},
+                        ui.Text{id="details",text=sub,width=text_w,height=META_H,font_size=CAPTION,color="onSurfaceVariant"}},
+                    ws_w>0 and ui.Box{id="workspace-chip",width=ws_w,height=META_H+T.spacing.xs,radius=T.radii.full,fill="surfaceContainerHigh",align="center",justify="center",
+                        ui.Text{id="workspace",text=ws,width=ws_w,height=META_H,font_size=CAPTION,text_align="center",color="onSurfaceVariant"}} or nil}}
             if (item.group or "")=="" then return row end
             return ui.Column{id="group",width=INNER,height=ROW+GROUP_H,gap=0,
                 ui.Box{id="heading",width=INNER,height=GROUP_H,padding_left=PAD_X,padding_top=T.spacing.sm,
-                    ui.Text{text=item.group,width=INNER-PAD_X,height=META_H,font_size=CAPTION,font_weight=600,color="onSurfaceVariant"}},
+                    ui.Text{text=active and item.group.." · "..running_count or item.group,width=INNER-PAD_X,height=META_H,font_size=CAPTION,font_weight=600,color="onSurfaceVariant"}},
                 row}
         end})
     local empty=get("launcher.empty_state")
     if empty~="" then add(ui.Text{id="launcher-message",position="absolute",left=E,top=rows_top+math.max(0,(list_h-META_H)/2),width=INNER,height=META_H,text=empty,font_size=CAPTION,text_align="center",color="onSurfaceVariant"}) end
-    local new_label=ui.tr("bead.panel.launcher-new-in-project")
-    -- N0206: the Brain button only with the Brain package (a list: a nil would end the row early).
-    local tools={icon_button("settings","settings",action("launcher:settings"),ui.tr("bead.panel.chat-tab-settings"))}
-    if get("chat.brain") then table.insert(tools,1,icon_button("brain","neurology",action("launcher:brain"),ui.tr("bead.panel.launcher-brain"))) end
-    add(ui.Row{id="secondary",position="absolute",left=E,top=footer_top,width=INNER,height=BTN,gap=T.spacing.xs,align="center",
-        kit.PillButton{id="new-chat",height=BTN,label=new_label,label_width=labels[new_label] and labels[new_label].caption or nil,glyph="add_comment",compact=true,
-            on_activate=get("launcher.can_new") and action("launcher:new") or nil,aria_label=new_label},
-        ui.Box{id="spacer",width=0,grow=1,height=1},
-        table.unpack(tools)})
-    if cued("secondary.brain") then tooltip("footer-tooltip",ui.tr("bead.panel.launcher-brain"),E+INNER-BTN-T.spacing.xs,footer_top-tooltip_height-2*T.spacing.sm) end
-    if cued("secondary.settings") then tooltip("footer-tooltip",ui.tr("bead.panel.chat-tab-settings"),E+INNER,footer_top-tooltip_height-2*T.spacing.sm) end
-    if cued("refresh") then tooltip("refresh-tooltip",refresh_label,E+INNER,search_top-tooltip_height-2*T.spacing.sm) end
+    -- The bottom input: send opens the quick chat with the draft (an empty draft just opens it).
+    add(ui.Box{id="compose",position="absolute",left=E,top=footer_top,width=INNER,height=PILL_H,radius=T.radii.full,fill="surfaceContainerHigh"})
+    add(kit.Composer{id="composer",position="absolute",left=E+T.spacing.md,top=footer_top+(PILL_H-FIELD)/2,width=INNER-BTN-T.spacing.md-T.spacing.xs-T.spacing.sm,height=FIELD,padding=T.spacing.xs,
+        radius=T.spacing.sm,fill="transparent",focus_ring=false,font_size=BODY,text=ui.bind("chat.draft"),placeholder=ui.tr("bead.panel.launcher-message"),aria_label=ui.tr("bead.panel.launcher-message"),on_activate=action("launcher:quick-chat")})
+    add(kit.PillButton{id="send",position="absolute",left=E+INNER-BTN-T.spacing.xs,top=footer_top+T.spacing.xs,width=BTN,height=BTN,glyph="arrow_upward",selected=true,compact=true,focus_ring=true,
+        on_activate=action("launcher:quick-chat"),aria_label=ui.tr("bead.panel.chat-send")})
 end
 -- Last, so it paints over the composer below the header.
 if cued("header.terminal") then tooltip("header-tooltip",terminal_label,terminal_right,header_bottom) end

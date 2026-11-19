@@ -1169,6 +1169,8 @@ async fn launcher_matches_scale_and_detached_goldens() -> bead_test::Result<()> 
     }
     projected.insert("launcher.chats".into(), Value::list(rows));
     projected.insert("panel.open".into(), Value::Bool(true));
+    // The running dot pulses on the wall clock; goldens hold it at rest.
+    projected.insert("launcher.pulse".into(), number(0.));
     for scale in [1., 1.5] {
         let mut regular = harness(projected.clone(), scale)?;
         let nodes = regular.session.view_nodes();
@@ -1176,19 +1178,14 @@ async fn launcher_matches_scale_and_detached_goldens() -> bead_test::Result<()> 
         for id in [
             "chat.header.logo",
             "chat.header.title",
-            "chat.header.pin",
             "chat.header.terminal",
+            "chat.header.provider",
             "chat.compose",
             "chat.composer",
-            "chat.actions.send",
-            "chat.secondary.new-chat",
-            "chat.header.provider.claude",
-            "chat.header.provider.codex",
+            "chat.send",
             "chat.search",
-            "chat.refresh",
+            "chat.search-icon",
             "chat.recent-chats",
-            "chat.secondary.brain",
-            "chat.secondary.settings",
         ] {
             assert!(
                 layers.iter().any(|layer| layer.id == id),
@@ -1218,7 +1215,7 @@ async fn launcher_matches_scale_and_detached_goldens() -> bead_test::Result<()> 
             .expect("row title");
         let meta = layers
             .iter()
-            .find(|layer| layer.id.starts_with(&row.id) && layer.id.ends_with(".meta"))
+            .find(|layer| layer.id.starts_with(&row.id) && layer.id.ends_with(".details"))
             .expect("row metadata");
         let row_rect = bead::ui::rect(&row.draw);
         for child in [title, meta] {
@@ -1244,7 +1241,7 @@ async fn launcher_matches_scale_and_detached_goldens() -> bead_test::Result<()> 
                 }
             }
         }
-        assert_header_terminal(&mut regular, "chat.header.pin");
+        assert_header_terminal(&mut regular, "chat.header.provider");
         let mut cued = projected.clone();
         cued.insert("bead.hovered".into(), text("chat.header.terminal"));
         assert!(
@@ -1276,6 +1273,44 @@ async fn launcher_matches_scale_and_detached_goldens() -> bead_test::Result<()> 
                 .any(|node| node.id.ends_with(".pin"))
         );
         golden("launcher-detached", &mut detached, scale)?;
+        // The design canvas: 3 running (two on workspaces), 4 today.
+        let design = [
+            ("Picker spec", "Claude", "running", "2 min ago", "ws 1"),
+            ("Bar long-title rules", "Claude", "running", "4 min ago", ""),
+            ("Lock screen copy", "Codex", "running", "6 min ago", "ws 2"),
+            ("Weekly plan", "Assistant", "idle", "1 hr ago", ""),
+            (
+                "Strand storyboard review",
+                "Claude",
+                "idle",
+                "2 hr ago",
+                "ws 3",
+            ),
+            ("Release notes draft", "Codex", "idle", "5 hr ago", ""),
+            ("Theme ideas", "Assistant", "idle", "7 hr ago", ""),
+        ];
+        let mut canvas = projected.clone();
+        canvas.insert("launcher.provider".into(), text("claude"));
+        canvas.insert("launcher.selected".into(), text("c0"));
+        canvas.insert(
+            "launcher.chats".into(),
+            Value::list(
+                design
+                    .iter()
+                    .enumerate()
+                    .map(|(i, (title, provider, state, age, ws))| {
+                        let group = match i {
+                            0 => "Running",
+                            3 => "Today",
+                            _ => "",
+                        };
+                        json!({"key": format!("c{i}"), "title": title, "provider": provider, "state": state,
+                            "lastActivityLabel": age, "workspace": ws, "group": group})
+                    })
+                    .collect(),
+            ),
+        );
+        golden("launcher-design", &mut harness(canvas, scale)?, scale)?;
         regular.presented()?;
         let mut utility = regular;
         let mut utility_projection = projected.clone();
@@ -1283,7 +1318,7 @@ async fn launcher_matches_scale_and_detached_goldens() -> bead_test::Result<()> 
             "launcher.warning".into(),
             text(tr("bead.common.request-failed", &[])),
         );
-        utility_projection.insert("bead.hovered".into(), text("chat.secondary.brain"));
+        utility_projection.insert("bead.hovered".into(), text("chat.header.terminal"));
         utility.update(utility_projection)?;
         assert_eq!(
             utility.scene().opacity,
@@ -1294,19 +1329,9 @@ async fn launcher_matches_scale_and_detached_goldens() -> bead_test::Result<()> 
             .scene()
             .layers
             .iter()
-            .find(|layer| layer.id == "chat.footer-tooltip")
-            .expect("footer tooltip");
-        let footer = utility
-            .scene()
-            .layers
-            .iter()
-            .find(|layer| layer.id == "chat.secondary")
-            .expect("footer");
-        assert!(tooltip.bounds.y > 0. && tooltip.bounds.y + tooltip.bounds.h < footer.bounds.y);
-        assert!(
-            tooltip.bounds.x >= footer.bounds.x
-                && tooltip.bounds.x + tooltip.bounds.w <= footer.bounds.x + footer.bounds.w
-        );
+            .find(|layer| layer.id == "chat.header-tooltip")
+            .expect("header tooltip");
+        assert!(tooltip.bounds.y > 0. && tooltip.bounds.x > 0.);
         golden("launcher-warning-tooltip", &mut utility, scale)?;
     }
     Ok(())
@@ -1338,7 +1363,7 @@ async fn missing_ai_shows_the_not_installed_state_and_calls_nothing() -> bead_te
         let shown = |id: &str| layers.iter().any(|layer| layer.id.starts_with(id));
         for id in [
             "chat.header.logo",
-            "chat.header.pin",
+            "chat.header.terminal",
             "chat.missing-title",
             "chat.missing-hint",
         ] {
@@ -1353,26 +1378,6 @@ async fn missing_ai_shows_the_not_installed_state_and_calls_nothing() -> bead_te
             assert!(!shown(id), "{id} needs Nacre AI");
         }
         golden("missing", &mut h, scale)?;
-    }
-    Ok(())
-}
-
-#[test]
-fn missing_brain_hides_the_launcher_brain_button() -> bead_test::Result<()> {
-    // N0206: Nacre AI without the Brain package draws no Brain button (it would exec a missing app).
-    let _guard = serial();
-    for brain in [false, true] {
-        let flags = json!({"flags": {"ai": true, "brain": brain}});
-        let (_, chat) = offline(topic(&[], state(false, "", None)));
-        let chat = chat.with_capabilities(Some(Arc::new(FakeSource::new(flags).unwrap())));
-        let mut projected = chat.project(&launcher_stores(&[]));
-        assert_eq!(projected["chat.brain"], Value::Bool(brain));
-        projected.insert("panel.open".into(), Value::Bool(true));
-        let h = harness(projected, 1.)?;
-        let layers = &h.scene().layers;
-        let shown = |id: &str| layers.iter().any(|layer| layer.id == id);
-        assert_eq!(shown("chat.secondary.brain"), brain);
-        assert!(shown("chat.secondary.settings"));
     }
     Ok(())
 }
@@ -1604,7 +1609,7 @@ fn transcript_scroll_preserves_touchpad_pixels_and_shared_wheel_distance() {
 }
 
 /// Owner 2026-11-14: New terminal chat paints at full size at the top of the panel, on the row of
-/// (and left of) the header button `neighbour`, in the launcher and in a quick chat alike.
+/// the header control `neighbour`, in the launcher and in a quick chat alike.
 fn assert_header_terminal(h: &mut Harness, neighbour: &str) {
     let layers = &h.scene().layers;
     let bounds = |id: &str| {
@@ -1619,7 +1624,7 @@ fn assert_header_terminal(h: &mut Harness, neighbour: &str) {
         button.w >= 10.
             && button.h >= 10.
             && button.x > 0.
-            && button.x + button.w <= next.x
+            && button.x != next.x
             && (button.y + button.h / 2. - next.y - next.h / 2.).abs() < 1.,
         "terminal button not visible in the header: {button:?}, {neighbour}: {next:?}"
     );

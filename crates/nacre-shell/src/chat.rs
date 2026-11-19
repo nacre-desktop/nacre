@@ -1519,12 +1519,6 @@ impl Chat {
                 }
                 _ => {}
             },
-            "pin" => {
-                out.stores.insert(
-                    "chat.pinned".into(),
-                    Value::Bool(stores.get("chat.pinned") != Some(&Value::Bool(true))),
-                );
-            }
             "send" => self.send(&value("chat.draft"), state.as_ref(), &mut out),
             "stop" => self.plain("ai.chat.cancel", json!({})),
             "new" if !busy => {
