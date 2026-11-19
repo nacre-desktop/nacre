@@ -1562,20 +1562,6 @@ fn tiles_dispatch_host_actions_and_the_detail_page_opens_in_place() -> bead_test
 }
 
 #[test]
-fn a_hide_drops_an_unconsumed_open_latency_stamp() -> bead_test::Result<()> {
-    use bead::wayland::{SceneSource, UiEvent};
-
-    // 2026-11-16 08:18: a stamp from while the centre was open timed the reopen at 2041 ms.
-    let h = harness(base(), "home", 1.)?;
-    let mut runtime = crate::reload::Runtime::new(h.session).with_control_center(offline())?;
-    runtime.stage(UiEvent::PanelVisibility(true))?;
-    assert!(runtime.test_open_started().is_some());
-    runtime.stage(UiEvent::PanelVisibility(false))?;
-    assert!(runtime.test_open_started().is_none());
-    Ok(())
-}
-
-#[test]
 fn control_center_slider_drag_visual_maps_thumb_to_hit_range() -> bead_test::Result<()> {
     use bead::wayland::{SceneSource, UiEvent};
 

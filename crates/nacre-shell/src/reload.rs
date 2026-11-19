@@ -858,7 +858,6 @@ pub struct Runtime {
     state_file: Option<crate::state::File>,
     actions: bead::core::capabilities::Registry,
     wakeup: Option<std::sync::Arc<dyn Fn(UiEvent) + Send + Sync>>,
-    smooth_open_started: Option<std::time::Instant>,
     smooth_key_starts: std::collections::VecDeque<(std::time::Instant, &'static str)>,
     smooth_scroll_started: Option<std::time::Instant>,
     smooth_scroll_last: Option<std::time::Instant>,
@@ -2819,7 +2818,6 @@ impl Runtime {
             state_file,
             actions: Default::default(),
             wakeup: None,
-            smooth_open_started: None,
             smooth_key_starts: std::collections::VecDeque::new(),
             smooth_scroll_started: None,
             smooth_scroll_last: None,
@@ -4022,10 +4020,6 @@ impl Runtime {
         }
         self.dashboard = Some(dashboard);
         Ok(self)
-    }
-    #[cfg(test)]
-    pub(crate) fn test_open_started(&self) -> Option<std::time::Instant> {
-        self.smooth_open_started
     }
     #[cfg(test)]
     pub(crate) fn test_reload_events(&self) -> usize {
@@ -6331,11 +6325,6 @@ impl SceneSource for Runtime {
             self.smooth_user_interacted = true;
         }
         match &event {
-            UiEvent::PanelVisibility(true) if self.smooth_open_started.is_none() => {
-                self.smooth_open_started = Some(now);
-            }
-            // A stamp no frame consumed before the hide must not time the next open.
-            UiEvent::PanelVisibility(false) => self.smooth_open_started = None,
             UiEvent::Key { .. } if self.launcher.is_some() || self.chat.is_some() => {
                 if self.smooth_key_starts.len() == 32 {
                     self.smooth_key_starts.pop_front();
@@ -10400,14 +10389,6 @@ impl SceneSource for Runtime {
             self.panel_animation_hold_until = Some(now + duration + self.smooth_frame_interval);
         }
         let name = self.smooth_surface();
-        if let Some(started) = self.smooth_open_started.take() {
-            eprintln!(
-                "PANEL_OPEN_LATENCY name={} ms_to_first_content_frame={:.3} monotonic_ns={}",
-                name,
-                now.duration_since(started).as_secs_f64() * 1000.,
-                bead::core::profile::monotonic_ns()
-            );
-        }
         while let Some((started, surface)) = self.smooth_key_starts.pop_front() {
             eprintln!(
                 "INPUT_ECHO_LATENCY surface={surface} ms={:.3}",

@@ -2423,7 +2423,7 @@ mod tests {
     #[test]
     fn a_strand_visit_holds_the_palette_and_closing_asks_for_the_real_one_once() {
         let palette = |red: u8| {
-            bead::render::Palette(Arc::new(BTreeMap::from([("primary".to_owned(), [red, 0, 0, 255])])))
+            bead::render::Palette(Arc::new(std::collections::HashMap::from([("primary".to_owned(), [red, 0, 0, 255])])))
         };
         let preview = Preview::default();
         let asked = Arc::new(std::sync::atomic::AtomicU32::new(0));

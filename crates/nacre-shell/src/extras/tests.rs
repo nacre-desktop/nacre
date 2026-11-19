@@ -2761,7 +2761,8 @@ async fn the_predecode_window_is_replanned_only_where_a_move_lands() {
         extras.state.borrow().wallpaper_prefetched,
         "a held-back move leaves the plan alone"
     );
-    tokio::time::sleep(Duration::from_millis(WALLPAPER_MOVE_MS.into())).await;
+    extras.state.borrow_mut().wallpaper_fade = Duration::from_millis(60);
+    tokio::time::sleep(Duration::from_millis(80)).await;
     let fired = extras.state.borrow().wallpaper_fired_at;
     extras.act("wallpaper:move:/fixture/next.mp4", &open, wake);
     assert_ne!(
@@ -2773,7 +2774,7 @@ async fn the_predecode_window_is_replanned_only_where_a_move_lands() {
         extras.state.borrow().wallpaper_prefetched,
         "and left the plan alone too"
     );
-    tokio::time::sleep(WALLPAPER_RELEASE).await;
+    tokio::time::sleep(Duration::from_millis(200)).await;
     extras.fire_pending_move();
     assert!(
         !extras.state.borrow().wallpaper_prefetched,
