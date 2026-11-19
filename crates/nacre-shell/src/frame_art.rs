@@ -141,10 +141,13 @@ fn grabber_mode(
     } else {
         String::new()
     };
-    // Hover lights the docked tab, and the free one in click mode; otherwise the dwell fill is the cue.
-    let glow = if charging {
+    // Hover lights the docked tab; the dwell fill is the cue otherwise. Click mode only scales the pill
+    // up (owner 2026-11-18: no darker band at its ends), so it draws no halo.
+    let glow = if click {
+        0.
+    } else if charging {
         charge
-    } else if state.hovered && (attach > 0. || click) {
+    } else if state.hovered && attach > 0. {
         1.
     } else {
         0.
@@ -447,7 +450,7 @@ mod tests {
         };
         let hovered = grabber(&lip(Edge::Right), (10., 144.), free_hover, A, S, false).unwrap();
         assert_eq!(hovered, free);
-        // In click mode hover alone grows the free pill from 5 x 56 to 9 x 72 and lights it.
+        // In click mode hover alone grows the free pill from 5 x 56 to 9 x 72, with no halo band around it.
         let click =
             |state| grabber_mode(&lip(Edge::Right), (10., 144.), state, A, S, false, true).unwrap();
         assert!(
@@ -460,10 +463,7 @@ mod tests {
             grown.contains(r#"width="9" height="72" rx="4.5" fill="rgb(10,20,30)""#),
             "{grown}"
         );
-        assert!(
-            grown.contains(r#"width="10" height="80" rx="5" fill="rgb(10,20,30)" opacity="0.3""#),
-            "{grown}"
-        );
+        assert!(!grown.contains(r#"opacity="0.3""#), "{grown}");
         // While its panel is open a lip's rest box keeps only its plate: its pill rides the tab.
         let rest = grabber(
             &lip(Edge::Right),
