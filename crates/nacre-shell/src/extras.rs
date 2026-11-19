@@ -518,8 +518,6 @@ const SWATCH_ROLES: [&str; 5] = [
     "primaryContainer",
     "onSurface",
 ];
-/// The close animation (shell/extras/tokens.luau close_ms) plus a frame or two.
-const STRAND_EXIT_SETTLE: Duration = Duration::from_millis(220);
 const STRAND_SETTLE: Duration = Duration::from_millis(250);
 pub struct Extras {
     pub kind: Kind,
@@ -1413,7 +1411,7 @@ impl Extras {
             self.hold_palette();
         } else if closing {
             self.peek_release(wake);
-            self.release_palette_after_exit();
+            self.release_palette();
         } else if open {
             self.peek_resolve(wake);
         }
@@ -1427,15 +1425,12 @@ impl Extras {
         let visit = self.wallpaper_preview().map(|preview| preview.hold_palette());
         self.state.borrow_mut().palette_visit = visit;
     }
-    /// Once the exit animation has played the real palette comes back in one tween, not under the exit's frames.
-    fn release_palette_after_exit(&self) {
+    /// Closing hands the real palette back: one palette-only tween, started with the exit animation.
+    fn release_palette(&self) {
         let preview = self.wallpaper_preview();
         let visit = self.state.borrow_mut().palette_visit.take();
         if let (Some(preview), Some(visit)) = (preview, visit) {
-            std::thread::spawn(move || {
-                std::thread::sleep(STRAND_EXIT_SETTLE);
-                preview.release_palette(visit);
-            });
+            preview.release_palette(visit);
         }
     }
     /// Clear the windows away so the real wallpaper preview is what the owner sees.
