@@ -29,21 +29,10 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
             if c.popouts then
                 collections=ui.resolve_for_check(ui.bind("bar.collections")) or {}
                 collection_current=ui.resolve_for_check(ui.bind("bar.collection.current")) or ""
-                -- Stacks belong to an output (nacre-niri). Every bar shows all of them, ordered by screen (left to right)
-                -- then stack; only the current stack of THIS bar's output is highlighted, the rest are dim pearls.
-                local origin={}
-                for _,output in ipairs(ui.resolve_for_check(ui.bind("widgets.outputs")) or {}) do origin[output.name]=output.x or 0 end
-                local rows={}
-                for i,collection in ipairs(collections) do rows[i]={collection=collection,at=i,x=origin[collection.output] or math.huge} end
-                table.sort(rows,function(a,b)
-                    if a.x~=b.x then return a.x<b.x end
-                    if a.collection.output~=b.collection.output then return tostring(a.collection.output)<tostring(b.collection.output) end
-                    return a.at<b.at
-                end)
-                collections={}
-                for i,row in ipairs(rows) do collections[i]=row.collection end
+                -- Stacks belong to an output (nacre-niri), and a switch swaps them between screens, so every bar lists all of them
+                -- in stack order: the highlight then visibly moves when this output's stack changes.
             end
-            -- Stack pearls (locked 2026-11-17): one enamel pearl per stack on every screen, by screen then stack. The
+            -- Stack pearls (locked 2026-11-17): one enamel pearl per stack on every screen, in stack order. The
             -- current one is larger, in a white ring, an accent ring and a glow. At rest 1-3 stacks show whole and
             -- 4+ show three around the current one and "+N"; hovering 400 ms fans out numbered pearls (up to 8).
             -- A named 28 px cap (Settings > Panels > Top bar > Stack style) replaces them. Tier 2 advertises no

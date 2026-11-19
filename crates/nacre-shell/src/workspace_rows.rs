@@ -708,6 +708,14 @@ mod tests {
             |output| collection_stores(&topic, Some(output))["bar.collection.current"].clone();
         assert_eq!(current("out"), Value::Text("niri-collection:1".into()));
         assert_eq!(current("ext"), Value::Text("niri-collection:2".into()));
+        // A switch swaps the stacks between the screens (CollectionsChanged): each bar's current follows.
+        let swapped = json!({"collections":[
+            {"id":"niri-collection:1","index":1,"name":"work","output":"ext","active":false},
+            {"id":"niri-collection:2","index":2,"name":"play","output":"out","active":true}
+        ]});
+        let after = |output| collection_stores(&swapped, Some(output))["bar.collection.current"].clone();
+        assert_eq!(after("out"), Value::Text("niri-collection:2".into()));
+        assert_eq!(after("ext"), Value::Text("niri-collection:1".into()));
     }
 
     #[test]

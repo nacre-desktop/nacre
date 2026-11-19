@@ -4047,8 +4047,8 @@ fn bar_counts_stay_whole_on_every_output_scale_and_after_hotplug() -> Result<()>
 }
 
 /// Stacks belong to an output on nacre-niri: every bar shows all of them (owner 2026-11-18: "the laptop and the
-/// external monitor should have different ones"), ordered by screen position, and only the current stack of the
-/// bar's own output carries the white ring.
+/// external monitor should have different ones"), in stack order, and only the current stack of the bar's own
+/// output carries the white ring. A switch swaps stacks between screens, so the ring must move along the strand.
 #[test]
 fn every_output_strand_shows_all_stacks_with_its_own_highlighted() -> Result<()> {
     let pearls = |collections: Value,
@@ -4062,13 +4062,6 @@ fn every_output_strand_shows_all_stacks_with_its_own_highlighted() -> Result<()>
             ("bar.collections".into(), collections),
             ("bar.collection.current".into(), Value::Text(current.into())),
             ("bar.collection.output".into(), Value::Text(output.into())),
-            (
-                "widgets.outputs".into(),
-                Value::list(vec![
-                    serde_json::json!({"name":"DP-1","x":1920.,"y":0.,"width":2560.,"height":1440.,"scale":1.}),
-                    serde_json::json!({"name":"eDP-1","x":0.,"y":0.,"width":1920.,"height":1200.,"scale":1.}),
-                ]),
-            ),
         ]));
         let mut h = Harness::load(
             &root(),
@@ -4082,9 +4075,6 @@ fn every_output_strand_shows_all_stacks_with_its_own_highlighted() -> Result<()>
             },
         )?;
         settle_harness_animations(&mut h)?;
-        if let Some(name) = shot {
-            bar_golden(&h.pose((0., 0.), 1.)?, name)?;
-        }
         if let Some(name) = shot {
             bar_golden(&h.pose((0., 0.), 1.)?, name)?;
         }
@@ -4116,7 +4106,6 @@ fn every_output_strand_shows_all_stacks_with_its_own_highlighted() -> Result<()>
         serde_json::json!({"id":"niri-collection:1","label":"1","index":1,"active":true,"output":"DP-1"}),
         serde_json::json!({"id":"niri-collection:4","label":"2","index":2,"active":false,"output":"eDP-1"}),
     ]);
-    // eDP-1 sits left of DP-1, so its stack comes first; each bar highlights its own.
     assert_eq!(
         pearls(
             live.clone(),
@@ -4124,11 +4113,25 @@ fn every_output_strand_shows_all_stacks_with_its_own_highlighted() -> Result<()>
             "niri-collection:4",
             Some("bar-screens-edp")
         )?,
-        (2, Some(0))
+        (2, Some(1))
     );
     assert_eq!(
-        pearls(live, "DP-1", "niri-collection:1", Some("bar-screens-dp"))?,
+        pearls(
+            live.clone(),
+            "DP-1",
+            "niri-collection:1",
+            Some("bar-screens-dp")
+        )?,
+        (2, Some(0))
+    );
+    // Super+Ctrl+Tab on DP-1 swaps the two stacks between the screens: each bar's ring moves to the other pearl.
+    assert_eq!(
+        pearls(live.clone(), "DP-1", "niri-collection:4", None)?,
         (2, Some(1))
+    );
+    assert_eq!(
+        pearls(live, "eDP-1", "niri-collection:1", None)?,
+        (2, Some(0))
     );
     let more = Value::list(vec![
         serde_json::json!({"id":"d1","label":"1","index":1,"output":"DP-1"}),
@@ -4142,7 +4145,7 @@ fn every_output_strand_shows_all_stacks_with_its_own_highlighted() -> Result<()>
         3,
         "five stacks collapse to three around the current one"
     );
-    assert_eq!(pearls(more, "eDP-1", "e2", None)?, (3, Some(1)));
+    assert_eq!(pearls(more, "eDP-1", "e2", None)?, (3, Some(2)));
     let single = Value::list(vec![
         serde_json::json!({"id":"a","label":"1","index":1,"output":"eDP-1"}),
     ]);
