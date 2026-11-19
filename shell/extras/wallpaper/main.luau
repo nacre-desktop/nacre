@@ -135,13 +135,15 @@ local function pearl_node(pearl)
     ui.Box{width=size,height=size,fill="transparent",table.unpack(kids)}}
 end
 
--- Silk: a dark shadow stroke under five iridescent segments that fade at the ends. Each stroke gets a box
--- that hugs its own piece of the curve, so the CPU renderer never needs a panel-sized repair scratch.
-local function silk(id,from,to,colour,stroke)
-  local x0,x1,top,bottom=width*from,width*to,math.huge,-math.huge
+-- Silk: a dark shadow stroke under one iridescent thread. Bead strokes one colour per polyline, so the thread is
+-- `silk_segments` short pieces whose colour blends along the five silk stops at one steady alpha; each piece reaches
+-- `silk_overlap` px into the next, so no seam, gap or step in brightness shows anywhere, tails included. Each stroke
+-- gets a box that hugs its own piece of the curve, so the CPU renderer never needs a panel-sized repair scratch.
+local function silk(id,from,to,colour,stroke,overlap,steps)
+  local x0,x1,top,bottom=width*from-overlap,width*to+overlap,math.huge,-math.huge
   local curve={}
-  for step=0,12 do
-    local x=x0+(x1-x0)*step/12
+  for step=0,steps do
+    local x=x0+(x1-x0)*step/steps
     local y=base-a*math.cosh((x-centre.x)/a)-lift
     curve[#curve+1]={x,y}
     top,bottom=math.min(top,y),math.max(bottom,y)
@@ -152,9 +154,17 @@ local function silk(id,from,to,colour,stroke)
   for _,point in ipairs(curve) do points[#points+1]={(point[1]-left)/box_width,(point[2]-top+pad)/box_height} end
   return ui.Polyline{id=id,position="absolute",left=left,top=top-pad,width=box_width,height=box_height,points=points,stroke_width=stroke*s,color=fade(colour,appear)}
 end
+local function silk_colour(at)
+  local position=at*(#W.silk-1)
+  local i=math.min(#W.silk-2,math.floor(position))
+  local from,to,mix=W.silk[i+1],W.silk[i+2],position-i
+  return {math.floor(from[1]+(to[1]-from[1])*mix),math.floor(from[2]+(to[2]-from[2])*mix),math.floor(from[3]+(to[3]-from[3])*mix),W.silk_alpha}
+end
 local strand_nodes={}
-for index in ipairs(W.silk) do strand_nodes[#strand_nodes+1]=silk("thread-shadow-"..index,(index-1)/#W.silk,index/#W.silk,W.silk_shadow,W.silk_stroke+2) end
-for index,colour in ipairs(W.silk) do strand_nodes[#strand_nodes+1]=silk("thread-"..index,(index-1)/#W.silk,index/#W.silk,colour,W.silk_stroke) end
+for index in ipairs(W.silk) do strand_nodes[#strand_nodes+1]=silk("thread-shadow-"..index,(index-1)/#W.silk,index/#W.silk,W.silk_shadow,W.silk_stroke+2,0,12) end
+for index=1,W.silk_segments do
+  strand_nodes[#strand_nodes+1]=silk("thread-"..index,(index-1)/W.silk_segments,index/W.silk_segments,silk_colour((index-.5)/W.silk_segments),W.silk_stroke,W.silk_overlap,4)
+end
 
 local knot=math.max(3,W.knot*s)
 table.sort(placed,function(left,right) return left.offset<right.offset end)

@@ -46,7 +46,7 @@ return {
     ring_gap=5, ring_stroke=2, silk_stroke=3, move_duration=.5, glide_duration=.09, open_ms=250, close_ms=180, entry_drop=24,
     veil_bands=40, veil_from=.45, veil_max=.55, sheen="extras/wallpaper/assets/sheen.svg", glow="extras/wallpaper/assets/glow.svg", shade="extras/wallpaper/assets/shade.svg",
     ink={255,255,255,255}, ink_soft={245,241,248,200},
-    silk={{244,201,218,110},{216,200,244,225},{185,214,245,245},{191,234,219,225},{242,228,186,110}},
+    silk={{244,201,218},{216,200,244},{185,214,245},{191,234,219},{242,228,186}}, silk_alpha=235, silk_segments=24, silk_overlap=2,
     silk_shadow={0,0,0,70}, knot_fill={235,228,242,255}, pearl_edge={255,255,255,56}, pearl_sheen={255,255,255,255},
     thumbnail_fallback_icon=36,
     name_top=205, name_height=56, name_font=46, meta_top=265, meta_height=16, meta_font=13, meta_gap=14,
