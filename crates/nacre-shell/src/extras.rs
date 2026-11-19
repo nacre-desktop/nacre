@@ -132,6 +132,8 @@ struct State {
     /// The last move came from the wheel, which lands later than a released key.
     wallpaper_wheel: bool,
     wallpaper_gliding: bool,
+    /// The visit that holds the desktop's palette (see `Preview::hold_palette`).
+    palette_visit: Option<u64>,
     /// Pixel size of the last previewed (or opening) wallpaper, for the strand's caption.
     wallpaper_resolution: Option<(String, u32, u32)>,
     frames: FrameLog,
@@ -516,6 +518,8 @@ const SWATCH_ROLES: [&str; 5] = [
     "primaryContainer",
     "onSurface",
 ];
+/// The close animation (shell/extras/tokens.luau close_ms) plus a frame or two.
+const STRAND_EXIT_SETTLE: Duration = Duration::from_millis(220);
 const STRAND_SETTLE: Duration = Duration::from_millis(250);
 pub struct Extras {
     pub kind: Kind,
@@ -1406,14 +1410,32 @@ impl Extras {
         // The one place the desktop peek starts and the one place it ends, whatever closed the picker.
         if opening {
             self.peek_engage(wake);
+            self.hold_palette();
         } else if closing {
             self.peek_release(wake);
+            self.release_palette_after_exit();
         } else if open {
             self.peek_resolve(wake);
         }
         if let Some(id) = activate {
             let wake = wake.clone().unwrap_or_else(|| Arc::new(|| {}));
             self.activate_wallpaper(&id, WALLPAPER_RESTORE_MS, wake);
+        }
+    }
+    /// The desktop keeps its palette while Strand is open (no palette steps on the bar and other panels per pick).
+    fn hold_palette(&self) {
+        let visit = self.wallpaper_preview().map(|preview| preview.hold_palette());
+        self.state.borrow_mut().palette_visit = visit;
+    }
+    /// Once the exit animation has played the real palette comes back in one tween, not under the exit's frames.
+    fn release_palette_after_exit(&self) {
+        let preview = self.wallpaper_preview();
+        let visit = self.state.borrow_mut().palette_visit.take();
+        if let (Some(preview), Some(visit)) = (preview, visit) {
+            std::thread::spawn(move || {
+                std::thread::sleep(STRAND_EXIT_SETTLE);
+                preview.release_palette(visit);
+            });
         }
     }
     /// Clear the windows away so the real wallpaper preview is what the owner sees.
@@ -1606,6 +1628,7 @@ impl Extras {
     fn fire_move(&self, id: &str, fade_ms: u32, wake: CallWake) {
         let mut state = self.state.borrow_mut();
         state.wallpaper_fired_at = Some(Instant::now());
+        state.wallpaper_fade = Duration::from_millis(fade_ms.into());
         // The pre-decoded window follows the pearl a move lands on, not every pearl a glide passes: each
         // re-plan cost the panel worker 3-5 ms and set off 4K decodes for windows the glide had already left.
         if fade_ms == WALLPAPER_MOVE_MS {
@@ -1628,7 +1651,6 @@ impl Extras {
     /// pearl) starts the next one, with the normal fade when the burst is over.
     fn fire_pending_move(&self) {
         let (id, wake, landing) = {
-        state.wallpaper_fade = Duration::from_millis(fade_ms.into());
             let mut state = self.state.borrow_mut();
             if state
                 .wallpaper_fired_at
@@ -1636,6 +1658,9 @@ impl Extras {
             {
                 return;
             }
+            let over = state
+                .wallpaper_moved_at
+                .is_none_or(|at| at.elapsed() >= state.release());
             let Some((id, wake)) = state.wallpaper_pending.clone() else {
                 return;
             };
@@ -1658,9 +1683,6 @@ impl Extras {
         if self.kind == Kind::Wallpaper {
             if let Some((id, wheel)) = request
                 .strip_prefix("wallpaper:move:")
-            let over = state
-                .wallpaper_moved_at
-                .is_none_or(|at| at.elapsed() >= state.release());
                 .map(|id| (id, false))
                 .or_else(|| {
                     request

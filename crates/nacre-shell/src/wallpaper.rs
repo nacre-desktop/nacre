@@ -568,6 +568,15 @@ pub(crate) struct Preview {
     changed: Mutex<Option<Arc<dyn Fn() + Send + Sync>>>,
     /// The fade the strand asked for its latest change, and when.
     fade: Mutex<Option<(bead::wayland::WallpaperFade, Instant)>>,
+    hold: Mutex<PaletteHold>,
+}
+/// While Strand is open the desktop keeps wearing the palette it had: every frame carries it, so the bar and the
+/// other panels are not restaged by each pick's palette tween. Per output: the held palette, and whether the
+/// latest frame's own palette differs from it (then closing re-asks for the frame, once, to tween to it).
+#[derive(Default)]
+struct PaletteHold {
+    visit: u64,
+    outputs: Option<BTreeMap<String, (bead::render::Palette, bool)>>,
 }
 /// A pick's fade only applies to the changes it caused (the change itself and its retargets).
 const FADE_LIFETIME: Duration = Duration::from_secs(3);
@@ -655,6 +664,57 @@ impl Preview {
                 predecoder
             })
             .clone()
+    }
+
+    /// Start a visit that holds the palette; the number ends it again (`release_palette`).
+    pub(crate) fn hold_palette(&self) -> u64 {
+        let mut hold = self.hold.lock().unwrap_or_else(|p| p.into_inner());
+        hold.visit += 1;
+        hold.outputs = Some(BTreeMap::new());
+        hold.visit
+    }
+
+    /// End a visit's hold and ask Bead for the frames again when any carried a held palette: the same pixels with
+    /// the real palette take the one palette-only tween. A later visit's hold is left alone.
+    pub(crate) fn release_palette(&self, visit: u64) {
+        let outputs = {
+            let mut hold = self.hold.lock().unwrap_or_else(|p| p.into_inner());
+            if hold.visit != visit {
+                return;
+            }
+            hold.outputs.take()
+        };
+        if outputs.is_some_and(|outputs| outputs.values().any(|(_, differs)| *differs))
+            && let Some(changed) = self
+                .changed
+                .lock()
+                .unwrap_or_else(|p| p.into_inner())
+                .as_ref()
+                .cloned()
+        {
+            changed();
+        }
+    }
+
+    /// The palette a frame of `output` carries: the held one during a visit (the displayed pair's, taken at the
+    /// first frame), else its own.
+    fn frame_palette(
+        &self,
+        output: &str,
+        own: bead::render::Palette,
+        shown: Option<bead::render::Palette>,
+    ) -> bead::render::Palette {
+        let mut hold = self.hold.lock().unwrap_or_else(|p| p.into_inner());
+        let Some(outputs) = hold.outputs.as_mut() else {
+            return own;
+        };
+        let held = outputs
+            .entry(output.to_owned())
+            .or_insert_with(|| (shown.unwrap_or_else(|| own.clone()), false))
+            .0
+            .clone();
+        outputs.insert(output.to_owned(), (held.clone(), held.0 != own.0));
+        held
     }
 
     fn set_changed(&self, changed: Arc<dyn Fn() + Send + Sync>) {
@@ -1253,7 +1313,14 @@ impl Consumer {
             height: decoded.height,
             rgba: decoded.rgba,
             previous_rgba: None,
-            palette: palette(&decoded.pair),
+            palette: self.preview.frame_palette(
+                &output,
+                palette(&decoded.pair),
+                self.displayed
+                    .lock()
+                    .ok()
+                    .and_then(|shown| shown.get(&output).map(palette)),
+            ),
             commit_token,
         };
         let frame = if let Some(staged) = staged {
@@ -2351,6 +2418,45 @@ mod tests {
             "reconnect repaints"
         );
         drop(subscription);
+    }
+
+    #[test]
+    fn a_strand_visit_holds_the_palette_and_closing_asks_for_the_real_one_once() {
+        let palette = |red: u8| {
+            bead::render::Palette(Arc::new(BTreeMap::from([("primary".to_owned(), [red, 0, 0, 255])])))
+        };
+        let preview = Preview::default();
+        let asked = Arc::new(std::sync::atomic::AtomicU32::new(0));
+        let counter = asked.clone();
+        preview.set_changed(Arc::new(move || {
+            counter.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        }));
+        assert_eq!(
+            preview.frame_palette("DP-1", palette(9), Some(palette(1))).0,
+            palette(9).0,
+            "no visit: the frame's own palette"
+        );
+        let visit = preview.hold_palette();
+        for own in [9, 8, 7] {
+            assert_eq!(
+                preview.frame_palette("DP-1", palette(own), Some(palette(1))).0,
+                palette(1).0,
+                "every pick of the visit carries the palette the desktop had"
+            );
+        }
+        preview.release_palette(visit + 1);
+        assert_eq!(asked.load(std::sync::atomic::Ordering::SeqCst), 0, "not this visit's");
+        let again = preview.hold_palette();
+        preview.release_palette(visit);
+        assert_eq!(asked.load(std::sync::atomic::Ordering::SeqCst), 0, "an old visit's release leaves a new hold");
+        assert_eq!(preview.frame_palette("DP-1", palette(5), None).0, palette(5).0, "a new hold starts from the frame it first sees");
+        preview.release_palette(again);
+        assert_eq!(asked.load(std::sync::atomic::Ordering::SeqCst), 0, "a visit that never differed asks for nothing");
+        let visit = preview.hold_palette();
+        preview.frame_palette("DP-1", palette(9), Some(palette(1)));
+        preview.release_palette(visit);
+        assert_eq!(asked.load(std::sync::atomic::Ordering::SeqCst), 1, "a held palette differing from the real one asks once");
+        assert_eq!(preview.frame_palette("DP-1", palette(9), Some(palette(1))).0, palette(9).0, "released");
     }
 
     #[test]
