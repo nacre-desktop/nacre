@@ -79,7 +79,7 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
             local cap_name_width=cap_style and math.ceil(ui.text_width(cap_name,stack_family,t.cap_font)) or 0
             local stack_control_width=cap_style and t.cap_pad_left+t.cap_icon+t.cap_gap+cap_name_width+t.cap_pad_right or strand_width+2*t.strand_pad
             -- The control's trailing pad plus the capsule gap puts the current pearl 6 px after the strand.
-            local collection_width=show_collections and stack_control_width+capsule_gap or 0
+            local collection_width=show_collections and stack_control_width+2*capsule_gap+1 or 0
             local active_left,active_width,active_accent,active_icon_mode
             local cursor=0
             for _,item in workspaces do
@@ -104,15 +104,19 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
             -- One stack's pearl layers, centred in a slot that starts at x.
             local function stack_nodes(i,k,x)
                 local size,outer,slot=stack_size(i)
-                local cx,cy,on=x+slot/2,t.workspace_height/2,i==cur
+                local cx,cy,on=x+slot/2,t.cap_height/2,i==cur
                 local nodes={}
-                if on then
-                    local glow,white=outer+2*t.stack_glow,size+2*t.stack_ring
-                    nodes[1]=ui.Box{id="stack-glow",position="absolute",left=cx-glow/2,top=cy-glow/2,width=glow,height=glow,radius=glow/2,fill=ui.alpha("primary",.3)}
-                    nodes[2]=ui.Box{id="stack-accent",position="absolute",left=cx-outer/2,top=cy-outer/2,width=outer,height=outer,radius=outer/2,fill="primary"}
-                    nodes[3]=ui.Box{id="stack-white",position="absolute",left=cx-white/2,top=cy-white/2,width=white,height=white,radius=white/2,fill=t.pearl_white}
+                -- Stacked cards: a rounded square on a fainter card peeking out behind it; the current one carries the rings and glow.
+                local function card(id,w,h,dx,fill,opacity)
+                    return ui.Box{id=id,position="absolute",left=cx-w/2+dx,top=cy-h/2,width=w,height=h,radius=w*t.stack_corner,fill=fill,opacity=opacity}
                 end
-                for _,node in enamel("stack-pearl-"..k,cx-size/2,cy-size/2,size,pearl_accent(i-1),on,not on and t.stack_other_alpha or nil) do nodes[#nodes+1]=node end
+                if on then
+                    nodes[1]=card("stack-glow",outer+2*t.stack_glow,outer+2*t.stack_glow,0,ui.alpha("primary",.3))
+                    nodes[2]=card("stack-accent",outer,outer,0,"primary")
+                    nodes[3]=card("stack-white",size+2*t.stack_ring,size+2*t.stack_ring,0,t.pearl_white)
+                end
+                nodes[#nodes+1]=card("stack-back-"..k,size,size,2,ui.alpha(pearl_accent(i-1),.5),not on and t.stack_other_alpha or nil)
+                nodes[#nodes+1]=card("stack-pearl-"..k,size,size,-1,pearl_accent(i-1),not on and t.stack_other_alpha or nil)
                 if fanned then
                     nodes[#nodes+1]=centered_text{id="stack-number-"..k,position="absolute",left=cx-size/2,top=cy-10*t.line_height/2,text=tostring(i),width=size,font_size=10,font_weight=600,family="IBM Plex Sans",text_align="center",color=t.pearl_dark}
                 end
@@ -127,7 +131,7 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
                     if not fanned then for _,node in stack_nodes(i,k,x) do strand_nodes[#strand_nodes+1]=node end end
                     if fanned then
                         -- Fanned, each pearl is its own button: the current one keeps the fan out, the others go. Only "+N" (and the cap style) opens the switcher.
-                        fan_buttons[k]=kit.Button{id="stack-strand-"..k,width=slot,height=t.workspace_height,padding=0,radius=t.workspace_radius,shrink=0,fill="transparent",hover_fill="transparent",
+                        fan_buttons[k]=kit.Button{id="stack-strand-"..k,width=slot,height=t.cap_height,padding=0,radius=t.cap_radius,shrink=0,fill="transparent",hover_fill="transparent",
                             aria_label=tostring(collections[i].name or collections[i].label or collections[i].index or i),
                             on_activate=c.popouts and (i==cur and ui.action("collection.fan") or ui.action("collection.switch",collections[i].id)) or nil,
                             table.unpack(stack_nodes(i,k,0))}
@@ -135,19 +139,19 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
                     x+=slot
                 end
                 if more>0 then
-                    local chip=ui.Text{id="stack-more",position="absolute",left=x,top=(t.workspace_height-t.cap_font*t.line_height)/2,text=more_text,width=more_width,height=t.cap_font*t.line_height,font_size=t.cap_font,family=stack_family,color="ink2"}
+                    local chip=ui.Text{id="stack-more",position="absolute",left=x,top=(t.cap_height-t.cap_font*t.line_height)/2,text=more_text,width=more_width,height=t.cap_font*t.line_height,font_size=t.cap_font,family=stack_family,color="ink2"}
                     strand_nodes[#strand_nodes+1]=chip
-                    fan_buttons[#fan_buttons+1]=kit.Button{id="stack-strand-more",width=more_width,height=t.workspace_height,padding=0,radius=t.workspace_radius,shrink=0,fill="transparent",hover_fill="transparent",
+                    fan_buttons[#fan_buttons+1]=kit.Button{id="stack-strand-more",width=more_width,height=t.cap_height,padding=0,radius=t.cap_radius,shrink=0,fill="transparent",hover_fill="transparent",
                         aria_label=current_collection_label,on_activate=c.popouts and ui.action("collection.switcher.open") or nil,
-                        ui.Text{id="stack-more-text",position="absolute",left=0,top=(t.workspace_height-t.cap_font*t.line_height)/2,text=more_text,width=more_width,height=t.cap_font*t.line_height,font_size=t.cap_font,family=stack_family,color="ink2"}}
+                        ui.Text{id="stack-more-text",position="absolute",left=0,top=(t.cap_height-t.cap_font*t.line_height)/2,text=more_text,width=more_width,height=t.cap_font*t.line_height,font_size=t.cap_font,family=stack_family,color="ink2"}}
                 end
             end
-            local collection_control=show_collections and (fanned and ui.Row{id="stack-fan",width=stack_control_width,height=t.workspace_height,padding_left=t.strand_pad,shrink=0,table.unpack(fan_buttons)} or kit.Button{id="collection-badge",width=stack_control_width,height=cap_style and t.cap_height or t.workspace_height,padding=0,radius=cap_style and t.cap_radius or t.workspace_radius,shrink=0,
-                    fill=cap_style and "surfaceContainerHighest" or "transparent",hover_fill=cap_style and "surfaceBright" or "transparent",aria_label=current_collection_label,on_activate=c.popouts and ui.action((cap_style or #collections<2) and "collection.switcher.open" or "collection.fan") or nil,
+            local collection_control=show_collections and (fanned and ui.Row{id="stack-fan",width=stack_control_width,height=t.cap_height,padding_left=t.strand_pad,radius=t.cap_radius,fill="surfaceContainerHighest",shrink=0,table.unpack(fan_buttons)} or kit.Button{id="collection-badge",width=stack_control_width,height=t.cap_height,padding=0,radius=t.cap_radius,shrink=0,
+                    fill="surfaceContainerHighest",hover_fill="surfaceBright",aria_label=current_collection_label,on_activate=c.popouts and ui.action((cap_style or #collections<2) and "collection.switcher.open" or "collection.fan") or nil,
                     cap_style and ui.Row{id="collection-content",width=stack_control_width,height=t.cap_height,padding_left=t.cap_pad_left,padding_right=t.cap_pad_right,gap=t.cap_gap,align="center",
                         ui.Text{id="collection-icon",text="stacks",width=t.cap_icon,height=t.cap_icon,shrink=0,family=kit.tokens.fonts.icon,font_size=t.cap_icon,color="onSurfaceVariant",text_align="center"},
                         ui.Text{id="collection-name",text=cap_name,width=cap_name_width,height=math.ceil(ui.text_line_height(stack_family,t.cap_font)),shrink=0,font_size=t.cap_font,family=stack_family,color="onSurface"}}
-                    or ui.Box{id="strand",position="absolute",left=t.strand_pad,top=0,width=strand_width,height=t.workspace_height,table.unpack(strand_nodes)}})
+                    or ui.Box{id="strand",position="absolute",left=t.strand_pad,top=0,width=strand_width,height=t.cap_height,table.unpack(strand_nodes)}})
                 or nil
             return ui.Row{id="capsule",width=pill_width,height=t.pill_height,padding_left=5,padding_right=5,gap=capsule_gap,radius=t.pill_radius,fill=c.islands and "transparent" or c.base,clip_children=false,align="center",
             -- QML workspaceThread: a 1 px primary -> secondary -> tertiary line at 12 % behind the pearls, inset 16 px.
@@ -158,6 +162,8 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
             c.lit_edge(t.pill_radius,not c.islands),
             -- Keep the child list dense when no stack is advertised, so Repeat still renders.
             collection_control or ui.Box{id="collection-segment",width=0,height=0,visible=false,shrink=0},
+            -- A hairline closes the stack capsule off from the workspaces.
+            show_collections and ui.Box{id="stack-divider",width=1,height=14,shrink=0,fill="outlineVariant"} or ui.Box{id="stack-divider",width=0,height=0,visible=false,shrink=0},
             ui.Repeat{id="workspaces",model=ui.bind("bead.workspaces"),key="id",render=function(item)
                 local accent=pearl_accent((item.index or 1)-1)
                 local label=item.label or item.name or ""

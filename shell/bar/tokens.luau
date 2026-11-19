@@ -23,7 +23,7 @@ return {
     pearl_current=22, pearl_occupied=20, pearl_empty=18, pearl_current_border=1, pearl_empty_border=1.5,
     -- Stack pearls: the current one 13 px inside a white 1.5 px ring, a 3 px accent ring and a glow; the rest 7.5 px
     -- at 70 %; a fanned strand shows numbers in 16 px pearls (at most 8), a collapsed one three around the current.
-    stack_current=13, stack_other=8, stack_ring=1.5, stack_accent_ring=3, stack_glow=3, stack_other_alpha=.7, stack_gap=4, stack_fan_size=16, stack_collapsed_max=3, stack_fan_max=8,
+    stack_current=13, stack_other=8, stack_ring=1.5, stack_accent_ring=3, stack_glow=3, stack_other_alpha=.7, stack_gap=4, stack_corner=.3, stack_fan_size=16, stack_collapsed_max=3, stack_fan_max=8,
     pearl_cream={255,249,241,255}, pearl_white={255,255,255,255}, pearl_dark={48,48,54,255}, pearl_light={245,242,238,255},
     title_height=30, title_font=15, title_ink="primary", title_icon=16, title_max_width=550, title_cue_max=560, title_gap=8, title_trace_height=2, title_trace_inset=5, title_trace_width=36,
 }
