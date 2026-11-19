@@ -30,12 +30,12 @@ pub fn handle(
     accent: [u8; 4],
     secondary: [u8; 4],
     surface: [u8; 4],
-    (arrows, top_tab): (bool, bool),
+    (arrows, top_tab, click): (bool, bool, bool),
 ) -> Option<String> {
     if arrows {
         edge_tab(lip, size, state, accent, secondary)
     } else {
-        grabber(lip, size, state, accent, surface, top_tab)
+        grabber_mode(lip, size, state, accent, surface, top_tab, click)
     }
 }
 /// The pearl grabber (design review D6): a rounded bar in primary centred on the lip, 6 x 56 at
@@ -54,23 +54,18 @@ pub fn handle(
 /// the pill and its glow, in the frame strip under the bar title (the lip spans the bar, so no plate
 /// may cover it); with `attach` the pill slides to the join, flush under the dashboard like a side
 /// tab (owner 2026-11-16: a plate band there read as its own square).
-pub fn grabber(
+/// The hover-open grabber; tests pass the mode explicitly instead of reading the shared `CLICK`,
+/// which other tests set in parallel.
+#[cfg(test)]
+fn grabber(
     lip: &Lip,
-    (width, height): (f32, f32),
+    size: (f32, f32),
     state: LipState,
     accent: [u8; 4],
     surface: [u8; 4],
     top_tab: bool,
 ) -> Option<String> {
-    grabber_mode(
-        lip,
-        (width, height),
-        state,
-        accent,
-        surface,
-        top_tab,
-        CLICK.load(SeqCst),
-    )
+    grabber_mode(lip, size, state, accent, surface, top_tab, false)
 }
 fn grabber_mode(
     lip: &Lip,
@@ -277,7 +272,16 @@ pub fn art(colors: &Palette) -> Result<EdgeArt, Box<dyn std::error::Error>> {
         // palette the shell started with.
         let [surface, accent, secondary] = crate::placement::live_colors().unwrap_or(startup);
         let arrows = ARROWS.load(SeqCst);
-        handle(lip, size, state, accent, secondary, surface, (arrows, TOP_TAB.load(SeqCst))).map(|svg| {
+        handle(
+            lip,
+            size,
+            state,
+            accent,
+            secondary,
+            surface,
+            (arrows, TOP_TAB.load(SeqCst), CLICK.load(SeqCst)),
+        )
+        .map(|svg| {
             if !arrows {
                 return Arc::from(svg.into_bytes());
             }
@@ -760,7 +764,7 @@ mod tests {
                 A,
                 S,
                 S,
-                (true, false)
+                (true, false, false)
             )
             .unwrap()
             .contains("<path")
@@ -773,7 +777,7 @@ mod tests {
                 A,
                 S,
                 S,
-                (false, false)
+                (false, false, false)
             )
             .unwrap()
             .contains("<path")

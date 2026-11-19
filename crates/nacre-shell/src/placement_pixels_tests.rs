@@ -343,7 +343,7 @@ fn compose(
             accent,
             secondary,
             surface,
-            (false, lip.edge == Edge::Top),
+            (false, lip.edge == Edge::Top, false),
         ) {
             tile(&mut pixels, rect, svg.as_bytes(), SCALE)?;
         }
