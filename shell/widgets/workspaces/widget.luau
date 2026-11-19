@@ -20,7 +20,7 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
                 end
                 return out
             end
-            -- App icons ride in every occupied pearl at every output width (the rows budget their room).
+            -- App icons ride only in the active pearl, at every output width.
             local function hints(item)
                 return item.shown or 0,item.overflow or "",item.hinted==true
             end

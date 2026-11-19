@@ -463,8 +463,6 @@ impl Rows {
             .filter(|o| o.scale > 0.)
             .map_or(1920., |o| f64::from(o.width) / o.scale);
         let available = 170f64.max(720f64.min(width / 2. - 130.).min(width - RIGHT - 220.));
-        // Every occupied pearl carries its app icons, sharing one width budget left to right.
-        let mut spent = 0.;
         shown
             .iter()
             .enumerate()
@@ -479,12 +477,11 @@ impl Rows {
                         || shown.get(at - 1).and_then(|p| origin(p)).map(|o| &o.output)
                             != origin(w).map(|o| &o.output));
                 let selected = active.as_ref() == Some(&w.id);
-                let hinted = view.hints && !icon_mode && !windows.is_empty();
+                let hinted = selected && view.hints && !icon_mode;
                 let count = windows.len();
                 let base = shown.len() as f64 * CELL
                     + shown.len().saturating_sub(1) as f64 * 2.
-                    + if count > 0 { 4. } else { 0. }
-                    + spent;
+                    + if count > 0 { 4. } else { 0. };
                 let cap = if view.show_all { count } else { MAX_HINTS };
                 let mut fit = cap
                     .min(count)
@@ -497,7 +494,6 @@ impl Rows {
                     fit -= 1;
                 }
                 let fit = if hinted { fit } else { 0 };
-                spent += fit as f64 * HINT + if hinted && fit < count { OVERFLOW } else { 0. };
                 let mut row = serde_json::to_value(w).unwrap_or(Json::Null);
                 if held.is_some() {
                     row["active"] = json!(selected);
@@ -887,7 +883,11 @@ mod tests {
     #[test]
     fn active_workspace_gets_up_to_three_hints_and_an_overflow_count() {
         let rows = Rows::default();
-        let windows = (0..5).map(|i| window(i, 1, "Foo")).collect();
+        // Workspace 2 is occupied too, but only the active pearl carries icons.
+        let windows = (0..5)
+            .map(|i| window(i, 1, "Foo"))
+            .chain((5..7).map(|i| window(i, 2, "Foo")))
+            .collect();
         let snap = snapshot(
             vec![
                 workspace(1, "1", false, true),
