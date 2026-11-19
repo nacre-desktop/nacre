@@ -1202,12 +1202,10 @@ fn base() -> BTreeMap<String, Value> {
 }
 fn harness(mut out: BTreeMap<String, Value>, page: &str, scale: f32) -> bead_test::Result<Harness> {
     out.insert("cc.page".into(), Value::Text(page.into()));
-    // The surface carries a 32 px margin each side of the 424 px drawer or the 480 px sheet.
-    let width = if out.get("cc.sheet") == Some(&Value::Bool(true)) {
-        544
-    } else {
-        488
-    };
+    // The host gives the 480 px width (frame drawer or no-border card); the surface adds a 32 px margin each side.
+    out.entry("view.width".into())
+        .or_insert(Value::Number(480.));
+    let width = 544;
     Harness::load(
         &root(),
         Path::new("control/main.luau"),
@@ -1285,7 +1283,7 @@ fn control_center_pages_match_goldens() -> bead_test::Result<()> {
 }
 
 /// The power button's Session page: the session menu's actions with their inline confirmation and the power mode
-/// tile. Drawer (B) at both scales; the no-border sheet (A, 480 wide with the back chip) at 1.
+/// tile. The frame drawer at both scales; the no-border card (rim and lit edge) at 1.
 #[test]
 fn session_page_matches_goldens() -> bead_test::Result<()> {
     for (suffix, sheet, scale) in [("", false, 1.), ("", false, 1.5), ("-sheet", true, 1.)] {
@@ -1337,14 +1335,17 @@ fn session_page_matches_goldens() -> bead_test::Result<()> {
 }
 
 /// The no-border control centre: the overview and a detail page in the 480 px card, with the "Control centre"
-/// chip that returns to the overview (the drawer keeps its arrow).
+/// chip that returns to the overview (the frame drawer has the same layout without the card chrome).
 #[test]
 fn sheet_pages_match_goldens() -> bead_test::Result<()> {
-    for (name, page, detail) in [("overview", "home", ""), ("notifications", "detail", "dnd")] {
+    for (name, page, detail, card) in [
+        ("overview", "home", "", true),
+        ("notifications", "detail", "dnd", true),
+        ("notifications", "detail", "dnd", false),
+    ] {
         let mut out = base();
         out.insert("cc.detail".into(), Value::Text(detail.into()));
-        out.insert("cc.sheet".into(), Value::Bool(true));
-        out.insert("view.width".into(), Value::Number(480.));
+        out.insert("cc.sheet".into(), Value::Bool(card));
         let mut h = harness(out, page, 1.)?;
         if page == "detail" {
             let back = h
@@ -1377,10 +1378,12 @@ fn sheet_pages_match_goldens() -> bead_test::Result<()> {
                 motion.reveal,
                 motion.slide_distance
             ),
-            (bead::core::Edge::Right, false, false, Some(480.)),
-            "the sheet slides in its whole width, like the cold fallback it replaces"
+            (bead::core::Edge::Right, false, !card, Some(480.)),
+            "the card slides in its whole width, the frame drawer grows from its pill"
         );
-        golden(&format!("sheet-{name}"), &mut h, 1.)?;
+        if card {
+            golden(&format!("sheet-{name}"), &mut h, 1.)?;
+        }
     }
     Ok(())
 }

@@ -7,9 +7,11 @@ local reg=require("./tiles")
 local T=kit.tokens
 local function get(name) return ui.resolve_for_check(ui.bind(name)) end
 local popup=get("view.edge")=="top"
--- The no-border control centre is a 480 px sheet like the AI sidebar's card: the host says so and gives its width.
+-- The design's control centre: the host gives its width (480 px) and, without a frame, `cc.sheet` for the floating card's chrome.
 local sheet=not popup and get("cc.sheet")
-local W,PAD,GAP=popup and 410 or (sheet and get("view.width") or reg.layout.width),popup and 15 or T.spacing.xl,popup and 12 or T.spacing.sm
+local width=get("view.width")
+local wide=not popup and type(width)=="number" and width>0 and width
+local W,PAD,GAP=popup and 410 or (wide or reg.layout.width),popup and 15 or T.spacing.xl,popup and 12 or T.spacing.sm
 local INNER=W-2*PAD
 local BODY,CAPTION=T.text.body*4/3,T.text.caption*4/3
 local HEAD=T.spacing.huge
@@ -78,7 +80,7 @@ local function tool(id,icon,label,action,selected)
 end
 local function header(title,back,tools,arrow)
     local row={id="header",width=INNER,height=HEADER,gap=HEADER_GAP,align="center"}
-    if back and (arrow or not sheet) then row[#row+1]=tool("back","arrow_back",ui.tr("bead.panel.control-back"),back)
+    if back and (arrow or not wide) then row[#row+1]=tool("back","arrow_back",ui.tr("bead.panel.control-back"),back)
     elseif back then
         -- The "‹ Control centre" chip: returns to the overview (or, on the catalog, to the editor).
         local label=ui.tr("bead.panel.control-overview")
@@ -566,7 +568,7 @@ if content+TOP+PAD>max then
     inner_height=height-TOP-PAD
     inner=ui.Scroll{id="scroll",scrollbar=false,scroll=ui.bind("cc.scroll"),width=INNER,height=inner_height,body}
 end
-if sheet then
+if wide then
     -- A page change (every one alternates `cc.flip`) slides the new page in from the right: 28 px over 220 ms.
     local flip=get("cc.flip")
     local offset=math.floor(28*math.abs(flip-ui.animate("cc.slide",flip,.22,"out-cubic"))+.5)

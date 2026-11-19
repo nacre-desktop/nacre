@@ -4986,15 +4986,16 @@ impl Runtime {
             .map_err(|error| error.to_string())?;
         Ok(self)
     }
-    /// The no-border control centre: a right-edge sheet of `width` (`control/main.luau`).
-    pub fn with_sheet(mut self, width: f64) -> Result<Self, String> {
+    /// The design's control centre at `width`; `card` adds the no-border floating card's chrome (`control/main.luau`).
+    pub fn with_sheet(mut self, width: f64, card: bool) -> Result<Self, String> {
+        let mut values = BTreeMap::from([("view.width".into(), bead::core::Value::Number(width))]);
+        if card {
+            values.insert("cc.sheet".into(), bead::core::Value::Bool(true));
+        }
         self.session.stores = self
             .session
             .stores
-            .reconcile(&BTreeMap::from([
-                ("cc.sheet".into(), bead::core::Value::Bool(true)),
-                ("view.width".into(), bead::core::Value::Number(width)),
-            ]))
+            .reconcile(&values)
             .map_err(|error| error.to_string())?;
         Ok(self)
     }
