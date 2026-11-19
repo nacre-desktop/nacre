@@ -113,6 +113,8 @@ struct Query {
     boot: String,
     ticket: CallTicket,
 }
+/// (boot, image revision, active id, entry count, catalogue generation)
+type RowsKey = (Option<String>, u64, Option<String>, usize, u64);
 #[derive(Default)]
 struct State {
     /// The pearl the strand rests on, so the pre-decoded window follows it.
@@ -155,6 +157,10 @@ struct State {
     catalogue_boot: Option<String>,
     catalogue_request_boot: Option<String>,
     catalogue_result: Vec<Json>,
+    /// The projected picker rows with what they were built from; rebuilt only when that changes, since
+    /// project() runs on every Strand frame. `catalogue_generation` counts entry edits the key cannot see.
+    rows_cache: Option<(RowsKey, Value)>,
+    catalogue_generation: u64,
     catalogue_preloaded: bool,
     catalogue_request_ids: Vec<String>,
     catalogue_request_handles: Vec<String>,
@@ -781,6 +787,7 @@ impl Extras {
             .clone()
             .filter(|_| self.client.snapshot().connected);
         let mut rows = Vec::new();
+        let mut wallpaper_rows = None;
         let mut windows = Vec::new();
         let mut workspaces = Vec::new();
         let mut available = false;
@@ -1021,6 +1028,7 @@ impl Extras {
                         state.catalogue_settled_handles.extend(request_handles);
                     }
                     trim_catalogue_palette_cache(&mut state.catalogue_result, &request_ids);
+                    state.catalogue_generation += 1;
                     crate::wallpaper_catalogue_cache::store_in_background(&state.catalogue_result);
                     if resources_changed {
                         state.image_revision = state.image_revision.wrapping_add(1);
@@ -1040,6 +1048,7 @@ impl Extras {
                     .as_str()
                     .or_else(|| current["path"].as_str())
                 {
+                    let mut swatched = 0;
                     for entry in &mut state.catalogue_result {
                         let active = entry["id"].as_str() == Some(id);
                         entry["active"] = active.into();
@@ -1050,8 +1059,10 @@ impl Extras {
                             && let Some(swatch) = swatch_of(&current["palette"]["colours"])
                         {
                             entry["swatch"] = swatch;
+                            swatched += 1;
                         }
                     }
+                    state.catalogue_generation += swatched;
                 }
             }
             // B0171: display-size rasters for every still, so any first selection is a cache hit.
@@ -1082,37 +1093,57 @@ impl Extras {
                 state.wallpaper_prefetched = preview.prefetch(&ids, active);
             }
             if boot.is_some() && state.catalogue_boot == boot {
-                rows = state
-                    .catalogue_result
-                    .iter()
-                    .map(|source| {
-                        // Luau gets the five caption colours, not the 80+ entry palette of every row: the
-                        // palette is never cloned (this runs on every Strand frame).
-                        let Some(object) = source.as_object() else {
-                            return source.clone();
-                        };
-                        let mut entry: serde_json::Map<String, Json> = object
-                            .iter()
-                            .filter(|(key, _)| key.as_str() != "palette")
-                            .map(|(key, value)| (key.clone(), value.clone()))
-                            .collect();
-                        if let Some(id) = source["id"].as_str().filter(|id| !id.is_empty()) {
-                            for field in ["thumbnail", "preview"] {
-                                entry.insert(
-                                    field.into(),
-                                    format!("wallpaper:{field}:{}:{id}", state.image_revision)
-                                        .into(),
-                                );
+                let key: RowsKey = (
+                    boot.clone(),
+                    state.image_revision,
+                    state
+                        .catalogue_result
+                        .iter()
+                        .find(|entry| entry["active"] == true)
+                        .and_then(|entry| entry["id"].as_str().map(str::to_owned)),
+                    state.catalogue_result.len(),
+                    state.catalogue_generation,
+                );
+                wallpaper_rows = match &state.rows_cache {
+                    Some((cached, value)) if *cached == key => Some(value.clone()),
+                    _ => None,
+                };
+                if wallpaper_rows.is_none() {
+                    let built: Vec<Json> = state
+                        .catalogue_result
+                        .iter()
+                        .map(|source| {
+                            // Luau gets the five caption colours, not the 80+ entry palette of every row: the
+                            // palette is never cloned (this runs on every Strand frame).
+                            let Some(object) = source.as_object() else {
+                                return source.clone();
+                            };
+                            let mut entry: serde_json::Map<String, Json> = object
+                                .iter()
+                                .filter(|(key, _)| key.as_str() != "palette")
+                                .map(|(key, value)| (key.clone(), value.clone()))
+                                .collect();
+                            if let Some(id) = source["id"].as_str().filter(|id| !id.is_empty()) {
+                                for field in ["thumbnail", "preview"] {
+                                    entry.insert(
+                                        field.into(),
+                                        format!("wallpaper:{field}:{}:{id}", state.image_revision)
+                                            .into(),
+                                    );
+                                }
                             }
-                        }
-                        if source["swatch"].is_null()
-                            && let Some(swatch) = swatch_of(&source["palette"]["colours"])
-                        {
-                            entry.insert("swatch".into(), swatch);
-                        }
-                        Json::Object(entry)
-                    })
-                    .collect();
+                            if source["swatch"].is_null()
+                                && let Some(swatch) = swatch_of(&source["palette"]["colours"])
+                            {
+                                entry.insert("swatch".into(), swatch);
+                            }
+                            Json::Object(entry)
+                        })
+                        .collect();
+                    let value = Value::list(built);
+                    state.rows_cache = Some((key, value.clone()));
+                    wallpaper_rows = Some(value);
+                }
                 available = true;
             }
             // A cache hit or in-flight refresh is usable picker content even if the
@@ -1245,7 +1276,10 @@ impl Extras {
             ("extras.available".into(), Value::Bool(available)),
             ("extras.per_output".into(), Value::Bool(per_output)),
             ("extras.message".into(), Value::Text(state.message.clone())),
-            ("extras.rows".into(), Value::list(rows)),
+            (
+                "extras.rows".into(),
+                wallpaper_rows.unwrap_or_else(|| Value::list(rows)),
+            ),
             ("extras.windows".into(), Value::list(windows)),
             ("extras.workspaces".into(), Value::list(workspaces)),
         ]);

@@ -9,7 +9,7 @@ use std::{
     path::PathBuf,
     sync::{
         Arc,
-        atomic::{AtomicBool, AtomicU32, Ordering},
+        atomic::{AtomicBool, Ordering},
         mpsc::{self, SyncSender, TrySendError},
     },
     thread,
@@ -28,7 +28,7 @@ fn notify(sender: &SyncSender<()>) {
 pub(crate) struct IconWarmer {
     source: Arc<dyn Source>,
     palette_path: PathBuf,
-    scale: Arc<AtomicU32>,
+    scales: Arc<std::sync::Mutex<Vec<f32>>>,
     started: bool,
     stop: Arc<AtomicBool>,
     wake: Option<SyncSender<()>>,
@@ -40,7 +40,7 @@ impl IconWarmer {
         Self {
             source,
             palette_path,
-            scale: Arc::new(AtomicU32::new(1.0f32.to_bits())),
+            scales: Arc::new(std::sync::Mutex::new(vec![1.0])),
             started: false,
             stop: Arc::new(AtomicBool::new(false)),
             wake: None,
@@ -49,12 +49,18 @@ impl IconWarmer {
     }
 
     pub(crate) fn set_scale(&self, scale: f32) {
-        if scale.is_finite() && scale > 0.0 {
-            let bits = scale.to_bits();
-            // Largest scale of any output, as in wallpaper_warm: two outputs must not flip it.
-            if self.scale.fetch_max(bits, Ordering::Relaxed) < bits
-                && let Some(wake) = &self.wake
-            {
+        if !scale.is_finite() || scale <= 0.0 {
+            return;
+        }
+        // Every distinct output scale is warmed once; the set only grows, so two outputs cannot flip it.
+        let mut scales = self
+            .scales
+            .lock()
+            .unwrap_or_else(|error| error.into_inner());
+        if !scales.contains(&scale) {
+            scales.push(scale);
+            drop(scales);
+            if let Some(wake) = &self.wake {
                 notify(wake);
             }
         }
@@ -69,7 +75,7 @@ impl IconWarmer {
         self.wake = Some(wake.clone());
         let source = self.source.clone();
         let palette_path = self.palette_path.clone();
-        let scale = self.scale.clone();
+        let scales = self.scales.clone();
         let stop = self.stop.clone();
         self.join = thread::Builder::new()
             .name("bead-icon-warm".into())
@@ -99,13 +105,11 @@ impl IconWarmer {
                     if stop.load(Ordering::Relaxed) {
                         break;
                     }
-                    warm_pages(
-                        &runtime,
-                        source.as_ref(),
-                        &palette_path,
-                        f32::from_bits(scale.load(Ordering::Relaxed)),
-                        &stop,
-                    );
+                    let scales = scales
+                        .lock()
+                        .unwrap_or_else(|error| error.into_inner())
+                        .clone();
+                    warm_pages(&runtime, source.as_ref(), &palette_path, &scales, &stop);
                     // Return temporary catalog/markup/decoder pages before sleeping;
                     // the shared raster cache keeps only its bounded live pixels.
                     #[cfg(all(target_os = "linux", target_env = "gnu"))]
@@ -135,12 +139,9 @@ fn warm_pages(
     runtime: &tokio::runtime::Runtime,
     source: &dyn Source,
     palette_path: &std::path::Path,
-    scale: f32,
+    scales: &[f32],
     stop: &AtomicBool,
 ) {
-    if !scale.is_finite() || scale <= 0.0 {
-        return;
-    }
     let mut query_errors = 0;
     let preferences = runtime
         .block_on(source.call(
@@ -198,18 +199,20 @@ fn warm_pages(
         if path.as_path() == std::path::Path::new("@bead-icon-fallback.svg") {
             failures += 1;
         }
-        if bead::render::prewarm_image(&path, &bytes, grid, scale, ImageFit::Fill).is_ok() {
-            warmed += 1;
-        }
-        if let Some(result) = result
-            && bead::render::prewarm_image(&path, &bytes, result, scale, ImageFit::Fill).is_ok()
-        {
-            result_warmed += 1;
+        for &scale in scales {
+            if bead::render::prewarm_image(&path, &bytes, grid, scale, ImageFit::Fill).is_ok() {
+                warmed += 1;
+            }
+            if let Some(result) = result
+                && bead::render::prewarm_image(&path, &bytes, result, scale, ImageFit::Fill).is_ok()
+            {
+                result_warmed += 1;
+            }
         }
     }
     let stats = bead::render::image_cache_stats();
     bead::core::vprintln!(
-        "ICON_WARM icons={} raster_success={} result_rasters={} fallback_or_error={} query_errors={} raster_bytes={} charged_bytes={} limit_bytes={} scale={:.3}",
+        "ICON_WARM icons={} raster_success={} result_rasters={} fallback_or_error={} query_errors={} raster_bytes={} charged_bytes={} limit_bytes={} scales={:?}",
         icon_count,
         warmed,
         result_warmed,
@@ -218,7 +221,7 @@ fn warm_pages(
         stats.raster_bytes,
         stats.charged_bytes,
         stats.limit_bytes,
-        scale
+        scales
     );
 }
 

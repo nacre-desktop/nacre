@@ -10,14 +10,14 @@ use std::{
     path::{Path, PathBuf},
     sync::{
         Arc,
-        atomic::{AtomicBool, AtomicU32, Ordering},
+        atomic::{AtomicBool, Ordering},
         mpsc::{self, SyncSender, TrySendError},
     },
     thread,
     time::{Duration, Instant},
 };
 
-type WarmIdentity = (String, String, u32, u32, u32, u32, u32);
+type WarmIdentity = (String, String, Vec<[u32; 5]>);
 type DesiredRaster = (Option<PathBuf>, Option<PathBuf>, u32, u32, ImageFit);
 const WARM_CATALOGUE_LIMIT: usize = bead::core::cache::MIB;
 
@@ -81,6 +81,7 @@ pub(crate) fn prepared_fallback_scene(viewport: (u32, u32)) -> Option<bead::rend
 
 fn publish_catalogue(
     identity: &WarmIdentity,
+    viewport: (f32, f32),
     entries: Vec<Json>,
     scene: bead::render::Scene,
 ) -> bool {
@@ -104,10 +105,7 @@ fn publish_catalogue(
     *slot = Some(Arc::new(PreparedCatalogue {
         boot: identity.0.clone(),
         active_path: identity.1.clone(),
-        viewport: (
-            f32::from_bits(identity.2) as u32,
-            f32::from_bits(identity.3) as u32,
-        ),
+        viewport: (viewport.0 as u32, viewport.1 as u32),
         entries: entries.into(),
         scene,
         _charge: charge,
@@ -120,11 +118,56 @@ struct WarmResult {
     hydrate_ids: Vec<String>,
     fallback_scene: Option<bead::render::Scene>,
 }
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default, PartialEq)]
 struct WarmGeometry {
     viewport: (f32, f32),
     inner: (f32, f32),
     scale: f32,
+}
+
+impl WarmGeometry {
+    fn valid(&self) -> bool {
+        [
+            self.viewport.0,
+            self.viewport.1,
+            self.inner.0,
+            self.inner.1,
+            self.scale,
+        ]
+        .iter()
+        .all(|value| value.is_finite() && *value > 0.)
+    }
+
+    fn bits(&self) -> [u32; 5] {
+        [
+            self.viewport.0.to_bits(),
+            self.viewport.1.to_bits(),
+            self.inner.0.to_bits(),
+            self.inner.1.to_bits(),
+            self.scale.to_bits(),
+        ]
+    }
+}
+
+type Outputs = std::sync::Mutex<BTreeMap<String, WarmGeometry>>;
+
+/// One geometry per distinct output (size and scale): a 1.0 output opens on its own 1.0 rasters.
+/// The largest comes first; it owns the fallback scene.
+fn distinct_geometries(outputs: &Outputs) -> Vec<WarmGeometry> {
+    let mut geometries: Vec<WarmGeometry> = Vec::new();
+    for geometry in outputs
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+        .values()
+        .filter(|geometry| geometry.valid())
+    {
+        if !geometries.contains(geometry) {
+            geometries.push(*geometry);
+        }
+    }
+    geometries
+        .sort_by(|a, b| (b.viewport.0 * b.viewport.1).total_cmp(&(a.viewport.0 * a.viewport.1)));
+    geometries
 }
 
 fn cached_file(path: &Path, bytes: &mut HashMap<PathBuf, Vec<u8>>) -> Option<PathBuf> {
@@ -142,11 +185,7 @@ fn notify(wake: &SyncSender<()>) {
 }
 
 pub(crate) struct Warmer {
-    width: Arc<AtomicU32>,
-    height: Arc<AtomicU32>,
-    inner_width: Arc<AtomicU32>,
-    inner_height: Arc<AtomicU32>,
-    scale: Arc<AtomicU32>,
+    outputs: Arc<Outputs>,
     stop: Arc<AtomicBool>,
     wake: SyncSender<()>,
     join: Option<thread::JoinHandle<()>>,
@@ -160,21 +199,13 @@ impl Warmer {
         root: PathBuf,
         palette: Palette,
     ) -> Self {
-        let width = Arc::new(AtomicU32::new(0));
-        let height = Arc::new(AtomicU32::new(0));
-        let inner_width = Arc::new(AtomicU32::new(0));
-        let inner_height = Arc::new(AtomicU32::new(0));
-        let scale = Arc::new(AtomicU32::new(0.0f32.to_bits()));
+        let outputs = Arc::new(Outputs::default());
         let stop = Arc::new(AtomicBool::new(false));
         let (wake, receiver) = mpsc::sync_channel(1);
         let join = thread::Builder::new()
             .name("bead-wallpaper-warm".into())
             .spawn({
-                let width = width.clone();
-                let height = height.clone();
-                let inner_width = inner_width.clone();
-                let inner_height = inner_height.clone();
-                let scale = scale.clone();
+                let outputs = outputs.clone();
                 let stop = stop.clone();
                 let wake_signal = wake.clone();
                 move || {
@@ -228,17 +259,10 @@ impl Warmer {
                             continue;
                         }
 
-                        let w = f32::from_bits(width.load(Ordering::Relaxed));
-                        let h = f32::from_bits(height.load(Ordering::Relaxed));
-                        let inner_w = f32::from_bits(inner_width.load(Ordering::Relaxed));
-                        let inner_h = f32::from_bits(inner_height.load(Ordering::Relaxed));
-                        let s = f32::from_bits(scale.load(Ordering::Relaxed));
-                        if [w, h, inner_w, inner_h, s]
-                            .iter()
-                            .any(|value| !value.is_finite() || *value <= 0.)
-                        {
+                        let geometries = distinct_geometries(&outputs);
+                        let Some(&geometry) = geometries.first() else {
                             continue;
-                        }
+                        };
                         let Some(boot) = client.status().boot.clone() else {
                             continue;
                         };
@@ -251,11 +275,7 @@ impl Warmer {
                         let identity = (
                             boot.clone(),
                             active_path,
-                            w.to_bits(),
-                            h.to_bits(),
-                            inner_w.to_bits(),
-                            inner_h.to_bits(),
-                            s.to_bits(),
+                            geometries.iter().map(WarmGeometry::bits).collect(),
                         );
                         if warmed
                             .as_ref()
@@ -271,11 +291,6 @@ impl Warmer {
                             continue;
                         };
                         let mut catalogue = entries;
-                        let geometry = WarmGeometry {
-                            viewport: (w, h),
-                            inner: (inner_w, inner_h),
-                            scale: s,
-                        };
                         let warm = |entries: &[Json]| {
                             warm_catalogue(&root, &palette, entries, geometry)
                         };
@@ -329,10 +344,15 @@ impl Warmer {
                         let mut complete = result.warmed == result.requested
                             && result.hydrate_ids.is_empty()
                             && result.fallback_scene.is_some();
+                        // The other outputs only need their rasters; hydration happened above.
+                        for other in &geometries[1..] {
+                            let extra = warm_catalogue(&root, &palette, &catalogue, *other);
+                            complete &= extra.is_some_and(|extra| extra.warmed == extra.requested);
+                        }
                         if complete
                             && let Some(scene) = result.fallback_scene.take()
                         {
-                            complete = publish_catalogue(&identity, catalogue, scene);
+                            complete = publish_catalogue(&identity, geometry.viewport, catalogue, scene);
                         }
                         let cache = bead::render::large_image_cache_stats();
                         bead::core::vprintln!(
@@ -342,11 +362,11 @@ impl Warmer {
                             result.requested,
                             cache.charged_bytes,
                             cache.limit_bytes,
-                            w,
-                            h,
-                            inner_w,
-                            inner_h,
-                            s
+                            geometry.viewport.0,
+                            geometry.viewport.1,
+                            geometry.inner.0,
+                            geometry.inner.1,
+                            geometry.scale
                         );
                         warmed = complete.then(|| (identity, Instant::now()));
                     }
@@ -354,50 +374,37 @@ impl Warmer {
             })
             .ok();
         Self {
-            width,
-            height,
-            inner_width,
-            inner_height,
-            scale,
+            outputs,
             stop,
             wake,
             join,
         }
     }
 
-    pub(crate) fn set_viewport(
-        &self,
-        width: f32,
-        height: f32,
-        inner_width: f32,
-        inner_height: f32,
-    ) {
-        // Every output's runtime reports into this one warmer: keep the largest, so two outputs
-        // cannot flip it and re-warm the whole catalogue on each report.
-        // shortcut: unplugging the larger output keeps its geometry until a restart; key by output if that matters.
-        let current = f32::from_bits(self.width.load(Ordering::Relaxed))
-            * f32::from_bits(self.height.load(Ordering::Relaxed));
-        if width * height < current {
-            return;
-        }
-        self.width.store(width.to_bits(), Ordering::Relaxed);
-        self.height.store(height.to_bits(), Ordering::Relaxed);
-        self.inner_width
-            .store(inner_width.to_bits(), Ordering::Relaxed);
-        self.inner_height
-            .store(inner_height.to_bits(), Ordering::Relaxed);
-        notify(&self.wake);
-    }
-
-    pub(crate) fn set_scale(&self, scale: f32) {
-        if scale.is_finite()
-            && scale > 0.
-            // The largest scale of any output (1.5 and 1.0 used to alternate on every stage job); positive
-            // finite f32 bits order like their values.
-            && self.scale.fetch_max(scale.to_bits(), Ordering::Relaxed) < scale.to_bits()
-        {
+    // shortcut: an unplugged output keeps its entry (extra warm work, no flip-flop) until restart.
+    fn update(&self, output: &str, change: impl FnOnce(&mut WarmGeometry)) {
+        let mut outputs = self
+            .outputs
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        let entry = outputs.entry(output.to_owned()).or_default();
+        let before = *entry;
+        change(entry);
+        if *entry != before {
+            drop(outputs);
             notify(&self.wake);
         }
+    }
+
+    pub(crate) fn set_viewport(&self, output: &str, viewport: (f32, f32), inner: (f32, f32)) {
+        self.update(output, |geometry| {
+            geometry.viewport = viewport;
+            geometry.inner = inner;
+        });
+    }
+
+    pub(crate) fn set_scale(&self, output: &str, scale: f32) {
+        self.update(output, |geometry| geometry.scale = scale);
     }
 }
 
@@ -628,5 +635,42 @@ fn resolve_wallpaper_handles(scene: &mut bead::render::Scene, entries: &[Json]) 
         if let Some(source) = source {
             *path = PathBuf::from(source);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn geometry(width: f32, scale: f32) -> WarmGeometry {
+        WarmGeometry {
+            viewport: (width, 1000.),
+            inner: (width - 20., 980.),
+            scale,
+        }
+    }
+
+    #[test]
+    fn every_distinct_output_scale_is_warmed_once_largest_first() {
+        let outputs = Outputs::default();
+        {
+            let mut map = outputs.lock().unwrap();
+            map.insert("eDP-1".into(), geometry(1920., 1.5));
+            map.insert("DP-1".into(), geometry(3440., 1.0));
+            map.insert("DP-2".into(), geometry(3440., 1.0));
+            map.insert("half-reported".into(), WarmGeometry::default());
+        }
+        let first = distinct_geometries(&outputs);
+        assert_eq!(first.len(), 2);
+        assert_eq!((first[0].viewport.0, first[0].scale), (3440., 1.0));
+        assert_eq!((first[1].viewport.0, first[1].scale), (1920., 1.5));
+        // Re-reporting never changes the identity, so nothing re-warms.
+        assert_eq!(
+            first.iter().map(WarmGeometry::bits).collect::<Vec<_>>(),
+            distinct_geometries(&outputs)
+                .iter()
+                .map(WarmGeometry::bits)
+                .collect::<Vec<_>>()
+        );
     }
 }

@@ -611,6 +611,11 @@ async fn wallpaper_catalogue_projects_and_selection_calls_revision_fenced_activa
     assert!(matches!(&rows,Value::List(entries) if entries.len()==4
             && entries.iter().any(|entry| entry["id"]=="/fixture/animated.gif" && entry["animated"]==true)
             && entries.iter().any(|entry| entry["id"]=="/fixture/next.mp4")));
+    // An unchanged projection reuses the rows instead of rebuilding them (this runs on every Strand frame).
+    let again = wallpaper.project(&stores, Some(wake.clone()));
+    assert!(
+        matches!((&rows, &again["extras.rows"]), (Value::List(a), Value::List(b)) if Arc::ptr_eq(a, b))
+    );
     assert!(
         wallpaper
             .state

@@ -95,15 +95,17 @@ fn load_from(root: &Path, pair: &ActiveWallpaper, width: u32, height: u32) -> Op
     if encoded_len == 0 || encoded_len > expected.saturating_add(1024 * 1024) {
         return None;
     }
-    let mut encoded = vec![0; encoded_len];
-    file.read_exact(&mut encoded).ok()?;
-    let mut trailing = [0];
-    if file.read(&mut trailing).ok()? != 0 {
-        let _ = fs::remove_file(path);
+    // Stream the zstd frame from the file: no second (compressed-size) buffer faulted in per load.
+    let file_len = file.metadata().ok()?.len();
+    let entry_len = (HEADER + encoded_len) as u64;
+    if file_len != entry_len {
+        if file_len > entry_len {
+            let _ = fs::remove_file(path);
+        }
         return None;
     }
     let _ = file.set_times(std::fs::FileTimes::new().set_modified(SystemTime::now()));
-    let decoder = zstd::stream::read::Decoder::new(&encoded[..]).ok()?;
+    let decoder = zstd::stream::read::Decoder::new(file).ok()?;
     let mut decoded = Vec::with_capacity(expected);
     decoder
         .take(expected as u64 + 1)
@@ -490,6 +492,22 @@ mod tests {
             }
         });
         assert_eq!(decodes.load(Ordering::SeqCst), 1);
+        let _ = fs::remove_dir_all(root);
+    }
+    #[test]
+    fn an_entry_with_trailing_bytes_or_a_cut_tail_is_a_miss() {
+        let (root, pair) = fixture();
+        let cache = root.join("cache");
+        store_at(&cache, &pair, 2, 2, &[5; 16], 1024);
+        let (path, _) = entry_path(&cache, &pair, 2, 2).unwrap();
+        let whole = fs::read(&path).unwrap();
+        fs::write(&path, &whole[..whole.len() - 1]).unwrap();
+        assert!(load_from(&cache, &pair, 2, 2).is_none());
+        let mut longer = whole;
+        longer.push(0);
+        fs::write(&path, longer).unwrap();
+        assert!(load_from(&cache, &pair, 2, 2).is_none());
+        assert!(!path.exists());
         let _ = fs::remove_dir_all(root);
     }
     #[test]

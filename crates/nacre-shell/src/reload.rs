@@ -6219,7 +6219,7 @@ impl SceneSource for Runtime {
         if let Some(warmer) = &self.wallpaper_warmer
             && let Some(scale) = scale
         {
-            warmer.set_scale(scale);
+            warmer.set_scale(self.output.as_deref().unwrap_or(""), scale);
         }
     }
     fn tracks_origin(&self) -> bool {
@@ -6259,10 +6259,12 @@ impl SceneSource for Runtime {
             let output_width = width as f32;
             let output_height = height as f32;
             warmer.set_viewport(
-                output_width,
-                output_height,
-                (output_width - frame.left - frame.right).max(1.),
-                (output_height - frame.top - frame.bottom).max(1.),
+                self.output.as_deref().unwrap_or(""),
+                (output_width, output_height),
+                (
+                    (output_width - frame.left - frame.right).max(1.),
+                    (output_height - frame.top - frame.bottom).max(1.),
+                ),
             );
         }
         if self.widget_editor {
