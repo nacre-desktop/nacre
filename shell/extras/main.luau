@@ -79,7 +79,9 @@ local function workspace_card(group)
   local tile_h = count <= 2 and T.overview.two_window_cell_height or T.overview.multi_window_cell_height
   local tile_extent = math.max(T.overview.thumbnail_height, rows*tile_h)
   local tiles = {}
-  for i, item in ipairs(group.windows) do
+  for i, window in ipairs(group.windows) do
+    -- Bound tables are read-only (Bead B0357): lay out a copy.
+    local item = {}; for k, v in pairs(window) do item[k] = v end
     item.tile_width = count == 1 and T.overview.single_tile_width or T.overview.multi_tile_width
     item.tile_height = tile_h-T.overview.tile_cell_inset
     item.preview_height = item.tile_height-T.overview.title_height-T.overview.title_gap
