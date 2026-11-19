@@ -23,26 +23,26 @@ local animation_key=2166136261
 for index=1,#animation_query do animation_key=(animation_key*33+string.byte(animation_query,index))%2147483647 end
 -- The entrance (owner, round 4: no staged overlay): everything arrives together in one out-cubic, opacity and a small
 -- drop; the exit is the same in reverse, shorter (the panel's `return_duration` keeps the surface until it ends).
--- `extras.wallpaper.entry_ms` pins it for goldens. Bead has no node opacity: the veil, thread, ring and texts fade through
--- colour alpha, the pearls through Image opacity.
+-- Both run on `ui.animated` markers of two Boxes (B0349 group opacity), so those frames patch and bake with no Luau.
+-- `extras.wallpaper.entry_ms` pins the entrance for goldens (>= 0).
 local opening=ui.resolve_for_check(ui.bind("panel.open"))~=false
 local pinned=ui.resolve_for_check(ui.bind("extras.wallpaper.entry_ms")) or -1 -- only goldens pin it (>= 0)
-local appear=pinned>=0 and 1-(1-math.min(1,pinned/W.open_ms))^3
-  or ui.animate("wallpaper-strand-open",opening and 1 or 0,(opening and W.open_ms or W.close_ms)/1000,"out-cubic")
+local appear=pinned>=0 and 1-(1-math.min(1,pinned/W.open_ms))^3 or nil
+local entry_s=(opening and W.open_ms or W.close_ms)/1000
+
 -- One continuous value drives the whole strand: pearls slide along the thread to a fractional slot.
 -- A held key or a fast scroll (`glide`) follows its moving target at a steady pace instead of restarting the
 -- out-quint for every repeat; a single tap keeps the full 500 ms out-quint.
 local glide=ui.resolve_for_check(ui.bind("extras.wallpaper.glide"))==true
--- While it arrives the strand rests on its pearl: a new visit never spins in from where the last one left off.
-local strand=ui.animate("wallpaper-strand:"..tostring(count)..":"..tostring(animation_key),position,opening and appear<1 and 0 or glide and W.glide_duration or W.move_duration,glide and "linear" or "out-quint")
-local ga=appear -- alpha of the glyph buttons and toggles built next
-local function fade(colour,alpha) return type(colour)=="table" and {colour[1],colour[2],colour[3],math.floor(colour[4]*alpha)} or colour end
-local function ga_fade(colour) return fade(colour,ga) end
-
+-- A new visit starts at rest on its pearl (its own animation key), and a closing strand does not glide while it leaves.
+local visit=ui.resolve_for_check(ui.bind("extras.wallpaper.visit")) or 0
+local strand=ui.animate("wallpaper-strand:"..tostring(visit)..":"..tostring(count)..":"..tostring(animation_key),position,not opening and 0 or glide and W.glide_duration or W.move_duration,glide and "linear" or "out-quint")
 local s=math.min(width/W.art_width,height/W.art_height)
 local centre={x=width/2,y=height/2}
 local gap=W.pearl_gap*s
-local lift=(1-appear)*W.entry_drop*s -- the small drop: everything comes down into place
+local drop=W.entry_drop*s -- the small drop: everything comes down into place
+local fade_in=appear or ui.animated("wallpaper-strand-fade",opening and 1 or 0,entry_s,"out-cubic",0)
+local lift=appear and (1-appear)*drop or ui.animated("wallpaper-strand-lift",opening and 0 or drop,entry_s,"out-cubic",drop)
 
 -- True catenary through the two off-screen anchors with its lowest point at the centre: a*(cosh(half/a)-1)=sag.
 local half=centre.x-W.anchor_x*s
@@ -95,8 +95,8 @@ local function pearl_node(pearl)
   local bake=math.abs(pearl.offset)<=2.5 and size_at(0) or size_at(3)
   local item=pearl.item
   -- The outer pair rests at 50 % (offset 4 -> 5), also while the strand moves.
-  local alpha=appear*(1-.5*math.max(0,math.min(1,math.abs(pearl.offset)-4)))
-  local size,cy=pearl.size,pearl.y-lift
+  local alpha=(1-.5*math.max(0,math.min(1,math.abs(pearl.offset)-4)))
+  local size,cy=pearl.size,pearl.y
   local near=math.max(0,1-math.abs(pearl.offset))
   local edge=math.max(1,s)
   local path=item.thumbnail
@@ -121,7 +121,7 @@ local function pearl_node(pearl)
     kids[#kids+1]=ui.Image{id="shade",position="absolute",left=0,top=0,width=size,height=size,path=W.shade,bake_size={w=bake,h=bake},opacity=alpha}
   end
   kids[#kids+1]=ui.Box{id="edge",position="absolute",left=0,top=0,width=size,height=size,radius=size/2,fill="transparent",
-    border_width=edge,border_color=fade(W.pearl_edge,alpha)}
+    border_width=edge,border_color=W.pearl_edge}
   if near>.3 then
     kids[#kids+1]=ui.Image{id="sheen",position="absolute",left=0,top=0,width=size,height=size,path=W.sheen,bake_size={w=bake,h=bake},
       tint=W.pearl_sheen,opacity=near*alpha}
@@ -144,7 +144,7 @@ local function silk(id,from,to,colour,stroke,overlap,steps)
   local curve={}
   for step=0,steps do
     local x=x0+(x1-x0)*step/steps
-    local y=base-a*math.cosh((x-centre.x)/a)-lift
+    local y=base-a*math.cosh((x-centre.x)/a)
     curve[#curve+1]={x,y}
     top,bottom=math.min(top,y),math.max(bottom,y)
   end
@@ -152,7 +152,7 @@ local function silk(id,from,to,colour,stroke,overlap,steps)
   local left,box_width,box_height=x0-pad,x1-x0+2*pad,bottom-top+2*pad
   local points={}
   for _,point in ipairs(curve) do points[#points+1]={(point[1]-left)/box_width,(point[2]-top+pad)/box_height} end
-  return ui.Polyline{id=id,position="absolute",left=left,top=top-pad,width=box_width,height=box_height,points=points,stroke_width=stroke*s,color=fade(colour,appear)}
+  return ui.Polyline{id=id,position="absolute",left=left,top=top-pad,width=box_width,height=box_height,points=points,stroke_width=stroke*s,color=colour}
 end
 local function silk_colour(at)
   local position=at*(#W.silk-1)
@@ -172,7 +172,7 @@ for index=1,#placed-1 do
   local left,right=placed[index],placed[index+1]
   if right.offset-left.offset<1.5 then
     local x,y=point_at(((left.arc+left.size/2)+(right.arc-right.size/2))/2)
-    strand_nodes[#strand_nodes+1]=ui.Box{id="knot-"..index,position="absolute",left=x-knot/2,top=y-lift-knot/2,width=knot,height=knot,radius=knot/2,fill=fade(W.knot_fill,appear)}
+    strand_nodes[#strand_nodes+1]=ui.Box{id="knot-"..index,position="absolute",left=x-knot/2,top=y-knot/2,width=knot,height=knot,radius=knot/2,fill=W.knot_fill}
   end
 end
 table.sort(placed,function(left,right) return math.abs(left.offset)>math.abs(right.offset) end)
@@ -182,22 +182,21 @@ for _,pearl in ipairs(placed) do strand_nodes[#strand_nodes+1]=pearl_node(pearl)
 local ring=size_at(nearest)+2*(W.ring_gap+W.ring_stroke)*s
 local stroke=math.max(1,W.ring_stroke*s)
 -- Between two pearls the ring has nothing to hold: it fades, then comes back around the next one.
-local ring_alpha=math.floor(255*appear*math.max(0,math.min(1,1-nearest*1.6)))
+local ring_alpha=math.floor(255*math.max(0,math.min(1,1-nearest*1.6)))
 if count>0 then
   for index,colour in ipairs(W.silk) do
-    strand_nodes[#strand_nodes+1]=ui.Arc{id="ring-"..index,position="absolute",left=centre.x-ring/2+stroke/2,top=centre.y-lift-ring/2+stroke/2,
+    strand_nodes[#strand_nodes+1]=ui.Arc{id="ring-"..index,position="absolute",left=centre.x-ring/2+stroke/2,top=centre.y-ring/2+stroke/2,
       width=ring-stroke,height=ring-stroke,start_angle=-160+(index-1)*72,sweep_angle=72,stroke_width=stroke,round_caps=false,
       color={colour[1],colour[2],colour[3],ring_alpha}}
   end
 end
 
 local function glyph_button(id,label,glyph,size,font,fill,action,request,left,top)
-  fill=ga_fade(fill)
   local props={id=id,aria_label=label,width=size,height=size,shrink=0,padding=0,radius=size/2,fill=fill,hover_fill=fill,
     activate_on_release=true,focus_on_pointer=false,on_activate=ui.action(action,request),
-    border_width=type(fill)=="table" and fill[4]>0 and 1 or nil,border_color=ga_fade(W.nav_ring),
+    border_width=type(fill)=="table" and fill[4]>0 and 1 or nil,border_color=W.nav_ring,
     ui.Row{width=size,height=size,align="center",justify="center",
-      ui.Text{text=glyph,width=font,height=font*1.15,family="Material Symbols Rounded",font_size=font,color=ga_fade(W.ink)}}}
+      ui.Text{text=glyph,width=font,height=font*1.15,family="Material Symbols Rounded",font_size=font,color=W.ink}}}
   if left then props.position,props.left,props.top="absolute",left,top end
   return kit.Button(props)
 end
@@ -206,19 +205,20 @@ end
 -- nothing over the upper part, then flat translucent bands to `veil_max` at the bottom. A stretched SVG would be
 -- rasterised at the full panel size, which overruns Bead's retained raster budget at 2880x1800.
 local function veil_alpha(at) return W.veil_max*math.max(0,at-W.veil_from)/(1-W.veil_from) end
+local veil={}
 local children={}
 for band=0,W.veil_bands-1 do
   -- Even edges land on whole physical pixels at scale 1, 1.5 and 2, so the bands leave no antialiased seams.
   local function edge(index) return index==W.veil_bands and height or 2*math.floor(height*index/W.veil_bands/2) end
   local top,bottom=edge(band),edge(band+1)
-  children[#children+1]=ui.Box{id="veil-"..band,position="absolute",left=0,top=top,width=width,height=bottom-top,radius=0,fill={6,7,10,math.floor(255*appear*veil_alpha((band+.5)/W.veil_bands))}}
+  veil[#veil+1]=ui.Box{id="veil-"..band,position="absolute",left=0,top=top,width=width,height=bottom-top,radius=0,fill={6,7,10,math.floor(255*veil_alpha((band+.5)/W.veil_bands))}}
 end
 -- Wheel or trackpad: at most one step per 60 ms (Bead drops the rest); extras.rs lands it 240 ms after the last step.
 children[#children+1]=ui.Box{id="strand",position="absolute",left=0,top=0,width=width,height=height,fill="transparent",
   scroll=ui.action("strand_wheel"),scroll_steps={min_interval_ms=60},table.unpack(strand_nodes)}
 
 if selected then
-  local name_top=centre.y+W.name_top*s-lift
+  local name_top=centre.y+W.name_top*s
   -- A long name ends in an ellipsis inside the span between the arrows (they sit a fixed gap outside it).
   local name_max,name_size=2*(W.nav_offset-W.nav_size/2-W.nav_gap)*s,W.name_font*s
   local title=selected.title or ""
@@ -230,8 +230,8 @@ if selected then
     until chars<=1 or ui.text_width(title,ui.default_font_family,name_size)<=name_max
   end
   children[#children+1]=ui.Text{id="selected-title",position="absolute",left=(width-name_max)/2,top=name_top,width=name_max,height=W.name_height*s,
-    text=title,font_size=W.name_font*s,font_weight=300,text_align="center",color=fade(W.ink,appear),
-    text_shadow_blur=18,text_shadow_y=2,text_shadow_color={0,0,0,math.floor(115*appear)}}
+    text=title,font_size=W.name_font*s,font_weight=300,text_align="center",color=W.ink,
+    text_shadow_blur=18,text_shadow_y=2,text_shadow_color={0,0,0,115}}
   -- The prototype's caption: "3 of 47, 3840 x 2560" for a still, "3 of 47, video, 24 s loop, plays muted" for a video;
   -- "3 of 5 matches" while a search narrows the strand.
   local meta=animation_query~="" and ui.tr("bead.dashboard.wallpaper-meta-matches",{index=selection_index,count=count})
@@ -240,20 +240,20 @@ if selected then
   elseif resolution~="" and resolution_id==selected.id then meta=ui.tr("bead.dashboard.wallpaper-meta-size",{meta=meta,size=resolution}) end
   local meta_font=W.meta_font*s
   local meta_row={ui.Text{id="selection-count",width=ui.text_width(meta,ui.default_font_family,meta_font)+12*s,height=W.meta_height*s,text=meta,
-    font_weight=500,font_size=meta_font,color=fade(W.ink_soft,appear)}}
+    font_weight=500,font_size=meta_font,color=W.ink_soft}}
   local dots={}
   local colours=selected.swatch or (type(selected.palette)=="table" and selected.palette.colours or nil)
   for _,role in ipairs(W.palette_roles) do
     local r,g,b=string.match(type(colours)=="table" and tostring(colours[role] or "") or "","#(%x%x)(%x%x)(%x%x)")
     if r then
       dots[#dots+1]=ui.Box{id="dot-"..role,width=W.dot*s,height=W.dot*s,shrink=0,radius=W.dot*s/2,
-        fill={tonumber(r,16),tonumber(g,16),tonumber(b,16),math.floor(255*appear)},border_width=1,border_color=fade(W.dot_edge,appear)}
+        fill={tonumber(r,16),tonumber(g,16),tonumber(b,16),255},border_width=1,border_color=W.dot_edge}
     end
   end
   if #dots>0 then
     meta_row[#meta_row+1]=ui.Row{id="palette-dots",gap=W.dot_gap*s,height=W.dot*s,align="center",table.unpack(dots)}
   end
-  children[#children+1]=ui.Row{id="selection-meta",position="absolute",left=0,top=centre.y+W.meta_top*s-lift,width=width,height=W.meta_height*s,
+  children[#children+1]=ui.Row{id="selection-meta",position="absolute",left=0,top=centre.y+W.meta_top*s,width=width,height=W.meta_height*s,
     gap=W.meta_gap*s,align="center",justify="center",table.unpack(meta_row)}
   local nav=W.nav_size*s
   local nav_top=name_top+(W.name_height*s-nav)/2
@@ -268,17 +268,17 @@ local button=W.button_size*s
 local pill_items={
   ui.Box{id="search-field",width=W.search_width*s,height=button,shrink=0,fill="transparent",
     kit.TextInput{id="search",position="absolute",left=0,top=0,width=W.search_width*s,height=button,
-      focus_ring=false,text=ui.bind("extras.query"),placeholder=appear>.5 and "Search wallpapers" or "",
+      focus_ring=false,text=ui.bind("extras.query"),placeholder="Search wallpapers",
       padding_left=(W.search_icon+19)*s,padding_right=12*s,padding_top=(button-kit.tokens.text.body*4/3*1.4)/2,padding_bottom=(button-kit.tokens.text.body*4/3*1.4)/2,
-      radius=button/2,font_size=kit.tokens.text.body*4/3,fill=fade(W.search_fill,appear),
+      radius=button/2,font_size=kit.tokens.text.body*4/3,fill=W.search_fill,
       border_width=search_focused and 1 or 0,border_color="outline"},
     ui.Text{id="search-icon",position="absolute",left=10*s,top=(button-W.search_icon*s*1.15)/2,width=W.search_icon*s,height=W.search_icon*s*1.15,
-      text="search",family="Material Symbols Rounded",font_size=W.search_icon*s,color=fade(W.ink_soft,appear)}}}
+      text="search",family="Material Symbols Rounded",font_size=W.search_icon*s,color=W.ink_soft}}}
 pill_items[#pill_items+1]=glyph_button("shuffle",ui.tr("bead.dashboard.wallpaper-shuffle"),"shuffle",button,W.button_font*s,"transparent","extras.shuffle",true)
 local pill_width=W.pill_padding*2*s+W.search_width*s+button+W.pill_gap*s
 local pill_height=W.pill_height*s
-children[#children+1]=ui.Box{id="wallpaper-controls",position="absolute",left=(width-pill_width)/2,top=centre.y+W.pill_top*s-lift,
-  width=pill_width,height=pill_height,radius=pill_height/2,fill=fade(W.pill_fill,appear),
+children[#children+1]=ui.Box{id="wallpaper-controls",position="absolute",left=(width-pill_width)/2,top=centre.y+W.pill_top*s,
+  width=pill_width,height=pill_height,radius=pill_height/2,fill=W.pill_fill,
   ui.Row{width=pill_width,height=pill_height,padding_left=W.pill_padding*s,padding_right=W.pill_padding*s,gap=W.pill_gap*s,align="center",table.unpack(pill_items)}}
 
 children[#children+1]=ui.Text{id="empty",position="absolute",left=24,top=height/2+40*s,width=width-48,height=W.empty_height,
@@ -299,4 +299,6 @@ children[#children+1]=ui.Text{id="status",position="absolute",left=24,top=height
 return kit.Panel{id="extras",edge="top",open=ui.bind("panel.open"),width=width,height=height,shadow=false,reveal=false,fade=false,slide_distance=0,
   duration=0,return_duration=W.close_ms/1000,palette_tween=false,key_repeat={delay=260,interval=95,min_interval=62,ramp_ms=800}, -- the held-arrow glide clock (spec v5f)
   radius=0,fill="transparent",border_width=1,border_color="transparent",padding=0,gap=0,body="body",on_activate=ui.action("close"),aria_label="Close wallpaper picker",
-  ui.Box{id="body",position="absolute",left=0,top=0,width=width,height=height,fill="transparent",join_edge="top",table.unpack(children)}}
+  ui.Box{id="body",position="absolute",left=0,top=0,width=width,height=height,fill="transparent",join_edge="top",
+    ui.Box{id="veil",position="absolute",left=0,top=0,width=width,height=height,opacity=fade_in,table.unpack(veil)},
+    ui.Box{id="appear",position="absolute",left=0,top=0,width=width,height=height,opacity=fade_in,translate_y=lift,table.unpack(children)}}}

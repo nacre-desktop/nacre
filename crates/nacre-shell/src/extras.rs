@@ -132,6 +132,8 @@ struct State {
     /// The last move came from the wheel, which lands later than a released key.
     wallpaper_wheel: bool,
     wallpaper_gliding: bool,
+    /// Counts the picker's opens: the strand's animation state is per visit, so a reopen never glides in from where the last visit left off.
+    visit: u64,
     /// The visit that holds the desktop's palette (see `Preview::hold_palette`).
     palette_visit: Option<u64>,
     /// Pixel size of the last previewed (or opening) wallpaper, for the strand's caption.
@@ -1262,6 +1264,10 @@ impl Extras {
                 ),
             );
             values.insert(
+                "extras.wallpaper.visit".into(),
+                Value::Number(state.visit as f64),
+            );
+            values.insert(
                 "extras.viewport.width".into(),
                 Value::Number((output_width - frame.left - frame.right).max(1.) as f64),
             );
@@ -1380,6 +1386,7 @@ impl Extras {
             // A visit starts its own STRAND_FRAMES burst: a close cut short by this open left its last frame time,
             // and the first interval spanned the whole closed time (the live "220 ms hitch" after a reopen).
             state.frames = FrameLog::default();
+            state.visit += 1;
             state.wallpaper_shown = None;
             state.wallpaper_focus = None;
             state.wallpaper_committed = false;

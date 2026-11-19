@@ -2008,7 +2008,9 @@ fn strand_harness(
         ),
         ("extras.wallpaper.position".into(), Value::Number(position)),
         ("extras.wallpaper.glide".into(), Value::Bool(false)),
-        ("extras.wallpaper.entry_ms".into(), Value::Number(-1.)),
+        ("extras.wallpaper.visit".into(), Value::Number(1.)),
+        // Pinned at the end of the entrance: the goldens show the strand open (the markers are not stepped here).
+        ("extras.wallpaper.entry_ms".into(), Value::Number(250.)),
         (
             "extras.wallpaper.resolution_id".into(),
             Value::Text(selected),
