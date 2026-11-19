@@ -277,6 +277,19 @@ impl Configuration {
             } else {
                 (None, None, None, None)
             };
+        // An unchanged publication writes and reloads nothing: niri reloads on any include's mtime
+        // and refits the active column (lag audit).
+        let unchanged = |candidate: &Path, previous: Option<&[u8]>| {
+            previous
+                .is_some_and(|previous| fs::read(candidate).is_ok_and(|bytes| bytes == previous))
+        };
+        if unchanged(temporary.path(), previous.as_deref())
+            && host_candidate
+                .as_ref()
+                .is_none_or(|candidate| unchanged(candidate.path(), host_previous.as_deref()))
+        {
+            return Ok(serde_json::json!({"unchanged": true}));
+        }
         temporary
             .persist(&self.desktop)
             .map_err(|value| io_error(value.error))?;
@@ -551,6 +564,15 @@ mod tests {
                 .count(),
             1
         );
+        // The same preferences again change no file: nothing is written and niri is not reloaded.
+        runtime.calls.clear();
+        config.set(
+            &serde_json::json!({"scrollSpeed":0.55,"mouseScrollSpeed":2.25}),
+            Duration::from_secs(3),
+            &mut runtime,
+        )?;
+        assert!(runtime.calls.iter().all(|call| call["kind"] != "reload"));
+        assert_eq!(fs::read_to_string(&desktop)?, desktop_text);
 
         fs::write(&desktop, original_desktop)?;
         fs::write(&host, original_host)?;
