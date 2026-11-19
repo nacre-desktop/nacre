@@ -125,6 +125,8 @@ struct State {
     /// Strand moves arrive in bursts (a held arrow, a trackpad): when the last one fired, the newest one that
     /// has not landed with the normal fade yet, and when the last move arrived (the strand glides meanwhile).
     wallpaper_fired_at: Option<Instant>,
+    /// How long the transition that move started runs: the next one waits for it (one fade in flight).
+    wallpaper_fade: Duration,
     wallpaper_pending: Option<(String, CallWake)>,
     wallpaper_moved_at: Option<Instant>,
     /// The last move came from the wheel, which lands later than a released key.
@@ -475,9 +477,10 @@ const THUMB_RETRY_NEXT: Duration = Duration::from_millis(if cfg!(test) { 80 } el
 const THUMB_RETRIES: u8 = 2;
 /// Strand moves, and the wallpaper change they cause, run for this long (out-quint, like the pearls).
 const WALLPAPER_MOVE_MS: u32 = 500;
-/// A burst of moves (a held key, a flick) retargets the wallpaper at most this often, each with a quick fade of
-/// the same length so one finishes before the next starts; no move for `WALLPAPER_RELEASE` lands the last one
-/// with the normal fade (last wins).
+/// One wallpaper transition runs per output at a time: a move that arrives while it fades waits for its end and then
+/// targets the latest pearl (last wins); no move for `WALLPAPER_RELEASE` lands the last one with the normal fade.
+/// Moves closer together than twice this are a glide (a held key, a flick): they follow with a quick fade of this
+/// length.
 const WALLPAPER_RETARGET_CAP: Duration = Duration::from_millis(180);
 const WALLPAPER_GLIDE_FADE_MS: u32 = 180;
 const WALLPAPER_RELEASE: Duration = Duration::from_millis(100);
@@ -1621,18 +1624,16 @@ impl Extras {
             self.activate_wallpaper(id, fade_ms, wake);
         }
     }
-    /// Runs on the runtime's deadline wake: while a burst goes on the held-back move retargets at the cap; once
-    /// it has ended the last pearl lands with the normal fade.
+    /// Runs on the runtime's deadline wake: once the running transition has ended, the held-back move (the latest
+    /// pearl) starts the next one, with the normal fade when the burst is over.
     fn fire_pending_move(&self) {
         let (id, wake, landing) = {
+        state.wallpaper_fade = Duration::from_millis(fade_ms.into());
             let mut state = self.state.borrow_mut();
-            let over = state
-                .wallpaper_moved_at
-                .is_none_or(|at| at.elapsed() >= state.release());
-            let due = state
+            if state
                 .wallpaper_fired_at
-                .is_none_or(|at| at.elapsed() >= WALLPAPER_RETARGET_CAP);
-            if !(over || due) {
+                .is_some_and(|at| at.elapsed() < state.wallpaper_fade)
+            {
                 return;
             }
             let Some((id, wake)) = state.wallpaper_pending.clone() else {
@@ -1657,6 +1658,9 @@ impl Extras {
         if self.kind == Kind::Wallpaper {
             if let Some((id, wheel)) = request
                 .strip_prefix("wallpaper:move:")
+            let over = state
+                .wallpaper_moved_at
+                .is_none_or(|at| at.elapsed() >= state.release());
                 .map(|id| (id, false))
                 .or_else(|| {
                     request
@@ -1664,8 +1668,8 @@ impl Extras {
                         .map(|id| (id, true))
                 })
             {
-                // The wallpaper moves with the strand: the first move of a burst fades at once, then at most
-                // one retarget per cap (the trailing one in `fire_pending_move`); the latest wins.
+                // The wallpaper moves with the strand: one transition in flight. A move that arrives while it
+                // runs waits for its end (the trailing one in `fire_pending_move`), and the latest wins.
                 let now = Instant::now();
                 let mut state = self.state.borrow_mut();
                 state.wallpaper_focus = Some(id.into());
@@ -1681,10 +1685,10 @@ impl Extras {
                 state.wallpaper_moved_at = Some(now);
                 let due = state
                     .wallpaper_fired_at
-                    .is_none_or(|at| now.duration_since(at) >= WALLPAPER_RETARGET_CAP);
+                    .is_none_or(|at| now.duration_since(at) >= state.wallpaper_fade);
                 let burst = state.wallpaper_gliding;
                 drop(state);
-                if burst {
+                if burst || !due {
                     self.state.borrow_mut().wallpaper_pending = Some((id.into(), wake.clone()));
                 }
                 if due {
@@ -2003,8 +2007,12 @@ impl Extras {
     pub fn thumb_retry_at(&self) -> Option<Instant> {
         let state = self.state.borrow();
         let trailing = state.wallpaper_pending.as_ref().and_then(|_| {
-            let release = state.wallpaper_moved_at? + state.release();
-            Some(release.min(state.wallpaper_fired_at? + WALLPAPER_RETARGET_CAP))
+            let ends = state.wallpaper_fired_at? + state.wallpaper_fade;
+            Some(if ends > Instant::now() {
+                ends
+            } else {
+                state.wallpaper_moved_at? + state.release()
+            })
         });
         state
             .thumb_retries

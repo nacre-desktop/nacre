@@ -2672,20 +2672,49 @@ async fn five_quick_moves_end_on_the_last_id() {
             wake.clone(),
         );
     }
-    // The first move fired at once; the cap holds the rest back until its trailing edge.
-    tokio::time::sleep(WALLPAPER_RETARGET_CAP).await;
+    // The first move fired at once; its fade is the one in flight, the rest wait for its end.
+    tokio::time::sleep(Duration::from_millis(WALLPAPER_MOVE_MS.into())).await;
     extras.fire_pending_move();
-    let mut last = None;
+    let (mut last, mut calls) = (None, 0);
     while let Ok(Some((method, params))) =
         tokio::time::timeout(Duration::from_millis(300), lab.calls.recv()).await
     {
         assert_eq!(method, "wallpaper.activate");
         last = Some(params["id"].clone());
+        calls += 1;
     }
     assert_eq!(
         last.as_ref().and_then(Json::as_str),
         Some("/fixture/animated.gif")
     );
+    assert_eq!(calls, 2, "the first step, then one follow to the latest");
+}
+#[tokio::test(flavor = "current_thread")]
+async fn a_step_mid_fade_waits_for_its_end_and_one_after_it_does_not() {
+    let mut lab = lab_with_topics(vec!["wallpaper.active".into()]).await;
+    let (extras, open, wake) = open_picker(&mut lab).await;
+    extras.act("wallpaper:move:/fixture/next.jpg", &open, wake.clone());
+    extras.state.borrow_mut().wallpaper_fade = Duration::from_millis(120);
+    tokio::time::sleep(Duration::from_millis(40)).await;
+    // Mid-fade: held back, not a second transition; the latest of several wins.
+    extras.act("wallpaper:move:/fixture/next.mp4", &open, wake.clone());
+    extras.act("wallpaper:move:/fixture/animated.gif", &open, wake.clone());
+    extras.fire_pending_move();
+    assert_eq!(activated(&mut lab).await, "/fixture/next.jpg");
+    assert!(
+        lab.calls.try_recv().is_err(),
+        "nothing else starts while the fade runs"
+    );
+    let ends = extras.thumb_retry_at().expect("the follow is scheduled");
+    assert!(ends > Instant::now(), "its deadline is the fade's end");
+    tokio::time::sleep(Duration::from_millis(100)).await;
+    extras.fire_pending_move();
+    assert_eq!(activated(&mut lab).await, "/fixture/animated.gif");
+    // A tap after the fade ended starts the next one at once, as before.
+    extras.state.borrow_mut().wallpaper_fade = Duration::from_millis(30);
+    tokio::time::sleep(Duration::from_millis(60)).await;
+    extras.act("wallpaper:move:/fixture/next.jpg", &open, wake);
+    assert_eq!(activated(&mut lab).await, "/fixture/next.jpg");
 }
 #[tokio::test(flavor = "current_thread")]
 async fn a_three_second_hold_retargets_the_wallpaper_at_the_cap_and_ends_on_the_last_id() {
@@ -2708,7 +2737,7 @@ async fn a_three_second_hold_retargets_the_wallpaper_at_the_cap_and_ends_on_the_
     }
     tokio::time::sleep(WALLPAPER_RELEASE).await;
     extras.fire_pending_move(); // the landing
-    // 3 s at one retarget per 180 ms is about 17, plus the leading move and the landing.
+    // 3 s: the 500 ms leading fade, then one follow per 180 ms fade (about 14), and the landing.
     assert!((10..=19).contains(&fires), "a 3 s hold: {fires} retargets");
     assert_eq!(
         extras.state.borrow().wallpaper_shown.as_deref(),
@@ -2732,7 +2761,7 @@ async fn the_predecode_window_is_replanned_only_where_a_move_lands() {
         extras.state.borrow().wallpaper_prefetched,
         "a held-back move leaves the plan alone"
     );
-    tokio::time::sleep(WALLPAPER_RETARGET_CAP).await;
+    tokio::time::sleep(Duration::from_millis(WALLPAPER_MOVE_MS.into())).await;
     let fired = extras.state.borrow().wallpaper_fired_at;
     extras.act("wallpaper:move:/fixture/next.mp4", &open, wake);
     assert_ne!(
