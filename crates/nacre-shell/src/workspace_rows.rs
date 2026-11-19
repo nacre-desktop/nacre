@@ -713,7 +713,8 @@ mod tests {
             {"id":"niri-collection:1","index":1,"name":"work","output":"ext","active":false},
             {"id":"niri-collection:2","index":2,"name":"play","output":"out","active":true}
         ]});
-        let after = |output| collection_stores(&swapped, Some(output))["bar.collection.current"].clone();
+        let after =
+            |output| collection_stores(&swapped, Some(output))["bar.collection.current"].clone();
         assert_eq!(after("out"), Value::Text("niri-collection:2".into()));
         assert_eq!(after("ext"), Value::Text("niri-collection:1".into()));
     }
