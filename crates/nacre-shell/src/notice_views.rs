@@ -79,6 +79,10 @@ fn spec(owner: Owner, style: Style, geometry: Geometry, interactive: bool) -> Pa
             crate::reload::Runtime::panel_session(session, open)
                 .with_trace(style.trace)
                 .with_notification_owner(owner, open)
+                .and_then(|r| {
+                    r.with_notification_frame(crate::placement::Frame::current().bordered)
+                        .map_err(Into::into)
+                })
                 .map(|r| Box::new(r) as Box<dyn bead::wayland::SceneSource>)
                 .map_err(|e| e.to_string())
         }),
@@ -111,11 +115,18 @@ pub fn notices(owner: Owner, style: Style) -> PanelSpec {
         width: 380.,
         bounds: Rect::new(-32., -32., 444., 65.),
         entry: "notifications/main.luau",
-        position: Some(Arc::new(|scene, _, (output_width, _)| {
+        position: Some(Arc::new(|scene, center, output| {
+            if crate::placement::Frame::current().bordered {
+                // With the frame the stack is flush on its inner edge under the bar, like the drawer.
+                return crate::placement::Frame::default()
+                    .positioner(crate::placement::Attachment::ControlCenter)(
+                    scene, center, output,
+                );
+            }
             // Panels ignore the bar's exclusive zone, so clear it here. The scene's
             // 32 px shadow margin sits inside the 12 px QML inset.
             (
-                output_width - scene.bounds.w.ceil() as i32 + SHADOW - INSET,
+                output.0 - scene.bounds.w.ceil() as i32 + SHADOW - INSET,
                 BAR_HEIGHT + INSET - SHADOW,
             )
         })),

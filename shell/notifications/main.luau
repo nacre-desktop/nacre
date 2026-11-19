@@ -114,8 +114,13 @@ for _,n in rows do height+=noticeHeight(n) end
 -- Motion (design review "Timings for 120 Hz", toast): 220 ms in, sliding 24 px from the right with the fade; 200 ms
 -- out. D16: the kit opens with its EaseOut (the review asks out-quint) and closes with its accelerate curve, at most
 -- .75 x the open duration (165 ms), until the B0263 easing tokens land.
+-- With the screen frame the stack sits flush on its inner edge and grows out of it, like the control centre drawer.
+-- Hosts that never set the store (the headless checks) are not framed.
+local ok,framed=pcall(function() return ui.resolve_for_check(ui.bind("notifications.frame")) end)
+local frame=ok and framed==true
 return ui.Column{edge="right",id="notifications",width=W,height=math.max(1,math.min(720,height)),fill="transparent",radius=0,
-    open=ui.bind("notifications.open"),duration=.22,return_duration=.2,slide_distance=24,
+    open=ui.bind("notifications.open"),duration=.22,return_duration=.2,slide_distance=frame and W or 24,
+    reveal=frame,fade=not frame,
     require("bead.widgets.kit.virtual-list"){id="stream",width=W,height=math.max(1,math.min(720,height)),
         scroll=ui.bind("notifications.scroll.y"),model=ui.bind("notifications.rows"),key="id",
         row_height=noticeHeight,gap=GAP,render=notice},

@@ -4999,6 +4999,18 @@ impl Runtime {
             .map_err(|error| error.to_string())?;
         Ok(self)
     }
+    /// Whether the notification stack docks on the screen frame (`notifications/main.luau`).
+    pub fn with_notification_frame(mut self, framed: bool) -> Result<Self, String> {
+        self.session.stores = self
+            .session
+            .stores
+            .reconcile(&BTreeMap::from([(
+                "notifications.frame".into(),
+                bead::core::Value::Bool(framed),
+            )]))
+            .map_err(|error| error.to_string())?;
+        Ok(self)
+    }
     pub fn with_panel_geometry(mut self, width: f64, height: f64) -> Result<Self, String> {
         self.session.stores = self
             .session
