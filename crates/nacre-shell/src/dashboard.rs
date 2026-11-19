@@ -18,7 +18,7 @@ use std::{
     path::{Path, PathBuf},
     sync::{
         Arc,
-        atomic::{AtomicU64, Ordering},
+        atomic::{AtomicBool, AtomicU64, Ordering},
     },
 };
 
@@ -558,6 +558,8 @@ pub struct Dashboard {
     client: Option<crate::nacre_source::Client>,
     notify: std::cell::RefCell<Option<Notify>>,
     projection_epoch: Arc<AtomicU64>,
+    /// False while the panel is closed: a warm retained session must not re-stage on source ticks.
+    awake: Arc<AtomicBool>,
     ticker: std::cell::RefCell<Option<Ticker>>,
     now: fn() -> u64,
     preview: bool,
@@ -603,6 +605,7 @@ impl Dashboard {
             client: None,
             notify: Default::default(),
             projection_epoch: Arc::new(AtomicU64::new(0)),
+            awake: Arc::new(AtomicBool::new(true)),
             ticker: Default::default(),
             now: now_ms,
             preview,
@@ -699,6 +702,7 @@ impl Dashboard {
     pub fn project_with_stores(&self, stores: &bead::core::Stores) -> BTreeMap<String, Value> {
         let mut values = self.project();
         let open = stores.get("panel.open") != Some(&Value::Bool(false));
+        self.awake.store(open, Ordering::Release);
         // Per-frame work (preview, countdown) needs a panel that is explicitly open.
         let shown = stores.get("panel.open") == Some(&Value::Bool(true));
         if self.page != Page::Today || !shown {
@@ -787,16 +791,29 @@ impl Dashboard {
         let notify: Notify = {
             let notify = notify.clone();
             let epoch = self.projection_epoch.clone();
+            let awake = self.awake.clone();
             Arc::new(move |event| {
                 epoch.fetch_add(1, Ordering::AcqRel);
-                notify(event);
+                // Opening changes panel.open, which re-projects with the bumped epoch.
+                if awake.load(Ordering::Acquire) {
+                    notify(event);
+                }
             })
         };
         *self.notify.borrow_mut() = Some(notify.clone());
         if let Some(desktop) = &self.desktop {
             let notify = notify.clone();
-            *self.desktop_subscription.borrow_mut() = Some(desktop.subscribe(move |_| {
-                notify(bead::wayland::UiEvent::Model(BTreeMap::new()));
+            // Only the fields the preview gate reads; the service revises on every sensor tick.
+            let last = std::sync::Mutex::new(None);
+            *self.desktop_subscription.borrow_mut() = Some(desktop.subscribe(move |snapshot| {
+                let key = (
+                    snapshot.battery.on_battery,
+                    snapshot.session.locked,
+                    snapshot.session.sleeping,
+                );
+                if last.lock().unwrap_or_else(|e| e.into_inner()).replace(key) != Some(key) {
+                    notify(bead::wayland::UiEvent::Model(BTreeMap::new()));
+                }
             }));
         }
         let callback: Callback = {

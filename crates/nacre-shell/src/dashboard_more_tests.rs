@@ -621,6 +621,43 @@ fn the_countdown_wake_runs_only_while_a_session_is_visible_and_running() -> Resu
     Ok(())
 }
 
+#[test]
+fn a_closed_panel_ignores_source_updates_until_it_opens() -> Result<()> {
+    use bead::wayland::UiEvent;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    let source = Arc::new(FakeSource::new(fixture("focus"))?);
+    let dashboard = Dashboard::new(Page::Focus, source.clone(), None, true).with_now(fixed_now);
+    let wakes = Arc::new(AtomicUsize::new(0));
+    let counter = wakes.clone();
+    let _subscriptions = dashboard.subscribe(Arc::new(move |_: UiEvent| {
+        counter.fetch_add(1, Ordering::Relaxed);
+    }))?;
+    let stores = |open| {
+        bead::core::Stores::default()
+            .reconcile(&BTreeMap::from([("panel.open".into(), Value::Bool(open))]))
+    };
+    dashboard.project_with_stores(&stores(false)?);
+    let before = (
+        wakes.load(Ordering::Relaxed),
+        dashboard.projection_epoch.load(Ordering::Relaxed),
+    );
+    let changed = |n| {
+        let mut data = fixture("focus");
+        data["tick"] = json!(n);
+        data
+    };
+    source.publish(changed(1))?;
+    assert_eq!(wakes.load(Ordering::Relaxed), before.0, "closed: no stage");
+    assert!(
+        dashboard.projection_epoch.load(Ordering::Relaxed) > before.1,
+        "closed: the next projection is still fresh"
+    );
+    dashboard.project_with_stores(&stores(true)?);
+    source.publish(changed(2))?;
+    assert!(wakes.load(Ordering::Relaxed) > before.0, "open: stages");
+    Ok(())
+}
+
 fn media(now: fn() -> u64) -> Dashboard {
     Dashboard::new(
         Page::Media,
