@@ -453,19 +453,19 @@ fn drag_visuals_are_quiet_and_drag_surfaces_are_layer_canvases() {
 
 #[test]
 fn the_owner_layout_migrates_pixel_identically() {
-    // Geometry from N0237 (D1 status cluster, power outside the pill); the hash pins the pixels, including the N0315 logo.
+    // Geometry from N0237 (D1 status cluster, power outside the pill; the end items carry the pill's end padding so their hover reaches its edge); the hash pins the pixels, including the N0315 logo.
     let expected = [
         ("launcher", 15., 32.),
         ("workspaces", 59., 10.),
         ("title", 928., 65.),
         ("status-pill", 1551., 311.),
-        ("updates", 1556., 38.),
+        ("updates", 1551., 43.),
         ("sound", 1594., 38.),
         ("wifi", 1632., 38.),
         ("bluetooth", 1670., 38.),
         ("battery", 1708., 38.),
         ("notifications", 1746., 38.),
-        ("clock", 1784., 73.),
+        ("clock", 1784., 78.),
         ("power", 1871., 34.),
     ];
     let mut harness = bar_harness(&owner_layout(), false);
@@ -481,7 +481,7 @@ fn the_owner_layout_migrates_pixel_identically() {
     });
     assert_eq!(
         (actual, hash),
-        (expected.to_vec(), 8611465041795366170),
+        (expected.to_vec(), 2071879591103256807),
         "N0237 bar geometry and pixels"
     );
 }
