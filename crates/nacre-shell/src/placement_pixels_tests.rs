@@ -81,6 +81,9 @@ fn assert_interior(qml: &Pixels, bead: &Pixels, fill: [u8; 4], name: &str) -> Re
 }
 #[test]
 fn all_popout_and_launcher_placement_masks_match_qml() -> Result<()> {
+    let _live = crate::placement::LIVE_TEST
+        .lock()
+        .unwrap_or_else(|p| p.into_inner());
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../shell");
     let palette = Palette::read(&root.join("tests/fixtures/palette-qml.json"))?;
     let cases: serde_json::Value = serde_json::from_str(include_str!(

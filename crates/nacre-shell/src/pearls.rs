@@ -924,6 +924,9 @@ mod tests {
 
     #[test]
     fn the_landing_guide_follows_a_palette_change() {
+        let _live = crate::placement::LIVE_TEST
+            .lock()
+            .unwrap_or_else(|p| p.into_inner());
         let startup = ink();
         let mut colors = Palette::read(
             &std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../shell/palette.json"),
@@ -933,7 +936,6 @@ mod tests {
         .iter()
         .map(|(k, v)| (k.clone(), *v))
         .collect::<std::collections::BTreeMap<_, _>>();
-        let original = colors.clone();
         colors.insert("primary".into(), [20, 200, 90, 255]);
         assert!(crate::placement::set_live_palette(&colors));
         let mut source = GuideSource {
@@ -949,7 +951,7 @@ mod tests {
             staged.asset_data,
             guide_scene(&guide(Edge::Top), &startup).asset_data
         );
-        crate::placement::set_live_palette(&original);
+        crate::placement::clear_live_palette();
     }
 
     #[test]

@@ -845,16 +845,17 @@ fn dashboard_closed_page_releases_sources() -> Result<()> {
                 .map(|source| source.clone() as Arc<dyn Source>),
             false,
         )?;
-        let events = Arc::new(AtomicUsize::new(0));
-        let callback_events = events.clone();
-        runtime.services(Box::new(move |_: UiEvent| {
-            callback_events.fetch_add(1, Ordering::Relaxed);
-        }));
+        // The dashboard starts asleep: project once (wakes it) before the sources subscribe.
         let scene = runtime
             .session
             .update_model(BTreeMap::new())?
             .ok_or("page Sources must materialize the page state")?;
         runtime.session.commit(scene);
+        let events = Arc::new(AtomicUsize::new(0));
+        let callback_events = events.clone();
+        runtime.services(Box::new(move |_: UiEvent| {
+            callback_events.fetch_add(1, Ordering::Relaxed);
+        }));
         assert_eq!(
             runtime.session.stores.get("dashboard.ready"),
             Some(&Value::Bool(true)),
@@ -1112,6 +1113,10 @@ fn dashboard_source_wakes_keep_last_good_data_and_drop_with_page() -> Result<()>
             None,
             true,
         )?;
+        // The dashboard starts asleep; the first projection with the panel open wakes it.
+        if let Some(scene) = runtime.stage(UiEvent::Model(BTreeMap::new()))? {
+            runtime.session.commit(scene);
+        }
         let (tx, rx) = mpsc::channel();
         runtime.services(Box::new(move |event| {
             let _ = tx.send(event);
@@ -1150,10 +1155,7 @@ fn dashboard_source_wakes_keep_last_good_data_and_drop_with_page() -> Result<()>
 fn unchanged_source_and_store_revisions_do_not_reproject_dashboard_over_animation_ticks()
 -> Result<()> {
     use bead::wayland::{SceneSource, UiEvent};
-    use std::{
-        sync::{atomic::Ordering, mpsc},
-        time::Duration,
-    };
+    use std::sync::{atomic::Ordering, mpsc};
     let source = Arc::new(FakeSource::new(fixture("today"))?);
     let mut harness = Harness::load(
         &root(),
@@ -1182,7 +1184,7 @@ fn unchanged_source_and_store_revisions_do_not_reproject_dashboard_over_animatio
     if let Some(scene) = runtime.stage(UiEvent::Reload)? {
         runtime.session.commit(scene);
     }
-    let _ = rx.recv_timeout(Duration::from_millis(200))?;
+    assert!(rx.try_recv().is_err(), "a closed dashboard stays asleep");
     assert_eq!(
         runtime.test_reload_events(),
         1,
@@ -1546,16 +1548,17 @@ fn dashboard_extras_release_sources_on_retirement() -> Result<()> {
             None,
             false,
         )?;
-        let events = Arc::new(AtomicUsize::new(0));
-        let counter = events.clone();
-        runtime.services(Box::new(move |_: UiEvent| {
-            counter.fetch_add(1, Ordering::Relaxed);
-        }));
+        // The dashboard starts asleep: project once (wakes it) before the sources subscribe.
         let scene = runtime
             .session
             .update_model(BTreeMap::new())?
             .ok_or("page state")?;
         runtime.session.commit(scene);
+        let events = Arc::new(AtomicUsize::new(0));
+        let counter = events.clone();
+        runtime.services(Box::new(move |_: UiEvent| {
+            counter.fetch_add(1, Ordering::Relaxed);
+        }));
         assert_eq!(
             runtime.session.stores.get("dashboard.ready"),
             Some(&Value::Bool(true))

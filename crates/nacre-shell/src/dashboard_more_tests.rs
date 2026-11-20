@@ -546,16 +546,17 @@ fn pages_release_their_sources_on_retirement() -> Result<()> {
         );
         let mut runtime =
             crate::reload::Runtime::new(harness.session).with_dashboard_view(dashboard)?;
-        let events = Arc::new(AtomicUsize::new(0));
-        let counter = events.clone();
-        runtime.services(Box::new(move |_: UiEvent| {
-            counter.fetch_add(1, Ordering::Relaxed);
-        }));
+        // The dashboard starts asleep: project once (wakes it) before the sources subscribe.
         let scene = runtime
             .session
             .update_model(BTreeMap::new())?
             .ok_or("page state")?;
         runtime.session.commit(scene);
+        let events = Arc::new(AtomicUsize::new(0));
+        let counter = events.clone();
+        runtime.services(Box::new(move |_: UiEvent| {
+            counter.fetch_add(1, Ordering::Relaxed);
+        }));
         let subscribed = events.load(Ordering::Relaxed);
         assert!(subscribed > 0);
         drop(runtime);
@@ -2072,6 +2073,8 @@ fn dashboard_wakes_on_a_preference_change_and_core_tabs_follow_dashboard_tabs() 
     };
     // No `tabs` key: Nacre's registry order (media before weather).
     assert_eq!(ids(&dashboard), ["today", "media", "weather", "system"]);
+    // The dashboard starts asleep; a projection with the panel open wakes it.
+    dashboard.project_with_stores(&bead::core::Stores::default());
     let woken = Arc::new(std::sync::atomic::AtomicUsize::new(0));
     let counter = woken.clone();
     let _subscriptions = dashboard

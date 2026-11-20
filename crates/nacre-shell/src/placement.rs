@@ -111,6 +111,14 @@ static LIVE_INK: std::sync::Mutex<Option<crate::pearls::Ink>> = std::sync::Mutex
 pub(crate) fn live_ink() -> Option<crate::pearls::Ink> {
     *LIVE_INK.lock().unwrap_or_else(|p| p.into_inner())
 }
+/// Tests that publish a live palette (or render against the QML palette) hold this, then clear it.
+#[cfg(test)]
+pub(crate) static LIVE_TEST: std::sync::Mutex<()> = std::sync::Mutex::new(());
+#[cfg(test)]
+pub(crate) fn clear_live_palette() {
+    *LIVE_INK.lock().unwrap_or_else(|p| p.into_inner()) = None;
+    *LIVE_COLORS.lock().unwrap_or_else(|p| p.into_inner()) = None;
+}
 /// B0056: a panel another process draws (the AI sidebar app) still takes its place in the frame.
 /// The host describes it (edge attachment and body size); the frame tiles then leave it out.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -1202,6 +1210,7 @@ mod tests {
     /// The no-border card (sheets, pearls) wears the live palette, not the one the chrome was built with.
     #[test]
     fn card_ink_follows_every_live_palette() {
+        let _live = LIVE_TEST.lock().unwrap_or_else(|p| p.into_inner());
         let colors = colors();
         let chrome = Chrome::new(Attachment::ControlCenter, &colors).unwrap();
         let frame = Frame {
@@ -1223,8 +1232,7 @@ mod tests {
             }));
             assert_eq!(seen.last().unwrap(), &Some(surface));
         }
-        *LIVE_INK.lock().unwrap() = None;
-        *LIVE_COLORS.lock().unwrap() = None;
+        clear_live_palette();
     }
     #[test]
     fn attached_position_and_chrome_follow_the_luau_edge() {
