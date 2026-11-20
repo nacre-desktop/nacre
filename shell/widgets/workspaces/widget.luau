@@ -80,15 +80,6 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
             local stack_control_width=cap_style and t.cap_pad_left+t.cap_icon+t.cap_gap+cap_name_width+t.cap_pad_right or strand_width+2*t.strand_pad
             -- The control's trailing pad plus the capsule gap puts the current pearl 6 px after the strand.
             local collection_width=show_collections and stack_control_width+2*capsule_gap+1 or 0
-            -- The tooltip's centre: the current stack square (the whole control in the name style), in capsule coordinates.
-            -- The tooltip is the capsule's height and radius, so it covers what is under it as one layer.
-            local tip_width=math.max(t.pill_height,math.ceil(ui.text_width(current_collection_name,stack_family,t.cap_font))+spacing.sm*2)
-            local tip_x=5+stack_control_width/2
-            if not cap_style then
-                tip_x=5+t.strand_pad
-                for i=first,cur-1 do tip_x+=select(3,stack_size(i)) end
-                tip_x+=select(3,stack_size(cur))/2
-            end
             local active_left,active_width,active_accent,active_icon_mode
             local cursor=0
             for _,item in workspaces do
@@ -101,15 +92,17 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
                     width=32+shown*18+(overflow~="" and 20 or 0)+(hinted and 4 or 0)
                 end
                 if item.active then
-                    active_left=5+collection_width+cursor+gs
+                    active_left=cursor+gs
                     active_width=width
                     active_accent=pearl_accent((item.index or 1)-1)
                     active_icon_mode=item.icon_mode==true
                 end
                 cursor+=gs+width+capsule_gap
             end
-            local natural_width=10+cursor-(#workspaces>0 and capsule_gap or 0)+collection_width
-            local pill_width=ui.animate("workspaces.pill.width:"..props.instance.iid,natural_width,.16,"out-cubic")
+            local natural_width=10+cursor-(#workspaces>0 and capsule_gap or 0)
+            -- The stack control's width (the fan opening or closing) moves the workspaces at once, so the pill and the
+            -- active capsule take it at once too; only the workspaces' own changes slide (a trailing capsule was a dark circle).
+            local pill_width=collection_width+ui.animate("workspaces.pill.width:"..props.instance.iid,natural_width,.16,"out-cubic")
             -- One stack's pearl layers, centred in a slot that starts at x.
             local function stack_nodes(i,k,x)
                 local size,outer,slot=stack_size(i)
@@ -165,7 +158,7 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
             return ui.Row{id="capsule",width=pill_width,height=t.pill_height,padding_left=5,padding_right=5,gap=capsule_gap,radius=t.pill_radius,fill=c.islands and "transparent" or c.base,clip_children=false,align="center",
             -- QML workspaceThread: a 1 px primary -> secondary -> tertiary line at 12 % behind the pearls, inset 16 px.
             thread and kit.tokens.gradients and ui.Image{id="thread",position="absolute",left=21+collection_width,right=21,top=(t.pill_height-1)/2,height=1,path="bar/assets/workspace-thread.themed.svg"} or ui.Box{id="thread",width=0,height=0,shrink=0,visible=false},
-            active_left and ui.Box{id="active-capsule",position="absolute",left=ui.animate("workspaces.active.left:"..props.instance.iid,active_left,.18,"out-cubic"),top=(t.pill_height-t.active_height)/2,width=ui.animate("workspaces.active.width:"..props.instance.iid,active_width,.16,"out-cubic"),height=t.active_height,radius=t.active_radius,
+            active_left and ui.Box{id="active-capsule",position="absolute",left=5+collection_width+ui.animate("workspaces.active.left:"..props.instance.iid,active_left,.18,"out-cubic"),top=(t.pill_height-t.active_height)/2,width=ui.animate("workspaces.active.width:"..props.instance.iid,active_width,.16,"out-cubic"),height=t.active_height,radius=t.active_radius,
                 fill=active_icon_mode and active_accent or ui.tint(c.base,active_accent,.15),border_width=1,border_color=ui.alpha(active_accent,.24)} or ui.Box{id="active-capsule",width=0,height=0,visible=false,shrink=0},
             -- Keep the child list dense when no stack is advertised, so Repeat still renders.
             collection_control or ui.Box{id="collection-segment",width=0,height=0,visible=false,shrink=0},
@@ -259,8 +252,5 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
                 end
                 return ui.Box{id="cell",width=gs+animated_width,height=t.workspace_height,shrink=0,table.unpack(kids)}
             end},
-            -- The stack name is one hover away: a tooltip on a lone stack (or on an ellipsized cap). Several stacks fan out instead, so no tooltip circle flashes before the fan.
-            show_collections and kit.Tooltip{id="collection-tooltip",edge="top",bar_size=-spacing.sm,left=math.max(0,tip_x-tip_width/2),width=tip_width,height=t.pill_height,radius=t.pill_radius,padding=spacing.sm,visible=stack_hovered and (cap_style and cap_name~=current_collection_name or not cap_style and #collections<2),
-                ui.Text{text=current_collection_name,height=t.pill_height-spacing.sm*2,width="fill",text_align="center",font_size=t.cap_font,family=stack_family,color="onSurface"}} or nil,
         }
     end}}}}}

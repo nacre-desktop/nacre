@@ -1372,7 +1372,20 @@ fn bar_stack_pearls_collapse_fan_and_narrow_bars_keep_app_icons() -> Result<()> 
     // render once (settling alone ended a frame short of it under load).
     std::thread::sleep(std::time::Duration::from_millis(500));
     h.update(BTreeMap::new())?;
+    let active_x = |h: &Harness| {
+        h.scene()
+            .layers
+            .iter()
+            .find(|layer| layer.id.ends_with("active-capsule"))
+            .map(|layer| layer.bounds.x)
+    };
+    let opened = active_x(&h).ok_or("active capsule missing")?;
     settle_harness_animations(&mut h)?;
+    // The active capsule moves with the pearls in the fan's first frame; sliding after them it trailed as a dark circle.
+    assert!(
+        (opened - active_x(&h).ok_or("active capsule missing")?).abs() < 0.5,
+        "the active capsule jumps with the fan"
+    );
     let goes = |h: &Harness| {
         h.session
             .view_nodes()
@@ -2257,8 +2270,8 @@ fn collection_switcher_badge_and_bounded_rename_menu_render() -> Result<()> {
                     "one pearl per stack at {scale}: {name}"
                 );
                 if single {
-                    // The stack's name is centred on its one square, not stuck at the capsule's left edge.
-                    let square = bounds("stack-pearl-1")?;
+                    // The owner's case, one stack: hovering it shows no name tooltip (a dark pill-height circle over
+                    // its square, owner 2026-11-20), on the first hover frame or after it settles.
                     let rect = bead::ui::rect(
                         &nodes
                             .iter()
@@ -2271,29 +2284,24 @@ fn collection_switcher_badge_and_bounded_rename_menu_render() -> Result<()> {
                         x: rect.x + rect.w / 2.,
                         y: rect.y + rect.h / 2.,
                     }])?;
-                    let tip = bar
-                        .scene()
-                        .layers
-                        .iter()
-                        .find(|layer| layer.id.ends_with("collection-tooltip"))
-                        .ok_or("stack tooltip missing")?
-                        .bounds;
-                    assert!(
-                        (tip.x + tip.w / 2. - (square.0 + square.1 / 2.)).abs() <= 2.,
-                        "tooltip {tip:?} centred on its square {square:?} at {scale}"
-                    );
-                    // The owner's case: a short name over its one square, looked at in a golden.
                     let hover = bar.pose((0., 0.), 1.)?;
+                    settle_harness_animations(&mut bar)?;
+                    assert!(
+                        !bar.scene()
+                            .layers
+                            .iter()
+                            .any(|layer| layer.id.ends_with("collection-tooltip")),
+                        "no stack tooltip over one stack at {scale}"
+                    );
                     let golden =
-                        root().join(format!("tests/goldens/desk-chip-short-tooltip-{scale}.png"));
+                        root().join(format!("tests/goldens/desk-chip-single-hover-{scale}.png"));
                     if std::env::var("BEAD_UPDATE_GOLDENS").as_deref() == Ok("1") {
                         hover.save(&golden)?;
                     }
                     hover.compare(
                         &golden,
                         bead_test::Tolerance::default(),
-                        &std::env::temp_dir()
-                            .join(format!("nacre-desk-chip-short-tooltip-{scale}")),
+                        &std::env::temp_dir().join(format!("nacre-desk-chip-single-hover-{scale}")),
                     )?;
                 }
             }

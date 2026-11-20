@@ -553,7 +553,7 @@
  "settings.registry.panels.top-bar.panel.workspaceOverflow.label": "Fold extra apps into +N",
  "settings.registry.panels.top-bar.panel.workspaceOverflow.description": "Off shows every open app of the active workspace instead of three and a +N count.",
  "settings.registry.panels.top-bar.panel.stackStyle.label": "Stack style",
- "settings.registry.panels.top-bar.panel.stackStyle.description": "How the workspace stack shows in the top bar: a strand of pearls (name on hover) or the stack's name.",
+ "settings.registry.panels.top-bar.panel.stackStyle.description": "How the workspace stack shows in the top bar: a strand of pearls or the stack's name.",
  "settings.registry.panels.top-bar.panel.stackStyle.option.pearls": "Pearls",
  "settings.registry.panels.top-bar.panel.stackStyle.option.name": "Name",
  "settings.registry.panels.top-bar.status.badges.description": "Counts on the status icons, such as unread notifications and pending updates.",
