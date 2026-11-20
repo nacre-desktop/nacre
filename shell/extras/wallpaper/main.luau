@@ -135,38 +135,26 @@ local function pearl_node(pearl)
     ui.Box{width=size,height=size,fill="transparent",table.unpack(kids)}}
 end
 
--- Silk: a dark shadow stroke under one iridescent thread. Bead strokes one colour per polyline, so the thread is
--- `silk_segments` short pieces whose colour blends along the five silk stops, drawn opaque; each piece reaches
--- `silk_overlap` px into the next, so no seam or gap shows and the overlap blends nothing. The translucent shadow is
--- one polyline, so no joint is darkened twice. Each thread piece gets a box that hugs its own bit of the curve; the
--- shadow's box spans the whole curve (panel wide, as tall as the sag). That matters only on the CPU renderer, whose
--- repair scratch is sized by the box: one wide, shallow strip, not a panel-sized one. Strand normally renders on GPU.
-local function silk(id,from,to,colour,stroke,overlap,steps)
-  local x0,x1,top,bottom=width*from-overlap,width*to+overlap,math.huge,-math.huge
-  local curve={}
+-- Silk: a dark shadow stroke under the thread, each ONE polyline sampled from the catenary (a point every ~3.5 px,
+-- Bead's cap is 256 points, still within 0.01 px of the curve at 2880 px), so the curve has no joints. Bead strokes
+-- one colour per polyline, so the thread is the wallpaper's `primary` role. The box spans the panel width and the sag
+-- height: a wide, shallow strip, which keeps the CPU renderer's repair scratch small.
+local function silk(id,colour,stroke)
+  local steps=math.min(255,math.ceil(width/3.5))
+  local top,bottom,curve=math.huge,-math.huge,{}
   for step=0,steps do
-    local x=x0+(x1-x0)*step/steps
+    local x=width*step/steps
     local y=base-a*math.cosh((x-centre.x)/a)
     curve[#curve+1]={x,y}
     top,bottom=math.min(top,y),math.max(bottom,y)
   end
   local pad=stroke*s+2
-  local left,box_width,box_height=x0-pad,x1-x0+2*pad,bottom-top+2*pad
+  local left,box_width,box_height=-pad,width+2*pad,bottom-top+2*pad
   local points={}
   for _,point in ipairs(curve) do points[#points+1]={(point[1]-left)/box_width,(point[2]-top+pad)/box_height} end
   return ui.Polyline{id=id,position="absolute",left=left,top=top-pad,width=box_width,height=box_height,points=points,stroke_width=stroke*s,color=colour}
 end
-local function silk_colour(at)
-  local position=at*(#W.silk-1)
-  local i=math.min(#W.silk-2,math.floor(position))
-  local from,to,mix=W.silk[i+1],W.silk[i+2],position-i
-  return {math.floor(from[1]+(to[1]-from[1])*mix),math.floor(from[2]+(to[2]-from[2])*mix),math.floor(from[3]+(to[3]-from[3])*mix),W.silk_alpha}
-end
-local strand_nodes={}
-strand_nodes[#strand_nodes+1]=silk("thread-shadow",0,1,W.silk_shadow,W.silk_stroke+2,0,60)
-for index=1,W.silk_segments do
-  strand_nodes[#strand_nodes+1]=silk("thread-"..index,(index-1)/W.silk_segments,index/W.silk_segments,silk_colour((index-.5)/W.silk_segments),W.silk_stroke,W.silk_overlap,4)
-end
+local strand_nodes={silk("thread-shadow",W.silk_shadow,W.silk_stroke+2),silk("thread","primary",W.silk_stroke)}
 
 local knot=math.max(3,W.knot*s)
 table.sort(placed,function(left,right) return left.offset<right.offset end)
