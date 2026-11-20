@@ -1605,7 +1605,7 @@ async fn wallpaper_runtime_search_and_next_button_dispatch_real_activation() {
         .stage(UiEvent::Scroll {
             x: card.x + card.w / 2.,
             y: card.y + card.h / 2.,
-            delta: 15.,
+            delta: 1.,
         })
         .unwrap();
     runtime.commit();
@@ -1658,6 +1658,85 @@ async fn wallpaper_runtime_search_and_next_button_dispatch_real_activation() {
     );
 }
 
+// Real wheel events reach Strand as whole +1 steps and must take the coalesced wheel path, not the arrow-key one.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_wheel_burst_over_strand_steps_live_and_starts_one_switch_for_its_last_pick() {
+    use bead::wayland::{SceneSource, UiEvent};
+    let mut lab = lab_with_topics(vec!["wallpaper.active".into()]).await;
+    let extras = Extras::new(Kind::Wallpaper, lab.client.clone()).unwrap();
+    start_with_empty_wallpaper_catalogue(&extras);
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../shell");
+    let colors = bead::render::Palette::read(&root.join("palette.json")).unwrap();
+    let cold = crate::sound::fallback(colors.get("surface").unwrap());
+    let session = bead::ui::Session::new(
+        root.clone(),
+        "extras/main.luau".into(),
+        root.join("palette.json"),
+        colors,
+        cold,
+    );
+    let mut runtime = crate::reload::Runtime::panel_session(session, true)
+        .with_extras(extras)
+        .unwrap();
+    runtime.services(Box::new(|_| {}));
+    assert!(runtime.viewport(1920, 1200));
+    runtime.stage(UiEvent::Reload).unwrap();
+    assert!(runtime.commit());
+    for _ in 0..200 {
+        if runtime
+            .stage(UiEvent::Model(BTreeMap::new()))
+            .unwrap()
+            .is_some()
+        {
+            assert!(runtime.commit());
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(5)).await;
+    }
+    while let Ok((method, _)) = lab.calls.try_recv() {
+        assert_eq!(method, "wallpaper.catalogue");
+    }
+    let card = runtime.session.view_nodes().iter().find(|node| {
+        let rect = bead::ui::rect(&node.draw);
+        matches!(&node.action_arg, Some(Value::Text(argument)) if argument.starts_with("wallpaper:select:"))
+            && node.contains(rect.x + rect.w / 2., rect.y + rect.h / 2.)
+    }).expect("a visible wallpaper card");
+    let card = bead::ui::rect(&card.draw);
+    let selection = |runtime: &crate::reload::Runtime| {
+        runtime
+            .session
+            .stores
+            .get("extras.wallpaper.selection_id")
+            .cloned()
+    };
+    let mut picks = vec![selection(&runtime)];
+    for _ in 0..3 {
+        runtime
+            .stage(UiEvent::Scroll {
+                x: card.x + card.w / 2.,
+                y: card.y + card.h / 2.,
+                delta: 1.,
+            })
+            .unwrap();
+        runtime.commit();
+        picks.push(selection(&runtime));
+        tokio::time::sleep(Duration::from_millis(30)).await;
+    }
+    assert!(
+        picks.windows(2).all(|pair| pair[0] != pair[1]),
+        "each wheel step advances the selection by one: {picks:?}"
+    );
+    assert!(lab.calls.try_recv().is_err(), "nothing switches mid-burst");
+    tokio::time::sleep(WALLPAPER_WHEEL_RELEASE).await;
+    let (method, params) = next_wallpaper_runtime_call(&mut runtime, &mut lab.calls).await;
+    assert_eq!(method, "wallpaper.activate");
+    assert_eq!(
+        Some(Value::Text(params["id"].as_str().unwrap().into())),
+        picks.pop().unwrap(),
+        "one switch, for the last pick: {params} after {picks:?}"
+    );
+    assert!(lab.calls.try_recv().is_err(), "and only one");
+}
 async fn next_wallpaper_runtime_call(
     runtime: &mut crate::reload::Runtime,
     calls: &mut mpsc::UnboundedReceiver<(String, Json)>,

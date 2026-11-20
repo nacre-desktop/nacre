@@ -6628,6 +6628,8 @@ impl SceneSource for Runtime {
                     "enter" if self.session.focused_action().is_none() => Some("extras.choose"),
                     _ => None,
                 },
+                // The wheel is its own action, which raises "wallpaper:wheel:" (a burst switches once, on its last
+                // pick); Bead has already cut it into whole steps by the Box's scroll_steps.
                 UiEvent::Scroll { delta, .. }
                     if self
                         .extras
@@ -6635,11 +6637,7 @@ impl SceneSource for Runtime {
                         .is_some_and(|e| e.kind == crate::extras::Kind::Wallpaper)
                         && *delta != 0. =>
                 {
-                    Some(if *delta > 0. {
-                        "extras.next"
-                    } else {
-                        "extras.prev"
-                    })
+                    Some("strand_wheel")
                 }
                 _ => None,
             };
@@ -6678,9 +6676,11 @@ impl SceneSource for Runtime {
                 return Ok(None);
             }
             if let Some(action) = action {
-                let mut values = self
-                    .session
-                    .action_values(action, bead::core::Value::Bool(true))?;
+                let argument = match &event {
+                    UiEvent::Scroll { delta, .. } => bead::core::Value::Number(delta.signum()),
+                    _ => bead::core::Value::Bool(true),
+                };
+                let mut values = self.session.action_values(action, argument)?;
                 let request = match values.get("extras.request") {
                     Some(bead::core::Value::Text(s)) => s.clone(),
                     _ => String::new(),
