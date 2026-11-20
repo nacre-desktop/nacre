@@ -2942,30 +2942,56 @@ async fn a_landed_pick_stays_on_esc_and_enter_adds_no_second_activation() {
     );
 }
 #[tokio::test(flavor = "current_thread")]
-async fn a_key_burst_holds_the_palette_until_its_landing() {
+async fn frames_carry_the_held_palette_until_close_and_the_release_follows_the_landing() {
     let mut lab = lab_with_topics(vec!["wallpaper.active".into()]).await;
+    let preview = Arc::new(crate::wallpaper::Preview::default());
     let (extras, open, wake) = open_picker(&mut lab).await;
-    if let Some(queue) = &extras.wallpaper_actions {
-        queue.lock().unwrap().preview = Some(Arc::new(crate::wallpaper::Preview::default()));
-    }
-    extras.act("wallpaper:move:/fixture/next.jpg", &open, wake.clone());
-    assert!(
-        extras.state.borrow().palette_visit.is_none(),
-        "a single press lands at once"
-    );
-    extras.act("wallpaper:move:/fixture/animated.gif", &open, wake.clone());
-    extras.state.borrow_mut().wallpaper_fade = Duration::from_millis(1);
-    tokio::time::sleep(Duration::from_millis(5)).await;
-    extras.act("wallpaper:move:/fixture/next.mp4", &open, wake.clone());
+    // The hold starts with an open that sees the preview: reopen once it is installed.
+    extras
+        .wallpaper_actions
+        .as_ref()
+        .unwrap()
+        .lock()
+        .unwrap()
+        .preview = Some(preview.clone());
+    extras.project(&closed(&open), Some(wake.clone()));
+    extras.project(&open, Some(wake.clone()));
     assert!(
         extras.state.borrow().palette_visit.is_some(),
-        "a glide fire holds the palette"
+        "open holds the palette"
     );
-    tokio::time::sleep(WALLPAPER_RETARGET_CAP + WALLPAPER_RELEASE).await;
-    extras.fire_pending_move();
+    let palette = |red: u8| {
+        bead::render::Palette(Arc::new(std::collections::HashMap::from([(
+            "primary".to_owned(),
+            [red, 0, 0, 255],
+        )])))
+    };
+    extras.act("wallpaper:move:/fixture/next.jpg", &open, wake.clone());
+    extras.act("wallpaper:move:/fixture/animated.gif", &open, wake.clone());
+    assert_eq!(activated(&mut lab).await, "/fixture/next.jpg");
+    assert_eq!(
+        preview
+            .frame_palette("DP-1", palette(9), Some(palette(1)))
+            .0,
+        palette(1).0,
+        "a landed pick's frame still carries the held palette while open"
+    );
+    extras.project(&closed(&open), Some(wake));
+    assert_eq!(
+        activated(&mut lab).await,
+        "/fixture/animated.gif",
+        "the pending pick lands at close"
+    );
     assert!(
         extras.state.borrow().palette_visit.is_none(),
-        "the landing ends the hold"
+        "close ends the hold"
+    );
+    assert_eq!(
+        preview
+            .frame_palette("DP-1", palette(9), Some(palette(1)))
+            .0,
+        palette(9).0,
+        "after close frames carry their own palette (the release re-ask is the Preview test's)"
     );
 }
 #[test]
