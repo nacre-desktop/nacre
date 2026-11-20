@@ -898,16 +898,17 @@ fn bar_counts_share_icon_hit_areas_and_centered_line_boxes() -> Result<()> {
                 _ => None,
             })
             .ok_or("status pill background missing")?;
-        // The pill keeps a 5 px end pad (12 px from the pill edge to the first glyph box).
+        // The end items' hit areas (and hovers) reach the pill's outer edge; they carry the 5 px end pad inside
+        // (12 px from the pill edge to the first glyph box).
         assert!(
-            (targets[0].1.x - pill_rect.x - 5.).abs() < 0.01,
-            "first hit area starts at the pill's end pad: {:?} in {pill_rect:?}",
+            (targets[0].1.x - pill_rect.x).abs() < 0.01,
+            "first hit area starts at the pill's edge: {:?} in {pill_rect:?}",
             targets[0].1
         );
         let last = targets.last().ok_or("status targets missing")?.1;
         assert!(
-            (last.x + last.w + 5. - (pill_rect.x + pill_rect.w)).abs() < 0.01,
-            "last hit area ends at the pill's end pad"
+            (last.x + last.w - (pill_rect.x + pill_rect.w)).abs() < 0.01,
+            "last hit area ends at the pill's edge"
         );
         for pair in targets.windows(2) {
             assert!(
@@ -946,10 +947,16 @@ fn bar_counts_share_icon_hit_areas_and_centered_line_boxes() -> Result<()> {
             .collect();
         glyphs.sort_by(|a, b| a.1.x.total_cmp(&b.1.x));
         assert_eq!(glyphs.len(), 6, "every status glyph is present: {glyphs:?}");
-        for ((text, glyph), (_, target)) in glyphs.iter().zip(&targets) {
+        // the end items' extra pad moves their glyph box 2.5 px off the target's centre, inward
+        let end_pad = |i: usize, target: &bead::render::Rect| {
+            let shift =
+                if i == 0 { 2.5 } else { 0. } - if i == targets.len() - 1 { 2.5 } else { 0. };
+            target.x + target.w / 2. + shift
+        };
+        for (i, ((text, glyph), (_, target))) in glyphs.iter().zip(&targets).enumerate() {
             assert!((glyph.w - 24.).abs() < 0.01, "{text} box is 24 px");
             assert!(
-                (glyph.x + glyph.w / 2. - (target.x + target.w / 2.)).abs() < 0.51,
+                (glyph.x + glyph.w / 2. - end_pad(i, target)).abs() < 0.51,
                 "status glyph {text} is not centred in its target {target:?}: {glyph:?}"
             );
         }
@@ -1102,6 +1109,67 @@ fn bar_counts_share_icon_hit_areas_and_centered_line_boxes() -> Result<()> {
         "the frame bar keeps its one full-width input rect"
     );
     bar_golden(&light.pose((0., 0.), 1.)?, "bar-parity-light-1")
+}
+
+/// The first item can draw nothing (updates off): the first VISIBLE item takes the pill's end pad, so its hover
+/// reaches the pill's edge and its glyph keeps its place.
+#[test]
+fn bar_first_status_item_absent_the_next_one_reaches_the_pill_edge() -> Result<()> {
+    let mut values = super::initial_models()?;
+    values.extend(parity_models());
+    values.insert("bar.updates.enabled".into(), Value::Bool(false));
+    let mut h = Harness::load(
+        &root(),
+        Path::new("bar/main.luau"),
+        &root().join("palette.json"),
+        values,
+        Config {
+            width: 1920,
+            height: 50,
+            scale: 1.,
+        },
+    )?;
+    settle_harness_animations(&mut h)?;
+    let pill = h
+        .scene()
+        .layers
+        .iter()
+        .find(|layer| layer.id.ends_with("system-pill"))
+        .ok_or("status pill layer missing")?;
+    let pill_rect = h.scene().primitives[pill.own.clone()]
+        .iter()
+        .find_map(|p| match p {
+            bead::render::Primitive::Rounded { rect, .. } => Some(*rect),
+            _ => None,
+        })
+        .ok_or("status pill background missing")?;
+    let first = h
+        .session
+        .view_nodes()
+        .iter()
+        .filter(|node| node.id.contains("system-pill") && node.action.is_some())
+        .map(|node| bead::ui::rect(&node.draw))
+        .min_by(|a, b| a.x.total_cmp(&b.x))
+        .ok_or("status targets missing")?;
+    assert!(
+        (first.x - pill_rect.x).abs() < 0.01,
+        "the first visible item reaches the pill's edge: {first:?} in {pill_rect:?}"
+    );
+    let glyph = bar_texts(&h)
+        .into_iter()
+        .find(|(text, rect)| text.starts_with("volume") && rect.x >= pill_rect.x)
+        .ok_or("sound glyph missing")?
+        .1;
+    assert!(
+        (glyph.x - pill_rect.x - 12.).abs() < 0.51,
+        "the glyph stays 12 px from the pill edge: {glyph:?} in {pill_rect:?}"
+    );
+    h.script([Input::Pointer {
+        x: first.x + first.w / 2.,
+        y: first.y + first.h / 2.,
+    }])?;
+    settle_harness_animations(&mut h)?;
+    bar_golden(&h.pose((0., 0.), 1.)?, "status-pill-hover-no-updates-1")
 }
 
 /// Screen border "none" (the default): transparent bar, three islands and the power button on the silk

@@ -20,11 +20,17 @@ return {id="pill",title="Pill",icon="pill",category="containers",data={topics={}
         for _,child in node.children or {} do if reach(child,left,right) then return true end end
         return false
     end
-    local function render(item,variant)
-        local node=props.render(item,variant)
-        if node then reach(node,item==items[1],item==items[#items]) end
-        return node
+    -- Render every item first: an item can draw nothing (no updates, a hidden battery), so the ends are the first
+    -- and last item that shows. The host then takes the finished nodes.
+    local nodes,shown={},{}
+    for _,item in items do
+        local package=props.catalogue[item.widget]
+        local node=package and props.render(item,package.variants.bar)
+        nodes[item]=node or false
+        if node and not (node.props and node.props.visible==false) then table.insert(shown,item) end
     end
+    for _,item in shown do reach(nodes[item],item==shown[1],item==shown[#shown]) end
+    local function render(item) return nodes[item] or nil end
     return kit.Pill(c.island{id="system-pill",height=t.pill_height,gap=gap,shrink=0,padding_left=0,padding_right=0,align="center",fill=c.base,radius=t.pill_radius,clip_children=true,
         ui.Host{id="pill-host",shape="strip-h",flatten=true,grid={tiles=60,mode="content",regions={left={inline=true},centre={props={id="status",height=t.pill_height,gap=gap,shrink=0,align="center"}},right={inline=true}}},layout=items,catalogue=props.catalogue,render=render},
     })
