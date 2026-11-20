@@ -2728,7 +2728,11 @@ async fn a_wheel_burst_starts_one_switch_on_the_last_pick_after_its_quiet_window
     let mut lab = lab_with_topics(vec!["wallpaper.active".into()]).await;
     let (extras, open, wake) = open_picker(&mut lab).await;
     for id in ["next.jpg", "animated.gif", "next.mp4"] {
-        extras.act(&format!("wallpaper:wheel:/fixture/{id}"), &open, wake.clone());
+        extras.act(
+            &format!("wallpaper:wheel:/fixture/{id}"),
+            &open,
+            wake.clone(),
+        );
         tokio::time::sleep(Duration::from_millis(30)).await;
         extras.fire_pending_move();
     }
