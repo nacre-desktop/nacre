@@ -137,9 +137,10 @@ end
 
 -- Silk: a dark shadow stroke under one iridescent thread. Bead strokes one colour per polyline, so the thread is
 -- `silk_segments` short pieces whose colour blends along the five silk stops, drawn opaque; each piece reaches
--- `silk_overlap` px into the next, so no seam or gap shows and the overlap blends nothing. The translucent shadow is one
--- polyline, so no joint is darkened twice. Each stroke
--- gets a box that hugs its own piece of the curve, so the CPU renderer never needs a panel-sized repair scratch.
+-- `silk_overlap` px into the next, so no seam or gap shows and the overlap blends nothing. The translucent shadow is
+-- one polyline, so no joint is darkened twice. Each thread piece gets a box that hugs its own bit of the curve; the
+-- shadow's box spans the whole curve (panel wide, as tall as the sag). That matters only on the CPU renderer, whose
+-- repair scratch is sized by the box: one wide, shallow strip, not a panel-sized one. Strand normally renders on GPU.
 local function silk(id,from,to,colour,stroke,overlap,steps)
   local x0,x1,top,bottom=width*from-overlap,width*to+overlap,math.huge,-math.huge
   local curve={}
