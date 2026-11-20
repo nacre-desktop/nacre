@@ -698,6 +698,27 @@ fn a_never_opened_panel_is_quiet_for_every_event_until_it_opens_and_after_it_clo
     Ok(())
 }
 
+/// A Today pearl (detached, restored at login) is never opened as a panel: `panel.open` is absent, which counts as
+/// open, so its first projection wakes it and its clock, weather and media keep updating.
+#[test]
+fn a_pearl_without_a_panel_open_store_wakes_on_its_first_projection() -> Result<()> {
+    use bead::wayland::UiEvent;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    let source = Arc::new(FakeSource::new(fixture("focus"))?);
+    let dashboard = Dashboard::new(Page::Focus, source.clone(), None, true).with_now(fixed_now);
+    let wakes = Arc::new(AtomicUsize::new(0));
+    let counter = wakes.clone();
+    let _subscriptions = dashboard.subscribe(Arc::new(move |_: UiEvent| {
+        counter.fetch_add(1, Ordering::Relaxed);
+    }))?;
+    dashboard.project_with_stores(&bead::core::Stores::default());
+    let mut data = fixture("focus");
+    data["tick"] = json!(1);
+    source.publish(data)?;
+    assert!(wakes.load(Ordering::Relaxed) >= 1, "pearl: stages after its first projection");
+    Ok(())
+}
+
 fn media(now: fn() -> u64) -> Dashboard {
     Dashboard::new(
         Page::Media,
