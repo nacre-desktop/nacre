@@ -942,7 +942,10 @@ mod tests {
             .stage(UiEvent::PearlGuide(Arc::new(guide(Edge::Top))))
             .unwrap()
             .unwrap();
-        assert_ne!(staged.asset_data, guide_scene(&guide(Edge::Top), &startup).asset_data);
+        assert_ne!(
+            staged.asset_data,
+            guide_scene(&guide(Edge::Top), &startup).asset_data
+        );
         crate::placement::set_live_palette(&original);
     }
 

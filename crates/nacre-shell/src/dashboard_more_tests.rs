@@ -659,7 +659,8 @@ fn a_closed_panel_ignores_source_updates_until_it_opens() -> Result<()> {
 }
 
 #[test]
-fn a_never_opened_panel_is_quiet_for_every_event_until_it_opens_and_after_it_closes() -> Result<()> {
+fn a_never_opened_panel_is_quiet_for_every_event_until_it_opens_and_after_it_closes() -> Result<()>
+{
     use bead::wayland::UiEvent;
     use std::sync::atomic::{AtomicUsize, Ordering};
     let source = Arc::new(FakeSource::new(fixture("focus"))?);
@@ -690,11 +691,18 @@ fn a_never_opened_panel_is_quiet_for_every_event_until_it_opens_and_after_it_clo
     assert_eq!(wakes.load(Ordering::Relaxed), 0, "never opened: quiet");
     dashboard.project_with_stores(&stores(true)?);
     events(2)?;
-    assert!(wakes.load(Ordering::Relaxed) >= 3, "open: every event stages");
+    assert!(
+        wakes.load(Ordering::Relaxed) >= 3,
+        "open: every event stages"
+    );
     dashboard.project_with_stores(&stores(false)?);
     let settled = wakes.load(Ordering::Relaxed);
     events(3)?;
-    assert_eq!(wakes.load(Ordering::Relaxed), settled, "closed again: quiet");
+    assert_eq!(
+        wakes.load(Ordering::Relaxed),
+        settled,
+        "closed again: quiet"
+    );
     Ok(())
 }
 
@@ -715,7 +723,10 @@ fn a_pearl_without_a_panel_open_store_wakes_on_its_first_projection() -> Result<
     let mut data = fixture("focus");
     data["tick"] = json!(1);
     source.publish(data)?;
-    assert!(wakes.load(Ordering::Relaxed) >= 1, "pearl: stages after its first projection");
+    assert!(
+        wakes.load(Ordering::Relaxed) >= 1,
+        "pearl: stages after its first projection"
+    );
     Ok(())
 }
 
