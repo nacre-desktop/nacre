@@ -119,11 +119,10 @@ type RowsKey = (Option<String>, u64, Option<String>, usize, u64);
 struct State {
     /// The pearl the strand rests on, so the pre-decoded window follows it.
     wallpaper_focus: Option<String>,
-    /// The active wallpaper when the picker opened; closing without a commit restores it.
+    /// The active wallpaper when the picker opened: a pick equal to it changes nothing.
     wallpaper_origin: Option<String>,
-    /// The last id this visit previewed; `None` while the desktop still shows the origin.
+    /// The last id this visit set; `None` while the desktop still shows the origin. Closing keeps it.
     wallpaper_shown: Option<String>,
-    wallpaper_committed: bool,
     /// Strand moves arrive in bursts (a held arrow, a trackpad): when the last one fired, the newest one that
     /// has not landed with the normal fade yet, and when the last move arrived (the strand glides meanwhile).
     wallpaper_fired_at: Option<Instant>,
@@ -136,7 +135,7 @@ struct State {
     wallpaper_gliding: bool,
     /// Counts the picker's opens: the strand's animation state is per visit, so a reopen never glides in from where the last visit left off.
     visit: u64,
-    /// The visit that holds the desktop's palette (see `Preview::hold_palette`).
+    /// The palette hold of the running key burst (see `Preview::hold_palette`); the landing ends it.
     palette_visit: Option<u64>,
     /// Pixel size of the last previewed (or opening) wallpaper, for the strand's caption.
     wallpaper_resolution: Option<(String, u32, u32)>,
@@ -515,8 +514,6 @@ impl StepGate {
 }
 /// A wheel burst starts one wallpaper switch, aimed at its last pearl, this long after its last step (the pearls slide live meanwhile).
 const WALLPAPER_WHEEL_RELEASE: Duration = Duration::from_millis(160);
-/// The Esc restore is a little quicker than a move.
-const WALLPAPER_RESTORE_MS: u32 = 400;
 /// Strand's open storyboard (shell/extras/tokens.luau open_ms): the warm hold waits for it.
 /// The caption's palette dots (shell/extras/tokens.luau palette_roles).
 const SWATCH_ROLES: [&str; 5] = [
@@ -1384,11 +1381,11 @@ impl Extras {
         }
         values
     }
-    /// The picker's visit: remember the wallpaper it opened over, and let a close that was not a
-    /// commit put the original back (a quicker fade).
+    /// The picker's visit: remember the wallpaper it opened over. Every pick is already the real wallpaper, so
+    /// closing keeps it, and a pick still held back by a burst lands now.
     fn wallpaper_visit(&self, open: bool, wake: &Option<CallWake>) {
         let mut state = self.state.borrow_mut();
-        let mut activate = None;
+        let mut landing = None;
         let opening = open && !state.wallpaper_open;
         let closing = !open && state.wallpaper_open;
         if opening || (open && state.wallpaper_origin.is_none() && state.wallpaper_shown.is_none())
@@ -1409,12 +1406,8 @@ impl Extras {
             state.wallpaper_origin = origin;
         }
         if opening || closing {
-            // A move that has not fired yet dies with the visit: Esc restores, nothing is left pending.
-            (
-                state.wallpaper_pending,
-                state.wallpaper_fired_at,
-                state.wallpaper_gliding,
-            ) = (None, None, false);
+            landing = state.wallpaper_pending.take().filter(|_| closing);
+            (state.wallpaper_fired_at, state.wallpaper_gliding) = (None, false);
         }
         if opening {
             // A visit starts its own STRAND_FRAMES burst: a close cut short by this open left its last frame time,
@@ -1423,13 +1416,6 @@ impl Extras {
             state.visit += 1;
             state.wallpaper_shown = None;
             state.wallpaper_focus = None;
-            state.wallpaper_committed = false;
-        } else if !open
-            && state.wallpaper_open
-            && !state.wallpaper_committed
-            && state.wallpaper_shown.take().is_some()
-        {
-            activate = state.wallpaper_origin.clone();
         }
         // Warm while open: taken once the open storyboard has settled (the fade run is not primed under it),
         // dropped on every close (the same single site as the peek).
@@ -1449,31 +1435,32 @@ impl Extras {
         // The one place the desktop peek starts and the one place it ends, whatever closed the picker.
         if opening {
             self.peek_engage(wake);
-            self.hold_palette();
         } else if closing {
             self.peek_release(wake);
-            self.release_palette();
+            if let Some((id, wake)) = landing {
+                self.fire_move(&id, WALLPAPER_MOVE_MS, wake);
+            }
+            self.release_palette(true); // a hold nothing landed on (the last glide pick was the landing)
         } else if open {
             self.peek_resolve(wake);
         }
-        if let Some(id) = activate {
-            let wake = wake.clone().unwrap_or_else(|| Arc::new(|| {}));
-            self.activate_wallpaper(&id, WALLPAPER_RESTORE_MS, wake);
+    }
+    /// A key burst's glides keep the palette the desktop had (no palette tween on the bar and other panels per
+    /// intermediate pick); the landing ends the hold.
+    fn hold_palette(&self) {
+        if self.state.borrow().palette_visit.is_none() {
+            let visit = self
+                .wallpaper_preview()
+                .map(|preview| preview.hold_palette());
+            self.state.borrow_mut().palette_visit = visit;
         }
     }
-    /// The desktop keeps its palette while Strand is open (no palette steps on the bar and other panels per pick).
-    fn hold_palette(&self) {
-        let visit = self
-            .wallpaper_preview()
-            .map(|preview| preview.hold_palette());
-        self.state.borrow_mut().palette_visit = visit;
-    }
-    /// Closing hands the real palette back: one palette-only tween, started with the exit animation.
-    fn release_palette(&self) {
+    /// End the hold. `reask`: no landing follows, so the frame is asked for again to take its palette tween now.
+    fn release_palette(&self, reask: bool) {
         let preview = self.wallpaper_preview();
         let visit = self.state.borrow_mut().palette_visit.take();
         if let (Some(preview), Some(visit)) = (preview, visit) {
-            preview.release_palette(visit);
+            preview.release_palette(visit, reask);
         }
     }
     /// Clear the windows away so the real wallpaper preview is what the owner sees.
@@ -1681,6 +1668,12 @@ impl Extras {
             state.wallpaper_shown = Some(id.into());
         }
         drop(state);
+        if fade_ms == WALLPAPER_GLIDE_FADE_MS {
+            self.hold_palette();
+        } else {
+            // The landing's own frame carries its palette: one tween, like a normal set.
+            self.release_palette(unchanged);
+        }
         if !unchanged {
             self.activate_wallpaper(id, fade_ms, wake);
         }
@@ -1770,23 +1763,12 @@ impl Extras {
                 return;
             }
             if let Some(id) = request.strip_prefix("wallpaper:commit:") {
-                // The shown wallpaper is already the pick; only an id the strand has not previewed fades.
+                // Enter only closes: a landed pick stays, an id not set yet lands now.
                 let mut state = self.state.borrow_mut();
-                state.wallpaper_committed = true;
                 state.wallpaper_pending = None;
                 state.close = true;
-                let shown = state
-                    .wallpaper_shown
-                    .as_ref()
-                    .or(state.wallpaper_origin.as_ref());
-                let unchanged = shown.is_some_and(|shown| shown == id);
-                if !unchanged {
-                    state.wallpaper_shown = Some(id.into());
-                }
                 drop(state);
-                if !unchanged {
-                    self.activate_wallpaper(id, WALLPAPER_MOVE_MS, wake);
-                }
+                self.fire_move(id, WALLPAPER_MOVE_MS, wake);
                 return;
             }
             if let Some(id) = request.strip_prefix("wallpaper:activate:") {

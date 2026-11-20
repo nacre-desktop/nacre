@@ -2888,24 +2888,28 @@ async fn the_predecode_window_is_replanned_only_where_a_move_lands() {
     );
 }
 #[tokio::test(flavor = "current_thread")]
-async fn esc_in_a_burst_drops_the_pending_move_and_restores() {
+async fn a_pending_pick_lands_when_esc_closes_and_nothing_restores_the_origin() {
     let mut lab = lab_with_topics(vec!["wallpaper.active".into()]).await;
     let (extras, open, wake) = open_picker(&mut lab).await;
     extras.act("wallpaper:move:/fixture/next.jpg", &open, wake.clone());
     extras.act("wallpaper:move:/fixture/animated.gif", &open, wake.clone());
     assert_eq!(activated(&mut lab).await, "/fixture/next.jpg");
     extras.project(&closed(&open), Some(wake));
-    assert_eq!(activated(&mut lab).await, "/fixture/current.jpg");
+    assert_eq!(
+        activated(&mut lab).await,
+        "/fixture/animated.gif",
+        "the held-back pick lands"
+    );
     tokio::time::sleep(WALLPAPER_RETARGET_CAP).await;
     extras.fire_pending_move();
     tokio::time::sleep(Duration::from_millis(60)).await;
     assert!(
         lab.calls.try_recv().is_err(),
-        "nothing pending fires after Esc"
+        "once, and the origin never returns"
     );
 }
 #[tokio::test(flavor = "current_thread")]
-async fn closing_restores_the_opening_wallpaper_only_when_a_preview_changed_it() {
+async fn a_landed_pick_stays_on_esc_and_enter_adds_no_second_activation() {
     let mut lab = lab_with_topics(vec!["wallpaper.active".into()]).await;
     let (extras, open, wake) = open_picker(&mut lab).await;
     // Open and close without moving: nothing is activated.
@@ -2914,40 +2918,54 @@ async fn closing_restores_the_opening_wallpaper_only_when_a_preview_changed_it()
         lab.calls.try_recv().is_err(),
         "an untouched visit activates nothing"
     );
-    // A step is undone on close, as the last activation, with the quicker 400 ms fade.
     extras.project(&open, Some(wake.clone()));
     extras.act("wallpaper:move:/fixture/next.jpg", &open, wake.clone());
     assert_eq!(activated(&mut lab).await, "/fixture/next.jpg");
     extras.project(&closed(&open), Some(wake.clone()));
-    assert_eq!(
-        activated(&mut lab).await,
-        "/fixture/current.jpg",
-        "Esc puts the original back"
+    tokio::time::sleep(Duration::from_millis(60)).await;
+    assert!(lab.calls.try_recv().is_err(), "Esc leaves the pick");
+    extras.project(&open, Some(wake.clone()));
+    extras.act("wallpaper:move:/fixture/animated.gif", &open, wake.clone());
+    assert_eq!(activated(&mut lab).await, "/fixture/animated.gif");
+    extras.act(
+        "wallpaper:commit:/fixture/animated.gif",
+        &open,
+        wake.clone(),
     );
-    if let Some(preview) = extras.wallpaper_preview() {
-        assert_eq!(preview.take_fade().map(|fade| fade.duration_ms), Some(400));
-    }
-    extras.project(&closed(&open), Some(wake));
-    assert!(lab.calls.try_recv().is_err());
-}
-#[tokio::test(flavor = "current_thread")]
-async fn enter_on_a_shown_wallpaper_fades_nothing_new_and_closes_without_a_restore() {
-    let mut lab = lab_with_topics(vec!["wallpaper.active".into()]).await;
-    let (extras, open, wake) = open_picker(&mut lab).await;
-    extras.act("wallpaper:move:/fixture/next.jpg", &open, wake.clone());
-    assert_eq!(activated(&mut lab).await, "/fixture/next.jpg");
-    extras.act("wallpaper:commit:/fixture/next.jpg", &open, wake.clone());
     let values = extras.project(&open, Some(wake.clone()));
-    assert_eq!(
-        values["panel.open"],
-        Value::Bool(false),
-        "the commit closes the picker"
-    );
+    assert_eq!(values["panel.open"], Value::Bool(false), "Enter closes");
     extras.project(&closed(&open), Some(wake));
     tokio::time::sleep(Duration::from_millis(60)).await;
     assert!(
         lab.calls.try_recv().is_err(),
-        "the pick was already shown: no new fade and no restore"
+        "the pick had landed: no second activation"
+    );
+}
+#[tokio::test(flavor = "current_thread")]
+async fn a_key_burst_holds_the_palette_until_its_landing() {
+    let mut lab = lab_with_topics(vec!["wallpaper.active".into()]).await;
+    let (extras, open, wake) = open_picker(&mut lab).await;
+    if let Some(queue) = &extras.wallpaper_actions {
+        queue.lock().unwrap().preview = Some(Arc::new(crate::wallpaper::Preview::default()));
+    }
+    extras.act("wallpaper:move:/fixture/next.jpg", &open, wake.clone());
+    assert!(
+        extras.state.borrow().palette_visit.is_none(),
+        "a single press lands at once"
+    );
+    extras.act("wallpaper:move:/fixture/animated.gif", &open, wake.clone());
+    extras.state.borrow_mut().wallpaper_fade = Duration::from_millis(1);
+    tokio::time::sleep(Duration::from_millis(5)).await;
+    extras.act("wallpaper:move:/fixture/next.mp4", &open, wake.clone());
+    assert!(
+        extras.state.borrow().palette_visit.is_some(),
+        "a glide fire holds the palette"
+    );
+    tokio::time::sleep(WALLPAPER_RETARGET_CAP + WALLPAPER_RELEASE).await;
+    extras.fire_pending_move();
+    assert!(
+        extras.state.borrow().palette_visit.is_none(),
+        "the landing ends the hold"
     );
 }
 #[test]

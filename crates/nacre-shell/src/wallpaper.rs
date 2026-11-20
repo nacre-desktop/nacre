@@ -570,9 +570,10 @@ pub(crate) struct Preview {
     fade: Mutex<Option<(bead::wayland::WallpaperFade, Instant)>>,
     hold: Mutex<PaletteHold>,
 }
-/// While Strand is open the desktop keeps wearing the palette it had: every frame carries it, so the bar and the
-/// other panels are not restaged by each pick's palette tween. Per output: the held palette, and whether the
-/// latest frame's own palette differs from it (then closing re-asks for the frame, once, to tween to it).
+/// While a Strand key burst glides the desktop keeps wearing the palette it had: every frame carries it, so the bar
+/// and the other panels are not restaged by each intermediate pick's palette tween. Per output: the held palette,
+/// and whether the latest frame's own palette differs from it (then a release with no landing re-asks for the
+/// frame, once, to tween to it).
 #[derive(Default)]
 struct PaletteHold {
     visit: u64,
@@ -674,9 +675,10 @@ impl Preview {
         hold.visit
     }
 
-    /// End a visit's hold and ask Bead for the frames again when any carried a held palette: the same pixels with
-    /// the real palette take the one palette-only tween. A later visit's hold is left alone.
-    pub(crate) fn release_palette(&self, visit: u64) {
+    /// End a visit's hold. With `reask`, ask Bead for the frames again when any carried a held palette: the same
+    /// pixels with the real palette take the one palette-only tween. Without it a landing follows, whose frame
+    /// carries its own palette. A later visit's hold is left alone.
+    pub(crate) fn release_palette(&self, visit: u64, reask: bool) {
         let outputs = {
             let mut hold = self.hold.lock().unwrap_or_else(|p| p.into_inner());
             if hold.visit != visit {
@@ -684,7 +686,8 @@ impl Preview {
             }
             hold.outputs.take()
         };
-        if outputs.is_some_and(|outputs| outputs.values().any(|(_, differs)| *differs))
+        if reask
+            && outputs.is_some_and(|outputs| outputs.values().any(|(_, differs)| *differs))
             && let Some(changed) = self
                 .changed
                 .lock()
@@ -2451,14 +2454,14 @@ mod tests {
                 "every pick of the visit carries the palette the desktop had"
             );
         }
-        preview.release_palette(visit + 1);
+        preview.release_palette(visit + 1, true);
         assert_eq!(
             asked.load(std::sync::atomic::Ordering::SeqCst),
             0,
             "not this visit's"
         );
         let again = preview.hold_palette();
-        preview.release_palette(visit);
+        preview.release_palette(visit, true);
         assert_eq!(
             asked.load(std::sync::atomic::Ordering::SeqCst),
             0,
@@ -2469,7 +2472,7 @@ mod tests {
             palette(5).0,
             "a new hold starts from the frame it first sees"
         );
-        preview.release_palette(again);
+        preview.release_palette(again, true);
         assert_eq!(
             asked.load(std::sync::atomic::Ordering::SeqCst),
             0,
@@ -2477,7 +2480,15 @@ mod tests {
         );
         let visit = preview.hold_palette();
         preview.frame_palette("DP-1", palette(9), Some(palette(1)));
-        preview.release_palette(visit);
+        preview.release_palette(visit, false);
+        assert_eq!(
+            asked.load(std::sync::atomic::Ordering::SeqCst),
+            0,
+            "a landing follows: no re-ask"
+        );
+        let visit = preview.hold_palette();
+        preview.frame_palette("DP-1", palette(9), Some(palette(1)));
+        preview.release_palette(visit, true);
         assert_eq!(
             asked.load(std::sync::atomic::Ordering::SeqCst),
             1,
