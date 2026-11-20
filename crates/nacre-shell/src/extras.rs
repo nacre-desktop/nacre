@@ -513,8 +513,8 @@ impl StepGate {
         true
     }
 }
-/// The prototype's wheel: the strand lands 240 ms after the last event.
-const WALLPAPER_WHEEL_RELEASE: Duration = Duration::from_millis(240);
+/// A wheel burst starts one wallpaper switch, aimed at its last pearl, this long after its last step (the pearls slide live meanwhile).
+const WALLPAPER_WHEEL_RELEASE: Duration = Duration::from_millis(160);
 /// The Esc restore is a little quicker than a move.
 const WALLPAPER_RESTORE_MS: u32 = 400;
 /// Strand's open storyboard (shell/extras/tokens.luau open_ms): the warm hold waits for it.
@@ -1699,6 +1699,10 @@ impl Extras {
             let over = state
                 .wallpaper_moved_at
                 .is_none_or(|at| at.elapsed() >= state.release());
+            // Wheel steps never start a switch mid-burst (decoding and fading for each starves the GPU): wait for the quiet window.
+            if state.wallpaper_wheel && !over {
+                return;
+            }
             let Some((id, wake)) = state.wallpaper_pending.clone() else {
                 return;
             };
@@ -1743,9 +1747,10 @@ impl Extras {
                     .wallpaper_moved_at
                     .is_some_and(|at| now.duration_since(at) < 2 * WALLPAPER_RETARGET_CAP);
                 state.wallpaper_moved_at = Some(now);
-                let due = state
-                    .wallpaper_fired_at
-                    .is_none_or(|at| now.duration_since(at) >= state.wallpaper_fade);
+                let due = !wheel
+                    && state
+                        .wallpaper_fired_at
+                        .is_none_or(|at| now.duration_since(at) >= state.wallpaper_fade);
                 let burst = state.wallpaper_gliding;
                 drop(state);
                 if burst || !due {
@@ -2068,10 +2073,13 @@ impl Extras {
         let state = self.state.borrow();
         let trailing = state.wallpaper_pending.as_ref().and_then(|_| {
             let ends = state.wallpaper_fired_at? + state.wallpaper_fade;
-            Some(if ends > Instant::now() {
+            let quiet = state.wallpaper_moved_at? + state.release();
+            Some(if state.wallpaper_wheel {
+                ends.max(quiet)
+            } else if ends > Instant::now() {
                 ends
             } else {
-                state.wallpaper_moved_at? + state.release()
+                quiet
             })
         });
         state

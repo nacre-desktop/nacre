@@ -2724,6 +2724,22 @@ async fn a_step_mid_fade_waits_for_its_end_and_one_after_it_does_not() {
     assert_eq!(activated(&mut lab).await, "/fixture/next.jpg");
 }
 #[tokio::test(flavor = "current_thread")]
+async fn a_wheel_burst_starts_one_switch_on_the_last_pick_after_its_quiet_window() {
+    let mut lab = lab_with_topics(vec!["wallpaper.active".into()]).await;
+    let (extras, open, wake) = open_picker(&mut lab).await;
+    for id in ["next.jpg", "animated.gif", "next.mp4"] {
+        extras.act(&format!("wallpaper:wheel:/fixture/{id}"), &open, wake.clone());
+        tokio::time::sleep(Duration::from_millis(30)).await;
+        extras.fire_pending_move();
+    }
+    assert!(lab.calls.try_recv().is_err(), "nothing starts mid-burst");
+    tokio::time::sleep(WALLPAPER_WHEEL_RELEASE).await;
+    extras.fire_pending_move();
+    assert_eq!(activated(&mut lab).await, "/fixture/next.mp4");
+    assert!(lab.calls.try_recv().is_err(), "one switch for the burst");
+    assert!(extras.state.borrow().wallpaper_pending.is_none());
+}
+#[tokio::test(flavor = "current_thread")]
 async fn a_three_second_hold_retargets_the_wallpaper_at_the_cap_and_ends_on_the_last_id() {
     let mut lab = lab_with_topics(vec!["wallpaper.active".into()]).await;
     let (extras, open, wake) = open_picker(&mut lab).await;
