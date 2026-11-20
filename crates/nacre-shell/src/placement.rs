@@ -108,6 +108,9 @@ pub fn set_live_palette(palette: &std::collections::BTreeMap<String, [u8; 4]>) -
 }
 /// The live card ink (no-border sheets and pearls): body, rim and shadow follow every palette.
 static LIVE_INK: std::sync::Mutex<Option<crate::pearls::Ink>> = std::sync::Mutex::new(None);
+pub(crate) fn live_ink() -> Option<crate::pearls::Ink> {
+    *LIVE_INK.lock().unwrap_or_else(|p| p.into_inner())
+}
 /// B0056: a panel another process draws (the AI sidebar app) still takes its place in the frame.
 /// The host describes it (edge attachment and body size); the frame tiles then leave it out.
 #[derive(Clone, Copy, Debug, PartialEq)]

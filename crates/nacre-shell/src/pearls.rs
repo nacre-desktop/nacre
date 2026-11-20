@@ -672,7 +672,8 @@ impl SceneSource for GuideSource {
                 if !self.film {
                     guide.film = None;
                 }
-                self.scene = guide_scene(&guide, &self.ink);
+                // The landing bars follow the live palette, not the one the guide was built with at startup.
+                self.scene = guide_scene(&guide, &crate::placement::live_ink().unwrap_or(self.ink));
                 self.scene.resource_revision += 1;
                 Ok(Some(self.scene.clone()))
             }
@@ -919,6 +920,30 @@ mod tests {
             landing: Some((960., 50.)),
             film: None,
         }
+    }
+
+    #[test]
+    fn the_landing_guide_follows_a_palette_change() {
+        let startup = ink();
+        let mut colors = Palette::read(
+            &std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../shell/palette.json"),
+        )
+        .unwrap()
+        .0;
+        let original = colors.clone();
+        colors.insert("primary".into(), [20, 200, 90, 255]);
+        assert!(crate::placement::set_live_palette(&colors));
+        let mut source = GuideSource {
+            ink: startup,
+            scene: blank(1., 1.),
+            film: false,
+        };
+        let staged = source
+            .stage(UiEvent::PearlGuide(Arc::new(guide(Edge::Top))))
+            .unwrap()
+            .unwrap();
+        assert_ne!(staged.asset_data, guide_scene(&guide(Edge::Top), &startup).asset_data);
+        crate::placement::set_live_palette(&original);
     }
 
     #[test]
