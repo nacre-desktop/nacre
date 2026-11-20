@@ -558,7 +558,8 @@ pub struct Dashboard {
     client: Option<crate::nacre_source::Client>,
     notify: std::cell::RefCell<Option<Notify>>,
     projection_epoch: Arc<AtomicU64>,
-    /// False while the panel is closed: a warm retained session must not re-stage on source ticks.
+    /// False until the first projection finds the panel open, and again while it is closed: a warm retained
+    /// session (opened or never opened) must not re-stage on source, settings, prefs, desktop or poster events.
     awake: Arc<AtomicBool>,
     ticker: std::cell::RefCell<Option<Ticker>>,
     now: fn() -> u64,
@@ -605,7 +606,7 @@ impl Dashboard {
             client: None,
             notify: Default::default(),
             projection_epoch: Arc::new(AtomicU64::new(0)),
-            awake: Arc::new(AtomicBool::new(true)),
+            awake: Arc::new(AtomicBool::new(false)),
             ticker: Default::default(),
             now: now_ms,
             preview,

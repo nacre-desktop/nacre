@@ -658,6 +658,46 @@ fn a_closed_panel_ignores_source_updates_until_it_opens() -> Result<()> {
     Ok(())
 }
 
+#[test]
+fn a_never_opened_panel_is_quiet_for_every_event_until_it_opens_and_after_it_closes() -> Result<()> {
+    use bead::wayland::UiEvent;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    let source = Arc::new(FakeSource::new(fixture("focus"))?);
+    let prefs = Arc::new(FakeSource::new(json!({}))?);
+    let dashboard = Dashboard::new(Page::Focus, source.clone(), None, true)
+        .with_prefs(Some(prefs.clone() as Arc<dyn Source>))
+        .with_now(fixed_now);
+    let wakes = Arc::new(AtomicUsize::new(0));
+    let counter = wakes.clone();
+    let _subscriptions = dashboard.subscribe(Arc::new(move |_: UiEvent| {
+        counter.fetch_add(1, Ordering::Relaxed);
+    }))?;
+    // The desktop, poster and video paths all send through this stored callback.
+    let direct = dashboard.notify.borrow().clone().ok_or("no notify")?;
+    let events = |n: u64| -> Result<()> {
+        let mut data = fixture("focus");
+        data["tick"] = json!(n);
+        source.publish(data)?;
+        prefs.publish(json!({"tick": n}))?;
+        direct(UiEvent::Model(BTreeMap::new()));
+        Ok(())
+    };
+    let stores = |open| {
+        bead::core::Stores::default()
+            .reconcile(&BTreeMap::from([("panel.open".into(), Value::Bool(open))]))
+    };
+    events(1)?;
+    assert_eq!(wakes.load(Ordering::Relaxed), 0, "never opened: quiet");
+    dashboard.project_with_stores(&stores(true)?);
+    events(2)?;
+    assert!(wakes.load(Ordering::Relaxed) >= 3, "open: every event stages");
+    dashboard.project_with_stores(&stores(false)?);
+    let settled = wakes.load(Ordering::Relaxed);
+    events(3)?;
+    assert_eq!(wakes.load(Ordering::Relaxed), settled, "closed again: quiet");
+    Ok(())
+}
+
 fn media(now: fn() -> u64) -> Dashboard {
     Dashboard::new(
         Page::Media,
