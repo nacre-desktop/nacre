@@ -136,8 +136,9 @@ local function pearl_node(pearl)
 end
 
 -- Silk: a dark shadow stroke under one iridescent thread. Bead strokes one colour per polyline, so the thread is
--- `silk_segments` short pieces whose colour blends along the five silk stops at one steady alpha; each piece reaches
--- `silk_overlap` px into the next, so no seam, gap or step in brightness shows anywhere, tails included. Each stroke
+-- `silk_segments` short pieces whose colour blends along the five silk stops, drawn opaque; each piece reaches
+-- `silk_overlap` px into the next, so no seam or gap shows and the overlap blends nothing. The translucent shadow is one
+-- polyline, so no joint is darkened twice. Each stroke
 -- gets a box that hugs its own piece of the curve, so the CPU renderer never needs a panel-sized repair scratch.
 local function silk(id,from,to,colour,stroke,overlap,steps)
   local x0,x1,top,bottom=width*from-overlap,width*to+overlap,math.huge,-math.huge
@@ -161,7 +162,7 @@ local function silk_colour(at)
   return {math.floor(from[1]+(to[1]-from[1])*mix),math.floor(from[2]+(to[2]-from[2])*mix),math.floor(from[3]+(to[3]-from[3])*mix),W.silk_alpha}
 end
 local strand_nodes={}
-for index in ipairs(W.silk) do strand_nodes[#strand_nodes+1]=silk("thread-shadow-"..index,(index-1)/#W.silk,index/#W.silk,W.silk_shadow,W.silk_stroke+2,0,12) end
+strand_nodes[#strand_nodes+1]=silk("thread-shadow",0,1,W.silk_shadow,W.silk_stroke+2,0,60)
 for index=1,W.silk_segments do
   strand_nodes[#strand_nodes+1]=silk("thread-"..index,(index-1)/W.silk_segments,index/W.silk_segments,silk_colour((index-.5)/W.silk_segments),W.silk_stroke,W.silk_overlap,4)
 end
