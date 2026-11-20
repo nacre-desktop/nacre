@@ -259,8 +259,8 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
                 end
                 return ui.Box{id="cell",width=gs+animated_width,height=t.workspace_height,shrink=0,table.unpack(kids)}
             end},
-            -- The stack name is one hover away: a tooltip on the strand (or on an ellipsized cap).
-            show_collections and kit.Tooltip{id="collection-tooltip",edge="top",bar_size=-spacing.sm,left=math.max(0,tip_x-tip_width/2),width=tip_width,height=t.pill_height,radius=t.pill_radius,padding=spacing.sm,visible=stack_hovered and not fanned and (not cap_style or cap_name~=current_collection_name),
+            -- The stack name is one hover away: a tooltip on a lone stack (or on an ellipsized cap). Several stacks fan out instead, so no tooltip circle flashes before the fan.
+            show_collections and kit.Tooltip{id="collection-tooltip",edge="top",bar_size=-spacing.sm,left=math.max(0,tip_x-tip_width/2),width=tip_width,height=t.pill_height,radius=t.pill_radius,padding=spacing.sm,visible=stack_hovered and (cap_style and cap_name~=current_collection_name or not cap_style and #collections<2),
                 ui.Text{text=current_collection_name,height=t.pill_height-spacing.sm*2,width="fill",text_align="center",font_size=t.cap_font,family=stack_family,color="onSurface"}} or nil,
         }
     end}}}}}

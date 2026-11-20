@@ -1324,6 +1324,37 @@ fn bar_stack_pearls_collapse_fan_and_narrow_bars_keep_app_icons() -> Result<()> 
         );
         bar_golden(&narrow.pose((0., 0.), 1.)?, &format!("bar-narrow-{tag}-1"))?;
     }
+    // The first hover frame shows no name tooltip: the fan replaces the strand after 400 ms, and a tooltip circle under
+    // the pointer until then flashed as a dark circle (owner 2026-11-20).
+    for (frame, scale) in [(false, 1.), (false, 1.5), (true, 1.5)] {
+        for palette in ["palette.json", "tests/fixtures/palette-light.json"] {
+            let mut h = bar(frame, palette, 1920, 5, scale)?;
+            let strand = h
+                .session
+                .view_nodes()
+                .iter()
+                .find(|node| node.action.as_deref() == Some("collection.fan"))
+                .map(|node| bead::ui::rect(&node.draw))
+                .ok_or("stack strand missing")?;
+            h.script([Input::Pointer {
+                x: strand.x + strand.w / 2.,
+                y: strand.y + strand.h / 2.,
+            }])?;
+            assert!(
+                !h.scene()
+                    .layers
+                    .iter()
+                    .any(|layer| layer.id.ends_with("collection-tooltip")),
+                "no tooltip circle on the first hover frame: {palette} {scale}"
+            );
+            if !frame && palette == "palette.json" {
+                bar_golden(
+                    &h.pose((0., 0.), 1.)?,
+                    &format!("bar-stacks-hover-0-{scale}"),
+                )?;
+            }
+        }
+    }
     // Hover fans the five stacks out (the 400 ms wait is the animation; a click fans at once); each other pearl goes to its stack.
     let mut h = bar(false, "palette.json", 1920, 5, 1.)?;
     let strand = h
@@ -2300,15 +2331,15 @@ fn collection_switcher_badge_and_bounded_rename_menu_render() -> Result<()> {
                     y: rect.y + rect.h / 2.,
                 }])?;
                 let full_name = "Very long personal research and writing desk";
+                // Several stacks fan out on hover, so no name tooltip flashes first.
                 assert!(
-                    bar.scene()
+                    !bar.scene()
                         .primitives
                         .iter()
                         .any(|primitive| matches!(primitive,
                             bead::render::Primitive::Text { text, .. } if text == full_name
                         )),
-                    "hover must show the full desk name at {scale}; hovered={:?}",
-                    bar.session.stores.get("bead.hovered")
+                    "hover shows no tooltip over several stacks at {scale}"
                 );
                 assert!(
                     matches!(
@@ -2319,20 +2350,6 @@ fn collection_switcher_badge_and_bounded_rename_menu_render() -> Result<()> {
                     ),
                     "hover tooltip must preserve menu click"
                 );
-                let hover = bar.pose((0., 0.), 1.)?;
-                assert_ne!(
-                    hover.pixels, frame.pixels,
-                    "tooltip must change painted pixels"
-                );
-                let golden = root().join(format!("tests/goldens/desk-chip-tooltip-{scale}.png"));
-                if std::env::var("BEAD_UPDATE_GOLDENS").as_deref() == Ok("1") {
-                    hover.save(&golden)?;
-                }
-                hover.compare(
-                    &golden,
-                    bead_test::Tolerance::default(),
-                    &std::env::temp_dir().join(format!("nacre-desk-chip-tooltip-{scale}")),
-                )?;
             }
         }
     }
