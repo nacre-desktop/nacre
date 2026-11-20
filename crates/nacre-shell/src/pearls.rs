@@ -929,7 +929,10 @@ mod tests {
             &std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../shell/palette.json"),
         )
         .unwrap()
-        .0;
+        .0
+        .iter()
+        .map(|(k, v)| (k.clone(), *v))
+        .collect::<std::collections::BTreeMap<_, _>>();
         let original = colors.clone();
         colors.insert("primary".into(), [20, 200, 90, 255]);
         assert!(crate::placement::set_live_palette(&colors));
