@@ -74,7 +74,7 @@ local function glyph(id,text,color)
     return centered_text{id=id,text=text,width=t.icon_width,shrink=0,family="Material Symbols Rounded",font_size=t.icon_font,color=color or "secondary",text_align="center"}
 end
 -- D1 (spec 0237): one 20 px glyph in a 24 px box in t.status_tone whatever its state (owner 2026-11-14);
--- `color` overrides it for attention states (warn/error/success). `badge` is a 15 px error
+-- `color` overrides it for attention states (warn/error/success). `badge` is a 15 px glyph_tone
 -- count pill at the box's top-right corner (hidden when empty or when Settings turns badges off);
 -- `kind` is kept for callers' ids.
 local function status_glyph(id,text,_kind,color,badge,_active)
@@ -84,8 +84,8 @@ local function status_glyph(id,text,_kind,color,badge,_active)
     return ui.Row{id=id,width=t.icon_width,height=box,shrink=0,align="center",justify="center",
         ui.Text{id="ink",width=t.icon_width,height=box,shrink=0,
             text=text,family="Material Symbols Rounded",font_size=t.icon_font,color=color or t.status_tone,text_align="center"},
-        count~="" and ui.Box{id="badge",position="absolute",left=t.icon_width+t.badge_overhang-badge_width,top=(box-t.icon_font)/2-t.badge_lift,width=badge_width,height=t.badge_size,radius=t.badge_size/2,fill="error",
-            ui.Text{id="count",text=count,width=badge_width,height=t.badge_size,font_size=t.badge_font,font_weight=600,family="IBM Plex Sans",text_align="center",color="onError"}} or nil}
+        count~="" and ui.Box{id="badge",position="absolute",left=t.icon_width+t.badge_overhang-badge_width,top=(box-t.icon_font)/2-t.badge_lift,width=badge_width,height=t.badge_size,radius=t.badge_size/2,fill=t.glyph_tone,
+            ui.Text{id="count",text=count,width=badge_width,height=t.badge_size,font_size=t.badge_font,font_weight=600,family="IBM Plex Sans",text_align="center",color="onTertiary"}} or nil}
 end
 -- Layout snaps every box to whole logical pixels, and text paints wrapped at its box's
 -- device width. A label box sized to its exact fractional advance can round below the

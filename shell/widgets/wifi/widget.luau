@@ -20,7 +20,7 @@ local function bar(props,settings,_data)
         status_glyph("glyph",ui.bind("bead.desktop.network"),"network",nil,nil,active),
         -- D1: a VPN shows as a small primary lock at the glyph's corner.
         ui.Text{id="vpn",position="absolute",left=t.status_padding+t.icon_width-10,top=(t.status_height-box)/2+box-12,width=12,height=12,visible=ui.bind("bead.desktop.network.vpn"),text="lock",family="Material Symbols Rounded",font_size=10,text_align="center",color="primary"},
-        content and status_text{id="value",text=content,width=width,font_size=t.detail_font,color=t.status_tone} or nil,
+        content and status_text{id="value",text=content,width=width,font_size=t.detail_font,color=t.glyph_tone} or nil,
     }
 end
 local function desktop(props,_settings,_data)
