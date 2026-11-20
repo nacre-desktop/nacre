@@ -2131,7 +2131,11 @@ fn collection_switcher_badge_and_bounded_rename_menu_render() -> Result<()> {
                 let Value::List(rows) = &groups else {
                     unreachable!()
                 };
-                models.insert("bar.collections".into(), Value::list(rows[..1].to_vec()));
+                // A short name, so the tooltip is centred on its square rather than clamped to the bar edge.
+                let mut one = rows[..1].to_vec();
+                one[0]["name"] = "1".into();
+                one[0]["label"] = "1".into();
+                models.insert("bar.collections".into(), Value::list(one));
             }
             let mut bar = Harness::load(
                 &root(),
@@ -2153,6 +2157,8 @@ fn collection_switcher_badge_and_bounded_rename_menu_render() -> Result<()> {
                 )
             });
             assert!(badge.is_some(), "stack segment visible at {scale}: {name}");
+            // The one-stack frame is taken before its hover, which this test also looks at.
+            let mut rest = None;
             if let Some(badge) = badge {
                 let rect = bead::ui::rect(&badge.draw);
                 assert!(matches!(
@@ -2219,8 +2225,51 @@ fn collection_switcher_badge_and_bounded_rename_menu_render() -> Result<()> {
                     if single { 1 } else { 3 },
                     "one pearl per stack at {scale}: {name}"
                 );
+                if single {
+                    // The stack's name is centred on its one square, not stuck at the capsule's left edge.
+                    let square = bounds("stack-pearl-1")?;
+                    let rect = bead::ui::rect(
+                        &nodes
+                            .iter()
+                            .find(|node| node.action.as_deref() == Some("collection.switcher.open"))
+                            .ok_or("desk badge missing")?
+                            .draw,
+                    );
+                    rest = Some(bar.pose((0., 0.), 1.)?);
+                    bar.script([Input::Pointer {
+                        x: rect.x + rect.w / 2.,
+                        y: rect.y + rect.h / 2.,
+                    }])?;
+                    let tip = bar
+                        .scene()
+                        .layers
+                        .iter()
+                        .find(|layer| layer.id.ends_with("collection-tooltip"))
+                        .ok_or("stack tooltip missing")?
+                        .bounds;
+                    assert!(
+                        (tip.x + tip.w / 2. - (square.0 + square.1 / 2.)).abs() <= 2.,
+                        "tooltip {tip:?} centred on its square {square:?} at {scale}"
+                    );
+                    // The owner's case: a short name over its one square, looked at in a golden.
+                    let hover = bar.pose((0., 0.), 1.)?;
+                    let golden =
+                        root().join(format!("tests/goldens/desk-chip-short-tooltip-{scale}.png"));
+                    if std::env::var("BEAD_UPDATE_GOLDENS").as_deref() == Ok("1") {
+                        hover.save(&golden)?;
+                    }
+                    hover.compare(
+                        &golden,
+                        bead_test::Tolerance::default(),
+                        &std::env::temp_dir()
+                            .join(format!("nacre-desk-chip-short-tooltip-{scale}")),
+                    )?;
+                }
             }
-            let frame = bar.pose((0., 0.), 1.)?;
+            let frame = match rest {
+                Some(frame) => frame,
+                None => bar.pose((0., 0.), 1.)?,
+            };
             let golden = root().join(format!("tests/goldens/desk-chip-{name}-{scale}.png"));
             if std::env::var("BEAD_UPDATE_GOLDENS").as_deref() == Ok("1") {
                 frame.save(&golden)?;

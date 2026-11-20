@@ -80,6 +80,15 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
             local stack_control_width=cap_style and t.cap_pad_left+t.cap_icon+t.cap_gap+cap_name_width+t.cap_pad_right or strand_width+2*t.strand_pad
             -- The control's trailing pad plus the capsule gap puts the current pearl 6 px after the strand.
             local collection_width=show_collections and stack_control_width+2*capsule_gap+1 or 0
+            -- The tooltip's centre: the current stack square (the whole control in the name style), in capsule coordinates.
+            -- The tooltip is the capsule's height and radius, so it covers what is under it as one layer.
+            local tip_width=math.max(t.pill_height,math.ceil(ui.text_width(current_collection_name,stack_family,t.cap_font))+spacing.sm*2)
+            local tip_x=5+stack_control_width/2
+            if not cap_style then
+                tip_x=5+t.strand_pad
+                for i=first,cur-1 do tip_x+=select(3,stack_size(i)) end
+                tip_x+=select(3,stack_size(cur))/2
+            end
             local active_left,active_width,active_accent,active_icon_mode
             local cursor=0
             for _,item in workspaces do
@@ -253,7 +262,7 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
                 return ui.Box{id="cell",width=gs+animated_width,height=t.workspace_height,shrink=0,table.unpack(kids)}
             end},
             -- The stack name is one hover away: a tooltip on the strand (or on an ellipsized cap).
-            show_collections and kit.Tooltip{id="collection-tooltip",edge="top",bar_size=-spacing.sm,left=0,width=math.ceil(ui.text_width(current_collection_name,stack_family,t.cap_font))+spacing.sm*2,height=t.workspace_height,padding=spacing.sm,visible=stack_hovered and not fanned and (not cap_style or cap_name~=current_collection_name),
-                ui.Text{text=current_collection_name,height=t.workspace_height-spacing.sm*2,width="fill",font_size=t.cap_font,family=stack_family,color="onSurface"}} or nil,
+            show_collections and kit.Tooltip{id="collection-tooltip",edge="top",bar_size=-spacing.sm,left=math.max(0,tip_x-tip_width/2),width=tip_width,height=t.pill_height,radius=t.pill_radius,padding=spacing.sm,visible=stack_hovered and not fanned and (not cap_style or cap_name~=current_collection_name),
+                ui.Text{text=current_collection_name,height=t.pill_height-spacing.sm*2,width="fill",text_align="center",font_size=t.cap_font,family=stack_family,color="onSurface"}} or nil,
         }
     end}}}}}
