@@ -51,12 +51,13 @@ local function compose(top,field_h,placeholder,on_send,can_send,left,right)
         ui.Row{id="left",width=0,grow=1,height=BTN,gap=T.spacing.xs,align="center",table.unpack(left)},
         table.unpack(right)})
 end
--- Icon-only buttons say their name one hover (or focus) away; `bar_size` is the top edge's distance.
+-- Icon-only buttons say their name one hover (or focus) away, in the header row left of the button: `right` is the
+-- tooltip's right edge and `centre` the row's vertical centre.
 local tooltip_height=CAPTION+2*T.spacing.sm
-local function tooltip(id,label,right,bar_size)
+local function tooltip(id,label,right,centre)
     local w=ui.text_width(label,T.fonts.sans,CAPTION)+2*T.spacing.sm
-    add(kit.Tooltip{id=id,position="absolute",edge="top",bar_size=bar_size,left=right-w,width=w,height=tooltip_height,padding=T.spacing.xs,visible=true,
-        ui.Text{text=label,width="fill",height=META_H,font_size=CAPTION,color="onSurface"}})
+    add(kit.Tooltip{id=id,position="absolute",edge="top",bar_size=centre-tooltip_height/2-T.spacing.sm,left=right-w,width=w,height=tooltip_height,padding=T.spacing.xs,visible=true,
+        ui.Text{text=label,width="fill",height=META_H,font_size=CAPTION,text_align="center",color="onSurface"}})
 end
 -- N0234: without the optional AI package the panel only says so (no provider or chat controls).
 local missing=get("chat.missing")
@@ -65,9 +66,9 @@ local busy=get("chat.busy")
 -- Owner 2026-11-14: New terminal chat is one click at the top of both the launcher and a quick chat
 -- (the panel reopens on the quick chat it left), a round icon button like the pin.
 local terminal_label=ui.tr("bead.panel.launcher-terminal")
-local terminal_right,header_bottom
+local terminal_left,header_centre
 if quick then
-    terminal_right,header_bottom=E+INNER-BTN-T.spacing.xs,E+HEADER_H
+    terminal_left,header_centre=E+INNER-2*BTN-2*T.spacing.xs,E+HEADER_H/2
     add(ui.Row{id="header",position="absolute",left=E,top=E,width=INNER,height=HEADER_H,gap=T.spacing.xs,align="center",
         icon_button("back","arrow_back",action("launcher:back"),ui.tr("bead.panel.launcher-back")),
         ui.Column{id="heading",width=0,grow=1,justify="center",gap=T.spacing.xs/4,
@@ -79,7 +80,7 @@ if quick then
         icon_button("terminal","terminal",get("launcher.can_new") and action("launcher:new") or nil,terminal_label),
         icon_button("overflow","more_vert",ui.action("chat.menu.toggle",""),ui.tr("bead.launcher.actions"))})
 else
-    terminal_right,header_bottom=E+INNER,E+BTN
+    terminal_left,header_centre=E+INNER-BTN-T.spacing.xs,E+BTN/2
     local codex=get("launcher.provider")=="codex"
     local other=codex and "claude" or "codex"
     local prov_label=ui.tr(codex and "bead.panel.chat-codex" or "bead.panel.chat-claude")
@@ -248,7 +249,7 @@ else
         on_activate=action("launcher:quick-chat"),aria_label=ui.tr("bead.panel.chat-send")})
 end
 -- Last, so it paints over the composer below the header.
-if cued("header.terminal") then tooltip("header-tooltip",terminal_label,terminal_right,header_bottom) end
+if cued("header.terminal") then tooltip("header-tooltip",terminal_label,terminal_left,header_centre) end
 -- Motion (design review "Timings for 120 Hz", edge slide): open 240 ms ease-out, close 160 ms
 -- (Bead closes with its accelerate curve, at most return_duration). D16: out-quint once the kit has it.
 local card=get("view.detached")==true
