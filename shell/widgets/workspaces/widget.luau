@@ -167,8 +167,6 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
             thread and kit.tokens.gradients and ui.Image{id="thread",position="absolute",left=21+collection_width,right=21,top=(t.pill_height-1)/2,height=1,path="bar/assets/workspace-thread.themed.svg"} or ui.Box{id="thread",width=0,height=0,shrink=0,visible=false},
             active_left and ui.Box{id="active-capsule",position="absolute",left=ui.animate("workspaces.active.left:"..props.instance.iid,active_left,.18,"out-cubic"),top=(t.pill_height-t.active_height)/2,width=ui.animate("workspaces.active.width:"..props.instance.iid,active_width,.16,"out-cubic"),height=t.active_height,radius=t.active_radius,
                 fill=active_icon_mode and active_accent or ui.tint(c.base,active_accent,.15),border_width=1,border_color=ui.alpha(active_accent,.24)} or ui.Box{id="active-capsule",width=0,height=0,visible=false,shrink=0},
-            -- The frame variant's own lacquer pill gets its lit edge here (the no-border island draws it).
-            c.lit_edge(t.pill_radius,not c.islands),
             -- Keep the child list dense when no stack is advertised, so Repeat still renders.
             collection_control or ui.Box{id="collection-segment",width=0,height=0,visible=false,shrink=0},
             -- A hairline closes the stack capsule off from the workspaces.
