@@ -1292,7 +1292,10 @@ mod tests {
             !surface_on_output_event(false, false),
             "added later: a surface now would stack below the poster made after it"
         );
-        assert!(surface_on_output_event(true, false), "an existing surface follows mode changes");
+        assert!(
+            surface_on_output_event(true, false),
+            "an existing surface follows mode changes"
+        );
     }
 
     #[test]
