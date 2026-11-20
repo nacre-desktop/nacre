@@ -84,6 +84,13 @@ fn wants(render: &BTreeSet<String>, name: &str) -> bool {
     render.contains(name) || render.contains("*")
 }
 
+/// Niri stacks a layer's surfaces in creation order, so a video surface stacks above the
+/// poster only when it is made after it. The shell sends `Source` once every output using it
+/// has committed its poster; an output added after start waits for that next `Source`.
+fn surface_on_output_event(known: bool, present_at_start: bool) -> bool {
+    known || present_at_start
+}
+
 fn fade_factor(alpha: f32) -> u32 {
     (f64::from(alpha.clamp(0.0, 1.0)) * f64::from(ALPHA_MAX)) as u32
 }
@@ -204,6 +211,8 @@ struct Engine {
     /// The decoder in use is reported after each source's first rendered frame.
     hwdec_reported: bool,
     outs: Vec<Out>,
+    /// wl_output global names present when the process started.
+    startup_outputs: BTreeSet<u32>,
     source: Option<Source>,
     source_generation: u64,
     decoder: Decoder,
@@ -796,6 +805,17 @@ impl Engine {
         }
     }
 
+    fn output_event(&mut self, output: &wl_output::WlOutput) {
+        let known = self.outs.iter().any(|out| out.output == *output);
+        let present_at_start = self
+            .output_state
+            .info(output)
+            .is_some_and(|info| self.startup_outputs.contains(&info.id));
+        if surface_on_output_event(known, present_at_start) {
+            self.ensure_output(output);
+        }
+    }
+
     fn ensure_outputs(&mut self) {
         let outputs: Vec<_> = self.output_state.outputs().collect();
         for output in outputs {
@@ -1006,7 +1026,7 @@ impl OutputHandler for Engine {
         &mut self.output_state
     }
     fn new_output(&mut self, _: &Connection, _: &QueueHandle<Self>, output: wl_output::WlOutput) {
-        self.ensure_output(&output);
+        self.output_event(&output);
     }
     fn update_output(
         &mut self,
@@ -1014,7 +1034,7 @@ impl OutputHandler for Engine {
         _: &QueueHandle<Self>,
         output: wl_output::WlOutput,
     ) {
-        self.ensure_output(&output);
+        self.output_event(&output);
     }
     fn output_destroyed(
         &mut self,
@@ -1142,6 +1162,12 @@ fn run(
         vaapi_device,
         hwdec_reported: false,
         outs: Vec::new(),
+        startup_outputs: globals.contents().with_list(|list| {
+            list.iter()
+                .filter(|global| global.interface == wl_output::WlOutput::interface().name)
+                .map(|global| global.name)
+                .collect()
+        }),
         source: None,
         source_generation: 0,
         decoder: Decoder::Release,
@@ -1257,6 +1283,16 @@ mod tests {
         assert!(draw_due(true, false, true, true));
         // An unchanged frame neither draws nor requests another callback.
         assert!(!draw_due(false, false, true, true));
+    }
+
+    #[test]
+    fn a_hotplugged_output_waits_for_the_source_after_its_poster() {
+        assert!(surface_on_output_event(false, true), "present at start");
+        assert!(
+            !surface_on_output_event(false, false),
+            "added later: a surface now would stack below the poster made after it"
+        );
+        assert!(surface_on_output_event(true, false), "an existing surface follows mode changes");
     }
 
     #[test]
