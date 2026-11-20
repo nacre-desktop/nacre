@@ -44,10 +44,6 @@ local i_stroke=islands and 1 or nil
 local i_stroke_color=islands and ui.alpha("onSurface",.05) or nil
 local i_shadow=islands and {blur=4,spread=0,dy=1,alpha=.6} or nil
 -- Islands carry no lit edge: a straight line that starts where the corner arc ends read as a cut-off top (owner 2026-11-20).
--- Only the workspaces pill still calls this (its widget is another unit's); delete both together.
-local function lit_edge(radius,visible)
-    return ui.Box{id="lit-edge",position="absolute",left=radius,right=radius,top=0,height=1,visible=visible,fill=ui.alpha("surfaceBright",.6)}
-end
 local function island(p)
     if islands then p.fill,p.border_width,p.border_color,p.shadow=i_fill,i_stroke,i_stroke_color,i_shadow end
     return p
@@ -103,4 +99,4 @@ local function status_text(p)
     p.max_width=whole_width(p.max_width)
     return ui.Text(p)
 end
-return {lit_edge=lit_edge,i_shadow=i_shadow,i_fill=i_fill,i_stroke=i_stroke,i_stroke_color=i_stroke_color,islands=islands,base=base,island=island,band_top=band_top,band_height=band_height,ui=ui,kit=kit,t=t,centered_text=centered_text,launcher=launcher,popouts=popouts,ws_on=ws_on,tray_on=tray_on,dash_on=dash_on,focus_on=focus_on,updates_on=updates_on,updates_n=updates_n,header=header,title=title,title_width=title_width,cue_extent=cue_extent,dwell=dwell,ws_count=ws_count,ws_icons=ws_icons,thread=thread,pearl_accent=pearl_accent,glyph=glyph,status_glyph=status_glyph,status_text=status_text,whole_width=whole_width}
+return {i_shadow=i_shadow,i_fill=i_fill,i_stroke=i_stroke,i_stroke_color=i_stroke_color,islands=islands,base=base,island=island,band_top=band_top,band_height=band_height,ui=ui,kit=kit,t=t,centered_text=centered_text,launcher=launcher,popouts=popouts,ws_on=ws_on,tray_on=tray_on,dash_on=dash_on,focus_on=focus_on,updates_on=updates_on,updates_n=updates_n,header=header,title=title,title_width=title_width,cue_extent=cue_extent,dwell=dwell,ws_count=ws_count,ws_icons=ws_icons,thread=thread,pearl_accent=pearl_accent,glyph=glyph,status_glyph=status_glyph,status_text=status_text,whole_width=whole_width}
