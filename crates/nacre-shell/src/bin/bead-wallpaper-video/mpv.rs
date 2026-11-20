@@ -232,6 +232,7 @@ impl Player {
                 ("vd-lavc-threads", "2"),
                 ("scale", "bilinear"),
                 ("cscale", "bilinear"),
+                ("dscale", "bilinear"),
                 ("dither-depth", "no"),
                 ("hwdec", hwdec),
             ] {
