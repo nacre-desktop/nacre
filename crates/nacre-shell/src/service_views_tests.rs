@@ -2515,6 +2515,109 @@ fn collection_switcher_badge_and_bounded_rename_menu_render() -> Result<()> {
 }
 
 #[test]
+fn desk_panel_name_required_rows_hold_their_labels() -> Result<()> {
+    // The owner's panel: one unnamed desk, so the note, the desk row, Rename and Create desk.
+    for scale in [1., 1.5] {
+        let mut models = super::initial_models()?;
+        models.insert(
+            "bar.collections".into(),
+            Value::list(vec![
+                serde_json::json!({"id":"niri-collection:17","label":"1","index":1,"output":"DP-1","active":true}),
+            ]),
+        );
+        for (key, value) in [
+            (
+                "bar.collection.current",
+                Value::Text("niri-collection:17".into()),
+            ),
+            ("bar.collection.height", Value::Number(260.into())),
+            ("bar.collection.wallpapers.enabled", Value::Bool(false)),
+            ("collection.scroll", Value::Number(0.into())),
+            ("collection.operation", Value::Text(String::new())),
+            ("panel.open", Value::Bool(true)),
+            ("view.edge", Value::Text("top".into())),
+        ] {
+            models.insert(key.into(), value);
+        }
+        let mut panel = Harness::load(
+            &root(),
+            Path::new("popouts/collections.luau"),
+            &root().join("palette.json"),
+            models,
+            Config {
+                width: 360,
+                height: 300,
+                scale,
+            },
+        )?;
+        settle_harness_animations(&mut panel)?;
+        let frame = panel.pose((0., 0.), 1.)?;
+        let golden = root().join(format!(
+            "tests/goldens/desk-panel-name-required-{scale}.png"
+        ));
+        if std::env::var("BEAD_UPDATE_GOLDENS").as_deref() == Ok("1") {
+            frame.save(&golden)?;
+        }
+        frame.compare(
+            &golden,
+            bead_test::Tolerance::default(),
+            &std::env::temp_dir().join(format!("nacre-desk-panel-name-required-{scale}")),
+        )?;
+        let nodes = panel.session.view_nodes();
+        let rect_of = |suffix: &str| -> Result<bead::render::Rect> {
+            let node = nodes
+                .iter()
+                .find(|node| node.id.ends_with(suffix))
+                .ok_or("desk panel control missing")?;
+            Ok(bead::ui::rect(&node.draw))
+        };
+        let layer = panel
+            .scene()
+            .layers
+            .iter()
+            .find(|layer| layer.id.ends_with("collection-switcher"))
+            .ok_or("desk panel layer missing")?;
+        let panel_rect = panel.scene().primitives[layer.own.clone()]
+            .iter()
+            .find_map(|primitive| match primitive {
+                bead::render::Primitive::Rounded { rect, .. } => Some(*rect),
+                _ => None,
+            })
+            .ok_or("desk panel surface missing")?;
+        // No label's text box is shorter than its line (it would clip) or leaves its row, and no row leaves the
+        // panel's 14 px padded content box.
+        for suffix in ["rename-niri-collection:17", "create"] {
+            let row = rect_of(suffix)?;
+            assert!(
+                row.y + row.h <= panel_rect.y + panel_rect.h - 14. + 0.5,
+                "{suffix} leaves the panel at {scale}: {row:?} in {panel_rect:?}"
+            );
+            let texts: Vec<_> = panel
+                .scene()
+                .primitives
+                .iter()
+                .filter_map(|primitive| match primitive {
+                    bead::render::Primitive::Text { rect, size, .. }
+                        if rect.y >= row.y - 0.5 && rect.y < row.y + row.h =>
+                    {
+                        Some((*rect, *size))
+                    }
+                    _ => None,
+                })
+                .collect();
+            assert!(!texts.is_empty(), "{suffix} has a label at {scale}");
+            for (text, size) in texts {
+                assert!(
+                    text.y + text.h <= row.y + row.h + 0.5 && text.h >= size * 1.2,
+                    "{suffix} label clipped at {scale}: {text:?} (font {size}) in {row:?}"
+                );
+            }
+        }
+    }
+    Ok(())
+}
+
+#[test]
 fn status_pill_click_routes_switch_escape_and_reopen() -> Result<()> {
     use bead::wayland::{SceneSource, UiEvent};
     use std::sync::{Arc, Mutex};

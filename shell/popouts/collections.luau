@@ -9,12 +9,14 @@ local height_limit=ui.resolve_for_check(ui.bind("bar.collection.height")) or 260
 local selected=nil
 for _,group in ipairs(groups) do if group.id==current then selected=group;break end end
 local actions={}
+-- The note is two lines of body text.
+local note_height=2*math.ceil(ui.text_line_height(kit.tokens.fonts.sans,kit.tokens.text.body))
 local note=nil
 if editing then
     note=nil
 elseif selected and selected.name then
     if ui.resolve_for_check(ui.bind("bar.collection.wallpapers.enabled"))~=true then
-        note=ui.Text{id="wallpaper-setting-note",text=ui.tr("bead.bar.collection-wallpapers-disabled"),width=272,height=38,font_size=kit.tokens.text.body,color="onSurfaceVariant"}
+        note=ui.Text{id="wallpaper-setting-note",text=ui.tr("bead.bar.collection-wallpapers-disabled"),width=272,height=note_height,font_size=kit.tokens.text.body,color="onSurfaceVariant"}
     end
     actions={
         {id="wallpaper",label=ui.tr("bead.bar.collection-set-wallpaper"),action="collection.wallpaper.set",arg=current},
@@ -22,16 +24,10 @@ elseif selected and selected.name then
         {id="base-accent",label=ui.tr("bead.bar.collection-base-accent"),action="collection.accent.clear",arg=current},
     }
 else
-    note=ui.Text{id="name-required",text=ui.tr("bead.bar.collection-name-required"),width=272,height=38,font_size=kit.tokens.text.body,color="onSurfaceVariant"}
+    note=ui.Text{id="name-required",text=ui.tr("bead.bar.collection-name-required"),width=272,height=note_height,font_size=kit.tokens.text.body,color="onSurfaceVariant"}
 end
-local edit_height=editing and 80 or 36
-local rows_height=#groups*(editing and 40 or 76)+edit_height+#actions*42+12
-local menu_height=math.min(height_limit,rows_height)
-local panel_height=menu_height+(note and 58 or 28)
-local body={}
-if note then body[#body+1]=note end
-body[#body+1]=kit.CollectionSwitcherMenu{
-    id="collection-switcher-menu",width=272,height=menu_height,scroll=ui.bind("collection.scroll"),
+local menu={
+    id="collection-switcher-menu",width=272,scroll=ui.bind("collection.scroll"),
     groups=groups,current=current,
     on_switch=not editing and "collection.switch" or nil,on_create=not editing and "collection.begin-create" or nil,on_rename=not editing and "collection.begin-rename" or nil,
     on_commit="collection.commit",on_cancel="collection.cancel",editing=editing,
@@ -39,6 +35,12 @@ body[#body+1]=kit.CollectionSwitcherMenu{
     save_label=ui.tr("bead.bar.collection-save"),cancel_label=ui.tr("bead.bar.collection-cancel"),
     actions=not editing and actions or {},
 }
+menu.height=math.min(height_limit,kit.CollectionSwitcherMenuHeight(menu))
+-- Panel = 14 px padding twice, the note and its gap when shown, and the menu.
+local panel_height=2*14+menu.height+(note and note_height+kit.tokens.spacing.sm or 0)
+local body={}
+if note then body[#body+1]=note end
+body[#body+1]=kit.CollectionSwitcherMenu(menu)
 return kit.Panel{id="collection-switcher",edge=ui.resolve_for_check(ui.bind("view.edge")),
     open=ui.bind("panel.open"),fade=false,reveal=true,
     width=300,height=panel_height,
