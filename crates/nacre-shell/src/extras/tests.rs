@@ -1737,6 +1737,87 @@ async fn a_wheel_burst_over_strand_steps_live_and_starts_one_switch_for_its_last
     );
     assert!(lab.calls.try_recv().is_err(), "and only one");
 }
+// A wallpaper palette tween restages Strand once, at its end: every scene Strand stages asks for that
+// (`palette_tween=false`: Bead skips the steps before the last), and the step it takes only re-colours the scene;
+// it never reprojects the strand (rows, images, caption).
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn strand_takes_a_palette_tween_once_without_reprojecting() {
+    use bead::wayland::{SceneSource, UiEvent};
+    let mut lab = lab_with_topics(vec!["wallpaper.active".into()]).await;
+    let extras = Extras::new(Kind::Wallpaper, lab.client.clone()).unwrap();
+    start_with_empty_wallpaper_catalogue(&extras);
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../shell");
+    let colors = bead::render::Palette::read(&root.join("palette.json")).unwrap();
+    let cold = crate::sound::fallback(colors.get("surface").unwrap());
+    let session = bead::ui::Session::new(
+        root.clone(),
+        "extras/main.luau".into(),
+        root.join("palette.json"),
+        colors.clone(),
+        cold,
+    );
+    let mut runtime = crate::reload::Runtime::panel_session(session, true)
+        .with_extras(extras)
+        .unwrap();
+    runtime.services(Box::new(|_| {}));
+    assert!(runtime.viewport(1920, 1200));
+    let mut scenes: Vec<_> = runtime
+        .stage(UiEvent::Reload)
+        .unwrap()
+        .into_iter()
+        .collect();
+    runtime.commit();
+    // The open storyboard and the catalogue's arrival, then a pick and its glide.
+    let mut press = None;
+    for frame in 0..400 {
+        let loaded = matches!(runtime.session.stores.get("extras.rows"), Some(Value::List(rows)) if rows.len() == 4);
+        if loaded && press.is_none() {
+            press = Some(frame);
+        }
+        let event = if press == Some(frame) {
+            UiEvent::Command {
+                command: "right".into(),
+                shift: false,
+            }
+        } else {
+            UiEvent::Model(BTreeMap::new())
+        };
+        scenes.extend(runtime.stage(event).unwrap());
+        runtime.commit();
+        while lab.calls.try_recv().is_ok() {}
+        if press.is_some_and(|press| frame > press + 40) {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(8)).await;
+    }
+    assert!(press.is_some(), "the catalogue arrives");
+    assert!(
+        scenes.len() > 10 && scenes.iter().all(|scene| scene.palette_at_rest),
+        "every Strand scene takes only a tween's last palette step ({} scenes)",
+        scenes.len()
+    );
+    let rows = runtime.session.stores.get("extras.rows").cloned();
+    let revision = runtime.session.stores.revision();
+    let last_step = colors
+        .0
+        .iter()
+        .map(|(role, c)| (role.clone(), [255 - c[0], c[1], c[2], c[3]]))
+        .collect();
+    assert!(
+        runtime
+            .stage(UiEvent::WallpaperPalette(last_step))
+            .unwrap()
+            .is_some(),
+        "the last step re-colours Strand"
+    );
+    runtime.commit();
+    assert_eq!(
+        runtime.session.stores.revision(),
+        revision,
+        "without a projection"
+    );
+    assert_eq!(runtime.session.stores.get("extras.rows").cloned(), rows);
+}
 async fn next_wallpaper_runtime_call(
     runtime: &mut crate::reload::Runtime,
     calls: &mut mpsc::UnboundedReceiver<(String, Json)>,
@@ -2942,56 +3023,30 @@ async fn a_landed_pick_stays_on_esc_and_enter_adds_no_second_activation() {
     );
 }
 #[tokio::test(flavor = "current_thread")]
-async fn frames_carry_the_held_palette_until_close_and_the_release_follows_the_landing() {
+async fn a_key_burst_holds_the_palette_until_its_landing() {
     let mut lab = lab_with_topics(vec!["wallpaper.active".into()]).await;
-    let preview = Arc::new(crate::wallpaper::Preview::default());
     let (extras, open, wake) = open_picker(&mut lab).await;
-    // The hold starts with an open that sees the preview: reopen once it is installed.
-    extras
-        .wallpaper_actions
-        .as_ref()
-        .unwrap()
-        .lock()
-        .unwrap()
-        .preview = Some(preview.clone());
-    extras.project(&closed(&open), Some(wake.clone()));
-    extras.project(&open, Some(wake.clone()));
-    assert!(
-        extras.state.borrow().palette_visit.is_some(),
-        "open holds the palette"
-    );
-    let palette = |red: u8| {
-        bead::render::Palette(Arc::new(std::collections::HashMap::from([(
-            "primary".to_owned(),
-            [red, 0, 0, 255],
-        )])))
-    };
+    if let Some(queue) = &extras.wallpaper_actions {
+        queue.lock().unwrap().preview = Some(Arc::new(crate::wallpaper::Preview::default()));
+    }
     extras.act("wallpaper:move:/fixture/next.jpg", &open, wake.clone());
-    extras.act("wallpaper:move:/fixture/animated.gif", &open, wake.clone());
-    assert_eq!(activated(&mut lab).await, "/fixture/next.jpg");
-    assert_eq!(
-        preview
-            .frame_palette("DP-1", palette(9), Some(palette(1)))
-            .0,
-        palette(1).0,
-        "a landed pick's frame still carries the held palette while open"
-    );
-    extras.project(&closed(&open), Some(wake));
-    assert_eq!(
-        activated(&mut lab).await,
-        "/fixture/animated.gif",
-        "the pending pick lands at close"
-    );
     assert!(
         extras.state.borrow().palette_visit.is_none(),
-        "close ends the hold"
+        "a single press lands at once"
     );
-    assert_eq!(
-        preview
-            .frame_palette("DP-1", palette(9), Some(palette(1)))
-            .0,
-        palette(9).0,
-        "after close frames carry their own palette (the release re-ask is the Preview test's)"
+    extras.act("wallpaper:move:/fixture/animated.gif", &open, wake.clone());
+    extras.state.borrow_mut().wallpaper_fade = Duration::from_millis(1);
+    tokio::time::sleep(Duration::from_millis(5)).await;
+    extras.act("wallpaper:move:/fixture/next.mp4", &open, wake.clone());
+    assert!(
+        extras.state.borrow().palette_visit.is_some(),
+        "a glide fire holds the palette"
+    );
+    tokio::time::sleep(WALLPAPER_RETARGET_CAP + WALLPAPER_RELEASE).await;
+    extras.fire_pending_move();
+    assert!(
+        extras.state.borrow().palette_visit.is_none(),
+        "the landing ends the hold"
     );
 }
 #[test]

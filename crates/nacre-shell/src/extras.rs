@@ -135,7 +135,7 @@ struct State {
     wallpaper_gliding: bool,
     /// Counts the picker's opens: the strand's animation state is per visit, so a reopen never glides in from where the last visit left off.
     visit: u64,
-    /// The visit that holds the desktop's palette (see `Preview::hold_palette`).
+    /// The palette hold of the running key burst (see `Preview::hold_palette`); the landing ends it.
     palette_visit: Option<u64>,
     /// Pixel size of the last previewed (or opening) wallpaper, for the strand's caption.
     wallpaper_resolution: Option<(String, u32, u32)>,
@@ -1435,31 +1435,32 @@ impl Extras {
         // The one place the desktop peek starts and the one place it ends, whatever closed the picker.
         if opening {
             self.peek_engage(wake);
-            self.hold_palette();
         } else if closing {
             self.peek_release(wake);
             if let Some((id, wake)) = landing {
                 self.fire_move(&id, WALLPAPER_MOVE_MS, wake);
             }
-            // After the landing: the release re-asks for its frame, so the one palette tween goes to the landed pick.
-            self.release_palette();
+            self.release_palette(true); // a hold nothing landed on (the last glide pick was the landing)
         } else if open {
             self.peek_resolve(wake);
         }
     }
-    /// The desktop keeps its palette while Strand is open (no palette steps on the bar and other panels per pick).
+    /// A key burst's glides keep the palette the desktop had (no palette tween on the bar and other panels per
+    /// intermediate pick); the landing ends the hold.
     fn hold_palette(&self) {
-        let visit = self
-            .wallpaper_preview()
-            .map(|preview| preview.hold_palette());
-        self.state.borrow_mut().palette_visit = visit;
+        if self.state.borrow().palette_visit.is_none() {
+            let visit = self
+                .wallpaper_preview()
+                .map(|preview| preview.hold_palette());
+            self.state.borrow_mut().palette_visit = visit;
+        }
     }
-    /// Closing hands the real palette back: one palette-only tween toward the last landed pick, started with the exit animation.
-    fn release_palette(&self) {
+    /// End the hold. `reask`: no landing follows, so the frame is asked for again to take its palette tween now.
+    fn release_palette(&self, reask: bool) {
         let preview = self.wallpaper_preview();
         let visit = self.state.borrow_mut().palette_visit.take();
         if let (Some(preview), Some(visit)) = (preview, visit) {
-            preview.release_palette(visit);
+            preview.release_palette(visit, reask);
         }
     }
     /// Clear the windows away so the real wallpaper preview is what the owner sees.
@@ -1667,6 +1668,12 @@ impl Extras {
             state.wallpaper_shown = Some(id.into());
         }
         drop(state);
+        if fade_ms == WALLPAPER_GLIDE_FADE_MS {
+            self.hold_palette();
+        } else {
+            // The landing's own frame carries its palette: one tween, like a normal set.
+            self.release_palette(unchanged);
+        }
         if !unchanged {
             self.activate_wallpaper(id, fade_ms, wake);
         }
