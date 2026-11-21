@@ -36,13 +36,7 @@ local entry_s=(opening and W.open_ms or W.close_ms)/1000
 local glide=ui.resolve_for_check(ui.bind("extras.wallpaper.glide"))==true
 -- A new visit starts at rest on its pearl (its own animation key), and a closing strand does not glide while it leaves.
 local visit=ui.resolve_for_check(ui.bind("extras.wallpaper.visit")) or 0
--- B3: the strand is built once per move and everything on it follows this driver on keyframe tracks, so the frames
--- of a move patch the scene (no Luau, no layout). Each part is laid out where it rests at `to`.
-local drive=ui.animated("wallpaper-strand:"..tostring(visit)..":"..tostring(count)..":"..tostring(animation_key),position,not opening and 0 or glide and W.glide_duration or W.move_duration,glide and "linear" or "out-quint")
-local from,to=ui.range(drive)
--- shortcut: a jump of more than 24 slots (a shuffle over 48+ wallpapers) holds still until its last 24, which keeps
--- the move's build within Bead's markup budget and track points; key the far part sparsely if that ever shows.
-local low,high=math.max(math.min(from,to),to-24),math.min(math.max(from,to),to+24)
+local strand=ui.animate("wallpaper-strand:"..tostring(visit)..":"..tostring(count)..":"..tostring(animation_key),position,not opening and 0 or glide and W.glide_duration or W.move_duration,glide and "linear" or "out-quint")
 local s=math.min(width/W.art_width,height/W.art_height)
 local centre={x=width/2,y=height/2}
 local gap=W.pearl_gap*s
@@ -77,75 +71,45 @@ end
 local DISC={}
 for index=0,31 do local angle=index*math.pi/16; DISC[#DISC+1]={.5+.5*math.cos(angle),.5+.5*math.sin(angle)} end
 
--- A pearl `o` slots from the driver is drawn within reach, each wallpaper once around the loop.
-local reach_max=math.min(W.visible_reach,count/2)
--- A pearl at offset `o` by the old per-frame formulas; out of reach it keeps the last place it was drawn at, unseen.
-local function pose(o)
-  local seen=o>=-count/2 and o<count/2 and math.abs(o)<=W.visible_reach
-  o=math.clamp(o,-reach_max,reach_max)
-  local d=math.abs(o)
-  local arc,size=math.sign(o)*reach(d),size_at(d)
-  local x,y=point_at(arc)
-  -- The outer pair rests at 50 % (offset 4 -> 5), also while the strand moves.
-  local alpha=seen and (1-.5*math.max(0,math.min(1,d-4))) or 0
-  local near=math.max(0,1-d)
-  return {x=x,y=y,arc=arc,size=size,shown=seen and 1 or 0,thumbnail=alpha,shade=d<=2.5 and alpha or 0,
-    shadow=d<=2.5 and alpha*math.min(1,size/(W.pearl_sizes[1]*s)+.35) or 0,sheen=near>.3 and near*alpha or 0}
-end
-
--- The driver values a part needs while its offset i-d is within [omin,omax]: the move's ends, a key every 1/fine
--- slot and both sides of each `cuts` offset (a step: something appears or goes) within 6 slots of `to`, whole slots
--- (every kink of the formulas) farther out, where it moves fast (Bead takes at most 128 keys), and one key just
--- outside the window, where the part is gone. At rest (low == high) that is the one key `to`.
-local EPS=1e-6
-local function keys_for(i,omin,omax,fine,cuts)
-  local a,b=math.max(low,i-omax-EPS),math.min(high,i-omin+EPS)
-  local keys={a,b}
-  for k=math.floor(a),math.floor(b) do
-    for j=0,fine-1 do
-      local key=k+j/fine
-      if key>a and key<b and (j==0 or math.abs(key-to)<6) then keys[#keys+1]=key end
+-- The pearls within reach of the animated position, farthest first so the chosen one draws on top.
+local placed={}
+for index=math.floor(strand-W.visible_reach),math.floor(strand+W.visible_reach)+1 do
+  if count>0 then
+    local wrapped=((index-1)%count)+1
+    local offset=((wrapped-strand+count/2)%count)-count/2
+    local seen=false
+    for _,known in ipairs(placed) do if known.wrapped==wrapped then seen=true end end
+    if not seen and math.abs(offset)<=W.visible_reach then
+      local arc=math.sign(offset)*reach(math.abs(offset))
+      local x,y=point_at(arc)
+      placed[#placed+1]={item=rows[wrapped],wrapped=wrapped,offset=offset,arc=arc,x=x,y=y,size=size_at(math.abs(offset))}
     end
   end
-  for _,cut in ipairs(cuts) do
-    for _,key in ipairs({i-cut-EPS,i-cut+EPS}) do if key>a and key<b and math.abs(key-to)<6 then keys[#keys+1]=key end end
-  end
-  table.sort(keys)
-  local out={}
-  for _,key in ipairs(keys) do if #out==0 or key>out[#out] then out[#out+1]=key end end
-  return out
 end
-local function sample(keys,at) local poses={} for n,key in ipairs(keys) do poses[n]=at(key) end return poses end
--- One prop over the move: its value at each key, a plain number at rest.
-local function along(keys,poses,value)
-  local values={}
-  for n,p in ipairs(poses) do values[n]=value(p) end
-  return #keys==1 and values[1] or ui.track(drive,keys,values)
-end
+table.sort(placed,function(left,right) return math.abs(left.offset)>math.abs(right.offset) end)
+local nearest=W.visible_reach
+for _,pearl in ipairs(placed) do nearest=math.min(nearest,math.abs(pearl.offset)) end
 
--- Pearl `i` (unwrapped slot): z-order, images and the action are fixed for the move, so its frames only patch.
-local function pearl_node(i)
-  local item=rows[(i-1)%count+1]
-  local keys=keys_for(i,-reach_max,reach_max,8,{-reach_max,reach_max,-2.5,2.5,-.7,.7})
-  local poses=sample(keys,function(key) return pose(i-key) end)
-  local function ever(name) for _,p in ipairs(poses) do if p[name]>0 then return true end end return false end
-  local function fade(name) return along(keys,poses,function(p) return p[name] end) end
-  local rest=pose(i-to)
-  local size=rest.size
+local function pearl_node(pearl)
   -- B0328: every image is baked once at its largest slot size and the draw scales it, so sliding never re-bakes.
-  local bake=ever("shadow") and size_at(0) or size_at(3)
+  local bake=math.abs(pearl.offset)<=2.5 and size_at(0) or size_at(3)
+  local item=pearl.item
+  -- The outer pair rests at 50 % (offset 4 -> 5), also while the strand moves.
+  local alpha=(1-.5*math.max(0,math.min(1,math.abs(pearl.offset)-4)))
+  local size,cy=pearl.size,pearl.y
+  local near=math.max(0,1-math.abs(pearl.offset))
   local edge=math.max(1,s)
   local path=item.thumbnail
   local kids={}
   -- The shadow and the sheen keep one tint and fade through opacity: a tint is part of the baked image's key, so a
   -- tint that changed every frame re-baked both images on every frame of a glide or the drop.
-  if ever("shadow") then
+  if math.abs(pearl.offset)<=2.5 then
     kids[#kids+1]=ui.Image{id="shadow",position="absolute",left=-size*.12,top=-size*.04,width=size*1.24,height=size*1.24,
-      path=W.glow,bake_size={w=bake*1.24,h=bake*1.24},tint={0,0,0,110},opacity=fade("shadow")}
+      path=W.glow,bake_size={w=bake*1.24,h=bake*1.24},tint={0,0,0,110},opacity=alpha*math.min(1,size/(W.pearl_sizes[1]*s)+.35)}
   end
   if path and path~="" then
     kids[#kids+1]=ui.Image{id="thumbnail",position="absolute",left=0,top=0,width=size,height=size,
-      icon=path,bake_size={w=bake,h=bake},image_fit="cover",clip_polygon=DISC,opacity=fade("thumbnail"),aria_label=item.title or "Wallpaper"}
+      icon=path,bake_size={w=bake,h=bake},image_fit="cover",clip_polygon=DISC,opacity=alpha,aria_label=item.title or "Wallpaper"}
   else
     kids[#kids+1]=ui.Box{id="missing-thumbnail",position="absolute",left=0,top=0,width=size,height=size,radius=size/2,fill="surfaceContainerHigh"}
     kids[#kids+1]=ui.Text{id="missing-icon",position="absolute",left=0,top=size/2-W.thumbnail_fallback_icon*s/2,width=size,height=W.thumbnail_fallback_icon*s,
@@ -153,43 +117,22 @@ local function pearl_node(i)
       color="onSurfaceVariant",text_align="center"}
   end
   -- The prototype's inset bottom shade (inset 0 -14px 26px rgba(0,0,0,.34)), under the rim.
-  if ever("shade") then
-    kids[#kids+1]=ui.Image{id="shade",position="absolute",left=0,top=0,width=size,height=size,path=W.shade,bake_size={w=bake,h=bake},opacity=fade("shade")}
+  if math.abs(pearl.offset)<=2.5 then
+    kids[#kids+1]=ui.Image{id="shade",position="absolute",left=0,top=0,width=size,height=size,path=W.shade,bake_size={w=bake,h=bake},opacity=alpha}
   end
   kids[#kids+1]=ui.Box{id="edge",position="absolute",left=0,top=0,width=size,height=size,radius=size/2,fill="transparent",
     border_width=edge,border_color=W.pearl_edge}
-  if ever("sheen") then
+  if near>.3 then
     kids[#kids+1]=ui.Image{id="sheen",position="absolute",left=0,top=0,width=size,height=size,path=W.sheen,bake_size={w=bake,h=bake},
-      tint=W.pearl_sheen,opacity=fade("sheen")}
+      tint=W.pearl_sheen,opacity=near*alpha}
   end
-  local props={id="pearl-"..tostring(i),position="absolute",left=rest.x-size/2,top=rest.y-size/2,width=size,height=size,
-    translate_x=along(keys,poses,function(p) return p.x-rest.x end),translate_y=along(keys,poses,function(p) return p.y-rest.y end),
-    scale=along(keys,poses,function(p) return p.size/size end),opacity=fade("shown"),
-    ui.Box{width=size,height=size,fill="transparent",table.unpack(kids)}}
-  -- Gone at `to`: drawn while it leaves, never hit (a zero-opacity button still takes clicks).
-  if rest.shown==0 then return ui.Box(props) end
   -- The chosen pearl keeps the pick; any other pearl only moves the strand.
-  local request=(math.abs(i-to)<.5 and "wallpaper:commit:" or "wallpaper:select:")..tostring(item.id)
-  props.padding,props.radius,props.fill,props.hover_fill=0,size/2,"transparent","transparent"
-  props.activate_on_release,props.focus_on_pointer,props.on_activate=true,false,ui.action("extras.do",request)
-  props.aria_label=(item.title or "Wallpaper")..(item.active and ", current" or "")
-  return ui.Button(props)
-end
-
--- The knot between pearls i and i+1 sits halfway along the silk between their facing edges.
-local knot=math.max(3,W.knot*s)
-local function knot_pose(o)
-  local left,right=pose(o),pose(o+1)
-  local x,y=point_at(((left.arc+left.size/2)+(right.arc-right.size/2))/2)
-  return {x=x,y=y,shown=left.shown*right.shown}
-end
-local function knot_node(i)
-  local keys=keys_for(i,-reach_max,reach_max-1,8,{-reach_max,reach_max-1})
-  local poses=sample(keys,function(key) return knot_pose(i-key) end)
-  local rest=knot_pose(i-to)
-  return ui.Box{id="knot-"..tostring(i),position="absolute",left=rest.x-knot/2,top=rest.y-knot/2,width=knot,height=knot,radius=knot/2,fill=W.knot_fill,
-    translate_x=along(keys,poses,function(p) return p.x-rest.x end),translate_y=along(keys,poses,function(p) return p.y-rest.y end),
-    opacity=along(keys,poses,function(p) return p.shown end)}
+  local request=(math.abs(pearl.offset)<.5 and "wallpaper:commit:" or "wallpaper:select:")..tostring(item.id)
+  return ui.Button{id="pearl-"..tostring(item.selection_index),position="absolute",left=pearl.x-size/2,top=cy-size/2,
+    width=size,height=size,padding=0,radius=size/2,fill="transparent",hover_fill="transparent",
+    activate_on_release=true,focus_on_pointer=false,on_activate=ui.action("extras.do",request),
+    aria_label=(item.title or "Wallpaper")..(item.active and ", current" or ""),
+    ui.Box{width=size,height=size,fill="transparent",table.unpack(kids)}}
 end
 
 -- Silk: a dark shadow stroke under the thread, each ONE polyline sampled from the catenary (a point every ~3.5 px,
@@ -213,39 +156,29 @@ local function silk(id,colour,stroke)
 end
 local strand_nodes={silk("thread-shadow",W.silk_shadow,W.silk_stroke+2),silk("thread","primary",W.silk_stroke)}
 
--- Every pearl drawn at some point of the move (at rest: those within reach), the knots between them, then the
--- pearls farthest from `to` first, so the chosen one draws on top.
-local placed={}
-if count>0 then
-  for i=math.ceil(low-reach_max),math.floor(high+reach_max) do
-    if i-high<count/2 then placed[#placed+1]=i end
+local knot=math.max(3,W.knot*s)
+table.sort(placed,function(left,right) return left.offset<right.offset end)
+for index=1,#placed-1 do
+  local left,right=placed[index],placed[index+1]
+  if right.offset-left.offset<1.5 then
+    local x,y=point_at(((left.arc+left.size/2)+(right.arc-right.size/2))/2)
+    strand_nodes[#strand_nodes+1]=ui.Box{id="knot-"..index,position="absolute",left=x-knot/2,top=y-knot/2,width=knot,height=knot,radius=knot/2,fill=W.knot_fill}
   end
 end
-if count>1 then for n=1,#placed-1 do strand_nodes[#strand_nodes+1]=knot_node(placed[n]) end end
-table.sort(placed,function(left,right) return math.abs(left-to)>math.abs(right-to) end)
-for _,i in ipairs(placed) do strand_nodes[#strand_nodes+1]=pearl_node(i) end
+table.sort(placed,function(left,right) return math.abs(left.offset)>math.abs(right.offset) end)
+for _,pearl in ipairs(placed) do strand_nodes[#strand_nodes+1]=pearl_node(pearl) end
 
--- A thin conic ring (five arcs from pink round to cream) around the lowest point, one Box that scales and fades.
--- Between two pearls the ring has nothing to hold: it fades, then comes back around the next one.
+-- A thin conic ring (five arcs from pink round to cream) around the lowest point.
+local ring=size_at(nearest)+2*(W.ring_gap+W.ring_stroke)*s
 local stroke=math.max(1,W.ring_stroke*s)
-local function ring_pose(d)
-  local nearest=math.abs(d-math.floor(d+.5))
-  return {size=size_at(nearest)+2*(W.ring_gap+W.ring_stroke)*s,alpha=math.floor(255*math.max(0,math.min(1,1-nearest*1.6)))/255}
-end
+-- Between two pearls the ring has nothing to hold: it fades, then comes back around the next one.
+local ring_alpha=math.floor(255*math.max(0,math.min(1,1-nearest*1.6)))
 if count>0 then
-  -- The ring's size and alpha are linear between half slots.
-  local keys=keys_for(0,-math.huge,math.huge,2,{})
-  local poses=sample(keys,ring_pose)
-  local rest=ring_pose(to)
-  local ring=rest.size-stroke
-  local arcs={}
   for index,colour in ipairs(W.silk) do
-    arcs[index]=ui.Arc{id="ring-"..index,position="absolute",left=0,top=0,width=ring,height=ring,start_angle=-160+(index-1)*72,sweep_angle=72,
-      stroke_width=stroke,round_caps=false,color={colour[1],colour[2],colour[3],255}}
+    strand_nodes[#strand_nodes+1]=ui.Arc{id="ring-"..index,position="absolute",left=centre.x-ring/2+stroke/2,top=centre.y-ring/2+stroke/2,
+      width=ring-stroke,height=ring-stroke,start_angle=-160+(index-1)*72,sweep_angle=72,stroke_width=stroke,round_caps=false,
+      color={colour[1],colour[2],colour[3],ring_alpha}}
   end
-  strand_nodes[#strand_nodes+1]=ui.Box{id="ring",position="absolute",left=centre.x-rest.size/2+stroke/2,top=centre.y-rest.size/2+stroke/2,
-    width=ring,height=ring,scale=along(keys,poses,function(p) return (p.size-stroke)/ring end),
-    opacity=along(keys,poses,function(p) return p.alpha end),table.unpack(arcs)}
 end
 
 local function glyph_button(id,label,glyph,size,font,fill,action,request,left,top)
