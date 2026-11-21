@@ -149,7 +149,7 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
                 end
             end
             local collection_control=show_collections and (fanned and ui.Row{id="stack-fan",width=stack_control_width,height=t.cap_height,padding_left=t.strand_pad,radius=t.cap_radius,fill="surfaceContainerHighest",shrink=0,table.unpack(fan_buttons)} or kit.Button{id="collection-badge",width=stack_control_width,height=t.cap_height,padding=0,radius=t.cap_radius,shrink=0,
-                    fill="surfaceContainerHighest",hover_fill="surfaceBright",aria_label=current_collection_label,on_activate=c.popouts and ui.action((cap_style or #collections<2) and "collection.switcher.open" or "collection.fan") or nil,
+                    fill="surfaceContainerHighest",hover_fill=ui.tint("surfaceContainerHighest","onSurface",.03),aria_label=current_collection_label,on_activate=c.popouts and ui.action((cap_style or #collections<2) and "collection.switcher.open" or "collection.fan") or nil,
                     cap_style and ui.Row{id="collection-content",width=stack_control_width,height=t.cap_height,padding_left=t.cap_pad_left,padding_right=t.cap_pad_right,gap=t.cap_gap,align="center",
                         ui.Text{id="collection-icon",text="stacks",width=t.cap_icon,height=t.cap_icon,shrink=0,family=kit.tokens.fonts.icon,font_size=t.cap_icon,color="onSurfaceVariant",text_align="center"},
                         ui.Text{id="collection-name",text=cap_name,width=cap_name_width,height=math.ceil(ui.text_line_height(stack_family,t.cap_font)),shrink=0,font_size=t.cap_font,family=stack_family,color="onSurface"}}
