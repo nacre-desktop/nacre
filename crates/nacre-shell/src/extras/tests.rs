@@ -2393,6 +2393,484 @@ fn a_big_catalogue_renders_at_most_eleven_pearls() -> bead_test::Result<()> {
     let _ = std::fs::remove_dir_all(&thumbnails);
     Ok(())
 }
+/// The per-frame Strand geometry main.luau computed before N2 (its point_at, reach and size_at, numbers from
+/// tokens.luau), the reference its keyframe tracks must follow.
+struct OldStrand {
+    s: f64,
+    centre: (f64, f64),
+    a: f64,
+}
+impl OldStrand {
+    const SIZES: [f64; 7] = [280., 150., 108., 84., 68., 56., 48.];
+    fn new(width: f64, height: f64) -> Self {
+        let s = (width / 1440.).min(height / 864.);
+        let centre = (width / 2., height / 2.);
+        let (half, sag) = (centre.0 + 140. * s, centre.1 + 30. * s);
+        let (mut lo, mut hi) = (50. * s, 5000. * s);
+        for _ in 0..60 {
+            let mid = (lo + hi) / 2.;
+            if mid * ((half / mid).cosh() - 1.) > sag {
+                lo = mid
+            } else {
+                hi = mid
+            }
+        }
+        Self {
+            s,
+            centre,
+            a: (lo + hi) / 2.,
+        }
+    }
+    fn size_at(&self, d: f64) -> f64 {
+        let i = (d.floor() as usize).min(Self::SIZES.len() - 2);
+        (Self::SIZES[i] + (Self::SIZES[i + 1] - Self::SIZES[i]) * (d - i as f64)) * self.s
+    }
+    fn arc(&self, offset: f64) -> f64 {
+        let step = |k: f64| (self.size_at(k) + self.size_at(k + 1.)) / 2. + 22. * self.s;
+        let (d, mut length, mut k) = (offset.abs(), 0., 0.);
+        while d - k > 1. {
+            length += step(k);
+            k += 1.;
+        }
+        offset.signum() * (length + (d - k) * step(k))
+    }
+    fn point_at(&self, arc: f64) -> (f64, f64) {
+        let a = self.a;
+        (
+            self.centre.0 + a * (arc / a).asinh(),
+            self.centre.1 + a - (a * a + arc * arc).sqrt(),
+        )
+    }
+    /// The pearls the old loop placed at driver value `d`, by offset: (unwrapped slot, offset).
+    fn pearls(count: usize, d: f64) -> Vec<(i64, f64)> {
+        let (n, wrap) = (count as f64, |i: i64| (i - 1).rem_euclid(count as i64));
+        let mut placed: Vec<(i64, f64)> = vec![];
+        for index in (d - 5.).floor() as i64..=(d + 5.).floor() as i64 + 1 {
+            let offset = ((wrap(index) + 1) as f64 - d + n / 2.).rem_euclid(n) - n / 2.;
+            if offset.abs() <= 5. && !placed.iter().any(|(i, _)| wrap(*i) == wrap(index)) {
+                placed.push(((d + offset).round() as i64, offset));
+            }
+        }
+        placed.sort_by(|l, r| l.1.total_cmp(&r.1));
+        placed
+    }
+}
+fn strand_layer<'a>(
+    scene: &'a bead::render::Scene,
+    id: &str,
+) -> Option<&'a bead::render::SceneLayer> {
+    scene
+        .layers
+        .iter()
+        .find(|l| l.id.ends_with(&format!(".{id}")))
+}
+fn strand_image(scene: &bead::render::Scene, id: &str) -> Option<(bead::render::Rect, f32)> {
+    let layer = strand_layer(scene, id)?;
+    scene.primitives[layer.own.clone()]
+        .iter()
+        .find_map(|p| match p {
+            bead::render::Primitive::Image { rect, opacity, .. } => Some((*rect, *opacity)),
+            _ => None,
+        })
+}
+/// Whether everything layer `id` draws is transparent.
+fn strand_unseen(scene: &bead::render::Scene, id: &str) -> bool {
+    use bead::render::Primitive;
+    strand_layer(scene, id).is_none_or(|layer| {
+        scene.primitives[layer.own.start..layer.subtree_end]
+            .iter()
+            .all(|p| match p {
+                Primitive::Image { opacity, .. } => *opacity < 0.01,
+                Primitive::Rounded { fill, border, .. } => {
+                    fill[3] <= 2 && border.is_none_or(|(c, _)| c[3] <= 2)
+                }
+                Primitive::Arc { color, .. } | Primitive::Text { color, .. } => color[3] <= 2,
+                _ => true,
+            })
+    })
+}
+/// The old geometry at the driver value the patched `scene` shows (read off pearl `to`'s place): pearl centres and
+/// sizes, knots and the ring within 0.5 px, image opacities within 0.01; pearls and knots the old loop did not draw are
+/// transparent. The layout rounds each part's rest rect (at `to`) to whole pixels and the tracks move and scale that
+/// rect, so the reference carries the same rounding. The reading is good to ~1e-3 slot: a part that steps (appears,
+/// goes, drops its shadow or sheen) that close to it is not judged. Returns the driver value.
+fn check_strand_frame(
+    scene: &bead::render::Scene,
+    old: &OldStrand,
+    count: usize,
+    to: f64,
+) -> Result<f64, String> {
+    // The strand box sits at the panel's origin.
+    let origin = strand_layer(scene, "strand").ok_or("no strand")?.bounds;
+    let centre = |r: bead::render::Rect| {
+        (
+            f64::from(r.x - origin.x + r.w / 2.),
+            f64::from(r.y - origin.y + r.h / 2.),
+        )
+    };
+    let edge = 5_f64.min(count as f64 / 2.);
+    let snap = |left: f64, size: f64| {
+        let (a, b) = (left.round(), (left + size).round());
+        ((a + b) / 2., b - a)
+    };
+    let pearl_at = |o: f64| {
+        let (x, y) = old.point_at(old.arc(o));
+        (x, y, old.size_at(o.abs()))
+    };
+    // Pearl i at driver d: centre x, centre y, width, height.
+    let pearl = |i: i64, d: f64| {
+        let (rx, ry, rs) = pearl_at((i as f64 - to).clamp(-edge, edge));
+        let (x, y, size) = pearl_at(i as f64 - d);
+        let ((cx, w), (cy, h)) = (snap(rx - rs / 2., rs), snap(ry - rs / 2., rs));
+        (cx + x - rx, cy + y - ry, w * size / rs, h * size / rs)
+    };
+    // Pearl `to`'s x falls as the driver grows.
+    let target = to as i64;
+    let seen = centre(
+        strand_layer(scene, &format!("pearl-{target}"))
+            .ok_or("no target")?
+            .bounds,
+    )
+    .0;
+    let (mut lo, mut hi) = (to - 4., to + 4.);
+    for _ in 0..60 {
+        let mid = (lo + hi) / 2.;
+        if pearl(target, mid).0 > seen {
+            lo = mid
+        } else {
+            hi = mid
+        }
+    }
+    let d = (lo + hi) / 2.;
+    let mut wrong = vec![];
+    let near = |what: String, got: f64, want: f64, tolerance: f64| {
+        ((got - want).abs() > tolerance).then(|| format!("{what}: {got:.3} vs {want:.3}"))
+    };
+    let pearls = OldStrand::pearls(count, d);
+    let unsure = |o: f64| [edge, 2.5, 0.7].iter().any(|c| (o.abs() - c).abs() < 2e-3);
+    for &(i, o) in pearls.iter().filter(|p| !unsure(p.1)) {
+        let (x, y, w, h) = pearl(i, d);
+        let size = old.size_at(o.abs());
+        let alpha = 1. - 0.5 * (o.abs() - 4.).clamp(0., 1.);
+        let rect = strand_layer(scene, &format!("pearl-{i}"))
+            .ok_or(format!("d={d}: no pearl {i}"))?
+            .bounds;
+        let (_, opacity) =
+            strand_image(scene, &format!("pearl-{i}.thumbnail")).ok_or("no thumbnail")?;
+        for (what, got, want) in [
+            ("x", centre(rect).0, x),
+            ("y", centre(rect).1, y),
+            ("width", f64::from(rect.w), w),
+            ("height", f64::from(rect.h), h),
+        ] {
+            wrong.extend(near(format!("pearl {i} {what}"), got, want, 0.5));
+        }
+        wrong.extend(near(
+            format!("pearl {i} alpha"),
+            f64::from(opacity),
+            alpha,
+            0.01,
+        ));
+        let inner = o.abs() <= 2.5;
+        let glow = alpha * (size / (280. * old.s) + 0.35).min(1.);
+        let sheen = (1. - o.abs()).max(0.);
+        for (part, want) in [
+            ("shadow", if inner { glow } else { 0. }),
+            ("shade", if inner { alpha } else { 0. }),
+            ("sheen", if sheen > 0.3 { sheen * alpha } else { 0. }),
+        ] {
+            let got =
+                strand_image(scene, &format!("pearl-{i}.{part}")).map_or(0., |(_, o)| f64::from(o));
+            wrong.extend(near(format!("pearl {i} {part}"), got, want, 0.01));
+        }
+    }
+    let knot_drawn = |i: i64| {
+        pearls
+            .windows(2)
+            .any(|w| w[0].0 == i && w[1].1 - w[0].1 < 1.5)
+    };
+    for layer in &scene.layers {
+        let Some((_, id)) = layer.id.rsplit_once('.') else {
+            continue;
+        };
+        let Some((kind, slot)) = id
+            .split_once('-')
+            .filter(|(k, _)| ["pearl", "knot"].contains(k))
+        else {
+            continue;
+        };
+        let i: i64 = slot.parse().map_err(|_| format!("odd id {id}"))?;
+        let o = i as f64 - d;
+        let (drawn, unsure) = if kind == "knot" {
+            (knot_drawn(i), unsure(o) || unsure(o + 1.))
+        } else {
+            (pearls.iter().any(|p| p.0 == i), unsure(o))
+        };
+        if !drawn && !unsure && !strand_unseen(scene, id) {
+            wrong.push(format!("{id} is drawn"));
+        }
+    }
+    let knot = (5. * old.s).max(3.);
+    let knot_at = |o: f64| {
+        let (l, r) = (o.clamp(-edge, edge), (o + 1.).clamp(-edge, edge));
+        old.point_at(
+            ((old.arc(l) + old.size_at(l.abs()) / 2.) + (old.arc(r) - old.size_at(r.abs()) / 2.))
+                / 2.,
+        )
+    };
+    for &(i, o) in pearls.iter().filter(|p| knot_drawn(p.0)) {
+        let (rx, ry) = knot_at(i as f64 - to);
+        let (x, y) = knot_at(o);
+        let got = centre(
+            strand_layer(scene, &format!("knot-{i}"))
+                .ok_or(format!("no knot {i}"))?
+                .bounds,
+        );
+        wrong.extend(near(
+            format!("knot {i} x"),
+            got.0,
+            snap(rx - knot / 2., knot).0 + x - rx,
+            0.5,
+        ));
+        wrong.extend(near(
+            format!("knot {i} y"),
+            got.1,
+            snap(ry - knot / 2., knot).0 + y - ry,
+            0.5,
+        ));
+    }
+    let stroke = (2. * old.s).max(1.);
+    let ring_at = |nearest: f64| old.size_at(nearest) + 14. * old.s - stroke;
+    let rest = ring_at((to - to.round()).abs());
+    let nearest = pearls.iter().fold(5_f64, |n, p| n.min(p.1.abs()));
+    let width = snap(old.centre.0 - rest / 2., rest).1 * ring_at(nearest) / rest;
+    let alpha = (255. * (1. - nearest * 1.6).clamp(0., 1.)).floor();
+    let ring = strand_layer(scene, "ring").ok_or("no ring")?;
+    for p in &scene.primitives[ring.own.start..ring.subtree_end] {
+        if let bead::render::Primitive::Arc { rect, color, .. } = p {
+            wrong.extend(near("ring width".into(), f64::from(rect.w), width, 0.5));
+            wrong.extend(near("ring alpha".into(), f64::from(color[3]), alpha, 2.6));
+        }
+    }
+    if wrong.is_empty() {
+        Ok(d)
+    } else {
+        Err(format!("d={d}: {}", wrong.join("; ")))
+    }
+}
+/// A Strand move to `to` (a tap, or a glide), a frame sampled every 40 ms (glide: 15 ms) for `sample` from the move's
+/// build, so the probe stays light next to other tests: (frames, layout passes during the frames, time per frame, the
+/// move's build time: behaviour, Luau, view_ir and layout).
+fn strand_move(
+    harness: &mut bead_test::Harness,
+    count: usize,
+    to: f64,
+    glide: bool,
+    sample: Duration,
+    mut frame: impl FnMut(&bead::render::Scene),
+) -> bead_test::Result<(usize, usize, Duration, Duration)> {
+    let started = Instant::now();
+    let built = harness.session.update(BTreeMap::from([
+        ("extras.wallpaper.position".into(), Value::Number(to)),
+        (
+            "extras.wallpaper.selection_id".into(),
+            Value::Text(format!(
+                "/fixture/wallpaper-{:02}",
+                (to as i64 - 1).rem_euclid(count as i64)
+            )),
+        ),
+        ("extras.wallpaper.glide".into(), Value::Bool(glide)),
+    ]))?;
+    let build = started.elapsed();
+    harness.session.commit(built.expect("a move rebuilds"));
+    let layouts = harness.counters().layouts;
+    let (mut frames, mut spent) = (0, Duration::ZERO);
+    while frames == 0 || started.elapsed() < sample {
+        std::thread::sleep(Duration::from_millis(if glide { 15 } else { 40 }));
+        let at = Instant::now();
+        let scene = harness.session.relayout()?.expect("a frame");
+        harness.session.commit(scene.clone());
+        spent += at.elapsed();
+        frames += 1;
+        frame(&scene);
+    }
+    Ok((
+        frames,
+        harness.counters().layouts - layouts,
+        spent / frames.max(1) as u32,
+        build,
+    ))
+}
+/// N2: a Strand move is built once, then every frame takes Bead's patch path (no Luau, no layout), and each frame's
+/// pearls, knots, ring and image opacities equal the old per-frame geometry at that driver value: taps and glides
+/// both ways, a move across a whole slot (the formulas' kinks), a retarget mid-move, the wrap at the list's end and a
+/// short list where a pearl jumps ends.
+#[test]
+fn strand_moves_patch_every_frame_and_follow_the_old_geometry() -> bead_test::Result<()> {
+    let thumbnails = std::env::temp_dir().join(format!("strand-tracks-{}", std::process::id()));
+    let frame = crate::placement::Frame::DEFAULT;
+    let old = OldStrand::new(
+        1440. - f64::from(frame.left + frame.right),
+        900. - f64::from(frame.top + frame.bottom),
+    );
+    let mut failures = vec![];
+    let (mut moves, mut frames, mut layouts, mut inside, mut spent, mut builds) =
+        (0, 0, 0, 0, Duration::ZERO, Duration::ZERO);
+    // (wallpapers, rest, [(to, glide, sampled ms)])
+    for (count, rest, steps) in [
+        (
+            12,
+            6.,
+            vec![
+                (7., false, 600),
+                (6., false, 600),
+                (7., true, 150),
+                (6., true, 150),
+                (8., false, 600),
+                (9., false, 120),
+                (10., false, 600),
+                (12., false, 600),
+                (13., false, 600),
+            ],
+        ),
+        (4, 1., vec![(2., false, 600), (1., false, 600)]),
+    ] {
+        let mut harness = strand_harness(count, "mixed", "", rest, (1440, 900), 1., &thumbnails)?;
+        for (to, glide, ms) in steps {
+            let mut interior = 0;
+            let stats = strand_move(
+                &mut harness,
+                count,
+                to,
+                glide,
+                Duration::from_millis(ms),
+                |scene| match check_strand_frame(scene, &old, count, to) {
+                    Ok(d) if (d - to).abs() > 1e-3 => interior += 1,
+                    Ok(_) => {}
+                    Err(error) => failures.push(format!("{count} -> {to}: {error}")),
+                },
+            )?;
+            eprintln!(
+                "N2 move {count}: -> {to} glide={glide}: build {:?}, {} frames",
+                stats.3, stats.0
+            );
+            moves += 1;
+            frames += stats.0;
+            layouts += stats.1;
+            spent += stats.2;
+            builds += stats.3;
+            inside += interior;
+        }
+    }
+    eprintln!(
+        "N2 strand: {moves} moves, {frames} frames ({inside} mid-move), {layouts} layout passes during frames, \
+         {:.2} ms per frame, {:.1} ms per move build (this build profile)",
+        spent.as_secs_f64() * 1e3 / moves as f64,
+        builds.as_secs_f64() * 1e3 / moves as f64
+    );
+    assert_eq!(layouts, 0, "a move's frames must patch: no Luau, no layout");
+    assert!(failures.is_empty(), "{}", failures.join("\n"));
+    assert!(inside >= 10, "too few mid-move frames sampled: {inside}");
+    let _ = std::fs::remove_dir_all(&thumbnails);
+    Ok(())
+}
+/// B0372: a move's patched frames reuse every pearl image's raster. A scale track keeps a bake_size image's raster key,
+/// so no image is baked again from one patched frame to the next (live N2 re-baked every pearl image per frame).
+#[test]
+fn a_strand_move_reuses_its_image_rasters_on_patched_frames() -> bead_test::Result<()> {
+    use bead::render::{
+        Primitive,
+        tree::{ImagePolicy, TreeCache},
+    };
+    let thumbnails = std::env::temp_dir().join(format!("strand-bakes-{}", std::process::id()));
+    let mut harness = strand_harness(12, "mixed", "", 6., (1440, 900), 1., &thumbnails)?;
+    let icons = strand_thumbnails(&thumbnails, 12);
+    // The frames of a tap, prepared afterwards: the cache sees each patched scene in order.
+    let mut scenes = Vec::new();
+    strand_move(
+        &mut harness,
+        12,
+        7.,
+        false,
+        Duration::from_millis(450),
+        |scene| scenes.push(scene.clone()),
+    )?;
+    let mut cache = TreeCache::default().with_image_policy(ImagePolicy::UploadOnly);
+    let mut previous: Vec<Option<std::sync::Arc<bead::render::tree::ImagePayload>>> = Vec::new();
+    let (mut baked, mut moved, mut rects) = (Vec::new(), 0, Vec::new());
+    for mut images in scenes {
+        // Only the images, with their bytes, as the host prepares them.
+        images
+            .primitives
+            .retain(|p| matches!(p, Primitive::Image { .. }));
+        images.layers.clear();
+        images.clips.clear();
+        for primitive in &mut images.primitives {
+            if let Primitive::Image { path, .. } = primitive {
+                if let Some(icon) = path.to_str().and_then(|p| p.strip_prefix("@icon:")) {
+                    *path = icons[icon].clone();
+                }
+                if !images.asset_data.contains_key(&*path) {
+                    let bytes = std::fs::read(&*path)?;
+                    images.asset_data.insert(path.clone(), bytes.into());
+                }
+            }
+        }
+        // Mid-move frames: the pearls' image rects scale and slide between them.
+        let now_rects: Vec<_> = images
+            .primitives
+            .iter()
+            .map(|p| match p {
+                Primitive::Image { rect, .. } => (rect.x, rect.y, rect.w),
+                _ => (0., 0., 0.),
+            })
+            .collect();
+        moved += usize::from(!rects.is_empty() && now_rects != rects);
+        rects = now_rects;
+        cache.prepare(&images, 1.)?;
+        let frame = cache.frame.as_ref().ok_or("no frame")?;
+        let now: Vec<_> = frame.items.iter().map(|item| item.image.clone()).collect();
+        if !previous.is_empty() {
+            let same = |(a, b): &(&Option<_>, &Option<_>)| matches!((a, b), (Some(a), Some(b)) if std::sync::Arc::ptr_eq(a, b));
+            baked.push(now.iter().zip(&previous).filter(|pair| !same(pair)).count());
+        }
+        previous = now;
+    }
+    eprintln!(
+        "N2 image bakes per patched frame: {baked:?} ({} images)",
+        previous.len()
+    );
+    assert!(
+        moved >= 3,
+        "too few mid-move frames: {moved} of {}",
+        baked.len()
+    );
+    assert!(
+        baked.iter().all(|n| *n == 0),
+        "images baked again on patched frames: {baked:?}"
+    );
+    let _ = std::fs::remove_dir_all(&thumbnails);
+    Ok(())
+}
+/// The longest shuffle of a 48-wallpaper strand (24 slots, the far-part cap) builds within Bead's track and markup
+/// budgets and still patches its frames.
+#[test]
+fn a_long_strand_jump_stays_within_the_track_budget() -> bead_test::Result<()> {
+    let thumbnails = std::env::temp_dir().join(format!("strand-jump-{}", std::process::id()));
+    let mut harness = strand_harness(48, "mixed", "", 1., (1440, 900), 1., &thumbnails)?;
+    let (frames, layouts, frame, build) = strand_move(
+        &mut harness,
+        48,
+        25.,
+        false,
+        Duration::from_millis(100),
+        |_| {},
+    )?;
+    eprintln!("N2 long jump: build {build:?}, {frames} frames at {frame:?}");
+    assert_eq!(layouts, 0);
+    let _ = std::fs::remove_dir_all(&thumbnails);
+    Ok(())
+}
 async fn open_picker(lab: &mut Lab) -> (Extras, Stores, CallWake) {
     open_picker_on(lab, None).await
 }
