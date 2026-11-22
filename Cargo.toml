@@ -101,6 +101,16 @@ opt-level = 3
 [profile.release.package.fast_image_resize]
 opt-level = 3
 
+# B0369: the 50 ms markup budget is thread CPU, so debug tests run the Luau VM and its mlua glue at product speed;
+# release runs the VM at -O3 (a package entry beats "*").
+[profile.dev.package]
+mlua-sys.opt-level = 3
+mlua.opt-level = 3
+luau0-src.debug-assertions = false
+
+[profile.release.package.mlua-sys]
+opt-level = 3
+
 # Match the Bead services pin: its task accounting requires this upstream fix.
 [patch.crates-io]
 fontconfig = { path = "vendor/fontconfig" }
