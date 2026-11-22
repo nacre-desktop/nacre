@@ -191,6 +191,13 @@ class UiShell(f4.Switch):
             if self._same_build(binary, shell, version) and not self.launcher_reasons(
                 old["launcher"]
             ):
+                # A rollback reinstalls an older build: record it so `bead` selects it.
+                self.begin(
+                    "install",
+                    launcher=old["launcher"],
+                    status="complete",
+                    reused=old["id"],
+                )
                 return {
                     "status": "complete",
                     "launcher": old["launcher"],

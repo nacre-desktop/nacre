@@ -580,6 +580,7 @@ class SwitchTests(Base):
     def test_identical_build_reuses_version_and_changed_build_is_retained(self):
         shell = self.build_shell()
         switch = self.switch()
+        original = self.launcher.read_text()
         first = switch.install(self.launcher, shell)
         same = switch.install(self.launcher, shell)
         self.assertEqual(first["launcher"], same["launcher"])
@@ -589,6 +590,12 @@ class SwitchTests(Base):
         self.assertNotEqual(first["launcher"], second["launcher"])
         self.assertTrue(Path(first["launcher"]).is_file())
         self.assertEqual(switch.selected_launcher(), second["launcher"])
+        # Rolling back reinstalls the first build: it is reused and becomes the selected one.
+        self.launcher.write_text(original)
+        rollback = switch.install(self.launcher, shell)
+        self.assertTrue(rollback["reused"])
+        self.assertEqual(rollback["launcher"], first["launcher"])
+        self.assertEqual(switch.selected_launcher(), first["launcher"])
 
     def test_install_rejects_symlinked_shell_assets(self):
         shell = self.build_shell()
