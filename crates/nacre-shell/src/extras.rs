@@ -159,6 +159,8 @@ struct State {
     catalogue_refresh_boot: Option<String>,
     /// The in-flight catalogue ticket is that refresh: closing the picker must not cancel it.
     catalogue_refreshing: bool,
+    /// Until when a closed Strand wakes the runtime to send that refresh once the daemon boot is known.
+    refresh_until: Option<Instant>,
     catalogue_result: Vec<Json>,
     /// The projected picker rows with what they were built from; rebuilt only when that changes, since
     /// project() runs on every Strand frame. `catalogue_generation` counts entry edits the key cannot see.
@@ -527,6 +529,8 @@ const SWATCH_ROLES: [&str; 5] = [
     "primaryContainer",
     "onSurface",
 ];
+/// How long after start a closed Strand keeps waking to send its once-per-boot catalogue refresh.
+const REFRESH_WINDOW: Duration = Duration::from_secs(30);
 const STRAND_SETTLE: Duration = Duration::from_millis(250);
 pub struct Extras {
     pub kind: Kind,
@@ -607,6 +611,9 @@ impl Extras {
             None
         };
         let mut state = State::default();
+        if kind == Kind::Wallpaper {
+            state.refresh_until = Some(Instant::now() + REFRESH_WINDOW);
+        }
         if kind == Kind::Wallpaper
             && let Some(boot) = client
                 .status()
@@ -913,14 +920,18 @@ impl Extras {
             if !open
                 && boot.is_some()
                 && state.catalogue.is_none()
-                && !state.catalogue_result.is_empty()
                 && state.catalogue_refresh_boot != boot
             {
-                state.catalogue =
-                    self.begin("wallpaper.catalogue", json!({"ids": []}), wake.clone());
-                if state.catalogue.is_some() {
+                // An empty catalogue has nothing to refresh: the first open requests it.
+                if state.catalogue_result.is_empty() {
                     state.catalogue_refresh_boot = boot.clone();
-                    state.catalogue_refreshing = true;
+                } else {
+                    state.catalogue =
+                        self.begin("wallpaper.catalogue", json!({"ids": []}), wake.clone());
+                    if state.catalogue.is_some() {
+                        state.catalogue_refresh_boot = boot.clone();
+                        state.catalogue_refreshing = true;
+                    }
                 }
             }
             if open
@@ -2105,6 +2116,16 @@ impl Extras {
             .map(|(_, due)| *due)
             .chain(trailing)
             .chain(state.warm_due)
+            .chain(
+                state
+                    .refresh_until
+                    .filter(|until| {
+                        Instant::now() < *until
+                            && !state.wallpaper_open
+                            && state.catalogue_refresh_boot.is_none()
+                    })
+                    .map(|_| Instant::now() + Duration::from_millis(250)),
+            )
             .min()
     }
     pub fn content_ready(&self) -> bool {

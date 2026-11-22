@@ -4468,3 +4468,21 @@ async fn catalogue_refresh_drops_stale_predecode_and_keeps_warm_thumbnails() {
     );
     assert_eq!(state.image_revision, revision);
 }
+
+#[tokio::test(flavor = "current_thread")]
+async fn closed_strand_wakes_for_its_refresh_until_it_is_sent() {
+    let lab = lab_with_topics(vec!["wallpaper.active".into()]).await;
+    let wallpaper = Extras::new(Kind::Wallpaper, lab.client.clone()).unwrap();
+    snapshot_loaded(&wallpaper, "");
+    assert!(
+        wallpaper.thumb_retry_at().is_some(),
+        "a closed Strand asks the runtime to wake it so the refresh goes out at shell start"
+    );
+    let closed = panel(false);
+    wallpaper.project(&closed, Some(Arc::new(|| {})));
+    settle_refresh(&wallpaper, &closed).await;
+    assert!(
+        wallpaper.thumb_retry_at().is_none(),
+        "no wakes once it was sent"
+    );
+}
