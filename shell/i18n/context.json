@@ -10,6 +10,7 @@
   "bead.bar.collection-rename": "Collection switcher: button that begins editing the selected desk name.",
   "bead.bar.collection-save": "Collection switcher: button that saves a newly entered or edited desk name.",
   "bead.bar.collection-set-wallpaper": "Collection switcher: action label that saves the current output wallpaper for this desk.",
+  "bead.bar.collection-unnamed": "Collection switcher: row label of a desk that has no name; {index} is its position (1 for the first desk).",
   "bead.bar.collection-wallpaper-accent": "Collection switcher: action label that applies this desk's saved wallpaper accent.",
   "bead.bar.collection-wallpapers-disabled": "Collection switcher: note shown while per-desk wallpaper profiles are disabled in Settings.",
   "bead.bar.desktop-title": "Bead top bar: title shown when no window is focused.",

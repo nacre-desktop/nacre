@@ -2516,7 +2516,7 @@ fn collection_switcher_badge_and_bounded_rename_menu_render() -> Result<()> {
 
 #[test]
 fn desk_panel_name_required_rows_hold_their_labels() -> Result<()> {
-    // The owner's panel: one unnamed desk, so the note, the desk row, Rename and Create desk.
+    // The owner's panel: one unnamed desk, so its row, Rename with the name hint, and Create desk.
     for scale in [1., 1.5] {
         let mut models = super::initial_models()?;
         models.insert(
@@ -2585,11 +2585,11 @@ fn desk_panel_name_required_rows_hold_their_labels() -> Result<()> {
             })
             .ok_or("desk panel surface missing")?;
         // No label's text box is shorter than its line (it would clip) or leaves its row, and no row leaves the
-        // panel's 14 px padded content box.
+        // panel's 12 px padded content box.
         for suffix in ["rename-niri-collection:17", "create"] {
             let row = rect_of(suffix)?;
             assert!(
-                row.y + row.h <= panel_rect.y + panel_rect.h - 14. + 0.5,
+                row.y + row.h <= panel_rect.y + panel_rect.h - 12. + 0.5,
                 "{suffix} leaves the panel at {scale}: {row:?} in {panel_rect:?}"
             );
             let texts: Vec<_> = panel
@@ -2612,6 +2612,61 @@ fn desk_panel_name_required_rows_hold_their_labels() -> Result<()> {
                     "{suffix} label clipped at {scale}: {text:?} (font {size}) in {row:?}"
                 );
             }
+        }
+    }
+    Ok(())
+}
+
+#[test]
+fn desk_panel_named_and_editing_states_render() -> Result<()> {
+    for scale in [1., 1.5] {
+        for (name, operation) in [("three", ""), ("editing", "rename")] {
+            let mut models = super::initial_models()?;
+            models.insert(
+                "bar.collections".into(),
+                Value::list(vec![
+                    serde_json::json!({"id":"niri-collection:1","label":"Personal","name":"Personal","index":1,"active":true}),
+                    serde_json::json!({"id":"niri-collection:2","label":"Research","name":"Research","index":2,"active":false}),
+                    serde_json::json!({"id":"niri-collection:3","label":"3","index":3,"active":false}),
+                ]),
+            );
+            for (key, value) in [
+                (
+                    "bar.collection.current",
+                    Value::Text("niri-collection:1".into()),
+                ),
+                ("bar.collection.height", Value::Number(260.into())),
+                ("bar.collection.wallpapers.enabled", Value::Bool(true)),
+                ("collection.scroll", Value::Number(0.into())),
+                ("collection.operation", Value::Text(operation.into())),
+                ("collection.draft", Value::Text("Personal".into())),
+                ("panel.open", Value::Bool(true)),
+                ("view.edge", Value::Text("top".into())),
+            ] {
+                models.insert(key.into(), value);
+            }
+            let mut panel = Harness::load(
+                &root(),
+                Path::new("popouts/collections.luau"),
+                &root().join("palette.json"),
+                models,
+                Config {
+                    width: 360,
+                    height: 420,
+                    scale,
+                },
+            )?;
+            settle_harness_animations(&mut panel)?;
+            let frame = panel.pose((0., 0.), 1.)?;
+            let golden = root().join(format!("tests/goldens/desk-panel-{name}-{scale}.png"));
+            if std::env::var("BEAD_UPDATE_GOLDENS").as_deref() == Ok("1") {
+                frame.save(&golden)?;
+            }
+            frame.compare(
+                &golden,
+                bead_test::Tolerance::default(),
+                &std::env::temp_dir().join(format!("nacre-desk-panel-{name}-{scale}")),
+            )?;
         }
     }
     Ok(())
