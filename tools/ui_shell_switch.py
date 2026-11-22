@@ -192,12 +192,14 @@ class UiShell(f4.Switch):
                 old["launcher"]
             ):
                 # A rollback reinstalls an older build: record it so `bead` selects it.
-                self.begin(
-                    "install",
-                    launcher=old["launcher"],
-                    status="complete",
-                    reused=old["id"],
-                )
+                # Redeploying the selected build writes nothing, so release snapshots stay valid.
+                if old["launcher"] != self.selected_launcher():
+                    self.begin(
+                        "install",
+                        launcher=old["launcher"],
+                        status="complete",
+                        reused=old["id"],
+                    )
                 return {
                     "status": "complete",
                     "launcher": old["launcher"],
