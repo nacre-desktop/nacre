@@ -3891,3 +3891,102 @@ fn strand_frames_reports_one_line_per_burst() {
         "and the next rest frame is silent again"
     );
 }
+
+fn snapshot_entry(id: &str, kind: &str, thumbnail: &str) -> Json {
+    json!({"id":id,"kind":kind,"animated":id.ends_with(".gif"),"title":"Old","thumbnail":thumbnail,"preview":"","active":false})
+}
+
+/// A catalogue loaded from the snapshot, as a restarted shell has it, before any picker visit.
+fn snapshot_loaded(extras: &Extras, stale_thumbnail: &str) {
+    let mut state = extras.state.borrow_mut();
+    state.wallpaper_boot = Some("extras-boot".into());
+    state.catalogue_boot = Some("extras-boot".into());
+    state.catalogue_result = vec![
+        snapshot_entry("/fixture/current.jpg", "image", ""),
+        snapshot_entry("/fixture/next.jpg", "image", stale_thumbnail),
+        snapshot_entry("/fixture/next.mp4", "video", ""),
+        snapshot_entry("/fixture/animated.gif", "image", ""),
+    ];
+}
+
+async fn settle_refresh(extras: &Extras, stores: &Stores) {
+    for _ in 0..200 {
+        extras.project(stores, Some(Arc::new(|| {})));
+        if extras.state.borrow().catalogue.is_none() {
+            return;
+        }
+        tokio::time::sleep(Duration::from_millis(5)).await;
+    }
+    panic!("the catalogue refresh never answered");
+}
+
+fn panel(open: bool) -> Stores {
+    Stores::default()
+        .reconcile(&BTreeMap::from([
+            ("panel.open".into(), Value::Bool(open)),
+            ("extras.kind".into(), Value::Text("wallpaper".into())),
+        ]))
+        .unwrap()
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn snapshot_loaded_catalogue_refreshes_once_per_boot_while_closed_without_rebaking() {
+    let mut lab = lab_with_topics(vec!["wallpaper.active".into()]).await;
+    let wallpaper = Extras::new(Kind::Wallpaper, lab.client.clone()).unwrap();
+    snapshot_loaded(&wallpaper, "");
+    let revision = wallpaper.state.borrow().image_revision;
+    let closed = panel(false);
+    wallpaper.project(&closed, Some(Arc::new(|| {})));
+    assert_eq!(
+        tokio::time::timeout(Duration::from_secs(2), lab.calls.recv())
+            .await
+            .unwrap()
+            .unwrap(),
+        ("wallpaper.catalogue".into(), json!({"ids":[]}))
+    );
+    settle_refresh(&wallpaper, &closed).await;
+    {
+        let state = wallpaper.state.borrow();
+        assert_eq!(
+            state.catalogue_result[0]["title"], "Current",
+            "stale rows are replaced"
+        );
+        assert_eq!(
+            state.image_revision, revision,
+            "identical image paths keep their pearls"
+        );
+    }
+    // Reopening and closing again in the same boot asks for nothing more.
+    let open = panel(true);
+    wallpaper.project(&open, Some(Arc::new(|| {})));
+    wallpaper.project(&closed, Some(Arc::new(|| {})));
+    wallpaper.project(&closed, Some(Arc::new(|| {})));
+    assert!(
+        lab.calls.try_recv().is_err(),
+        "one full refresh per boot, not per open"
+    );
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn catalogue_refresh_drops_stale_predecode_and_keeps_warm_thumbnails() {
+    let mut lab = lab_with_topics(vec!["wallpaper.active".into()]).await;
+    let wallpaper = Extras::new(Kind::Wallpaper, lab.client.clone()).unwrap();
+    snapshot_loaded(&wallpaper, "/warm/next-thumbnail.jpg");
+    wallpaper.state.borrow_mut().catalogue_result[2]["video_predecode"] =
+        json!({"poster_path":"/old/poster.png"});
+    let revision = wallpaper.state.borrow().image_revision;
+    let closed = panel(false);
+    wallpaper.project(&closed, Some(Arc::new(|| {})));
+    assert_eq!(lab.calls.recv().await.unwrap().0, "wallpaper.catalogue");
+    settle_refresh(&wallpaper, &closed).await;
+    let state = wallpaper.state.borrow();
+    assert!(
+        state.catalogue_result[2]["video_predecode"].is_null(),
+        "the stale predecode is replaced, so the pick fetches the current one"
+    );
+    assert_eq!(
+        state.catalogue_result[1]["thumbnail"],
+        "/warm/next-thumbnail.jpg"
+    );
+    assert_eq!(state.image_revision, revision);
+}

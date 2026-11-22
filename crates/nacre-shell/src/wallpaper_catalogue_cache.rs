@@ -109,6 +109,10 @@ fn store_at(destination: &Path, entries: &[Value]) {
         return;
     };
     if bytes.len() as u64 > LIMIT {
+        eprintln!(
+            "WALLPAPER_CATALOGUE_SNAPSHOT too_large bytes={}",
+            bytes.len()
+        );
         return;
     }
     let Some(parent) = destination.parent() else {

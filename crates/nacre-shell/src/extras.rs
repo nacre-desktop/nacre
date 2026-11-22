@@ -155,6 +155,10 @@ struct State {
     catalogue: Option<CallTicket>,
     catalogue_boot: Option<String>,
     catalogue_request_boot: Option<String>,
+    /// The boot whose one full catalogue refresh was sent; it survives closes (one scan per boot, not per open).
+    catalogue_refresh_boot: Option<String>,
+    /// The in-flight catalogue ticket is that refresh: closing the picker must not cancel it.
+    catalogue_refreshing: bool,
     catalogue_result: Vec<Json>,
     /// The projected picker rows with what they were built from; rebuilt only when that changes, since
     /// project() runs on every Strand frame. `catalogue_generation` counts entry edits the key cannot see.
@@ -842,6 +846,7 @@ impl Extras {
                         .invalidate_boot(boot.as_deref());
                 }
                 state.catalogue = None;
+                state.catalogue_refreshing = false;
                 state.catalogue_boot = None;
                 state.catalogue_request_boot = None;
                 state.catalogue_result.clear();
@@ -884,6 +889,7 @@ impl Extras {
                 && state.catalogue_boot != boot
                 && (wallpaper_opened || state.catalogue_request_boot != boot)
             {
+                state.catalogue_refresh_boot = boot.clone();
                 if state.catalogue_boot != boot {
                     state.catalogue_result.clear();
                 }
@@ -902,6 +908,21 @@ impl Extras {
                     "Wallpaper catalogue unavailable".into()
                 };
             }
+            // A catalogue loaded from the snapshot is refreshed once per boot, while the picker is closed, so
+            // entries replaced on disk (new size, new poster) reach the picker and the snapshot is rewritten.
+            if !open
+                && boot.is_some()
+                && state.catalogue.is_none()
+                && !state.catalogue_result.is_empty()
+                && state.catalogue_refresh_boot != boot
+            {
+                state.catalogue =
+                    self.begin("wallpaper.catalogue", json!({"ids": []}), wake.clone());
+                if state.catalogue.is_some() {
+                    state.catalogue_refresh_boot = boot.clone();
+                    state.catalogue_refreshing = true;
+                }
+            }
             if open
                 && state
                     .thumb_retries
@@ -914,7 +935,9 @@ impl Extras {
             if !open {
                 // The panel is sliding out. Cancel service work, but keep the last
                 // projected content and encoded image leases until the worker retires.
-                state.catalogue = None;
+                if !state.catalogue_refreshing {
+                    state.catalogue = None;
+                }
                 state.catalogue_request_boot = None;
                 state.catalogue_request_ids.clear();
                 state.catalogue_request_handles.clear();
@@ -928,6 +951,7 @@ impl Extras {
                 && let Some(reply) = ticket.try_take()
             {
                 state.catalogue = None;
+                state.catalogue_refreshing = false;
                 let request_ids = std::mem::take(&mut state.catalogue_request_ids);
                 let request_handles = std::mem::take(&mut state.catalogue_request_handles);
                 let raw_catalogue = reply.ok();
@@ -951,7 +975,7 @@ impl Extras {
                 if let Some(catalogue) = catalogue {
                     // A reply that only brings palettes must not rename every pearl's image (a new revision
                     // re-bakes all of them): only a full listing or a changed thumbnail/preview path does.
-                    let mut resources_changed = request_ids.is_empty();
+                    let mut resources_changed = false;
                     let mut seen = std::collections::BTreeSet::new();
                     let mut incoming: Vec<Json> = catalogue
                         .entries
@@ -990,6 +1014,16 @@ impl Extras {
                                 }
                             }
                         }
+                        // Entries whose image paths did not change keep their pearls (a new revision re-bakes all).
+                        resources_changed = incoming.len() != state.catalogue_result.len()
+                            || incoming
+                                .iter()
+                                .zip(&state.catalogue_result)
+                                .any(|(new, old)| {
+                                    ["id", "thumbnail", "preview"]
+                                        .iter()
+                                        .any(|field| new[*field] != old[*field])
+                                });
                         state.catalogue_result = incoming;
                         state.catalogue_boot = boot.clone();
                     } else {
