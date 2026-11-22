@@ -351,3 +351,97 @@ fn unavailable_wallpaper_keeps_an_in_flight_poster_receiver() -> Result<()> {
     );
     Ok(())
 }
+
+/// The 1 Hz `dashboard.system` and the player wake a hidden Today page for nothing: no
+/// projection, no Model stage. Showing it stages once with the latest reading. Open, a sample
+/// that moves no shown digit (the listing's disk bytes, a few memory pages) restages nothing.
+#[test]
+fn today_stages_system_samples_only_while_open_and_only_when_a_shown_reading_moves() -> Result<()> {
+    use bead::wayland::{SceneSource, UiEvent};
+    use std::sync::{atomic::Ordering, mpsc};
+    let sample = |cpu: f64, memory: u64, disk: u64| {
+        let mut data = fixture("system");
+        data["cpu_percent"] = json!(cpu);
+        data["memory"] = json!({"used": memory, "total": 16u64 << 30});
+        data["disks"]["items"]["disk-main"]["used"] = json!(disk);
+        data
+    };
+    let system = Arc::new(FakeSource::new(sample(5., 6 << 30, 50 << 30))?);
+    let player = Arc::new(FakeSource::new(fixture("player"))?);
+    let mut h = Harness::load(
+        &root(),
+        Path::new("dashboard/today/main.luau"),
+        &root().join("palette.json"),
+        BTreeMap::new(),
+        Config {
+            width: 1048,
+            height: 714,
+            scale: 1.,
+        },
+    )?;
+    h.session
+        .stores
+        .commit(BTreeMap::from([("panel.open".into(), Value::Bool(false))]))?;
+    let dashboard = Dashboard::new(
+        Page::Today,
+        Arc::new(FakeSource::new(fixture("calendar"))?),
+        None,
+        true,
+    )
+    .with_now(|| 1709193600000)
+    .with_player(Some(player.clone() as Arc<dyn Source>))
+    .with_overview(Some(system.clone() as Arc<dyn Source>), None, None);
+    let (projections, _) = dashboard.test_projection_counters();
+    let mut runtime = crate::reload::Runtime::new(h.session).with_dashboard_view(dashboard)?;
+    let (tx, rx) = mpsc::channel();
+    runtime.services(Box::new(move |event| {
+        let _ = tx.send(event);
+    }));
+    if let Some(scene) = runtime.stage(UiEvent::Reload)? {
+        runtime.session.commit(scene);
+    }
+    let hidden = projections.load(Ordering::Relaxed);
+    for n in 1..=10u64 {
+        system.publish(sample(
+            5. + n as f64,
+            (6 << 30) + n * 4096,
+            (50 << 30) + n * 8192,
+        ))?;
+        let mut playing = fixture("player");
+        playing["players"]["items"]["player-1"]["position_ms"] = json!(42_000 + n * 1000);
+        player.publish(playing)?;
+    }
+    assert!(rx.try_recv().is_err(), "hidden: no wake, so no Model stage");
+    assert_eq!(
+        projections.load(Ordering::Relaxed),
+        hidden,
+        "hidden: no projection"
+    );
+    let cpu =
+        |runtime: &crate::reload::Runtime| match runtime.session.stores.get("dashboard.gauges") {
+            Some(Value::List(gauges)) => gauges[0]["value"].clone(),
+            _ => Json::Null,
+        };
+    let scene = runtime
+        .stage(UiEvent::PanelVisibility(true))?
+        .ok_or("showing stages")?;
+    runtime.session.commit(scene);
+    assert_eq!(
+        cpu(&runtime),
+        json!("15%"),
+        "one catch-up with the latest sample"
+    );
+    let mut next = |data: Json| -> Result<Option<bead::render::Scene>> {
+        system.publish(data)?;
+        let wake = rx.recv_timeout(std::time::Duration::from_millis(500))?;
+        runtime.stage(wake)
+    };
+    assert!(
+        next(sample(15.2, (6 << 30) + 99 * 4096, (50 << 30) + 99 * 8192))?.is_none(),
+        "open: a sample that moves no shown digit restages nothing"
+    );
+    let scene = next(sample(42., 6 << 30, 50 << 30))?.ok_or("open: a shown reading restages")?;
+    runtime.session.commit(scene);
+    assert_eq!(cpu(&runtime), json!("42%"));
+    Ok(())
+}

@@ -957,12 +957,16 @@ impl Dashboard {
                 controls::host(&s, self.now, &mut out);
                 let mut gauges = controls::gauges(&s);
                 let disk = s.disks.order.iter().find_map(|id| s.disks.items.get(id));
-                gauges[2] = json!({"id":"storage","label":tr("bead.dashboard.gauge-storage", &[]),"icon":"storage",
-                    "used":disk.map(|d| d.used),"total":disk.map(|d| d.total),
-                        "value":disk.map_or("—".into(), |d| format!("{:.0}%", d.used as f64 * 100. / d.total as f64)),
-                    "fraction":disk.map(|d| (d.used as f64 / d.total as f64).clamp(0.,1.)),
-                    "detail":disk.map_or(String::new(), |d| format!("{} / {}", bytes(d.used), bytes(d.total)))});
-                out.insert("dashboard.gauges".into(), Value::list(gauges));
+                gauges[2] = json!({"id":"storage","label":tr("bead.dashboard.gauge-storage", &[]),
+                    "value":disk.map_or("—".into(), |d| format!("{:.0}%", d.used as f64 * 100. / d.total as f64)),
+                    "fraction":disk.map(|d| (d.used as f64 / d.total as f64).clamp(0.,1.))});
+                // Today draws a label, the whole-percent reading and its arc. Keeping only those, with
+                // the arc at that percent, lets a 1 Hz sample that moves no shown digit restage nothing.
+                let shown = gauges.iter().map(|g| {
+                    json!({"id":g["id"],"label":g["label"],"value":g["value"],
+                    "fraction":g["fraction"].as_f64().map(|f| (f * 100.).round() / 100.)})
+                });
+                out.insert("dashboard.gauges".into(), Value::list(shown.collect()));
             }
             text(&mut out, "clock", "—", 16);
             if let Some(source) = &self.secondary {
