@@ -2887,7 +2887,12 @@ fn a_strand_move_reuses_its_image_rasters_on_patched_frames() -> bead_test::Resu
         let frame = cache.frame.as_ref().ok_or("no frame")?;
         let now: Vec<_> = frame.items.iter().map(|item| item.image.clone()).collect();
         if !previous.is_empty() {
-            let same = |(a, b): &(&Option<_>, &Option<_>)| matches!((a, b), (Some(a), Some(b)) if std::sync::Arc::ptr_eq(a, b));
+            // B0377: a zero-opacity image not hydrated yet has no item (it prefetches behind the frame), so
+            // none on both frames is no bake either.
+            let same = |(a, b): &(&Option<_>, &Option<_>)| {
+                matches!((a, b), (None, None))
+                    || matches!((a, b), (Some(a), Some(b)) if std::sync::Arc::ptr_eq(a, b))
+            };
             baked.push(now.iter().zip(&previous).filter(|pair| !same(pair)).count());
         }
         previous = now;
