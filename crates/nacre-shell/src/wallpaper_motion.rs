@@ -116,6 +116,14 @@ fn covered_for_overview(covered: bool, overview_open: bool) -> bool {
     covered && !overview_open
 }
 
+/// QML `pickerOpen`: Strand's desktop peek, like the niri overview, takes the windows off the
+/// wallpaper, so while either is open they neither cover nor fullscreen-hide it.
+fn windows_away(picker_open: bool, overview: Option<&Arc<dyn Source>>) -> bool {
+    picker_open
+        || overview
+            .is_some_and(|source| source.snapshot().data["overviewOpen"].as_bool() == Some(true))
+}
+
 fn inputs(
     windows: &Windows,
     services: &Services,
@@ -361,13 +369,15 @@ fn run(deps: Deps, supervisor: supervisor::Supervisor, receiver: mpsc::Receiver<
                 services.session.locked = state.locked;
                 services.session.sleeping = state.sleeping;
             }
-            let overview_open = deps.overview.as_ref().is_some_and(|source| {
-                source.snapshot().data["overviewOpen"].as_bool() == Some(true)
-            });
             let now = start.elapsed().as_millis() as u64;
             let decision = group.step(
                 &prefs.policy(),
-                &inputs(&windows, &services, prefs, overview_open),
+                &inputs(
+                    &windows,
+                    &services,
+                    prefs,
+                    windows_away(picker_open, deps.overview.as_ref()),
+                ),
                 now,
             );
             let state = (
@@ -569,6 +579,35 @@ mod tests {
         assert!(!overview["A"].hidden);
         let closed = inputs(&windows, &services, Prefs::default(), false);
         assert!(closed["A"].covered && closed["A"].hidden);
+    }
+
+    /// Live 2026-11-22: a video picked in Strand showed only its poster, because the peeked
+    /// (faded) windows still counted as covering. The open picker plays it, like the QML.
+    #[test]
+    fn strand_peek_plays_a_covered_wallpaper_but_a_lock_still_hides_it() {
+        let mut windows = desktop();
+        windows.windows.push(window("a1", false, None));
+        windows.windows.push(window("b1", false, Some(true)));
+        let overview = |open: bool| -> Arc<dyn Source> {
+            Arc::new(bead_test::source::FakeSource::new(json!({"overviewOpen": open})).unwrap())
+        };
+        let closed = overview(false);
+        let prefs = Prefs::default();
+        let decide = |services: &Services, picker_open: bool| {
+            let away = windows_away(picker_open, Some(&closed));
+            Group::default().step(&prefs.policy(), &inputs(&windows, services, prefs, away), 0)
+        };
+        let desk = decide(&Services::default(), false);
+        assert_eq!(desk.decoder, Decoder::Pause);
+        assert!(desk.render.is_empty(), "covered and fullscreen outputs hold");
+        let peek = decide(&Services::default(), true);
+        assert_eq!(peek.decoder, Decoder::Play);
+        assert_eq!(peek.render.iter().collect::<Vec<_>>(), ["A", "B"]);
+        let mut locked = Services::default();
+        locked.session.locked = true;
+        assert_eq!(decide(&locked, true).decoder, Decoder::Pause, "lock hides");
+        assert!(windows_away(false, Some(&overview(true))));
+        assert!(!windows_away(false, Some(&closed)) && !windows_away(false, None));
     }
 
     #[test]
