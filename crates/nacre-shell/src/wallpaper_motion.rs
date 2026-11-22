@@ -599,7 +599,10 @@ mod tests {
         };
         let desk = decide(&Services::default(), false);
         assert_eq!(desk.decoder, Decoder::Pause);
-        assert!(desk.render.is_empty(), "covered and fullscreen outputs hold");
+        assert!(
+            desk.render.is_empty(),
+            "covered and fullscreen outputs hold"
+        );
         let peek = decide(&Services::default(), true);
         assert_eq!(peek.decoder, Decoder::Play);
         assert_eq!(peek.render.iter().collect::<Vec<_>>(), ["A", "B"]);
