@@ -217,7 +217,7 @@ local function silk(id,colour,stroke)
   for _,point in ipairs(curve) do points[#points+1]={(point[1]-left)/box_width,(point[2]-top+pad)/box_height} end
   return ui.Polyline{id=id,position="absolute",left=left,top=top-pad,width=box_width,height=box_height,points=points,stroke_width=stroke*s,color=colour}
 end
-local strand_nodes={silk("thread-shadow",W.silk_shadow,W.silk_stroke+2),silk("thread","primary",W.silk_stroke)}
+local strand_nodes={silk("thread-shadow",W.silk_shadow,W.silk_stroke+3),silk("thread","primary",W.silk_stroke)}
 
 -- Every pearl drawn at some point of the move (at rest: those within reach), the knots between them, then the
 -- pearls farthest from `to` first, so the chosen one draws on top.
@@ -254,12 +254,12 @@ if count>0 then
     opacity=along(keys,poses,function(p) return p.alpha end),table.unpack(arcs)}
 end
 
-local function glyph_button(id,label,glyph,size,font,fill,action,request,left,top)
+local function glyph_button(id,label,glyph,size,font,fill,action,request,left,top,ink)
   local props={id=id,aria_label=label,width=size,height=size,shrink=0,padding=0,radius=size/2,fill=fill,hover_fill=fill,
     activate_on_release=true,focus_on_pointer=false,on_activate=ui.action(action,request),
     border_width=type(fill)=="table" and fill[4]>0 and 1 or nil,border_color=W.nav_ring,
     ui.Row{width=size,height=size,align="center",justify="center",
-      ui.Text{text=glyph,width=font,height=font*1.15,family="Material Symbols Rounded",font_size=font,color=W.ink}}}
+      ui.Text{text=glyph,width=font,height=font*1.15,family="Material Symbols Rounded",font_size=font,color=ink or W.ink}}}
   if left then props.position,props.left,props.top="absolute",left,top end
   return kit.Button(props)
 end
@@ -333,15 +333,15 @@ local pill_items={
     kit.TextInput{id="search",position="absolute",left=0,top=0,width=W.search_width*s,height=button,
       focus_ring=false,text=ui.bind("extras.query"),placeholder="Search wallpapers",
       padding_left=(W.search_icon+19)*s,padding_right=12*s,padding_top=(button-kit.tokens.text.body*4/3*1.4)/2,padding_bottom=(button-kit.tokens.text.body*4/3*1.4)/2,
-      radius=button/2,font_size=kit.tokens.text.body*4/3,fill=W.search_fill,
+      radius=button/2,font_size=kit.tokens.text.body*4/3,fill=ui.alpha(W.search_fill,W.search_alpha),
       border_width=search_focused and 1 or 0,border_color="outline"},
     ui.Text{id="search-icon",position="absolute",left=10*s,top=(button-W.search_icon*s*1.15)/2,width=W.search_icon*s,height=W.search_icon*s*1.15,
-      text="search",family="Material Symbols Rounded",font_size=W.search_icon*s,color=W.ink_soft}}}
-pill_items[#pill_items+1]=glyph_button("shuffle",ui.tr("bead.dashboard.wallpaper-shuffle"),"shuffle",button,W.button_font*s,"transparent","extras.shuffle",true)
+      text="search",family="Material Symbols Rounded",font_size=W.search_icon*s,color="onSurfaceVariant"}}}
+pill_items[#pill_items+1]=glyph_button("shuffle",ui.tr("bead.dashboard.wallpaper-shuffle"),"shuffle",button,W.button_font*s,"transparent","extras.shuffle",true,nil,nil,"onSurface")
 local pill_width=W.pill_padding*2*s+W.search_width*s+button+W.pill_gap*s
 local pill_height=W.pill_height*s
 children[#children+1]=ui.Box{id="wallpaper-controls",position="absolute",left=(width-pill_width)/2,top=centre.y+W.pill_top*s,
-  width=pill_width,height=pill_height,radius=pill_height/2,fill=W.pill_fill,
+  width=pill_width,height=pill_height,radius=pill_height/2,fill=ui.alpha(W.pill_fill,W.pill_alpha),
   ui.Row{width=pill_width,height=pill_height,padding_left=W.pill_padding*s,padding_right=W.pill_padding*s,gap=W.pill_gap*s,align="center",table.unpack(pill_items)}}
 
 children[#children+1]=ui.Text{id="empty",position="absolute",left=24,top=height/2+40*s,width=width-48,height=W.empty_height,

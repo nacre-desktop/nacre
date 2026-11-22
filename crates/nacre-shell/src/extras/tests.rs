@@ -2187,6 +2187,29 @@ fn strand_harness(
     scale: f32,
     thumbnails: &std::path::Path,
 ) -> bead_test::Result<bead_test::Harness> {
+    strand_harness_with(
+        "palette.json",
+        count,
+        kind,
+        query,
+        position,
+        logical,
+        scale,
+        thumbnails,
+    )
+}
+/// `strand_harness` under another shell palette (a file of shell/).
+#[allow(clippy::too_many_arguments)]
+fn strand_harness_with(
+    palette: &str,
+    count: usize,
+    kind: &str,
+    query: &str,
+    position: f64,
+    logical: (u32, u32),
+    scale: f32,
+    thumbnails: &std::path::Path,
+) -> bead_test::Result<bead_test::Harness> {
     crate::i18n::init(); // the caption's strings
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../shell");
     let frame = crate::placement::Frame::DEFAULT;
@@ -2228,7 +2251,7 @@ fn strand_harness(
     bead_test::Harness::load_with_icons(
         &root,
         std::path::Path::new("extras/main.luau"),
-        &root.join("palette.json"),
+        &root.join(palette),
         stores,
         bead_test::Config {
             width: logical.0 - 20 + 64,
@@ -2263,9 +2286,24 @@ fn wallpaper_strand_goldens() -> bead_test::Result<()> {
         ("search", "mixed", "o", 3., (1440, 900), 1., 12),
         // The owner's library: 47 entries and a long name that must stop at the arrows.
         ("long", "mixed", "", 12., (1920, 1200), 1.5, 47),
+        // The light scheme (sky wallpaper's palette): dark thread and halo, pill and caption readable.
+        ("light", "mixed", "", 6., (1920, 1200), 1.5, 12),
     ] {
-        let mut harness =
-            strand_harness(count, kind, query, position, logical, scale, &thumbnails)?;
+        let palette = if name == "light" {
+            "tests/palette-light.json"
+        } else {
+            "palette.json"
+        };
+        let mut harness = strand_harness_with(
+            palette,
+            count,
+            kind,
+            query,
+            position,
+            logical,
+            scale,
+            &thumbnails,
+        )?;
         let pearls = pearl_images(&harness);
         if name == "empty" {
             assert_eq!(pearls, 0, "no result, no pearls");
