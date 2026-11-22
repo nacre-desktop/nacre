@@ -965,12 +965,23 @@ fn history(
                 }
             }
             let Some(title) = title else { continue };
-            let modified = meta
-                .modified()
-                .ok()
-                .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
-                .map(|d| d.as_millis() as f64 / 1000.0)
-                .unwrap_or(0.0);
+            // Claude Code appends bookkeeping records (bridge-session, system, ...) on
+            // reconnect and exit, so the file mtime is not when the chat was last used.
+            let last_message = records
+                .iter()
+                .filter(|record| matches!(record["type"].as_str(), Some("user" | "assistant")))
+                .filter_map(|record| {
+                    chrono::DateTime::parse_from_rfc3339(record["timestamp"].as_str()?).ok()
+                })
+                .map(|time| time.timestamp_millis() as f64 / 1000.0)
+                .reduce(f64::max);
+            let modified = last_message.unwrap_or_else(|| {
+                meta.modified()
+                    .ok()
+                    .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+                    .map(|d| d.as_millis() as f64 / 1000.0)
+                    .unwrap_or(0.0)
+            });
             let working = transcript_working(&records, meta.modified().ok());
             let cwd = cwd.unwrap_or_else(|| directory.to_string_lossy().into_owned());
             accepted += 1;
@@ -1760,8 +1771,38 @@ mod tests {
             row["session"],
             format!("ai-chat-claude-profile-work-{CURRENT_ID}")
         );
-        assert_eq!(row["updated_at"].as_f64().unwrap(), 1_800_000_000.123);
+        // The last message's time (2026-01-01T00:00:00Z), not the newer file mtime.
+        assert_eq!(row["updated_at"].as_f64().unwrap(), 1_767_225_600.0);
         assert!(rows.iter().any(|row| row["id"] == raw_id));
+        // Bookkeeping appended on reconnect or exit leaves the time alone; with no
+        // timestamped message the file mtime is the fallback.
+        let path = project.join(format!("{raw_id}.jsonl"));
+        fs::write(
+            &path,
+            format!(
+                "{current}{}\n{}\n",
+                r#"{"type":"bridge-session","timestamp":"2026-11-21T23:53:00Z"}"#,
+                r#"{"type":"system","subtype":"informational","timestamp":"2026-11-22T00:01:00Z"}"#,
+            ),
+        )
+        .unwrap();
+        let rows = history(&config, &root, true, &running).unwrap();
+        let row = rows.iter().find(|row| row["id"] == raw_id).unwrap();
+        assert_eq!(row["updated_at"].as_f64().unwrap(), 1_767_225_600.0);
+        fs::write(
+            &path,
+            current.replace(r#""timestamp":"2026-01-01T00:00:00Z","#, ""),
+        )
+        .unwrap();
+        fs::File::options()
+            .write(true)
+            .open(&path)
+            .unwrap()
+            .set_modified(std::time::UNIX_EPOCH + Duration::from_secs(1_700_000_000))
+            .unwrap();
+        let rows = history(&config, &root, true, &running).unwrap();
+        let row = rows.iter().find(|row| row["id"] == raw_id).unwrap();
+        assert_eq!(row["updated_at"].as_f64().unwrap(), 1_700_000_000.0);
 
         let old_cwd = temp.path().join("old cwd fallback");
         let old_cwd_path = old_cwd.clone();
