@@ -42,12 +42,13 @@ unsafe extern "C" {
 /// the process-wide current config under a concurrent match (SIGSEGV on 2026-11-15).
 static FONTCONFIG: Mutex<()> = Mutex::new(());
 
-/// `$XDG_DATA_HOME/nacre/fonts`, the path the lock screen reads.
-fn installed_dir(data_home: Option<OsString>, home: Option<OsString>) -> Option<PathBuf> {
-    let base = data_home
+/// `$XDG_CACHE_HOME/nacre/fonts`: copies of the embedded faces, rewritten when missing, so
+/// uninstall removes them with Nacre's cache instead of leaving them in the user's data.
+fn installed_dir(cache_home: Option<OsString>, home: Option<OsString>) -> Option<PathBuf> {
+    let base = cache_home
         .filter(|path| !path.is_empty())
         .map(PathBuf::from)
-        .or_else(|| home.map(|home| PathBuf::from(home).join(".local/share")))?;
+        .or_else(|| home.map(|home| PathBuf::from(home).join(".cache")))?;
     Some(base.join("nacre/fonts"))
 }
 
@@ -74,25 +75,14 @@ impl Face {
         }
     }
 
-    /// The installed file, written from the embedded copy when absent; the cache is the fallback
-    /// when the data directory is not writable.
+    /// The installed file, written from the embedded copy when absent.
     fn path(&self) -> Result<PathBuf> {
         self.path
             .get_or_init(|| {
-                let cache = std::env::var_os("XDG_CACHE_HOME")
-                    .map(PathBuf::from)
-                    .or_else(|| {
-                        std::env::var_os("HOME").map(|home| PathBuf::from(home).join(".cache"))
-                    })
-                    .unwrap_or_else(std::env::temp_dir)
-                    .join("bead/fonts");
-                let path =
-                    installed_dir(std::env::var_os("XDG_DATA_HOME"), std::env::var_os("HOME"))
-                        .and_then(|dir| provision(&dir, self.file, self.bytes).ok())
-                        .map_or_else(
-                            || provision(&cache, self.file, self.bytes).map_err(|e| e.to_string()),
-                            Ok,
-                        )?;
+                let dir =
+                    installed_dir(std::env::var_os("XDG_CACHE_HOME"), std::env::var_os("HOME"))
+                        .unwrap_or_else(|| std::env::temp_dir().join("bead/fonts"));
+                let path = provision(&dir, self.file, self.bytes).map_err(|e| e.to_string())?;
                 let filename = CString::new(path.to_string_lossy().as_bytes())
                     .map_err(|error| error.to_string())?;
                 // Register this bundled family only in the shell process; never install a
@@ -364,11 +354,11 @@ mod tests {
     }
 
     #[test]
-    fn faces_install_at_the_stable_data_path_and_embedded_bytes_restore_it() {
-        let dir = installed_dir(Some("/data".into()), Some("/home/u".into())).unwrap();
-        assert_eq!(dir, Path::new("/data/nacre/fonts"));
+    fn faces_install_in_nacre_s_cache_and_embedded_bytes_restore_it() {
+        let dir = installed_dir(Some("/cache".into()), Some("/home/u".into())).unwrap();
+        assert_eq!(dir, Path::new("/cache/nacre/fonts"));
         let dir = installed_dir(Some("".into()), Some("/home/u".into())).unwrap();
-        assert_eq!(dir, Path::new("/home/u/.local/share/nacre/fonts"));
+        assert_eq!(dir, Path::new("/home/u/.cache/nacre/fonts"));
         let temp = std::env::temp_dir().join(format!("nacre-fonts-{}", std::process::id()));
         for face in [&COMMISSIONER, &COMMISSIONER_DISPLAY] {
             let path = provision(&temp, face.file, face.bytes).unwrap();
