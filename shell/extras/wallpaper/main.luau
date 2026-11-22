@@ -351,12 +351,12 @@ children[#children+1]=ui.Text{id="status",position="absolute",left=24,top=height
 -- slide: the shared profile would fight it); a click on empty
 -- space closes the picker like Esc (the wallpaper goes back). No open motion either (`duration=0`): Bead keeps a
 -- panel on its CPU renderer while the panel motion runs, which at full screen held the strand's first GL frame
--- back ~200 ms behind 10-20 ms CPU frames. `palette_tween=false`: Strand's look takes nothing from the palette, so a
--- wallpaper's palette tween re-staged the whole strand ~30 times per move; it now takes the tween's final palette only.
+-- back ~200 ms behind 10-20 ms CPU frames. Strand takes every step of a landing's palette tween (its thread is the
+-- `primary` role): with only the last step it snapped ~500 ms after the bar had eased, a second colour change.
 -- The invisible edge makes the root the scene's first box, which the shell places as the panel body (otherwise the
 -- first veil band or pearl was taken for it). `view.frame=false` (behavior.luau) keeps the frame art out of Strand.
 return kit.Panel{id="extras",edge="top",open=ui.bind("panel.open"),width=width,height=height,shadow=false,reveal=false,fade=false,slide_distance=0,
-  duration=0,return_duration=W.close_ms/1000,palette_tween=false,key_repeat={delay=260,interval=95,min_interval=62,ramp_ms=800}, -- the held-arrow glide clock (spec v5f)
+  duration=0,return_duration=W.close_ms/1000,key_repeat={delay=260,interval=95,min_interval=62,ramp_ms=800}, -- the held-arrow glide clock (spec v5f)
   radius=0,fill="transparent",border_width=1,border_color="transparent",padding=0,gap=0,body="body",on_activate=ui.action("close"),aria_label="Close wallpaper picker",
   ui.Box{id="body",position="absolute",left=0,top=0,width=width,height=height,fill="transparent",join_edge="top",
     ui.Box{id="veil",position="absolute",left=0,top=0,width=width,height=height,opacity=fade_in,table.unpack(veil)},

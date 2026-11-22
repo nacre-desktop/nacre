@@ -701,7 +701,7 @@ impl Preview {
 
     /// The palette a frame of `output` carries: the held one during a visit (the displayed pair's, taken at the
     /// first frame), else its own.
-    fn frame_palette(
+    pub(crate) fn frame_palette(
         &self,
         output: &str,
         own: bead::render::Palette,
@@ -720,7 +720,7 @@ impl Preview {
         held
     }
 
-    fn set_changed(&self, changed: Arc<dyn Fn() + Send + Sync>) {
+    pub(crate) fn set_changed(&self, changed: Arc<dyn Fn() + Send + Sync>) {
         *self.changed.lock().unwrap_or_else(|p| p.into_inner()) = Some(changed.clone());
         for predecoder in self.predecoders() {
             *predecoder

@@ -1737,11 +1737,11 @@ async fn a_wheel_burst_over_strand_steps_live_and_starts_one_switch_for_its_last
     );
     assert!(lab.calls.try_recv().is_err(), "and only one");
 }
-// A wallpaper palette tween restages Strand once, at its end: every scene Strand stages asks for that
-// (`palette_tween=false`: Bead skips the steps before the last), and the step it takes only re-colours the scene;
-// it never reprojects the strand (rows, images, caption).
+// A wallpaper palette tween restages Strand at every step, with the bar: no Strand scene opts out of the steps
+// (with the last step only, its `primary` thread snapped ~500 ms after the bar had eased: a second colour change),
+// and each step only re-colours the scene; it never reprojects the strand (rows, images, caption).
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn strand_takes_a_palette_tween_once_without_reprojecting() {
+async fn strand_takes_every_palette_step_without_reprojecting() {
     use bead::wayland::{SceneSource, UiEvent};
     let mut lab = lab_with_topics(vec!["wallpaper.active".into()]).await;
     let extras = Extras::new(Kind::Wallpaper, lab.client.clone()).unwrap();
@@ -1792,31 +1792,45 @@ async fn strand_takes_a_palette_tween_once_without_reprojecting() {
     }
     assert!(press.is_some(), "the catalogue arrives");
     assert!(
-        scenes.len() > 10 && scenes.iter().all(|scene| scene.palette_at_rest),
-        "every Strand scene takes only a tween's last palette step ({} scenes)",
+        scenes.len() > 10 && scenes.iter().all(|scene| !scene.palette_at_rest),
+        "every Strand scene takes each palette step ({} scenes)",
         scenes.len()
     );
     let rows = runtime.session.stores.get("extras.rows").cloned();
     let revision = runtime.session.stores.revision();
-    let last_step = colors
-        .0
-        .iter()
-        .map(|(role, c)| (role.clone(), [255 - c[0], c[1], c[2], c[3]]))
-        .collect();
-    assert!(
-        runtime
-            .stage(UiEvent::WallpaperPalette(last_step))
+    for red in [40, 120, 200] {
+        let step: BTreeMap<_, _> = colors
+            .0
+            .iter()
+            .map(|(role, c)| (role.clone(), [red, c[1], c[2], c[3]]))
+            .collect();
+        let scene = runtime
+            .stage(UiEvent::WallpaperPalette(step.clone()))
             .unwrap()
-            .is_some(),
-        "the last step re-colours Strand"
-    );
-    runtime.commit();
+            .expect("a step re-colours Strand");
+        runtime.commit();
+        assert_eq!(
+            strand_thread(&scene),
+            Some(step["primary"]),
+            "the thread takes it"
+        );
+    }
     assert_eq!(
         runtime.session.stores.revision(),
         revision,
         "without a projection"
     );
     assert_eq!(runtime.session.stores.get("extras.rows").cloned(), rows);
+}
+/// The colour the Strand thread is stroked in.
+fn strand_thread(scene: &bead::render::Scene) -> Option<[u8; 4]> {
+    let layer = strand_layer(scene, "thread")?;
+    scene.primitives[layer.own.clone()]
+        .iter()
+        .find_map(|p| match p {
+            bead::render::Primitive::Polyline { color, .. } => Some(*color),
+            _ => None,
+        })
 }
 async fn next_wallpaper_runtime_call(
     runtime: &mut crate::reload::Runtime,
@@ -2779,6 +2793,97 @@ fn a_long_strand_jump_stays_within_the_track_budget() -> bead_test::Result<()> {
     let _ = std::fs::remove_dir_all(&thumbnails);
     Ok(())
 }
+/// A landing's palette tween on the owner's 47-wallpaper strand (1920 x 1200 x 1.5): 29 OutQuint steps over the
+/// 500 ms move, a frame every 8 ms. Each step re-colours the thread; the move's frames between steps keep the patch
+/// path (no layout). Prints a step's cost at rest and mid-move next to a move frame's (this build profile).
+#[test]
+fn strand_palette_steps_keep_a_move_on_the_patch_path() -> bead_test::Result<()> {
+    const STEPS: u32 = 29;
+    let thumbnails = std::env::temp_dir().join(format!("strand-steps-{}", std::process::id()));
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../shell");
+    let from = bead::render::Palette::read(&root.join("palette.json"))?;
+    let step = |k: u32| {
+        let eased = 1. - (1. - k as f32 / STEPS as f32).powi(5);
+        bead::render::Palette(Arc::new(
+            from.0
+                .iter()
+                .map(|(role, c)| {
+                    let to = [255 - c[0], 255 - c[1], c[2], c[3]];
+                    let mix = |i: usize| {
+                        (f32::from(c[i]) + (f32::from(to[i]) - f32::from(c[i])) * eased).round()
+                            as u8
+                    };
+                    (role.clone(), [mix(0), mix(1), mix(2), c[3]])
+                })
+                .collect(),
+        ))
+    };
+    let mut harness = strand_harness(47, "mixed", "", 12., (1920, 1200), 1.5, &thumbnails)?;
+    let take = |harness: &mut bead_test::Harness, k: u32| -> bead_test::Result<Duration> {
+        let palette = step(k);
+        let at = Instant::now();
+        let scene = harness
+            .session
+            .set_runtime_palette(palette.clone())?
+            .expect("a step");
+        harness.session.commit(scene.clone());
+        let spent = at.elapsed();
+        assert!(!scene.palette_at_rest, "Strand takes every step");
+        assert_eq!(
+            strand_thread(&scene),
+            palette.0.get("primary").copied(),
+            "step {k} re-colours the thread"
+        );
+        Ok(spent)
+    };
+    let mut rest = Duration::ZERO;
+    for k in 1..=STEPS {
+        rest += take(&mut harness, k)?;
+    }
+    let built = harness.session.update(BTreeMap::from([
+        ("extras.wallpaper.position".into(), Value::Number(13.)),
+        (
+            "extras.wallpaper.selection_id".into(),
+            Value::Text("/fixture/wallpaper-12".into()),
+        ),
+        ("extras.wallpaper.glide".into(), Value::Bool(false)),
+    ]))?;
+    harness.session.commit(built.expect("a move rebuilds"));
+    let started = Instant::now();
+    let (mut taken, mut moving, mut frames, mut layouts, mut framed) =
+        (0, Duration::ZERO, 0, 0, Duration::ZERO);
+    while started.elapsed() < Duration::from_millis(500) {
+        std::thread::sleep(Duration::from_millis(8));
+        if taken < STEPS && started.elapsed() >= Duration::from_millis(500) * taken / STEPS {
+            taken += 1;
+            moving += take(&mut harness, taken)?;
+            continue;
+        }
+        let before = harness.counters().layouts;
+        let at = Instant::now();
+        if let Some(scene) = harness.session.relayout()? {
+            harness.session.commit(scene);
+            framed += at.elapsed();
+            frames += 1;
+            layouts += harness.counters().layouts - before;
+        }
+    }
+    let ms = |total: Duration, n: u32| total.as_secs_f64() * 1e3 / f64::from(n.max(1));
+    eprintln!(
+        "PALETTE_STEPS strand: a step {:.2} ms at rest, {:.2} ms mid-move ({taken} steps); a move frame {:.2} ms \
+         ({frames} frames, {layouts} layout passes)",
+        ms(rest, STEPS),
+        ms(moving, taken),
+        ms(framed, frames)
+    );
+    assert!(
+        taken >= 20 && frames >= 10,
+        "{taken} steps, {frames} frames"
+    );
+    assert_eq!(layouts, 0, "the move's frames between steps patch");
+    let _ = std::fs::remove_dir_all(&thumbnails);
+    Ok(())
+}
 async fn open_picker(lab: &mut Lab) -> (Extras, Stores, CallWake) {
     open_picker_on(lab, None).await
 }
@@ -3447,6 +3552,80 @@ async fn a_key_burst_holds_the_palette_until_its_landing() {
     assert!(
         extras.state.borrow().palette_visit.is_none(),
         "the landing ends the hold"
+    );
+}
+/// A close asks for at most one palette change: after a burst's landing (on its last glide pick: the one re-ask for
+/// the real palette) it asks for nothing more, and a close that cuts a burst short lands it with that one re-ask.
+#[tokio::test(flavor = "current_thread")]
+async fn a_strand_close_asks_for_at_most_one_palette_change() {
+    use std::sync::atomic::{AtomicU32, Ordering::SeqCst};
+    let mut lab = lab_with_topics(vec!["wallpaper.active".into()]).await;
+    let (extras, open, wake) = open_picker(&mut lab).await;
+    let preview = Arc::new(crate::wallpaper::Preview::default());
+    let asked = Arc::new(AtomicU32::new(0));
+    let counter = asked.clone();
+    preview.set_changed(Arc::new(move || {
+        counter.fetch_add(1, SeqCst);
+    }));
+    extras
+        .wallpaper_actions
+        .as_ref()
+        .unwrap()
+        .lock()
+        .unwrap()
+        .preview = Some(preview.clone());
+    let primary = |red: u8| {
+        bead::render::Palette(Arc::new(std::collections::HashMap::from([(
+            "primary".to_owned(),
+            [red, 0, 0, 255],
+        )])))
+    };
+    // A tap that lands, then a burst whose glide pick shows with the held palette.
+    let burst = async |lab: &mut Lab| {
+        extras.act("wallpaper:move:/fixture/animated.gif", &open, wake.clone());
+        assert_eq!(activated(lab).await, "/fixture/animated.gif");
+        extras.act("wallpaper:move:/fixture/next.jpg", &open, wake.clone());
+        extras.state.borrow_mut().wallpaper_fade = Duration::from_millis(1);
+        tokio::time::sleep(Duration::from_millis(5)).await;
+        extras.act("wallpaper:move:/fixture/next.mp4", &open, wake.clone());
+        assert_eq!(activated(lab).await, "/fixture/next.mp4");
+        assert!(
+            extras.state.borrow().palette_visit.is_some(),
+            "the glide holds"
+        );
+        preview.frame_palette("DP-1", primary(9), Some(primary(1)));
+    };
+    // Every ask is a frame request (a selection's or a re-ask): a possible palette change.
+    let asks = || asked.load(SeqCst);
+    burst(&mut lab).await;
+    tokio::time::sleep(WALLPAPER_RETARGET_CAP + WALLPAPER_RELEASE).await;
+    let before = asks();
+    extras.fire_pending_move();
+    assert_eq!(
+        asks() - before,
+        1,
+        "the landing on the glide pick re-asks once"
+    );
+    extras.project(&closed(&open), Some(wake.clone()));
+    assert_eq!(
+        asks() - before,
+        1,
+        "a landed visit's close asks for nothing"
+    );
+    tokio::time::sleep(WALLPAPER_RETARGET_CAP + WALLPAPER_RELEASE).await;
+    extras.project(&open, Some(wake.clone()));
+    burst(&mut lab).await;
+    let before = asks();
+    extras.project(&closed(&open), Some(wake.clone()));
+    assert_eq!(
+        asks() - before,
+        1,
+        "a close mid-burst lands it with one re-ask"
+    );
+    tokio::time::sleep(Duration::from_millis(60)).await;
+    assert!(
+        lab.calls.try_recv().is_err(),
+        "and no activation after close"
     );
 }
 #[test]
