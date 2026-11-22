@@ -124,6 +124,31 @@ async fn lab_with_activation_behavior(
     fail_first_activation: bool,
     stale_menu_activations: usize,
 ) -> Lab {
+    let lab = unconnected_lab(
+        requested_topics,
+        gate_first_activation,
+        fail_first_activation,
+        stale_menu_activations,
+    );
+    await_connected(&lab.client).await;
+    lab
+}
+async fn await_connected(client: &Client) {
+    for _ in 0..200 {
+        if client.snapshot().connected {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(5)).await;
+    }
+    assert!(client.snapshot().connected);
+}
+/// The fake daemon is listening but the client has not connected yet: the daemon boot is not known.
+fn unconnected_lab(
+    requested_topics: Vec<String>,
+    gate_first_activation: bool,
+    fail_first_activation: bool,
+    stale_menu_activations: usize,
+) -> Lab {
     use std::os::unix::fs::PermissionsExt;
     static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
     let dir = std::env::temp_dir().join(format!(
@@ -369,13 +394,6 @@ async fn lab_with_activation_behavior(
         }
     });
     let client = Client::start(Config::new(socket, requested_topics)).unwrap();
-    for _ in 0..200 {
-        if client.snapshot().connected {
-            break;
-        }
-        tokio::time::sleep(Duration::from_millis(5)).await;
-    }
-    assert!(client.snapshot().connected);
     Lab {
         dir,
         client,
@@ -4484,5 +4502,84 @@ async fn closed_strand_wakes_for_its_refresh_until_it_is_sent() {
     assert!(
         wallpaper.thumb_retry_at().is_none(),
         "no wakes once it was sent"
+    );
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn closed_strand_runtime_sends_its_refresh_on_a_deadline_wake_then_stops_waking() {
+    use bead::wayland::{SceneSource, UiEvent};
+    // The shell's startup build runs before the daemon boot is known.
+    let mut lab = unconnected_lab(vec!["wallpaper.active".into()], false, false, 0);
+    // The previous boot's snapshot, which project() loads once the boot is known.
+    crate::wallpaper_catalogue_cache::store(&[
+        snapshot_entry("/fixture/current.jpg", "image", ""),
+        snapshot_entry("/fixture/next.jpg", "image", ""),
+    ]);
+    let extras = Extras::new(Kind::Wallpaper, lab.client.clone()).unwrap();
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../shell");
+    let colors = bead::render::Palette::read(&root.join("palette.json")).unwrap();
+    let cold = crate::sound::fallback(colors.get("surface").unwrap());
+    let session = bead::ui::Session::new(
+        root.clone(),
+        "extras/main.luau".into(),
+        root.join("palette.json"),
+        colors,
+        cold,
+    );
+    let mut runtime = crate::reload::Runtime::panel_session(session, false)
+        .with_extras(extras)
+        .unwrap();
+    runtime.services(Box::new(|_| {}));
+    if runtime.stage(UiEvent::Reload).unwrap().is_some() {
+        runtime.commit();
+    }
+    assert!(
+        lab.calls.try_recv().is_err(),
+        "the startup build sends nothing while closed"
+    );
+    await_connected(&lab.client).await;
+    // Bead's worker sleeps until wakeup_at() and then stages a model wake.
+    let due = runtime
+        .wakeup_at()
+        .expect("a closed Strand with a pending refresh asks to be woken");
+    assert!(due <= std::time::Instant::now() + Duration::from_millis(300));
+    let (mut staged, mut pearls) = (0, 0);
+    let wallpaper_images = |scene: &bead::render::Scene| {
+        scene
+            .primitives
+            .iter()
+            .filter(|p| matches!(p, bead::render::Primitive::Image { path, .. } if path.to_string_lossy().starts_with("@icon:wallpaper:")))
+            .count()
+    };
+    if let Some(scene) = runtime.stage(UiEvent::Model(BTreeMap::new())).unwrap() {
+        (staged, pearls) = (staged + 1, pearls + wallpaper_images(&scene));
+        runtime.commit();
+    }
+    assert_eq!(
+        tokio::time::timeout(Duration::from_secs(2), lab.calls.recv())
+            .await
+            .unwrap()
+            .unwrap(),
+        ("wallpaper.catalogue".into(), json!({"ids":[]}))
+    );
+    assert!(
+        runtime.wakeup_at().is_none(),
+        "no refresh deadline remains once the request is sent"
+    );
+    for _ in 0..20 {
+        if let Some(scene) = runtime.stage(UiEvent::Model(BTreeMap::new())).unwrap() {
+            (staged, pearls) = (staged + 1, pearls + wallpaper_images(&scene));
+            runtime.commit();
+        }
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+    assert!(
+        lab.calls.try_recv().is_err(),
+        "exactly one request while closed"
+    );
+    // A closed Strand may restage its (hidden) rows when the catalogue content changes, but it carries no pearl images to bake.
+    assert_eq!(
+        pearls, 0,
+        "no wallpaper image reaches a closed stage ({staged} scenes staged)"
     );
 }
