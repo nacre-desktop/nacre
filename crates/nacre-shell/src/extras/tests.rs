@@ -2889,6 +2889,114 @@ fn a_long_strand_jump_stays_within_the_track_budget() -> bead_test::Result<()> {
     let _ = std::fs::remove_dir_all(&thumbnails);
     Ok(())
 }
+/// Shuffles and glides at the owner's 1920x1200 @1.5 keep their images' textures well within Bead's 64 MiB
+/// native-gl-images cap: live N2 baked every pearl a 24-slot shuffle carried past the centre at full size (~29 x 1.2 MB
+/// in its first frame) and the cap refused uploads. Every move still lands on rasters at least the size they are drawn.
+#[test]
+fn strand_shuffles_and_glides_stay_within_the_image_texture_budget() -> bead_test::Result<()> {
+    use bead::render::Primitive;
+    let thumbnails = std::env::temp_dir().join(format!("strand-textures-{}", std::process::id()));
+    let scale = 1.5;
+    let mut harness = strand_harness(48, "mixed", "", 1., (1920, 1200), scale, &thumbnails)?;
+    let images = |scene: &bead::render::Scene| {
+        let mut out = Vec::new();
+        for primitive in &scene.primitives {
+            if let Primitive::Image {
+                path,
+                rect,
+                bake_size,
+                tint,
+                ..
+            } = primitive
+            {
+                out.push((
+                    path.clone(),
+                    *rect,
+                    bake_size.unwrap_or((rect.w, rect.h)),
+                    *tint,
+                ));
+            }
+        }
+        out
+    };
+    // Physical px at 4 bytes: one texture per distinct raster (B0375) and, as the GL kept them before, per image.
+    let need = |scene: &bead::render::Scene| {
+        let rasters: Vec<_> = images(scene)
+            .into_iter()
+            .map(|(path, _, (w, h), tint)| {
+                (
+                    path,
+                    (w * scale).ceil() as usize,
+                    (h * scale).ceil() as usize,
+                    tint,
+                )
+            })
+            .collect();
+        let bytes = |(_, w, h, _): &(_, usize, usize, _)| w * h * 4;
+        let distinct: std::collections::BTreeSet<_> = rasters.iter().collect();
+        (
+            distinct.into_iter().map(bytes).sum::<usize>(),
+            rasters.iter().map(bytes).sum::<usize>(),
+        )
+    };
+    // The most a frame's image is drawn up from its raster (1 = sharp).
+    let softest = |scene: &bead::render::Scene| {
+        images(scene)
+            .iter()
+            .map(|(_, rect, (w, _), _)| rect.w / w)
+            .fold(0f32, f32::max)
+    };
+    let (mut peak, mut landed) = (need(harness.scene()), Vec::new());
+    let mut track = |scene: &bead::render::Scene| {
+        let (distinct, items) = need(scene);
+        peak = (peak.0.max(distinct), peak.1.max(items));
+    };
+    // Shuffles both ways and again, a held key retargeting mid-glide, then a tap; the long samples reach the rest.
+    for (to, glide, sample) in [
+        (25., false, 700),
+        (1., false, 700),
+        (25., false, 700),
+        (26., true, 40),
+        (27., true, 40),
+        (28., true, 300),
+        (30., false, 700),
+    ] {
+        let mut last = None;
+        strand_move(
+            &mut harness,
+            48,
+            to,
+            glide,
+            Duration::from_millis(sample),
+            |scene| {
+                track(scene);
+                last = Some(softest(scene));
+            },
+        )?;
+        if sample >= 300 {
+            landed.push(last.ok_or("no frame")?);
+        }
+    }
+    let mib = |bytes: usize| bytes as f64 / 1048576.;
+    eprintln!(
+        "Strand image textures per frame: peak {:.1} MiB distinct, {:.1} MiB one per image; landed draw/raster {landed:?}",
+        mib(peak.0),
+        mib(peak.1)
+    );
+    assert!(
+        peak.0 < 24 << 20,
+        "a frame's images need {} bytes of textures",
+        peak.0
+    );
+    // At rest the centre pearl draws ~0.15 % over its raster (layout rounding, as before N2); a small raster under the
+    // centre pearl would draw 3.3x.
+    assert!(
+        landed.iter().all(|soft| *soft <= 1.01),
+        "a move landed on an upscaled image: {landed:?}"
+    );
+    let _ = std::fs::remove_dir_all(&thumbnails);
+    Ok(())
+}
 async fn open_picker(lab: &mut Lab) -> (Extras, Stores, CallWake) {
     open_picker_on(lab, None).await
 }

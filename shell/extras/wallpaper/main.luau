@@ -43,6 +43,8 @@ local from,to=ui.range(drive)
 -- shortcut: a jump of more than 24 slots (a shuffle over 48+ wallpapers) holds still until its last 24, which keeps
 -- the move's build within Bead's markup budget and track points; key the far part sparsely if that ever shows.
 local low,high=math.max(math.min(from,to),to-24),math.min(math.max(from,to),to+24)
+-- Where the move starts on screen (a held far part starts at its last 24).
+local start=math.clamp(from,low,high)
 local s=math.min(width/W.art_width,height/W.art_height)
 local centre={x=width/2,y=height/2}
 local gap=W.pearl_gap*s
@@ -135,7 +137,9 @@ local function pearl_node(i)
   local rest=pose(i-to)
   local size=rest.size
   -- B0328: every image is baked once at its largest slot size and the draw scales it, so sliding never re-bakes.
-  local bake=ever("shadow") and size_at(0) or size_at(3)
+  -- Only the pearls the move starts or lands on near the centre bake at full size: one a shuffle only carries past it
+  -- stays small (all of them at full size were ~29 x 1.2 MB in a shuffle's first frame, over Bead's texture cap).
+  local bake=ever("shadow") and math.min(math.abs(i-to),math.abs(i-start))<=2.5 and size_at(0) or size_at(3)
   local edge=math.max(1,s)
   local path=item.thumbnail
   local kids={}
