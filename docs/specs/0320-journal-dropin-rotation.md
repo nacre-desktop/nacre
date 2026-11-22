@@ -1,6 +1,6 @@
 # N0320 — compositor journal drop-in and rotation on `session.state`
 
-**Status:** B committed with focused dev-2 checks green; not pushed yet (overnight checkpoint, hosted CI backlog). A not implemented: a `LogLevelMax=` drop-in has no effect on a user unit (evidence below); lead decision.
+**Status:** Done. B landed on main (120d587d4). A closed as no-action on 2026-11-22: a `LogLevelMax=` drop-in has no effect on a user unit (evidence below), and the flood has since stopped (decision at the end).
 
 ## B. Daemon readers use `session.state`
 
@@ -58,3 +58,10 @@ Remaining levers, none Nacre-only: `LogLevelMax=info` on the system unit
 `user@.service` (root, filters every user-session process),
 `MaxLevelStore=info` in journald.conf (root, whole system), or an upstream
 xwayland-satellite change to honour `RUST_LOG` in syslog mode.
+
+**Decision (2026-11-22): no action.** Laptop journal, read-only: xwayland-satellite 0.8.3
+logged 1,177 lines in 4 days (98% priority 7), at most 628 in one hour (2026-11-21 00h).
+On 2026-11-22 all 168 lines came at boot, with none after about 01:00. Its lines follow X11
+window events (new, configure, destroy). The 3,004 lines per 12 h above are not the steady
+state. Neither root-level lever (`user@.service` or journald) nor an upstream issue is worth
+it at this volume.
