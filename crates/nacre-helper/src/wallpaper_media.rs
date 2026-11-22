@@ -4,7 +4,6 @@ use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use std::{
     fs,
-    io::Read,
     os::unix::fs::MetadataExt,
     path::{Path, PathBuf},
     time::Duration,
@@ -15,116 +14,22 @@ pub const VIDEOS: [&str; 6] = ["mp4", "webm", "mkv", "mov", "avi", "m4v"];
 const THUMBNAIL_LIMIT_BYTES: u64 = 256 * 1024;
 const PREVIEW_LIMIT_BYTES: u64 = 2 * 1024 * 1024;
 const THUMBNAIL_CACHE_COUNT: usize = 128;
-const ENGINE_IDENTITY_CACHE_LIMIT: u64 = 4096;
 
-type ExecutableIdentity = nacre_protocol::wallpaper::WallpaperFileIdentity;
-
-#[derive(serde::Serialize, serde::Deserialize)]
-struct EngineIdentityCache {
-    engine: String,
-    identity: ExecutableIdentity,
-    sha256: String,
-}
-
-fn read_engine_identity_cache(
-    path: &Path,
-    engine: &str,
-    identity: &ExecutableIdentity,
-) -> Option<String> {
-    use std::os::unix::fs::OpenOptionsExt;
-    let file = fs::OpenOptions::new()
-        .read(true)
-        .custom_flags(nix::libc::O_NOFOLLOW | nix::libc::O_NONBLOCK)
-        .open(path)
-        .ok()?;
-    let meta = file.metadata().ok()?;
-    if !meta.is_file()
-        || meta.len() > ENGINE_IDENTITY_CACHE_LIMIT
-        || meta.uid() != nix::unistd::getuid().as_raw()
-        || meta.mode() & 0o022 != 0
-    {
-        return None;
-    }
-    let mut bytes = Vec::new();
-    (&file)
-        .take(ENGINE_IDENTITY_CACHE_LIMIT + 1)
-        .read_to_end(&mut bytes)
-        .ok()?;
-    if bytes.len() as u64 > ENGINE_IDENTITY_CACHE_LIMIT {
-        return None;
-    }
-    let cached: EngineIdentityCache = serde_json::from_slice(&bytes).ok()?;
-    if cached.engine != engine || cached.identity != *identity {
-        return None;
-    }
-    (cached.sha256.len() == 64
-        && cached
-            .sha256
-            .bytes()
-            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte)))
-    .then_some(cached.sha256)
-}
-
-fn write_engine_identity_cache(
-    path: &Path,
-    engine: &str,
-    identity: &ExecutableIdentity,
-    hash: &str,
-) {
-    let cached = EngineIdentityCache {
-        engine: engine.to_owned(),
-        identity: identity.clone(),
-        sha256: hash.to_owned(),
-    };
-    let Ok(bytes) = serde_json::to_vec(&cached) else {
-        return;
-    };
-    if bytes.len() as u64 > ENGINE_IDENTITY_CACHE_LIMIT {
-        return;
-    }
-    let _ = crate::files::atomic(path, &bytes);
-}
-
-fn engine_identity_for(executable: &Path, cache: &Path) -> Result<String> {
-    let mut file = fs::File::open(executable)?;
-    let before = ExecutableIdentity::from_metadata(&file.metadata()?);
-    let engine = crate::orient::engine_id();
-    let (digest, cache_miss) =
-        if let Some(cached) = read_engine_identity_cache(cache, engine, &before) {
-            (cached, false)
-        } else {
-            let mut hasher = Sha256::new();
-            let mut buffer = [0u8; 64 * 1024];
-            loop {
-                let count = file.read(&mut buffer)?;
-                if count == 0 {
-                    break;
-                }
-                hasher.update(&buffer[..count]);
-            }
-            (format!("{:x}", hasher.finalize()), true)
-        };
-    let after = ExecutableIdentity::from_metadata(&file.metadata()?);
-    if before != after {
-        return Err("Executable changed while hashing".into());
-    }
-    if cache_miss {
-        write_engine_identity_cache(cache, engine, &before, &digest);
-    }
-    Ok(format!("{engine}:{digest}"))
-}
-
-fn native_engine_identity(paths: &Paths) -> Result<&'static str> {
+/// What shapes prepared palette data: the pinned Orient engine plus the helper code that
+/// assembles the palette from it. Unrelated helper deploys keep every prepared palette.
+fn palette_code_identity() -> &'static str {
     static ID: std::sync::OnceLock<String> = std::sync::OnceLock::new();
-    if let Some(value) = ID.get() {
-        return Ok(value);
-    }
-    // /proc/self/exe remains readable if an upgrade unlinks the running binary.
-    let identity = engine_identity_for(
-        Path::new("/proc/self/exe"),
-        &paths.cache.join("native-engine-identity.json"),
-    )?;
-    Ok(ID.get_or_init(|| identity))
+    ID.get_or_init(|| {
+        let mut hasher = Sha256::new();
+        for source in [
+            include_str!("palette_cli.rs"),
+            include_str!("orient.rs"),
+            include_str!("lacquer.rs"),
+        ] {
+            hasher.update(source);
+        }
+        format!("{}:{:x}", crate::orient::engine_id(), hasher.finalize())
+    })
 }
 pub fn atomic(path: &Path, data: &Value) -> Result<()> {
     if state::schema(path).is_some() {
@@ -2083,7 +1988,7 @@ impl Media {
         } else {
             "uninstalled".into()
         };
-        let engine = format!("{}:{legacy}", native_engine_identity(&self.paths)?);
+        let engine = format!("{}:{legacy}", palette_code_identity());
         let scheme = state::read(&self.paths.state.join("scheme.json"), json!({}))?;
         let config = state::read(&self.paths.config.join("cli.json"), json!({}))?;
         let settings = self.settings()?;
@@ -2366,126 +2271,6 @@ mod thumbnail_cache_tests {
                 .filter(|entry| !entry["palette"].is_null())
                 .count(),
             17
-        );
-        Ok(())
-    }
-
-    #[test]
-    fn native_identity_cache_reuses_matching_digest() -> Result<()> {
-        let root = tempfile::tempdir()?;
-        let executable = root.path().join("fake-executable");
-        let cache = root.path().join("cache/engine.json");
-        fs::write(&executable, b"fake executable bytes")?;
-        let identity = ExecutableIdentity::from_metadata(&fs::metadata(&executable)?);
-        let digest = "a".repeat(64);
-        write_engine_identity_cache(&cache, crate::orient::engine_id(), &identity, &digest);
-        assert_eq!(
-            engine_identity_for(&executable, &cache)?,
-            format!("{}:{digest}", crate::orient::engine_id())
-        );
-        assert_eq!(
-            read_engine_identity_cache(&cache, crate::orient::engine_id(), &identity),
-            Some(digest)
-        );
-        Ok(())
-    }
-
-    #[test]
-    fn native_identity_cache_invalidates_changed_same_size_executable() -> Result<()> {
-        let root = tempfile::tempdir()?;
-        let executable = root.path().join("fake-executable");
-        let cache = root.path().join("cache/engine.json");
-        fs::write(&executable, b"first executable bytes")?;
-        let initial = ExecutableIdentity::from_metadata(&fs::metadata(&executable)?);
-        let digest = "a".repeat(64);
-        write_engine_identity_cache(&cache, crate::orient::engine_id(), &initial, &digest);
-        fs::write(&executable, b"other executable bytes")?;
-        // Two same-size writes can land in one timestamp tick; force a later mtime.
-        fs::File::options()
-            .write(true)
-            .open(&executable)?
-            .set_modified(std::time::SystemTime::now() + Duration::from_secs(2))?;
-        let changed = ExecutableIdentity::from_metadata(&fs::metadata(&executable)?);
-        assert_eq!(initial.size, changed.size);
-        assert_ne!(initial, changed);
-        assert_eq!(
-            read_engine_identity_cache(&cache, crate::orient::engine_id(), &changed),
-            None
-        );
-        let identity = engine_identity_for(&executable, &cache)?;
-        assert_eq!(
-            identity,
-            format!(
-                "{}:{:x}",
-                crate::orient::engine_id(),
-                Sha256::digest(b"other executable bytes")
-            )
-        );
-        Ok(())
-    }
-
-    #[test]
-    fn native_identity_cache_rebuilds_corrupt_data_and_rejects_unsafe_files() -> Result<()> {
-        use std::os::unix::fs::PermissionsExt;
-        let root = tempfile::tempdir()?;
-        let executable = root.path().join("fake-executable");
-        let cache = root.path().join("cache/engine.json");
-        fs::write(&executable, b"fake executable bytes")?;
-        fs::create_dir_all(cache.parent().ok_or("missing cache parent")?)?;
-        fs::write(&cache, b"{")?;
-        let identity = engine_identity_for(&executable, &cache)?;
-        let hash = identity.rsplit(':').next().ok_or("missing hash")?;
-        assert_eq!(
-            hash,
-            format!("{:x}", Sha256::digest(b"fake executable bytes"))
-        );
-        assert_eq!(
-            read_engine_identity_cache(
-                &cache,
-                crate::orient::engine_id(),
-                &ExecutableIdentity::from_metadata(&fs::metadata(&executable)?)
-            ),
-            Some(hash.to_owned())
-        );
-        fs::set_permissions(&cache, fs::Permissions::from_mode(0o666))?;
-        assert_eq!(
-            read_engine_identity_cache(
-                &cache,
-                crate::orient::engine_id(),
-                &ExecutableIdentity::from_metadata(&fs::metadata(&executable)?)
-            ),
-            None
-        );
-        fs::remove_file(&cache)?;
-        let target = root.path().join("foreign-cache");
-        fs::write(&target, b"{}")?;
-        std::os::unix::fs::symlink(&target, &cache)?;
-        assert_eq!(
-            read_engine_identity_cache(
-                &cache,
-                crate::orient::engine_id(),
-                &ExecutableIdentity::from_metadata(&fs::metadata(&executable)?)
-            ),
-            None
-        );
-        Ok(())
-    }
-
-    #[test]
-    fn native_identity_cache_write_failure_does_not_break_hashing() -> Result<()> {
-        let root = tempfile::tempdir()?;
-        let executable = root.path().join("fake-executable");
-        let cache_parent = root.path().join("not-a-directory");
-        fs::write(&executable, b"fake executable bytes")?;
-        fs::write(&cache_parent, b"occupied")?;
-        let identity = engine_identity_for(&executable, &cache_parent.join("engine.json"))?;
-        assert_eq!(
-            identity,
-            format!(
-                "{}:{:x}",
-                crate::orient::engine_id(),
-                Sha256::digest(b"fake executable bytes")
-            )
         );
         Ok(())
     }

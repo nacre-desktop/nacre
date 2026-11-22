@@ -64,3 +64,39 @@ fn automatic_mode_matches_original_pillow_luminance_and_thumbnail_bytes() -> Res
     }
     Ok(())
 }
+
+#[test]
+fn a_different_helper_executable_keeps_the_prepared_palette_marker() -> Result<()> {
+    // A deploy swaps the helper binary. This test binary and nacre-helper are different
+    // executables with the same palette code, so a prepared palette must stay valid.
+    let home = tempfile::tempdir()?;
+    let paths = nacre_helper::paths::Paths::new(home.path());
+    fs::create_dir_all(&paths.config)?;
+    let poster = home.path().join("wall.png");
+    image::DynamicImage::new_rgb8(4, 4).save(&poster)?;
+    let assets = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../nacre/shell-tools");
+    let here = Media::new(paths, assets.clone())?.palette_marker(
+        &poster,
+        "default",
+        None,
+        Some(&poster),
+        None,
+        None,
+    )?;
+    let output = std::process::Command::new(env!("CARGO_BIN_EXE_nacre-helper"))
+        .args(["palette-api", "wallpaper-media", "palette_marker"])
+        .arg(serde_json::json!({"args":[poster, "default", null, poster, null, null]}).to_string())
+        .env_clear()
+        .env("HOME", home.path())
+        .env("PATH", "/usr/bin:/bin")
+        .env("NACRE_HELPER_TOOLS", &assets)
+        .output()?;
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let reply: Value = serde_json::from_slice(&output.stdout)?;
+    assert_eq!(reply["result"].as_str(), here.to_str());
+    Ok(())
+}
