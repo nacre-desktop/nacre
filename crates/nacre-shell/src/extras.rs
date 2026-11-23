@@ -1118,20 +1118,8 @@ impl Extras {
                 && !state.catalogue_result.is_empty()
                 && let Some(preview) = self.wallpaper_preview()
             {
-                let images: Vec<&Json> = state
-                    .catalogue_result
-                    .iter()
-                    .filter(|entry| entry["kind"] == "image")
-                    .collect();
-                let ids: Vec<String> = images
-                    .iter()
-                    .filter_map(|entry| entry["id"].as_str().map(str::to_owned))
-                    .collect();
-                let active = state
-                    .wallpaper_focus
-                    .as_deref()
-                    .and_then(|focus| images.iter().position(|entry| entry["id"] == focus))
-                    .or_else(|| images.iter().position(|entry| entry["active"] == true));
+                let (ids, active) =
+                    prefetch_paths(&state.catalogue_result, state.wallpaper_focus.as_deref());
                 state.wallpaper_prefetched = preview.prefetch(&ids, active);
             }
             if boot.is_some() && state.catalogue_boot == boot {
@@ -2435,6 +2423,31 @@ pub fn panel(
                 .map_err(|error| error.to_string())
         }),
     })
+}
+
+/// What the display-size prefetch decodes per catalogue entry: a still's image, a video's poster (the still Bead
+/// shows while the video starts), in catalogue order, with the position of the focused (else active) entry.
+fn prefetch_paths(catalogue: &[Json], focus: Option<&str>) -> (Vec<String>, Option<usize>) {
+    let entries: Vec<(&Json, &str)> = catalogue
+        .iter()
+        .filter_map(|entry| {
+            let path = match entry["kind"].as_str()? {
+                "image" => entry["id"].as_str()?,
+                "video" => entry["video_predecode"]["poster_path"].as_str()?,
+                _ => return None,
+            };
+            Some((entry, path))
+        })
+        .collect();
+    let active = focus
+        .and_then(|focus| entries.iter().position(|(entry, _)| entry["id"] == focus))
+        .or_else(|| {
+            entries
+                .iter()
+                .position(|(entry, _)| entry["active"] == true)
+        });
+    let paths = entries.iter().map(|(_, path)| (*path).to_owned()).collect();
+    (paths, active)
 }
 
 #[cfg(test)]

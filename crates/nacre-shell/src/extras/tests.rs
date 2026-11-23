@@ -4737,3 +4737,20 @@ async fn closed_strand_runtime_sends_its_refresh_on_a_deadline_wake_then_stops_w
         "no wallpaper image reaches a closed stage ({staged} scenes staged)"
     );
 }
+
+#[test]
+fn prefetch_takes_a_stills_image_and_a_videos_poster_in_the_window() {
+    let catalogue = vec![
+        json!({"kind":"image","id":"/w/a.png"}),
+        json!({"kind":"video","id":"/w/b.mp4","video_predecode":{"poster_path":"/c/b.png"}}),
+        json!({"kind":"video","id":"/w/no-poster.mp4"}),
+        json!({"kind":"image","id":"/w/c.png"}),
+    ];
+    let (ids, active) = prefetch_paths(&catalogue, Some("/w/b.mp4"));
+    assert_eq!(ids, ["/w/a.png", "/c/b.png", "/w/c.png"]);
+    assert_eq!(active, Some(1));
+    assert_eq!(
+        crate::wallpaper_prefetch::window(&ids, active),
+        ["/c/b.png", "/w/c.png", "/w/a.png"]
+    );
+}
