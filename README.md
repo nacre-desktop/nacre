@@ -22,6 +22,8 @@ too, with fewer features (see the [compatibility table](docs/compatibility.md)).
   calculator, actions and web search.
 - A control center for Wi-Fi, Bluetooth, sound, brightness, power profiles and
   notifications. A dashboard with media, weather and system pages.
+- Strand, a wallpaper picker: each pick crossfades in at once and the desktop
+  recolours with it while you browse.
 - Wallpaper-derived dark and light palettes, previewed before you apply them, and
   pushed to GTK, Qt, Kitty, Chromium, Discord and Spotify if you want.
 - Settings with search. Changes apply as you make them.
