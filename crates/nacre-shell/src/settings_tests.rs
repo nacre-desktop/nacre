@@ -1183,3 +1183,54 @@ fn typing_in_the_search_field_is_fast() {
         Some(Value::Text(t)) if t == "keyboard layout"
     ));
 }
+
+/// Esc in the Settings window closes an open drop-down; with nothing left to cancel it does nothing
+/// (it fell through to the edit keys and logged `unsupported input command`).
+#[test]
+fn escape_in_settings_closes_a_drop_down_then_does_nothing() {
+    use bead::wayland::{SceneSource, UiEvent};
+    crate::i18n::init();
+    let palette = root().join("palette.json");
+    let colors = bead::render::Palette::read(&palette).unwrap();
+    let cold = crate::sound::fallback(colors.get("surface").unwrap());
+    let session =
+        bead::ui::Session::new(root(), "settings/main.luau".into(), palette, colors, cold);
+    let mut runtime = crate::reload::Runtime::new(session)
+        .with_settings(None, &root())
+        .unwrap();
+    runtime.services(Box::new(|_| {}));
+    runtime.viewport(960, 640);
+    runtime
+        .stage(UiEvent::Reload)
+        .unwrap()
+        .expect("settings view loads");
+    runtime.commit();
+    let escape = || UiEvent::Command {
+        command: "escape".into(),
+        shift: false,
+    };
+    if let Some(scene) = runtime
+        .session
+        .update(BTreeMap::from([(
+            "settings.select".into(),
+            Value::Text("a1".into()),
+        )]))
+        .unwrap()
+    {
+        runtime.session.commit(scene);
+    }
+    runtime.stage(escape()).expect("Esc closes the drop-down");
+    runtime.commit();
+    assert_eq!(
+        runtime.session.stores.get("settings.select"),
+        Some(&Value::Text(String::new()))
+    );
+    runtime
+        .stage(escape())
+        .expect("Esc with nothing to cancel is not an error");
+    runtime.commit();
+    assert_eq!(
+        runtime.session.stores.get("settings.select"),
+        Some(&Value::Text(String::new()))
+    );
+}

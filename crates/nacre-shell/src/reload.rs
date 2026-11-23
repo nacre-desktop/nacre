@@ -10172,6 +10172,8 @@ impl SceneSource for Runtime {
                         self.schedule_status_pill();
                         self.publish_status_pill()?
                     }
+                    // A window with nothing left to cancel (Settings, an app) ignores Esc.
+                    "escape" => None,
                     "tab" => self.session.focus_next(shift)?,
                     "enter"
                         if self.chat.as_ref().is_some_and(|chat| {
