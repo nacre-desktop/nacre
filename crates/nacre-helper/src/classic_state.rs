@@ -1187,13 +1187,7 @@ impl Publisher {
                 .join("\n")
                 + "\n"),
         )?;
-        let before = self
-            .backend
-            .config_path("palette")
-            .ok()
-            .and_then(|path| fs::read_to_string(path).ok());
         let config = self.publish_compositor_palette(&colors)?;
-        let palette_changed = before.as_deref() != Some(config.as_str());
         if theme_target_enabled(paths, "rofi")? {
             atomic_write(
                 &paths.config.join("rofi.rasi"),
@@ -1242,7 +1236,9 @@ impl Publisher {
                 &data,
                 &icon_theme,
                 &config,
-                palette_changed,
+                // niri's watcher reloads a changed palette include within 500 ms; asking again
+                // here made each wallpaper pick load niri's whole config twice.
+                false,
                 connection.as_ref(),
             )?;
         }
