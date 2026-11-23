@@ -354,7 +354,7 @@ fn unavailable_wallpaper_keeps_an_in_flight_poster_receiver() -> Result<()> {
 
 /// The 1 Hz `dashboard.system` and the player wake a hidden Today page for nothing: no
 /// projection, no Model stage. Showing it stages once with the latest reading. Open, a sample
-/// that moves no shown digit (the listing's disk bytes, a few memory pages) restages nothing.
+/// that moves no shown digit (the listing's disk bytes, a few memory pages, CPU tenths) wakes nothing.
 #[test]
 fn today_stages_system_samples_only_while_open_and_only_when_a_shown_reading_moves() -> Result<()> {
     use bead::wayland::{SceneSource, UiEvent};
@@ -431,16 +431,23 @@ fn today_stages_system_samples_only_while_open_and_only_when_a_shown_reading_mov
         json!("15%"),
         "one catch-up with the latest sample"
     );
-    let mut next = |data: Json| -> Result<Option<bead::render::Scene>> {
-        system.publish(data)?;
-        let wake = rx.recv_timeout(std::time::Duration::from_millis(500))?;
-        runtime.stage(wake)
-    };
+    let projected = projections.load(Ordering::Relaxed);
+    system.publish(sample(15.2, (6 << 30) + 99 * 4096, (50 << 30) + 99 * 8192))?;
     assert!(
-        next(sample(15.2, (6 << 30) + 99 * 4096, (50 << 30) + 99 * 8192))?.is_none(),
-        "open: a sample that moves no shown digit restages nothing"
+        rx.recv_timeout(std::time::Duration::from_millis(200))
+            .is_err(),
+        "open: a sample that moves no shown digit wakes nothing"
     );
-    let scene = next(sample(42., 6 << 30, 50 << 30))?.ok_or("open: a shown reading restages")?;
+    assert_eq!(
+        projections.load(Ordering::Relaxed),
+        projected,
+        "open: so it projects nothing either"
+    );
+    system.publish(sample(42., 6 << 30, 50 << 30))?;
+    let wake = rx.recv_timeout(std::time::Duration::from_millis(500))?;
+    let scene = runtime
+        .stage(wake)?
+        .ok_or("open: a shown reading restages")?;
     runtime.session.commit(scene);
     assert_eq!(cpu(&runtime), json!("42%"));
     Ok(())

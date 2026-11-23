@@ -430,6 +430,28 @@ impl Source for ReadOnly {
 fn invalid() -> source::Error {
     source::Error::new("validation", "invalid dashboard snapshot", false)
 }
+/// What Today draws from `dashboard.system`: the host card, and a label, the whole-percent reading and
+/// its arc (at that percent) per gauge. Its wake compares these, so the 1 Hz samples that move none of
+/// them (process lists, a few memory pages, CPU tenths) neither wake nor restage the page.
+fn today_system(data: &Json, now: fn() -> u64) -> BTreeMap<String, Value> {
+    let mut out = BTreeMap::new();
+    if let Ok(CoreSnapshot::System(s)) = checked("dashboard.system", data)
+        && s.health.available
+    {
+        controls::host(&s, now, &mut out);
+        let mut gauges = controls::gauges(&s);
+        let disk = s.disks.order.iter().find_map(|id| s.disks.items.get(id));
+        gauges[2] = json!({"id":"storage","label":tr("bead.dashboard.gauge-storage", &[]),
+            "value":disk.map_or("—".into(), |d| format!("{:.0}%", d.used as f64 * 100. / d.total as f64)),
+            "fraction":disk.map(|d| (d.used as f64 / d.total as f64).clamp(0.,1.))});
+        let shown = gauges.iter().map(|g| {
+            json!({"id":g["id"],"label":g["label"],"value":g["value"],
+            "fraction":g["fraction"].as_f64().map(|f| (f * 100.).round() / 100.)})
+        });
+        out.insert("dashboard.gauges".into(), Value::list(shown.collect()));
+    }
+    out
+}
 fn checked(topic: &str, data: &Json) -> source::Result<CoreSnapshot> {
     // Decode only the selected published dashboard payload types. Deserializing the whole
     // service enum links unrelated device/notification parsers into this view.
@@ -838,7 +860,21 @@ impl Dashboard {
         if let Some(player) = &self.player {
             subscriptions.push(player.subscribe(callback.clone())?);
         }
-        for source in [&self.system, &self.wallpaper, &self.summary_updates]
+        if let Some(system) = &self.system {
+            // The system topic revises every second; wake only when what Today draws from it moves.
+            let (callback, now) = (callback.clone(), self.now);
+            let last = std::sync::Mutex::new(None);
+            subscriptions.push(system.subscribe(Arc::new(move |snapshot| {
+                let key = (today_system(&snapshot.data, now), snapshot.connected);
+                let mut last = last.lock().unwrap_or_else(|e| e.into_inner());
+                if last.as_ref() != Some(&key) {
+                    *last = Some(key);
+                    drop(last);
+                    callback(snapshot);
+                }
+            }))?);
+        }
+        for source in [&self.wallpaper, &self.summary_updates]
             .into_iter()
             .flatten()
         {
@@ -949,24 +985,8 @@ impl Dashboard {
         if self.page == Page::Today {
             out.insert("dashboard.wallpaper".into(), Value::Bool(false));
             out.insert("dashboard.host".into(), Value::list(Vec::new()));
-            if let Some(source) = &self.system
-                && let Ok(CoreSnapshot::System(s)) =
-                    checked("dashboard.system", &source.snapshot().data)
-                && s.health.available
-            {
-                controls::host(&s, self.now, &mut out);
-                let mut gauges = controls::gauges(&s);
-                let disk = s.disks.order.iter().find_map(|id| s.disks.items.get(id));
-                gauges[2] = json!({"id":"storage","label":tr("bead.dashboard.gauge-storage", &[]),
-                    "value":disk.map_or("—".into(), |d| format!("{:.0}%", d.used as f64 * 100. / d.total as f64)),
-                    "fraction":disk.map(|d| (d.used as f64 / d.total as f64).clamp(0.,1.))});
-                // Today draws a label, the whole-percent reading and its arc. Keeping only those, with
-                // the arc at that percent, lets a 1 Hz sample that moves no shown digit restage nothing.
-                let shown = gauges.iter().map(|g| {
-                    json!({"id":g["id"],"label":g["label"],"value":g["value"],
-                    "fraction":g["fraction"].as_f64().map(|f| (f * 100.).round() / 100.)})
-                });
-                out.insert("dashboard.gauges".into(), Value::list(shown.collect()));
+            if let Some(source) = &self.system {
+                out.extend(today_system(&source.snapshot().data, self.now));
             }
             text(&mut out, "clock", "—", 16);
             if let Some(source) = &self.secondary {
