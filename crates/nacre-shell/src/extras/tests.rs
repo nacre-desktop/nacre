@@ -2887,13 +2887,15 @@ fn a_strand_move_reuses_its_image_rasters_on_patched_frames() -> bead_test::Resu
         let frame = cache.frame.as_ref().ok_or("no frame")?;
         let now: Vec<_> = frame.items.iter().map(|item| item.image.clone()).collect();
         if !previous.is_empty() {
-            // B0377: a zero-opacity image not hydrated yet has no item (it prefetches behind the frame), so
-            // none on both frames is no bake either.
-            let same = |(a, b): &(&Option<_>, &Option<_>)| {
-                matches!((a, b), (None, None))
-                    || matches!((a, b), (Some(a), Some(b)) if std::sync::Arc::ptr_eq(a, b))
+            // B0377: a zero-opacity image not hydrated yet has no item (it prefetches behind the frame) and
+            // gets one when the resource worker finishes it, between any two frames: that is its first bake.
+            // A re-bake is new or lost pixels for an image that already had some.
+            let rebaked = |(now, before): &(&Option<_>, &Option<_>)| match (now, before) {
+                (Some(a), Some(b)) => !std::sync::Arc::ptr_eq(a, b),
+                (None, Some(_)) => true,
+                _ => false,
             };
-            baked.push(now.iter().zip(&previous).filter(|pair| !same(pair)).count());
+            baked.push(now.iter().zip(&previous).filter(rebaked).count());
         }
         previous = now;
     }
