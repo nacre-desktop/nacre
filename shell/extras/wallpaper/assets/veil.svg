@@ -1,0 +1,7 @@
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 8 256" preserveAspectRatio="none">
+<defs>
+<linearGradient id="ramp" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#06070a" stop-opacity="0"/><stop offset="1" stop-color="#06070a" stop-opacity="1"/></linearGradient>
+</defs>
+<rect width="8" height="256" fill="url(#ramp)"/>
+</svg>

@@ -265,17 +265,12 @@ local function glyph_button(id,label,glyph,size,font,fill,action,request,left,to
 end
 
 -- Veil: only what the name, caption and pill need to read (owner, round 4: no dim that makes Strand an overlay):
--- nothing over the upper part, then flat translucent bands to `veil_max` at the bottom. A stretched SVG would be
--- rasterised at the full panel size, which overruns Bead's retained raster budget at 2880x1800.
-local function veil_alpha(at) return W.veil_max*math.max(0,at-W.veil_from)/(1-W.veil_from) end
-local veil={}
+-- nothing over the upper part, then one baked ramp image (alpha 0 at `veil_from` of the height, `veil_max` at the bottom).
+-- A ramp, not stacked flat bands: those showed a step per band on light wallpapers. Bead's GL path bakes it at 8x256 and
+-- draws it stretched; the CPU path rasters it at its rect (about 11 MB at 2880x1800, within the retained budget).
+local veil_top=math.floor(height*W.veil_from)
+local veil={ui.Image{id="veil-ramp",path=W.veil,image_fit="fill",bake_size={w=8,h=256},position="absolute",left=0,top=veil_top,width=width,height=height-veil_top,opacity=W.veil_max}}
 local children={}
-for band=0,W.veil_bands-1 do
-  -- Even edges land on whole physical pixels at scale 1, 1.5 and 2, so the bands leave no antialiased seams.
-  local function edge(index) return index==W.veil_bands and height or 2*math.floor(height*index/W.veil_bands/2) end
-  local top,bottom=edge(band),edge(band+1)
-  veil[#veil+1]=ui.Box{id="veil-"..band,position="absolute",left=0,top=top,width=width,height=bottom-top,radius=0,fill={6,7,10,math.floor(255*veil_alpha((band+.5)/W.veil_bands))}}
-end
 -- Wheel or trackpad: at most one step per 60 ms (Bead drops the rest); extras.rs lands it 240 ms after the last step.
 children[#children+1]=ui.Box{id="strand",position="absolute",left=0,top=0,width=width,height=height,fill="transparent",
   scroll=ui.action("strand_wheel"),scroll_steps={min_interval_ms=60},table.unpack(strand_nodes)}

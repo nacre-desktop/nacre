@@ -2984,10 +2984,11 @@ fn strand_shuffles_and_glides_stay_within_the_image_texture_budget() -> bead_tes
             rasters.iter().map(bytes).sum::<usize>(),
         )
     };
-    // The most a frame's image is drawn up from its raster (1 = sharp).
+    // The most a frame's pearl image is drawn up from its raster (1 = sharp); the veil is a ramp stretched on purpose.
     let softest = |scene: &bead::render::Scene| {
         images(scene)
             .iter()
+            .filter(|(path, ..)| !path.ends_with("veil.svg"))
             .map(|(_, rect, (w, _), _)| rect.w / w)
             .fold(0f32, f32::max)
     };

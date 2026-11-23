@@ -44,7 +44,7 @@ return {
     pearl_sizes={280,150,108,84,68,56,48}, pearl_gap=22, visible_reach=5, knot=5,
     anchor_x=-140, anchor_y=-30,
     ring_gap=5, ring_stroke=2, silk_stroke=3, move_duration=.5, glide_duration=.09, open_ms=250, close_ms=180, entry_drop=24,
-    veil_bands=40, veil_from=.45, veil_max=.88, sheen="extras/wallpaper/assets/sheen.svg", glow="extras/wallpaper/assets/glow.svg", shade="extras/wallpaper/assets/shade.svg",
+    veil_from=.45, veil_max=.88, veil="extras/wallpaper/assets/veil.svg", sheen="extras/wallpaper/assets/sheen.svg", glow="extras/wallpaper/assets/glow.svg", shade="extras/wallpaper/assets/shade.svg",
     ink={255,255,255,255}, ink_soft={245,241,248,255},
     silk={{244,201,218},{216,200,244},{185,214,245},{191,234,219},{242,228,186}},
     silk_shadow={0,0,0,150}, knot_fill={235,228,242,255}, pearl_edge={255,255,255,56}, pearl_sheen={255,255,255,255},
