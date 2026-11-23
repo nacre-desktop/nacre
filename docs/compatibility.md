@@ -9,6 +9,7 @@ features. Some shared features use a fallback or have reduced behavior.
 | **Desktop basics** | | | |
 | Session, lock and idle | Partly: idle lock is opt-in (see below) | Partly: idle lock is opt-in (see below) | Yes |
 | Wallpaper and backdrop | Yes | Yes | Yes |
+| Wallpaper picker (Strand) | Yes: windows fade out while you browse | Partly: switches the focused screen to an empty workspace instead (not yet checked in a session) | Partly: switches to an empty workspace if one exists, else the windows stay (not yet checked in a session) |
 | Notifications and on-screen feedback | Yes | Yes | Yes |
 | Screenshots | Yes | Yes | Yes |
 | Shortcut hints | Yes | Partly: hints are generated locally | Yes |
