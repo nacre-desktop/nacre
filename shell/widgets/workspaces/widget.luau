@@ -9,6 +9,14 @@ local ws_on=c.ws_on
 local focus_on=c.focus_on
 local thread=c.thread
 local pearl_accent=c.pearl_accent
+-- Out-cubic `ui.animated` slide of `target`, plus `base`; a plain number while it does not move, so a resting bar holds no markers.
+local function slide(key,target,duration,base)
+    local drive=ui.animated(key,target,duration,"out-cubic")
+    local from,to=ui.range(drive)
+    if from==to then return base+to end
+    -- Luau cannot add to a marker: follow the driver on a track.
+    return ui.track(drive,{math.min(from,to),math.max(from,to)},from<to and {base+from,base+to} or {base+to,base+from})
+end
 return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",data={topics={},actions={}},settings={},defaults={},budget={fps_active=0,fps_idle=0,pause_on={"fullscreen","lock","battery_saver"}},
     forms={bar={default_style="pearls",styles={pearls={title="Workspaces",min_span=1,max_span=60,preferred_span=1,render=function(props,settings,data)
             local workspaces=ui.resolve_for_check(ui.bind("bead.workspaces")) or {}
@@ -94,7 +102,7 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
             local natural_width=10+cursor-(#workspaces>0 and capsule_gap or 0)
             -- The stack control's width (the fan opening or closing) moves the workspaces at once, so the pill and the
             -- active capsule take it at once too; only the workspaces' own changes slide (a trailing capsule was a dark circle).
-            local pill_width=collection_width+ui.animate("workspaces.pill.width:"..props.instance.iid,natural_width,.16,"out-cubic")
+            local pill_width=slide("workspaces.pill.width:"..props.instance.iid,natural_width,.16,collection_width)
             local number_height=t.stack_font*t.line_height
             -- Stack i's numeral, `top` px into its slot; the current stack's (`on`) in the accent.
             local function numeral(id,i,width,top,on)
@@ -132,7 +140,7 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
             return ui.Row{id="capsule",width=pill_width,height=t.pill_height,padding_left=5,padding_right=5,gap=capsule_gap,radius=t.pill_radius,fill=c.islands and "transparent" or c.base,clip_children=false,align="center",
             -- QML workspaceThread: a 1 px primary -> secondary -> tertiary line at 12 % behind the pearls, inset 16 px.
             thread and kit.tokens.gradients and ui.Image{id="thread",position="absolute",left=21+collection_width,right=21,top=(t.pill_height-1)/2,height=1,path="bar/assets/workspace-thread.themed.svg"} or ui.Box{id="thread",width=0,height=0,shrink=0,visible=false},
-            active_left and ui.Box{id="active-capsule",position="absolute",left=5+collection_width+ui.animate("workspaces.active.left:"..props.instance.iid,active_left,.18,"out-cubic"),top=(t.pill_height-t.active_height)/2,width=ui.animate("workspaces.active.width:"..props.instance.iid,active_width,.16,"out-cubic"),height=t.active_height,radius=t.active_radius,
+            active_left and ui.Box{id="active-capsule",position="absolute",left=5+collection_width,translate_x=slide("workspaces.active.left:"..props.instance.iid,active_left,.18,0),top=(t.pill_height-t.active_height)/2,width=slide("workspaces.active.width:"..props.instance.iid,active_width,.16,0),height=t.active_height,radius=t.active_radius,
                 fill=active_icon_mode and active_accent or ui.tint(c.base,active_accent,.15),border_width=1,border_color=ui.alpha(active_accent,.24)} or ui.Box{id="active-capsule",width=0,height=0,visible=false,shrink=0},
             -- Keep the child list dense when no stack is advertised, so Repeat still renders.
             collection_control or ui.Box{id="collection-segment",width=0,height=0,visible=false,shrink=0},
@@ -155,7 +163,7 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
                     local ink=on and "onPrimary" or "onSurfaceVariant"
                     local icon=item.icon or ""
                     width=46
-                    animated_width=ui.animate("workspace.cell.width:"..props.instance.iid..":"..item.id,width,.16,"out-cubic")
+                    animated_width=slide("workspace.cell.width:"..props.instance.iid..":"..item.id,width,.16,0)
                     button=kit.Button{id="workspace",position="absolute",left=gs,top=0,width=animated_width,height=t.workspace_height,radius=t.workspace_radius,padding=0,fill="transparent",hover_fill=ui.alpha(accent,0.1),shrink=0,
                         on_activate=activate,
                         ui.Row{id="face",position="absolute",left=0,top=2,width=46,height=24,gap=4,align="center",justify="center",
@@ -191,7 +199,7 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
                         apps[#apps+1]=centered_text{id="more",text=more,width=17,shrink=0,font_size=12,color="onSurface"}
                     end
                     width=32+shown*18+(more~="" and 20 or 0)+(hinted and 4 or 0)
-                    animated_width=ui.animate("workspace.cell.width:"..props.instance.iid..":"..item.id,width,.16,"out-cubic")
+                    animated_width=slide("workspace.cell.width:"..props.instance.iid..":"..item.id,width,.16,0)
                     local lit=on or item.occupied==true
                     local size=on and t.pearl_current or lit and t.pearl_occupied or t.pearl_empty
                     local parts={}
@@ -224,7 +232,7 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
                 if pressed_workspace then
                     kids[#kids+1]=ui.Box{id="pressed-feedback",position="absolute",left=gs,top=0,width=animated_width,height=t.workspace_height,radius=t.workspace_radius,fill=ui.alpha("onSurface",.12),shrink=0}
                 end
-                return ui.Box{id="cell",width=gs+animated_width,height=t.workspace_height,shrink=0,table.unpack(kids)}
+                return ui.Box{id="cell",width=(slide("workspace.cell.width:"..props.instance.iid..":"..item.id,width,.16,gs)),height=t.workspace_height,shrink=0,table.unpack(kids)}
             end},
         }
     end}}}}}

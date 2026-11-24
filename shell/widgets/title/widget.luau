@@ -58,8 +58,14 @@ end
 -- first). A fresh key or reduced motion snaps to the target, i.e. draws nothing.
 local function trace(iid)
     local rev=ui.resolve_for_check(ui.bind("bead.title.rev")) or 0
-    local width=t.title_trace_width*(1-math.clamp(rev-ui.animate("title.trace.w."..iid,rev,.12,"out-cubic"),0,1))
-    local alpha=.9*math.clamp(rev-ui.animate("title.trace.a."..iid,rev,.4,"in-cubic"),0,1)
+    -- rev-v runs 1 -> 0 as each key chases rev, so width and alpha are tracks over their own driver (plain numbers at rest, when nothing paints).
+    local function follow(key,duration,curve,rest,moving)
+        local drive=ui.animated(key,rev,duration,curve)
+        local from,to=ui.range(drive)
+        return from==to and rest or ui.track(drive,{rev-1,rev},moving)
+    end
+    local width=follow("title.trace.w."..iid,.12,"out-cubic",t.title_trace_width,{0,t.title_trace_width})
+    local alpha=follow("title.trace.a."..iid,.4,"in-cubic",0,{.9,0})
     return ui.Row{id="title-trace-row",position="absolute",left=0,right=0,top=header-t.title_trace_inset-t.title_trace_height-(header-t.title_height)/2,height=t.title_trace_height,justify="center",visible=ui.bind("bead.desktop.titlevisible"),
         ui.Box{id="title-trace",width=width,height=t.title_trace_height,radius=1,fill=ui.alpha(trace_accent(),alpha)}}
 end
