@@ -7,7 +7,7 @@ features. Some shared features use a fallback or have reduced behavior.
 | Feature | nacre-niri | Stock niri | Hyprland |
 | --- | --- | --- | --- |
 | **Desktop basics** | | | |
-| Session, lock and idle | Partly: idle lock is opt-in (see below) | Partly: idle lock is opt-in (see below) | Yes |
+| Session, lock and idle | Partly: idle lock is opt-in (see below) | Partly: idle lock is opt-in, and the lock can finish just after waking (see below) | Yes |
 | Wallpaper and backdrop | Yes | Yes | Yes |
 | Wallpaper picker (Strand) | Yes: windows fade out while you browse | Partly: switches the focused screen to an empty workspace instead (not yet checked in a session) | Partly: switches to an empty workspace if one exists, else the windows stay (not yet checked in a session) |
 | Notifications and on-screen feedback | Yes | Yes | Yes |
@@ -30,11 +30,17 @@ features. Some shared features use a fallback or have reduced behavior.
 | **Settings** | | | |
 | Compositor-specific options | Yes | Partly: unsupported choices are hidden | Partly: some options may not apply |
 
-On nacre-niri and stock niri, Nacre always locks before suspend. Idle lock stays
-off until you confirm that password unlock works: lock with Super+L, unlock with
-your password, then create `~/.config/nacre/niri-on-pc/acceptance.json`
-containing `{"phase":"nacre","backendReady":true,"unlockVerified":true}`. It
-takes effect at your next login, or at once after
+On nacre-niri, Nacre always locks before suspend. On stock niri, suspend starts
+the lock, but stock niri lacks hyprland-lock-notify-v1, so the machine can sleep
+before the lock screen is up; it locks within about a second of waking.
+nacre-niri is the tier that guarantees the screen is locked before the machine
+sleeps.
+
+On both niri tiers, idle lock stays off until you confirm that password unlock
+works: lock with Super+L, unlock with your password, then create
+`~/.config/nacre/niri-on-pc/acceptance.json` containing
+`{"phase":"nacre","backendReady":true,"unlockVerified":true}`. It takes effect
+at your next login, or at once after
 `systemctl --user restart nacre-niri-lock.service`.
 
 The fresh-Arch VM gate checks install, session startup, rendered output,
@@ -43,5 +49,5 @@ set. It last passed every stage on all three tiers on 2026-11-24 (main
 49601c1a1, nacre-niri r3130); the upgrade stage last ran on 2026-11-16 (main
 7e12fa0e9). On CachyOS (generic, x86-64-v3 and x86-64-v4 repositories), a
 container check of install, setup and purge passed on all three tiers on
-2026-11-16; there, most dependencies, including niri and Hyprland, come from CachyOS's
-rebuilt packages.
+2026-11-16; there, most dependencies, including niri and Hyprland, come from
+CachyOS's rebuilt packages.
