@@ -560,6 +560,7 @@ class PackageSetupTests(unittest.TestCase):
                     target.unlink()
                     with (
                         patch.object(releases, "HOME", home),
+                        patch.object(releases, "STATE", home / "releases"),
                         patch.object(releases, "subprocess"),
                     ):
                         releases.restore(Path(record["release"]), record)
