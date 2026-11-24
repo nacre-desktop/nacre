@@ -23,6 +23,7 @@ and project tasks. Provider installation/sign-in is a separate user choice. The
 code-only component installer preserves existing accounts and running workers;
 it never copies somebody else's authentication. General profiles use workspace
 write access; full access is an explicit `aiFullAccess:true` profile preference.
+The AI full-access switch applies to Claude; Codex always runs with full access.
 
 Brain displays/searches a local Markdown vault. The default path is
 `~/Documents/Nacre-Brain`; `NACRE_BRAIN_DIR`/`NACRE_BRAIN` can select an existing

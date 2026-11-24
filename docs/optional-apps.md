@@ -18,9 +18,9 @@ AI connects an existing Codex or Claude installation and its accounts to
 conversations and project tasks. Install and sign into your chosen provider
 separately, then use AI Settings to select it. Open the sidebar with Super+A or
 from the launcher. Installing Nacre's code does not sign in, copy authentication,
-download models or interrupt existing conversations. Codex defaults to write
-access in the task workspace and configured Brain vault; Claude uses its own
-permission prompts. `"aiFullAccess": true` is a profile opt-in for broader access.
+download models or interrupt existing conversations. Claude uses its own
+permission prompts; `"aiFullAccess": true` is a profile opt-in for broader access.
+The AI full-access switch applies to Claude; Codex always runs with full access.
 
 ## Brain
 
