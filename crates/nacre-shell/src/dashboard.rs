@@ -430,6 +430,40 @@ impl Source for ReadOnly {
 fn invalid() -> source::Error {
     source::Error::new("validation", "invalid dashboard snapshot", false)
 }
+/// A page topic across a close (row 73). `last` is what the page showed; it stands in until
+/// `live` has data, so a reopened page draws it on its first frame, never "loading".
+struct Kept {
+    live: Arc<dyn Source>,
+    last: std::sync::Mutex<Option<Arc<Snapshot>>>,
+}
+impl Source for Kept {
+    fn snapshot(&self) -> Arc<Snapshot> {
+        let live = self.live.snapshot();
+        let mut last = self.last.lock().unwrap_or_else(|p| p.into_inner());
+        if live.connected || live.revision > 0 {
+            *last = None;
+        }
+        last.clone().unwrap_or(live)
+    }
+    fn subscribe(&self, callback: Callback) -> source::Result<Subscription> {
+        self.live.subscribe(callback)
+    }
+    fn invoke(&self, method: String, params: Json) -> source::Reply<'_> {
+        self.live.invoke(method, params)
+    }
+    fn reconnect(&self) -> source::Reply<'_> {
+        self.live.reconnect()
+    }
+    fn stop(&self) -> source::Reply<'_> {
+        self.live.stop()
+    }
+}
+fn kept(live: Arc<dyn Source>, last: Arc<Snapshot>) -> Arc<dyn Source> {
+    Arc::new(Kept {
+        live,
+        last: std::sync::Mutex::new(Some(last)),
+    })
+}
 /// What Today draws from `dashboard.system`: the host card, and a label, the whole-percent reading and
 /// its arc (at that percent) per gauge. Its wake compares these, so the 1 Hz samples that move none of
 /// them (process lists, a few memory pages, CPU tenths) neither wake nor restage the page.
@@ -588,6 +622,8 @@ pub struct Dashboard {
     ticker: std::cell::RefCell<Option<Ticker>>,
     now: fn() -> u64,
     preview: bool,
+    /// Closed with its daemon topics dropped (row 73), see [`Self::park`].
+    parked: bool,
     #[cfg(test)]
     project_calls: Arc<std::sync::atomic::AtomicUsize>,
     #[cfg(test)]
@@ -597,6 +633,53 @@ pub type Factory = Arc<dyn Fn(Page) -> Result<Dashboard, String> + Send + Sync>;
 impl Dashboard {
     pub fn page(&self) -> Page {
         self.page
+    }
+    /// The daemon topics the page reads besides `source` (`prefs` and the clock are shared).
+    fn topics(&mut self) -> [&mut Option<Arc<dyn Source>>; 8] {
+        [
+            &mut self.secondary,
+            &mut self.player,
+            &mut self.system,
+            &mut self.wallpaper,
+            &mut self.wallpaper_settings,
+            &mut self.power_settings,
+            &mut self.summary_updates,
+            &mut self.settings,
+        ]
+    }
+    pub(crate) fn parked(&self) -> bool {
+        self.parked
+    }
+    /// Closed: drop every topic lease, so the daemon stops sampling for a hidden page (row 73),
+    /// and keep the snapshot each showed for the closing frames and the next open.
+    pub(crate) fn park(&mut self) -> source::Result<()> {
+        let off: Arc<dyn Source> = Arc::new(ReadOnly::unavailable()?);
+        self.source = kept(off.clone(), self.source.snapshot());
+        for topic in self.topics().into_iter().flatten() {
+            *topic = kept(off.clone(), topic.snapshot());
+        }
+        self.parked = true;
+        Ok(())
+    }
+    /// Reopened: take the factory's fresh leases; each shows the parked snapshot until it has data.
+    pub(crate) fn resume(&mut self, mut fresh: Dashboard) {
+        // A link that dropped while closed reads stale, as held leases would have.
+        let link = self.client.as_ref().is_none_or(|c| c.snapshot().connected);
+        let last = |source: &Arc<dyn Source>| {
+            let mut last = source.snapshot();
+            Arc::make_mut(&mut last).connected &= link;
+            last
+        };
+        self.source = kept(fresh.source.clone(), last(&self.source));
+        for (topic, live) in self.topics().into_iter().zip(fresh.topics()) {
+            if let Some(live) = live.take() {
+                *topic = Some(match topic.as_ref() {
+                    Some(parked) => kept(live, last(parked)),
+                    None => live,
+                });
+            }
+        }
+        self.parked = false;
     }
     pub fn new(
         page: Page,
@@ -635,6 +718,7 @@ impl Dashboard {
             ticker: Default::default(),
             now: now_ms,
             preview,
+            parked: false,
             #[cfg(test)]
             project_calls: Arc::default(),
             #[cfg(test)]

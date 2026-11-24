@@ -420,6 +420,97 @@ fn tab_navigation_keeps_runtime_open_and_releases_previous_page_sources() -> Res
 }
 
 #[test]
+fn closed_dashboard_holds_no_lease_and_reopens_on_the_values_it_showed() -> Result<()> {
+    use bead::wayland::{SceneSource, UiEvent};
+    use std::sync::{
+        Mutex, Weak,
+        atomic::{AtomicBool, Ordering},
+    };
+    let harness = Harness::load(
+        &root(),
+        Path::new("dashboard/today/main.luau"),
+        &root().join("palette.json"),
+        BTreeMap::new(),
+        Config {
+            width: 1048,
+            height: 714,
+            scale: 1.5,
+        },
+    )?;
+    // A fake daemon: each source the factory opens is one lease; `pending` ones have no data yet.
+    let leases = Arc::new(Mutex::new(Vec::<Weak<FakeSource>>::new()));
+    let pending = Arc::new(AtomicBool::new(false));
+    let factory: Factory = {
+        let (leases, pending) = (leases.clone(), pending.clone());
+        Arc::new(move |page| {
+            let lease = |name: &str| -> std::result::Result<Arc<dyn Source>, String> {
+                let pending = pending.load(Ordering::Relaxed);
+                let data = if pending { json!({}) } else { fixture(name) };
+                let source = Arc::new(FakeSource::new(data).map_err(|e| e.to_string())?);
+                if pending {
+                    source.disconnect().map_err(|e| e.to_string())?;
+                }
+                leases.lock().unwrap().push(Arc::downgrade(&source));
+                Ok(source)
+            };
+            Ok(
+                Dashboard::new(page, lease("today")?, Some(lease("weather")?), true)
+                    .with_now(fixed_now)
+                    .with_overview(Some(lease("system")?), None, Some(lease("updates")?)),
+            )
+        })
+    };
+    let held = || {
+        let leases = leases.lock().unwrap();
+        leases.iter().filter(|l| l.strong_count() > 0).count()
+    };
+    let shown = |runtime: &mut crate::reload::Runtime, event| -> Result<BTreeMap<String, Value>> {
+        if let Some(scene) = runtime.stage(event)? {
+            runtime.session.commit(scene);
+        }
+        let values = runtime.session.stores.values().iter();
+        Ok(values
+            .filter(|(id, _)| id.starts_with("dashboard."))
+            .map(|(id, value)| (id.clone(), value.clone()))
+            .collect())
+    };
+    let initial = factory(Page::Today)?;
+    let mut runtime =
+        crate::reload::Runtime::new(harness.session).with_dashboard_factory(initial, factory)?;
+    runtime.services(Box::new(|_| {}));
+    let open = shown(&mut runtime, UiEvent::Model(BTreeMap::new()))?;
+    assert_eq!(held(), 4);
+    let count = |n| Value::Text(tr_n("bead.dashboard.updates-count", n, &[]));
+    assert_eq!(open["dashboard.updates"], count(12));
+
+    let closed = shown(&mut runtime, UiEvent::PanelVisibility(false))?;
+    assert_eq!(held(), 0, "a closed dashboard holds no daemon lease");
+    assert_eq!(closed, open, "closing changes no dashboard value");
+    pending.store(true, Ordering::Relaxed);
+    let reopened = shown(&mut runtime, UiEvent::PanelVisibility(true))?;
+    assert_eq!(held(), 4, "reopening leases again");
+    assert_eq!(
+        reopened, open,
+        "the first frame after reopening draws the values the page closed on"
+    );
+
+    // The fresh snapshot replaces its parked one; the other topics still wait for theirs.
+    let fresh = leases.lock().unwrap()[7]
+        .upgrade()
+        .ok_or("fresh updates lease")?;
+    let mut update = fixture("updates");
+    update["count"] = json!(3);
+    fresh.publish(update)?;
+    drop(fresh);
+    let now = shown(&mut runtime, UiEvent::Model(BTreeMap::new()))?;
+    assert_eq!(now["dashboard.updates"], count(3));
+    assert_eq!(now["dashboard.summary"], open["dashboard.summary"]);
+    shown(&mut runtime, UiEvent::PanelVisibility(false))?;
+    assert_eq!(held(), 0);
+    Ok(())
+}
+
+#[test]
 fn dashboard_pearl_centers_under_each_caption_at_fractional_scale() -> Result<()> {
     use bead::render::Primitive;
     crate::i18n::init();

@@ -9190,6 +9190,29 @@ impl SceneSource for Runtime {
                 }
             }
             UiEvent::PanelVisibility(open) => {
+                // Row 73: a closed dashboard holds no daemon lease; reopening takes fresh ones
+                // through the page factory and draws the parked values until they have data.
+                if let Some(dashboard) = &self.dashboard
+                    && let Some(factory) = &self.dashboard_factory
+                {
+                    let parked = dashboard.borrow().parked();
+                    if !open && !parked {
+                        self.dashboard_subscription.clear();
+                        dashboard.borrow_mut().park()?;
+                    } else if open && parked {
+                        let page = dashboard.borrow().page();
+                        match factory(page) {
+                            Ok(fresh) => dashboard.borrow_mut().resume(fresh),
+                            Err(error) => eprintln!("SOURCE_ERROR code=dashboard_resume {error}"),
+                        }
+                        if let Some(wakeup) = self.wakeup.clone() {
+                            match dashboard.borrow().subscribe(wakeup) {
+                                Ok(subscriptions) => self.dashboard_subscription = subscriptions,
+                                Err(_) => eprintln!("SOURCE_ERROR code=dashboard_subscription"),
+                            }
+                        }
+                    }
+                }
                 crate::placement::panel_visible(&mut self.panel_shown, open);
                 if self.chat.is_some() {
                     crate::app::notify_panel_visibility(open);
