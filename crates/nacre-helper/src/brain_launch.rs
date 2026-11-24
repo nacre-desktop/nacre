@@ -152,6 +152,14 @@ pub(crate) fn percent_encode(value: &str) -> String {
     result
 }
 
+/// Percent-encoded `file://` URI of an absolute path; only encoded slashes are restored.
+fn file_uri(path: &Path) -> String {
+    format!(
+        "file://{}",
+        percent_encode(&path.to_string_lossy()).replace("%2F", "/")
+    )
+}
+
 fn is_brain_window(window: &Value, pids: &std::collections::BTreeSet<u32>) -> bool {
     let class = window
         .get("class")
@@ -418,7 +426,8 @@ fn notify_launch_failure(message: &str) {
     }
 }
 
-/// Retry authentication for a browser already open during a server upgrade.
+/// Re-authenticate a browser window left open across a server restart (each start mints a
+/// fresh session).
 pub fn migrate_existing_browser() -> Result<()> {
     if brain_window()?.is_some() {
         bootstrap_existing_browser()?;
@@ -431,7 +440,7 @@ pub fn bootstrap_existing_browser() -> Result<()> {
     if !brain_auth::browser_ready(&state, brain_web::port()?)? {
         let handoff = brain_auth::refresh_bootstrap(&state, brain_web::port()?, true)?;
         // Own scope: a daemon restart must not kill the browser (KillMode=control-group).
-        launch(&browser_command(&handoff, true)?)?;
+        launch(&browser_command(&file_uri(&handoff), true)?)?;
     }
     Ok(())
 }
@@ -536,7 +545,7 @@ fn ensure_brain(focus: bool) -> Result<()> {
             .ok()
             .and_then(|v| v.get("id").and_then(Value::as_i64));
         let open = brain_auth::refresh_bootstrap(&state, brain_web::port()?, false)?;
-        launch(&browser_command(&open, false)?)?;
+        launch(&browser_command(&file_uri(&open), false)?)?;
         launched = true;
         for _ in 0..100 {
             window = brain_window()?;
@@ -1024,32 +1033,47 @@ mod tests {
     }
 
     #[test]
-    fn browser_open_url_uses_dedicated_profile_and_private_handoff_class() {
-        let open_uri = "http://127.0.0.1:17843/#nacre-bootstrap=token";
-        let handoff_uri = "http://127.0.0.1:17843/auth-complete#nacre-bootstrap=token";
-        let open = browser_arguments(
-            Path::new("/browser/chrome"),
-            Path::new("/home/test/nacre/brain-browser"),
-            open_uri,
-            false,
+    fn browser_launch_argv_opens_a_private_page_and_carries_no_bootstrap_token() {
+        let fixture = tempfile::tempdir().unwrap();
+        let state = fixture.path().join("Brain state");
+        for (handoff, class, target) in [
+            (false, "--class=nacre-brain", "/#nacre-bootstrap="),
+            (
+                true,
+                "--class=nacre-brain-auth",
+                "/auth-complete#nacre-bootstrap=",
+            ),
+        ] {
+            let page = brain_auth::refresh_bootstrap(&state, 17843, handoff).unwrap();
+            let bootstrap: Value = serde_json::from_slice(
+                &fs::read(state.join("auth/ports/17843.bootstrap.json")).unwrap(),
+            )
+            .unwrap();
+            let token = bootstrap["token"].as_str().unwrap();
+            let argv = browser_arguments(
+                Path::new("/browser/chrome"),
+                Path::new("/home/test/nacre/brain-browser"),
+                &file_uri(&page),
+                handoff,
+            );
+            assert!(argv.iter().all(|arg| !arg.contains(token)), "{argv:?}");
+            assert!(argv.iter().any(|arg| arg == class));
+            assert!(argv
+                .iter()
+                .any(|arg| arg == "--user-data-dir=/home/test/nacre/brain-browser"));
+            let app = format!("--app={}", file_uri(&page));
+            assert!(argv.contains(&app), "{argv:?}");
+            let html = fs::read_to_string(&page).unwrap();
+            assert!(html.contains(&format!("http://127.0.0.1:17843{target}{token}")));
+            assert_eq!(
+                fs::metadata(&page).unwrap().permissions().mode() & 0o777,
+                0o600
+            );
+        }
+        assert_eq!(
+            file_uri(Path::new("/tmp/Brain Home/a%2F#.html")),
+            "file:///tmp/Brain%20Home/a%252F%23.html"
         );
-        let handoff = browser_arguments(
-            Path::new("/browser/chrome"),
-            Path::new("/home/test/nacre/brain-browser"),
-            handoff_uri,
-            true,
-        );
-        assert!(open.iter().any(|arg| arg == "--class=nacre-brain"));
-        assert!(handoff.iter().any(|arg| arg == "--class=nacre-brain-auth"));
-        assert!(open
-            .iter()
-            .any(|arg| arg == "--user-data-dir=/home/test/nacre/brain-browser"));
-        assert!(open
-            .iter()
-            .any(|arg| arg == "--app=http://127.0.0.1:17843/#nacre-bootstrap=token"));
-        assert!(handoff
-            .iter()
-            .any(|arg| arg == "--app=http://127.0.0.1:17843/auth-complete#nacre-bootstrap=token"));
     }
 
     #[test]

@@ -67,12 +67,17 @@ Existing AI permissions and `paru -Syu --skipreview` stay unchanged.
   and the private API credential. POST retains exact canonical Origin, cookie
   and application/json checks. The canonical origin remains `127.0.0.1`.
 - Bootstrap expires after five minutes and is consumed once. Explicit launches
-  refresh its private handoff file. Restart revokes old bootstraps. Sessions
+  refresh its private 0600 handoff page (`auth/open.html`, `auth/handoff.html`),
+  and the browser opens that file, so the token is never on a command line
+  (security review C1, `docs/research/v0.1-security-review-20261124.md`).
+  Restart revokes old bootstraps and mints a fresh session (C2): credentials an
+  open window sent to a squatter on the free port die with it, and the window
+  re-authenticates through the handoff. Sessions
   expire after 30 days server-side and via cookie Max-Age; each listener port
   has separate session/marker state under `auth/ports` (this does not port-scope
   browser cookies). Legacy sessions reauthenticate through the existing handoff.
   A page already loaded from the Python server needs one reload to load the
-  origin-bound fetch hook; subsequent native-client restarts retain credentials.
+  origin-bound fetch hook.
 - At most 32 clients; absolute 60-second connection lifetime, five-second
   request parse/body and response-write deadlines, 16 KiB headers, 4 KiB action
   bodies, 8 MiB responses. Transfer-Encoding, repeated headers, invalid lengths,

@@ -1,4 +1,4 @@
-//! Restart-safe sessions and one-time bootstrap for the Brain loopback server.
+//! Per-start sessions and one-time bootstrap for the Brain loopback server.
 
 use hmac::{Hmac, Mac};
 use serde::{Deserialize, Serialize};
@@ -26,7 +26,8 @@ struct BootstrapFile {
     expires: u64,
 }
 
-/// Authentication state for one listener port. Session credentials survive restarts;
+/// Authentication state for one listener port. Each listener start mints a fresh session,
+/// so credentials sent to a squatter on a free port die with it (security review C2);
 /// bootstrap credentials are rotated at startup and expire after five minutes.
 /// Browser cookies are still host-scoped across ports; HTTP enforces same-origin
 /// Fetch Metadata on protected APIs rather than treating the name as port isolation.
@@ -44,7 +45,7 @@ impl BrowserAuth {
         let directory = state.join("auth").join("ports");
         secure_state_dirs(state, &directory)?;
         let _lock = auth_lock(&directory, port)?;
-        let session = active_session(&directory, port)?;
+        let session = new_session(&directory.join(format!("{port}.json")))?;
         let cookie = session.cookie;
         let bearer = session.bearer;
         let cookie_expires = session.expires;
@@ -203,8 +204,9 @@ fn readiness_mac(bearer: &str, port: u16, nonce: &str) -> String {
     output
 }
 
-/// Rotate bootstrap and return its loopback URL for an explicit browser launch.
-pub fn refresh_bootstrap(state: &Path, port: u16, handoff: bool) -> io::Result<String> {
+/// Rotate bootstrap and write the private page that hands it to an explicit browser launch.
+/// The token stays in this 0600 file: a browser's command line is world-readable (review C1).
+pub fn refresh_bootstrap(state: &Path, port: u16, handoff: bool) -> io::Result<PathBuf> {
     let directory = state.join("auth").join("ports");
     secure_state_dirs(state, &directory)?;
     let _lock = auth_lock(&directory, port)?;
@@ -217,11 +219,21 @@ pub fn refresh_bootstrap(state: &Path, port: u16, handoff: bool) -> io::Result<S
         &directory.join(format!("{port}.bootstrap.json")),
         &to_json(&bootstrap)?,
     )?;
-    Ok(format!(
+    let url = format!(
         "http://127.0.0.1:{port}/{}#nacre-bootstrap={}",
         if handoff { "auth-complete" } else { "" },
         bootstrap.token
-    ))
+    );
+    // These names give file-launched app windows the ids the compositor window rules match.
+    let page = state
+        .join("auth")
+        .join(if handoff { "handoff.html" } else { "open.html" });
+    let html = format!(
+        "<!doctype html><meta charset=\"utf-8\"><script>location.replace({})</script>",
+        serde_json::to_string(&url).map_err(io::Error::other)?
+    );
+    write_private(&page, html.as_bytes())?;
+    Ok(page)
 }
 
 fn active_session(directory: &Path, port: u16) -> io::Result<SessionFile> {
@@ -236,12 +248,16 @@ fn active_session(directory: &Path, port: u16) -> io::Result<SessionFile> {
     }) {
         return Ok(session);
     }
+    new_session(&path)
+}
+
+fn new_session(path: &Path) -> io::Result<SessionFile> {
     let session = SessionFile {
         cookie: random_hex()?,
         bearer: random_hex()?,
         expires: now()?.saturating_add(SESSION_TTL),
     };
-    write_private(&path, &to_json(&session)?)?;
+    write_private(path, &to_json(&session)?)?;
     Ok(session)
 }
 
@@ -439,19 +455,26 @@ mod tests {
     use super::*;
     use std::os::unix::fs::symlink;
 
+    fn page_token(page: &Path) -> String {
+        let html = fs::read_to_string(page).unwrap();
+        html.split("nacre-bootstrap=").nth(1).unwrap()[..64].to_owned()
+    }
+
     #[test]
-    fn credentials_are_port_bound_restart_safe_and_bootstrap_is_one_time() {
+    fn credentials_are_port_bound_bootstrap_is_one_time_and_restart_mints_a_fresh_session() {
         let dir = tempfile::tempdir().unwrap();
         let mut first = BrowserAuth::open(dir.path(), 17843).unwrap();
         let cookie = first.cookie_value().to_owned();
+        let bearer = first.bearer_value().to_owned();
         let token = first.bootstrap_token().unwrap().to_owned();
         assert!(first.cookie_valid(&cookie));
+        assert!(!dir.path().join("auth/open.html").exists());
         assert!(!browser_ready(dir.path(), 17843).unwrap());
         assert!(first.consume_bootstrap(&token));
         assert!(browser_ready(dir.path(), 17843).unwrap());
         assert!(!first.consume_bootstrap(&token));
         let page = refresh_bootstrap(dir.path(), 17843, false).unwrap();
-        let refreshed = page.split("nacre-bootstrap=").nth(1).unwrap().to_owned();
+        let refreshed = page_token(&page);
         assert!(first.consume_bootstrap(&refreshed));
         let expired_bootstrap = BootstrapFile {
             token: "stale".into(),
@@ -465,7 +488,10 @@ mod tests {
         assert!(!first.consume_bootstrap("stale"));
         let mut restarted = BrowserAuth::open(dir.path(), 17843).unwrap();
         assert!(!restarted.consume_bootstrap(&refreshed));
-        assert!(restarted.cookie_valid(&cookie));
+        // C2: a restart revokes credentials a squatter could have captured while the port was free.
+        assert!(!restarted.cookie_valid(&cookie));
+        assert!(!restarted.bearer_valid(&bearer));
+        assert!(!browser_ready(dir.path(), 17843).unwrap());
         let expired = SessionFile {
             cookie: restarted.cookie_value().to_owned(),
             bearer: restarted.bearer_value().to_owned(),
@@ -518,7 +544,11 @@ mod tests {
                 & 0o777,
             0o600
         );
-        assert!(!dir.path().join("auth/open.html").exists());
+        assert_eq!(page, dir.path().join("auth/open.html"));
+        assert_eq!(
+            fs::metadata(&page).unwrap().permissions().mode() & 0o777,
+            0o600
+        );
         assert!(!dir.path().join("auth/handoff.html").exists());
     }
 
@@ -610,13 +640,13 @@ mod tests {
         fs::write(&linked_source, br#"{"cookie":"0123456789012345678901234567890123456789012345678901234567890123","bearer":"abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789","expires":4102444800}"#).unwrap();
         fs::set_permissions(&linked_source, fs::Permissions::from_mode(0o600)).unwrap();
         fs::hard_link(&linked_source, &session).unwrap();
-        assert!(BrowserAuth::open(dir.path(), 17843).is_err());
+        assert!(refresh_bootstrap(dir.path(), 17843, false).is_err());
 
         fs::remove_file(&session).unwrap();
         fs::remove_file(&linked_source).unwrap();
         fs::write(&session, vec![b'x'; 4097]).unwrap();
         fs::set_permissions(&session, fs::Permissions::from_mode(0o600)).unwrap();
-        assert!(BrowserAuth::open(dir.path(), 17843).is_err());
+        assert!(refresh_bootstrap(dir.path(), 17843, false).is_err());
     }
 
     #[test]
@@ -699,8 +729,7 @@ mod tests {
             &auth.readiness_proof(&nonce).unwrap()
         )
         .unwrap());
-        let token = page.split("nacre-bootstrap=").nth(1).unwrap();
-        assert!(auth.consume_bootstrap(token));
+        assert!(auth.consume_bootstrap(&page_token(&page)));
         assert!(!auth.cookie_valid(&old_cookie));
         assert!(!auth.bearer_valid(&old_bearer));
         assert!(auth.cookie_valid(auth.cookie_value()));

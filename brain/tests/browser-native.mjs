@@ -323,7 +323,7 @@ try {
   await until(() => evaluate('typeof ready !== "undefined" && ready && graph.noteCount >= 4'), 'Brain graph after restart');
   const cookiesAfter = await cdp('Network.getAllCookies');
   const persistentCookie = cookiesAfter.cookies.find(item => item.name === `nacre_brain_${brainPort}`);
-  if (!persistentCookie || persistentCookie.value !== firstCookie) throw new Error('browser session cookie did not survive server restart');
+  if (!persistentCookie || persistentCookie.value === firstCookie) throw new Error('server restart kept the old session cookie');
   const readyAfterRestart = await evaluate('fetch("/api/health").then(async r=>({status:r.status,body:await r.json()}))');
   if (readyAfterRestart.status !== 200 || readyAfterRestart.body.authVersion !== 1) throw new Error('health failed after auth restart');
   if (exceptions.length) throw new Error(`browser exceptions: ${[...new Set(exceptions)].join('\n')}`);
@@ -341,7 +341,7 @@ try {
     crossPortCookieWasSent: cookieWasSent,
     crossPortLeakedFixtureContent: bodyText.includes(fixtureSecret),
     stolenCookieReplayStatus: 403,
-    persistentCookieAfterRestart: true,
+    sessionRotatedOnRestart: true,
     bootstrapCredentialRestored: true,
     fetchInputOriginIsolation: 'passed',
     unverifiedFragmentRejected: true,

@@ -557,8 +557,9 @@ mod tests {
     }
 
     fn launch_order_bootstrap_and_authorize(state: &Path, port: u16, auth: &mut BrowserAuth) {
-        let url = crate::brain_auth::refresh_bootstrap(state, port, false).unwrap();
-        let token = url.split("nacre-bootstrap=").nth(1).unwrap();
+        let page = crate::brain_auth::refresh_bootstrap(state, port, false).unwrap();
+        let page = std::fs::read_to_string(page).unwrap();
+        let token = &page.split("nacre-bootstrap=").nth(1).unwrap()[..64];
         let mut bootstrap_headers = BTreeMap::new();
         bootstrap_headers.insert("host".into(), format!("127.0.0.1:{port}"));
         bootstrap_headers.insert("origin".into(), format!("http://127.0.0.1:{port}"));
@@ -652,11 +653,11 @@ mod tests {
         )
         .unwrap();
 
-        // The running server initializes from the older persisted session;
+        // Server start replaces the older persisted session (review C2);
         // launcher refresh and browser redemption happen after server startup.
         let mut auth = BrowserAuth::open(state, port).unwrap();
-        assert_eq!(auth.cookie_value(), "a".repeat(64));
-        assert_eq!(auth.bearer_value(), "b".repeat(64));
+        assert_ne!(auth.cookie_value(), "a".repeat(64));
+        assert_ne!(auth.bearer_value(), "b".repeat(64));
         launch_order_bootstrap_and_authorize(state, port, &mut auth);
         assert!(crate::brain_auth::browser_ready(state, port).unwrap());
     }
@@ -844,7 +845,6 @@ mod tests {
         let port = listener.local_addr().unwrap().port();
         let auth = BrowserAuth::open(&state, port).unwrap();
         let nonce = crate::brain_auth::readiness_challenge().unwrap();
-        let expected_proof = auth.readiness_proof(&nonce).unwrap();
         let server = std::thread::spawn(move || {
             serve(
                 listener,
@@ -871,6 +871,8 @@ mod tests {
         let mut response = Vec::new();
         client.read_to_end(&mut response).unwrap();
         let response = String::from_utf8(response).unwrap();
+        // The proof binds the session the server minted at start, read back from disk.
+        let expected_proof = auth.readiness_proof(&nonce).unwrap();
         assert!(response.contains(&format!("X-Nacre-Brain-Proof: {expected_proof}\r\n")));
         assert!(response.ends_with("{\"ready\":true,\"authVersion\":1}"));
 
@@ -1046,18 +1048,21 @@ mod tests {
         let attacker = TcpListener::bind(("127.0.0.1", 0)).unwrap();
         let port = victim.local_addr().unwrap().port();
         let attacker_port = attacker.local_addr().unwrap().port();
-        let auth = BrowserAuth::open(&state, port).unwrap();
-        let cookie = format!("{}={}", auth.cookie_name(), auth.cookie_value());
+        let session = state.join(format!("auth/ports/{port}.json"));
         let server = std::thread::spawn(move || {
             serve(
                 victim,
                 &state,
-                Duration::from_millis(300),
+                Duration::from_secs(1),
                 Default::default(),
                 |_request| Response::new(200, "application/json", b"{}".to_vec()),
             )
             .unwrap()
         });
+        // The live cookie is the session the server minted at start.
+        wait_for_server(port);
+        let session: Value = serde_json::from_slice(&std::fs::read(session).unwrap()).unwrap();
+        let cookie = format!("nacre_brain_{port}={}", session["cookie"].as_str().unwrap());
 
         let mut client = TcpStream::connect(("127.0.0.1", port)).unwrap();
         write!(client, "GET /api/brain HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nCookie: {cookie}\r\nSec-Fetch-Site: same-site\r\nOrigin: http://127.0.0.1:{attacker_port}\r\nReferer: http://127.0.0.1:{attacker_port}/\r\nConnection: close\r\n\r\n").unwrap();
