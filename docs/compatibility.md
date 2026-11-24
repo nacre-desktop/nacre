@@ -46,8 +46,9 @@ at your next login, or at once after
 The fresh-Arch VM gate checks install, session startup, rendered output,
 `nacre update` and purge for each tier, plus an upgrade from an earlier package
 set. It last passed every stage on all three tiers on 2026-11-24 (main
-49601c1a1, nacre-niri r3130); the upgrade stage last ran on 2026-11-16 (main
-7e12fa0e9). On CachyOS (generic, x86-64-v3 and x86-64-v4 repositories), a
+49601c1a1, nacre-niri r3130). An upgrade from the published 0.1.0dev2 preview
+repository last passed every stage on niri and Hyprland on 2026-11-24 (main
+291caf584). On CachyOS (generic, x86-64-v3 and x86-64-v4 repositories), a
 container check of install, setup and purge passed on all three tiers on
 2026-11-16; there, most dependencies, including niri and Hyprland, come from
 CachyOS's rebuilt packages.
