@@ -6195,6 +6195,11 @@ impl SceneSource for Runtime {
     fn accessibility_tree(&self) -> Option<accesskit::TreeUpdate> {
         Some(self.session.accessibility_tree())
     }
+    // The tree, the summary and saved_state all read the session, so its revision says when they may change and
+    // the worker reuses its copies in between (None rebuilt them on every packet).
+    fn state_revision(&self) -> Option<u64> {
+        Some(self.session.state_revision())
+    }
     fn surrounding_text(&self) -> Option<(String, i32, i32)> {
         self.session.surrounding_text()
     }
