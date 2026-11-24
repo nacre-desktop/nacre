@@ -989,6 +989,69 @@ pub(crate) struct Consumer {
     prepared: Mutex<BTreeMap<String, ActiveWallpaper>>,
     motion_commits: Publisher,
     visibility: Mutex<BTreeMap<String, VisibilityRecord>>,
+    rotation: Mutex<RotationWarm>,
+}
+/// Warm the fade this long before the daemon's next rotation, so Bead primes it on an idle turn first.
+const ROTATION_WARM_LEAD_MS: u64 = 3_000;
+/// The hold never outlives the due by more than this, whatever became of the rotation.
+const ROTATION_WARM_BACKSTOP_MS: u64 = 15_000;
+/// The rotation's warm window (epoch ms): `plan` is the due and the revision it was seen with, `faded`
+/// the newest revision a fade started for since. From the lead before the due until that fade, never past the backstop.
+fn rotation_warm_wanted(now: u64, plan: Option<(u64, u64)>, faded: u64) -> bool {
+    plan.is_some_and(|(due, seen)| {
+        faded <= seen
+            && now + ROTATION_WARM_LEAD_MS >= due
+            && now < due.saturating_add(ROTATION_WARM_BACKSTOP_MS)
+    })
+}
+/// When `rotation_warm_wanted` next changes with the clock alone.
+fn rotation_warm_next(now: u64, plan: Option<(u64, u64)>, faded: u64) -> Option<u64> {
+    let (due, _) = plan.filter(|&(_, seen)| faded <= seen)?;
+    [
+        due.saturating_sub(ROTATION_WARM_LEAD_MS),
+        due.saturating_add(ROTATION_WARM_BACKSTOP_MS),
+    ]
+    .into_iter()
+    .find(|&at| at > now)
+}
+/// The scheduled rotation's one warm hold (B0317), with the window it follows.
+#[derive(Default)]
+struct RotationWarm {
+    plan: Option<(u64, u64)>,
+    faded: u64,
+    hold: Option<crate::shell_control::WarmHold>,
+}
+impl RotationWarm {
+    /// A new due (moved or gone) replaces the plan; then the hold follows the window. Returns when to look again.
+    fn update(
+        &mut self,
+        now: u64,
+        due: Option<u64>,
+        revision: u64,
+        gate: Option<&Arc<crate::shell_control::Gate>>,
+    ) -> Option<u64> {
+        if due != self.plan.map(|(due, _)| due) {
+            (self.plan, self.faded) = (due.map(|due| (due, revision)), 0);
+        }
+        if !rotation_warm_wanted(now, self.plan, self.faded) {
+            self.hold = None;
+        } else if self.hold.is_none() {
+            self.hold = gate.map(|gate| gate.hold_wallpaper_warm());
+        }
+        rotation_warm_next(now, self.plan, self.faded)
+    }
+    /// A fade started towards `revision`: newer than the plan's, it is the rotation's (or replaced it).
+    fn fade_started(&mut self, now: u64, revision: u64) {
+        self.faded = self.faded.max(revision);
+        if !rotation_warm_wanted(now, self.plan, self.faded) {
+            self.hold = None;
+        }
+    }
+}
+fn epoch_ms() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |since| since.as_millis() as u64)
 }
 type VisibilityRecord = (u64, Instant, &'static str, Option<SwitchMetadata>);
 struct PairToken {
@@ -1031,6 +1094,7 @@ impl Consumer {
             displayed: Mutex::new(BTreeMap::new()),
             prepared: Mutex::new(BTreeMap::new()),
             visibility: Mutex::new(BTreeMap::new()),
+            rotation: Mutex::default(),
             motion_commits: Publisher::new(
                 "wallpaper-motion-commits".into(),
                 serde_json::json!({}),
@@ -1105,6 +1169,20 @@ impl Consumer {
         let active = Source::subscribe(&self.topic, Arc::new(move |_| changed())).ok()?;
         Some(vec![committed, active])
     }
+    /// Follow the daemon's `next_rotation_ms` with the rotation's warm hold; the motion loop calls this on
+    /// every topic change and again after the returned wait.
+    pub(crate) fn warm_rotation(&self) -> Option<Duration> {
+        let state = self.state().ok();
+        let due = state.as_ref().and_then(|state| state.next_rotation_ms);
+        let revision = state.map_or(0, |state| state.revision);
+        let now = epoch_ms();
+        let next = self
+            .rotation
+            .lock()
+            .unwrap_or_else(|p| p.into_inner())
+            .update(now, due, revision, crate::shell_control::live().as_ref());
+        next.map(|at| Duration::from_millis(at - now + 1))
+    }
 
     #[cfg(test)]
     pub(crate) fn commit_token_for_test(
@@ -1140,8 +1218,10 @@ fn wallpaper_paint_changed(
             .filter(|state| state.validate().is_ok())
             .and_then(|_| {
                 let mut data = (*snapshot.data).clone();
-                data.as_object_mut()?
-                    .insert("previous_available".into(), false.into());
+                let data_map = data.as_object_mut()?;
+                data_map.insert("previous_available".into(), false.into());
+                // The rotation's due only moves the warm hold, never the pixels.
+                data_map.remove("next_rotation_ms");
                 Some((snapshot.epoch.clone(), snapshot.connected, data))
             })
     } else {
@@ -1427,7 +1507,19 @@ impl bead::wayland::WallpaperProvider for Consumer {
     ) -> Result<Option<bead::wayland::WallpaperFrame>, String> {
         self.prepare_inner(output, width, height, Some(staged))
     }
-    fn fade(&self, _output: &str) -> Option<bead::wayland::WallpaperFade> {
+    fn fade(&self, output: &str) -> Option<bead::wayland::WallpaperFade> {
+        // Bead asks as it starts the fade to the frame last prepared for this output.
+        let revision = self
+            .prepared
+            .lock()
+            .ok()
+            .and_then(|prepared| prepared.get(output).map(|pair| pair.revision));
+        if let Some(revision) = revision {
+            self.rotation
+                .lock()
+                .unwrap_or_else(|p| p.into_inner())
+                .fade_started(epoch_ms(), revision);
+        }
         self.preview.take_fade()
     }
     fn prepare_transition(&self, output: &str, width: u32, height: u32) -> Option<Vec<u8>> {
@@ -2392,6 +2484,15 @@ mod tests {
             1,
             "readiness-only patch is suppressed"
         );
+        ready.next_rotation_ms = Some(1_800_000);
+        publisher
+            .publish(serde_json::to_value(&ready).unwrap())
+            .unwrap();
+        assert_eq!(
+            callbacks.load(std::sync::atomic::Ordering::SeqCst),
+            1,
+            "a rotation due patch is suppressed"
+        );
         let mut changed = ready.clone();
         changed.revision += 1;
         changed.current.as_mut().unwrap().revision += 1;
@@ -2423,6 +2524,112 @@ mod tests {
             "reconnect repaints"
         );
         drop(subscription);
+    }
+
+    #[test]
+    fn the_rotation_warm_window_opens_before_the_due_and_ends_at_its_fade_or_the_backstop() {
+        let plan = Some((100_000, 7));
+        assert!(!rotation_warm_wanted(96_999, plan, 0));
+        assert_eq!(rotation_warm_next(90_000, plan, 0), Some(97_000));
+        assert!(rotation_warm_wanted(97_000, plan, 0), "due - 3 s");
+        assert!(rotation_warm_wanted(110_000, plan, 7), "seen late: at once");
+        assert_eq!(rotation_warm_next(97_000, plan, 7), Some(115_000));
+        assert!(
+            !rotation_warm_wanted(115_000, plan, 0),
+            "backstop at due + 15 s"
+        );
+        assert_eq!(rotation_warm_next(115_000, plan, 0), None);
+        assert!(
+            !rotation_warm_wanted(100_050, plan, 8),
+            "the rotation's fade"
+        );
+        assert_eq!(rotation_warm_next(100_050, plan, 8), None);
+        assert!(!rotation_warm_wanted(100_000, None, 0), "nothing scheduled");
+        assert_eq!(rotation_warm_next(100_000, None, 0), None);
+    }
+
+    #[test]
+    fn the_rotation_takes_one_warm_hold_and_always_lets_go() {
+        use bead::wayland::ShellControl as _;
+        use std::sync::atomic::{AtomicUsize, Ordering::SeqCst};
+        let gate = crate::shell_control::Gate::new();
+        let calls = Arc::new(AtomicUsize::new(0));
+        let counter = calls.clone();
+        // Bead's runtime registers exactly this kind of watcher and re-reads `wallpaper_warm()` in it.
+        gate.watch(Box::new(move || {
+            counter.fetch_add(1, SeqCst);
+        }));
+        let live = Some(&gate);
+        let mut warm = RotationWarm::default();
+        assert_eq!(warm.update(90_000, Some(100_000), 7, live), Some(97_000));
+        assert!(!gate.wallpaper_warm());
+        assert_eq!(warm.update(97_000, Some(100_000), 7, live), Some(115_000));
+        warm.update(98_000, Some(100_000), 7, live);
+        assert!(gate.wallpaper_warm());
+        assert_eq!(calls.load(SeqCst), 1, "one hold, one change callback");
+        warm.fade_started(99_000, 7);
+        assert!(
+            gate.wallpaper_warm(),
+            "a fade of the shown revision is not the rotation"
+        );
+        warm.fade_started(100_020, 8);
+        assert!(!gate.wallpaper_warm(), "the rotation's fade lets go");
+        assert_eq!(calls.load(SeqCst), 2);
+        assert_eq!(warm.update(100_100, Some(100_000), 8, live), None);
+        // The next due (published after the revision) gets its own window.
+        assert_eq!(
+            warm.update(100_200, Some(1_900_000), 8, live),
+            Some(1_897_000)
+        );
+        warm.update(1_897_000, Some(1_900_000), 8, live);
+        assert!(gate.wallpaper_warm());
+        // A failed change re-plans to now + 60 s: the moved due lets go and opens a new window.
+        assert_eq!(
+            warm.update(1_900_500, Some(1_960_500), 8, live),
+            Some(1_957_500)
+        );
+        assert!(!gate.wallpaper_warm());
+        warm.update(1_957_500, Some(1_960_500), 8, live);
+        assert!(gate.wallpaper_warm());
+        warm.update(1_958_000, None, 8, live);
+        assert!(!gate.wallpaper_warm(), "rotation off, paused or blocked");
+        warm.update(2_000_000, Some(2_000_000), 8, live);
+        assert!(gate.wallpaper_warm());
+        assert_eq!(warm.update(2_015_000, Some(2_000_000), 8, live), None);
+        assert!(!gate.wallpaper_warm(), "the backstop");
+        assert_eq!(
+            calls.load(SeqCst),
+            8,
+            "every take and drop called back once"
+        );
+    }
+
+    #[test]
+    fn the_rotations_fade_and_its_next_due_end_the_old_window_in_either_order() {
+        for fade_first in [true, false] {
+            let gate = crate::shell_control::Gate::new();
+            let live = Some(&gate);
+            let mut warm = RotationWarm::default();
+            warm.update(97_000, Some(100_000), 7, live);
+            assert!(bead::wayland::ShellControl::wallpaper_warm(&*gate));
+            if fade_first {
+                warm.fade_started(100_020, 8);
+            }
+            warm.update(100_030, Some(1_900_000), 8, live);
+            if !fade_first {
+                warm.fade_started(100_040, 8);
+            }
+            assert!(!bead::wayland::ShellControl::wallpaper_warm(&*gate));
+            assert_eq!(
+                warm.update(100_050, Some(1_900_000), 8, live),
+                Some(1_897_000)
+            );
+            warm.update(1_897_000, Some(1_900_000), 8, live);
+            assert!(
+                bead::wayland::ShellControl::wallpaper_warm(&*gate),
+                "the next rotation still warms (fade first: {fade_first})"
+            );
+        }
     }
 
     #[test]

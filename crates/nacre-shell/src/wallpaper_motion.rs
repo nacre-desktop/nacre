@@ -395,6 +395,10 @@ fn run(deps: Deps, supervisor: supervisor::Supervisor, receiver: mpsc::Receiver<
                 wait = Duration::from_millis(deadline.saturating_sub(now) + 1);
             }
         }
+        // This loop also times the scheduled rotation's warm hold (it wakes on every wallpaper topic change).
+        if let Some(rotation) = deps.wallpaper.warm_rotation() {
+            wait = wait.min(rotation);
+        }
         match receiver.recv_timeout(event_wait(wait, source.is_some())) {
             Ok(Msg::Stop) | Err(mpsc::RecvTimeoutError::Disconnected) => break,
             Ok(Msg::Poke) | Err(mpsc::RecvTimeoutError::Timeout) => {}
