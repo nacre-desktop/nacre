@@ -438,6 +438,25 @@ def session_parser():
     return parser
 
 
+def packaged(installed):
+    """True for the installed package's own controller, never a source deploy in HOME."""
+    return (installed / "package.json.installed").is_file() and Path(
+        __file__
+    ).resolve().is_relative_to(installed.resolve())
+
+
+def start_session(installed, command):
+    if not (installed / "package.json.installed").is_file():
+        raise SystemExit("Install Nacre packages before starting a session")
+    import package_sessions
+
+    if packaged(installed):
+        import package_runtime
+
+        package_runtime.repair_session(HOME, installed)
+    package_sessions.start(installed, command)
+
+
 def refresh_session(installed):
     """Regenerate, validate, and reload the already-prepared private Niri session."""
     session = HOME / ".local/share/nacre/niri-on-pc/session"
@@ -448,11 +467,7 @@ def refresh_session(installed):
         raise RuntimeError("The installed Nacre helper is unavailable")
     from niri_session_refresh import backend_root, refresh
 
-    package_root = None
-    if (installed / "package.json.installed").is_file() and Path(
-        __file__
-    ).resolve().is_relative_to(installed.resolve()):
-        package_root = installed
+    package_root = installed if packaged(installed) else None
     backend = backend_root(home=HOME, package_root=package_root)
     command = [str(helper), "niri-session-runtime", "--backend", str(backend)]
     if (session / "stock-niri").is_file():
@@ -906,11 +921,7 @@ def main():
         if session.command == "refresh":
             refresh_session(installed)
         else:
-            if not (installed / "package.json.installed").is_file():
-                raise SystemExit("Install Nacre packages before starting a session")
-            import package_sessions
-
-            package_sessions.start(installed, session.command)
+            start_session(installed, session.command)
         return
     if sys.argv[1:2] in (["module"], ["uninstall"]) or sys.argv[1:3] == [
         "status",

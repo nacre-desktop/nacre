@@ -565,6 +565,80 @@ class PackageSetupTests(unittest.TestCase):
                         releases.restore(Path(record["release"]), record)
                     self.assertEqual(target.read_bytes(), source.read_bytes())
 
+    def test_login_after_plain_upgrade_repairs_only_verified_session_files(self):
+        import configure
+        import package_sessions
+
+        with tempfile.TemporaryDirectory() as folder:
+            root, home, profile = self.fixture(folder)
+            marker = root / "package.json.installed"
+            metadata = json.loads(marker.read_text())
+            marker.write_text(json.dumps({**metadata, "vendor_user_units": True}))
+            launcher = Path(".local/bin/nacre-shell")
+            command = Path(".local/bin/nacre-app")
+            dbus = Path(".local/share/dbus-1/services")
+            dbus /= "org.freedesktop.Notifications.service"
+            unit = package_runtime.CORE_USER_UNITS[0]
+            receipt = {}
+            # The older release's copies, as its setup recorded them.
+            for relative in (launcher, dbus, unit, command):
+                (home / relative).parent.mkdir(parents=True, exist_ok=True)
+                (home / relative).write_text("older " + str(relative))
+                receipt[str(relative)] = configure.digest(home / relative)
+            for relative in (launcher, dbus):  # Still deployed, with new content.
+                (root / "deployment/core" / relative).parent.mkdir(
+                    parents=True, exist_ok=True
+                )
+                (root / "deployment/core" / relative).write_text("current")
+            (home / dbus).write_text("user edit")
+            state = home / ".local/state/nacre"
+            (state / "releases").mkdir(parents=True)
+            (state / "configuration.json").write_text(json.dumps(receipt))
+            (state / "releases/current.json").write_text('{"revision": "older"}')
+
+            def tree():
+                return {
+                    p: p.read_bytes() if p.is_file() else os.readlink(p)
+                    for p in home.rglob("*")
+                    if p.is_file() or p.is_symlink()
+                }
+
+            before = tree()
+            with (
+                patch.object(releases, "HOME", home),
+                patch.object(releases, "STATE", state / "releases"),
+                patch.object(package_sessions, "start") as start,
+                patch.object(package_runtime, "subprocess") as notice,
+                contextlib.redirect_stderr(io.StringIO()),
+            ):
+                releases.start_session(root, "hyprland")  # A source controller.
+                self.assertEqual(tree(), before)
+                controller = str(root / "tools/releases.py")
+                with patch.object(releases, "__file__", controller):
+                    # A source deploy's receipt matches too, but it has no links receipt.
+                    releases.start_session(root, "hyprland")
+                    self.assertEqual(tree(), before)
+                    preserved = "Local runtime preserved"
+                    with self.assertRaisesRegex(RuntimeError, preserved):
+                        package_runtime.plan(home, root, profile)
+                    (state / "package-links.json").write_text("{}")  # Packaged.
+                    releases.start_session(root, "hyprland")
+                    repaired = tree()
+                    releases.start_session(root, "hyprland")  # The next login.
+                self.assertEqual(tree(), repaired)
+            self.assertEqual(start.call_count, 4)
+            self.assertEqual(notice.Popen.call_count, 1)
+            self.assertIn(package_runtime.UPGRADE_NOTICE, notice.Popen.call_args[0][0])
+            self.assertEqual((home / launcher).read_text(), "current")
+            self.assertEqual((home / dbus).read_text(), "user edit")
+            self.assertFalse((home / unit).exists())  # The vendor unit applies.
+            link = "../share/nacre/shell/bin/nacre-app"
+            self.assertEqual(os.readlink(home / command), link)
+            self.assertTrue((home / package_runtime.BEAD_UNITS[0]).is_file())
+            known = json.loads((state / "configuration.json").read_text())
+            self.assertEqual(known[str(launcher)], configure.digest(home / launcher))
+            self.assertNotIn(str(command), known)
+
     def test_source_configuration_keeps_home_units(self):
         import configure
 

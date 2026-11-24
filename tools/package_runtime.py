@@ -4,6 +4,7 @@ import json
 import importlib
 from pathlib import Path
 import os
+import subprocess
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "nacre/shell-tools"))
@@ -242,15 +243,27 @@ def plan(home, root, profile, compositor="hyprland"):
         for key, value in known.items()
     ):
         raise ValueError("Invalid package runtime manifest")
+    from configure import digest
+
+    copies = home / ".local/state/nacre/configuration.json"
+    # Only a packaged setup's receipt proves a copy came from a package.
+    packaged = known_path.exists() and copies.exists()
+    copies = _state.read_json_file(copies) if packaged else {}
     desired = links(root, profile, compositor)
     changed = []
     for relative, target in desired.items():
         path = home / relative
         if path.is_symlink() and os.readlink(path) == str(target):
             continue
-        if path.exists() or path.is_symlink():
-            if not path.is_symlink() or os.readlink(path) != known.get(str(relative)):
-                raise RuntimeError("Local runtime preserved: " + str(path))
+        if path.is_symlink():
+            owned = os.readlink(path) == known.get(str(relative))
+        else:
+            # An older release copied this command here; unedited, it is still Nacre's.
+            owned = not path.exists() or (
+                path.is_file() and digest(path) == copies.get(str(relative))
+            )
+        if not owned:
+            raise RuntimeError("Local runtime preserved: " + str(path))
         changed.append((relative, target))
     for relative, target in known.items():
         if Path(relative) in desired:
@@ -265,7 +278,13 @@ def plan(home, root, profile, compositor="hyprland"):
 
 def apply(home, root, profile, compositor="hyprland"):
     prepare_bead(home, root)
-    for relative, target in plan(home, root, profile, compositor):
+    changes = plan(home, root, profile, compositor)
+    copies = [
+        relative
+        for relative, _ in changes
+        if (home / relative).is_file() and not (home / relative).is_symlink()
+    ]
+    for relative, target in changes:
         path = home / relative
         path.parent.mkdir(parents=True, exist_ok=True)
         path.unlink(missing_ok=True)
@@ -274,7 +293,8 @@ def apply(home, root, profile, compositor="hyprland"):
             pending.unlink(missing_ok=True)
             pending.symlink_to(target)
             os.replace(pending, path)
-    from configure import atomic
+    from configure import atomic, record_modules
+    import nacre_modules
 
     atomic(
         home / ".local/state/nacre/package-links.json",
@@ -283,3 +303,71 @@ def apply(home, root, profile, compositor="hyprland"):
         ).encode(),
         0o600,
     )
+    if copies:  # The links replaced copies; retire their receipts too.
+        manifest = home / ".local/state/nacre/configuration.json"
+        known = _state.read_json_file(manifest)
+        for relative in copies:
+            known.pop(str(relative), None)
+        atomic(manifest, json.dumps(known, indent=2).encode(), 0o600)
+        record_modules(home, nacre_modules.resolve(home), {}, removed=copies)
+
+
+# What a login needs from setup: launchers, units and D-Bus activation files.
+SESSION_FILES = (
+    ".local/bin/",
+    ".local/share/nacre/shell/bin/",
+    ".local/share/dbus-1/services/",
+    ".config/systemd/user/",
+)
+UPGRADE_NOTICE = "Nacre was upgraded; run nacre update to finish."
+NOTIFY = (
+    "gdbus wait --session --timeout 120 org.freedesktop.Notifications"
+    ' && exec notify-send -a Nacre -u critical "$0"'
+)
+
+
+def repair_session(home, root):
+    """First login after a plain package upgrade: let this release's shell start.
+
+    Rewrites only session files the last setup wrote and nobody edited since, then
+    activates the packaged shell; `nacre update` does the rest. Once per revision."""
+    from configure import atomic, content, digest, wanted_digest
+
+    state = home / ".local/state/nacre"
+    current, notice = state / "releases/current.json", state / "releases/upgraded-to"
+    try:
+        revision = metadata(root)["revision"]
+        if (
+            # A source deploy's HOME is never repaired, whatever controller runs.
+            not (state / "package-links.json").is_file()
+            or not current.is_file()
+            or _state.read_json_file(current).get("revision") == revision
+            or (notice.is_file() and notice.read_text() == revision)
+        ):
+            return
+        atomic(notice, revision.encode(), 0o600)
+        import setup
+
+        profile = setup.policy(root).load(home)
+        manifest = state / "configuration.json"
+        known = _state.read_json_file(manifest)
+        for relative, source in files(root, profile).items():
+            path, recorded = home / relative, known.get(str(relative))
+            if (
+                str(relative).startswith(SESSION_FILES)
+                and recorded is not None
+                and not path.is_symlink()
+                and digest(path) == recorded
+                and recorded != wanted_digest(source, home)
+            ):
+                mode = 0o755 if os.access(source, os.X_OK) else 0o644
+                atomic(path, content(source, home), mode)
+                known[str(relative)] = digest(path)
+        atomic(manifest, json.dumps(known, indent=2).encode(), 0o600)
+        legacy_units(home, root, apply=True)
+        apply(home, root, profile)
+    except Exception as error:  # noqa: BLE001 - a failed repair must never block login
+        print("nacre session: " + str(error), file=sys.stderr)
+    print(UPGRADE_NOTICE, file=sys.stderr)
+    # The notification service appears with the session this login starts.
+    subprocess.Popen(["sh", "-c", NOTIFY, UPGRADE_NOTICE])
