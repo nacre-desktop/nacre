@@ -76,6 +76,7 @@ if __name__ == "__main__":
         "--theme", type=Path, default=Path(__file__).resolve().parents[1] / "login"
     )
     args = parser.parse_args()
+    os.umask(0o022)  # pkexec keeps the caller's loose umask (security review B5)
     if os.geteuid() != 0:
         raise SystemExit(
             "Administrator authentication is required to install the system login theme."

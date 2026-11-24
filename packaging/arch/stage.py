@@ -95,6 +95,8 @@ def stage(root, destination, component, build):
             "packaging/sessions.json",
             "VERSION",
             "nacre/shell-tools",
+            # Root-owned theme sources for login.install_theme (security review B1/B2).
+            "nacre/login",
         ):
             copy(root / name, shared / name)
         # Preserve the documented managed-session template path across upgrades.

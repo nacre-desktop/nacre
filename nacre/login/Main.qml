@@ -34,6 +34,7 @@ Rectangle {
     readonly property color muted: colour("muted", "#cec5b7")
     readonly property color raised: colour("raised", "#211f1c")
     readonly property color failure: colour("error", "#ffb4ab")
+    readonly property string wallpaper: "/var/lib/nacre/login/appearance/background.png"
     function colour(key, fallback) {
         const value = String(configuration[key] ?? "");
         return /^#[0-9a-fA-F]{6}$/.test(value) ? value : fallback;
@@ -59,7 +60,8 @@ Rectangle {
     color: colour("surface", "#151310")
     Image {
         anchors.fill: parent
-        source: root.configuration.background ?? ""
+        // Only the image the helper publishes: the INI is user-owned (security review B3).
+        source: String(root.configuration.background ?? "") === root.wallpaper ? "file://" + root.wallpaper : ""
         fillMode: Image.PreserveAspectCrop
         asynchronous: true
     }

@@ -5,10 +5,10 @@
 //! helper's own `login-appearance` publishes the colours and wallpaper for the greeter.
 //!
 //! Nothing a caller sends reaches the command line: the method takes no parameters, and the paths
-//! are the daemon's own tool and theme folders. Command output is parsed for the manifest path and
-//! never relayed.
+//! are the package's root-owned copies, so the method exists only on packaged installs. Command
+//! output is parsed for the manifest path and never relayed.
 use super::hub::{failure, Hub, Shared};
-use crate::{paths::Paths, process};
+use crate::process;
 use nacre_protocol::{
     pill_controls::PillEmpty,
     system_settings::{methods, PROMPT_TIMEOUT_MS},
@@ -29,14 +29,18 @@ const MAX_MANIFEST: usize = 4096;
 /// pkexec: the authentication dialog was dismissed (126) or authorisation failed (127).
 const DISMISSED: i32 = 126;
 const NOT_AUTHORIZED: i32 = 127;
+/// Root-owned package copies only: a script or theme in the user's home folder would run, or be
+/// copied, as root once the user authenticates (security review B1/B2, 2026-11-24).
+const PACKAGED_INSTALLER: &str = "/usr/share/nacre/nacre/shell-tools/login-install.py";
+const PACKAGED_THEME: &str = "/usr/share/nacre/nacre/login";
 
 #[derive(Clone)]
 pub struct Env {
     pub pkexec: String,
     pub python: String,
-    /// `login-install.py` in the helper tools folder.
+    /// `login-install.py`, root-owned.
     pub installer: PathBuf,
-    /// The SDDM theme sources the installer copies (`Main.qml` marks a real one).
+    /// The root-owned SDDM theme sources the installer copies (`Main.qml` marks a real one).
     pub theme: PathBuf,
     pub user: String,
     /// The daemon's own executable, which hosts `login-appearance`.
@@ -45,23 +49,14 @@ pub struct Env {
 }
 impl Env {
     fn production() -> Option<Self> {
-        let paths = Paths::environment().ok()?;
-        let installer = paths.assets().join("login-install.py");
-        // The installer's own default: the `login` folder beside its parent.
-        let theme = installer
-            .canonicalize()
-            .ok()?
-            .parent()?
-            .parent()?
-            .join("login");
         let user = nix::unistd::User::from_uid(nix::unistd::getuid())
             .ok()??
             .name;
         Some(Self {
-            pkexec: "pkexec".into(),
+            pkexec: "/usr/bin/pkexec".into(),
             python: "/usr/bin/python3".into(),
-            installer,
-            theme,
+            installer: PACKAGED_INSTALLER.into(),
+            theme: PACKAGED_THEME.into(),
             user,
             engine: crate::process::current_exe().ok()?,
             timeout: Duration::from_millis(u64::from(PROMPT_TIMEOUT_MS) - 5_000),

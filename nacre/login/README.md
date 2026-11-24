@@ -13,7 +13,10 @@ nacre-helper login-appearance
 To preview without authenticating or changing the active SDDM session, use a
 private copy of Main.qml/Logo.qml/metadata.desktop/theme.conf, with the generated theme.conf as theme.conf.user. Run sddm-greeter-qt6 --test-mode --theme PATH. Test mode cannot authenticate or perform power actions.
 
-Install the reviewed source with administrator authentication:
+On a packaged install, Settings > Lock and login > Install login theme runs the package's
+root-owned copy (/usr/share/nacre/nacre/shell-tools/login-install.py with the theme in
+/usr/share/nacre/nacre/login); the button is not offered on source installs. From a source
+checkout, install the reviewed source with administrator authentication:
 
 ```sh
 pkexec /usr/bin/python3 nacre/shell-tools/login-install.py --user "$USER"
