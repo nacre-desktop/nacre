@@ -1579,7 +1579,7 @@ impl Dashboard {
         let pair = self.wallpaper.as_ref().and_then(|source| {
             let snapshot = source.snapshot();
             let state: nacre_protocol::wallpaper::WallpaperActive =
-                serde_json::from_value((*snapshot.data).clone()).ok()?;
+                serde::Deserialize::deserialize(&*snapshot.data).ok()?;
             (snapshot.connected && state.available && !state.stale && state.validate().is_ok())
                 .then_some(state.current)
                 .flatten()

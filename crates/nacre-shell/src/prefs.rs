@@ -401,7 +401,7 @@ impl Prefs {
         .into()
     }
     pub fn from_source(source: &dyn Source) -> Self {
-        serde_json::from_value((*source.snapshot().data).clone()).unwrap_or_default()
+        serde::Deserialize::deserialize(&*source.snapshot().data).unwrap_or_default()
     }
 }
 

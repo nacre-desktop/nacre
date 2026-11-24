@@ -802,7 +802,7 @@ fn on_compositor(shared: &Shared, snap: &Snapshot) {
 fn on_notifications(shared: &Shared, snap: &Snapshot) {
     {
         let mut g = shared.lock();
-        let parsed = serde_json::from_value::<NotificationsState>((*snap.data).clone())
+        let parsed = <NotificationsState as serde::Deserialize>::deserialize(&*snap.data)
             .ok()
             .filter(|s| s.producer_valid());
         match (snap.connected, parsed) {

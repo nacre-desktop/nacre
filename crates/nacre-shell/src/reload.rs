@@ -5804,7 +5804,7 @@ impl SceneSource for Runtime {
             let launcher = self.launcher.is_some();
             match source.subscribe(std::sync::Arc::new(move |snapshot| {
                 let prefs: crate::prefs::Prefs =
-                    serde_json::from_value((*snapshot.data).clone()).unwrap_or_default();
+                    serde::Deserialize::deserialize(&*snapshot.data).unwrap_or_default();
                 wakeup(UiEvent::Model(if launcher {
                     prefs.launcher_stores()
                 } else {
