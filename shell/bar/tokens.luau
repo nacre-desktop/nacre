@@ -15,15 +15,15 @@ return {
     pill_height=34, pill_radius=17, pill_gap=0, power_size=34,
     workspace_height=30, workspace_radius=15, workspace_number_font=11,
     active_height=28, active_radius=14, app_font=14, hint_icon=16,
-    -- D2 stack: a named 28 px cap (Settings > Panels > Top bar > Stack style); the default strand is the stack pearls below.
+    -- D2 stack: a named 28 px cap (Settings > Panels > Top bar > Stack style); the default is the stack number below.
     strand_overlap=4, strand_pad=3,
     cap_height=28, cap_radius=14, cap_font=12, cap_icon=14, cap_gap=5, cap_pad_left=6, cap_pad_right=8, cap_chars=12,
     -- Calm left island (locked 2026-11-17): one pearl size, larger numbers, app icons in every occupied pearl.
     -- Workspace pearls (QML NacreWorkspacePearl), themed SVG gloss from the wallpaper palette.
     pearl_current=22, pearl_occupied=20, pearl_empty=18, pearl_current_border=1, pearl_empty_border=1.5,
-    -- Stack pearls: the current one 13 px inside a white 1.5 px ring, a 3 px accent ring and a glow; the rest 7.5 px
-    -- at 70 %; a fanned strand shows numbers in 16 px pearls (at most 8), a collapsed one three around the current.
-    stack_current=13, stack_other=8, stack_ring=1.5, stack_accent_ring=3, stack_glow=3, stack_other_alpha=.7, stack_gap=4, stack_corner=.3, stack_fan_size=16, stack_collapsed_max=3, stack_fan_max=8,
-    pearl_cream={255,249,241,255}, pearl_white={255,255,255,255}, pearl_dark={48,48,54,255}, pearl_light={245,242,238,255},
+    -- Stack number (spec 0253): the current stack's numeral in the 28 px cap, rolled in 180 ms on a switch; fanned,
+    -- one 20 px numeral slot per stack (at most 8, then "+N").
+    stack_font=15, stack_slot=20, stack_roll=.18, stack_gap=4, stack_fan_max=8,
+    pearl_cream={255,249,241,255}, pearl_dark={48,48,54,255}, pearl_light={245,242,238,255},
     title_height=30, title_font=15, title_ink="primary", title_icon=16, title_max_width=550, title_cue_max=560, title_gap=8, title_trace_height=2, title_trace_inset=5, title_trace_width=36,
 }

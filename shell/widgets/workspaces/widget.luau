@@ -32,15 +32,16 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
                 -- Stacks belong to an output (nacre-niri), and a switch swaps them between screens, so every bar lists all of them
                 -- in stack order: the highlight then visibly moves when this output's stack changes.
             end
-            -- Stack pearls (locked 2026-11-17): one enamel pearl per stack on every screen, in stack order. The
-            -- current one is larger, in a white ring, an accent ring and a glow. At rest 1-3 stacks show whole and
-            -- 4+ show three around the current one and "+N"; hovering 400 ms fans out numbered pearls (up to 8).
-            -- A named 28 px cap (Settings > Panels > Top bar > Stack style) replaces them. Tier 2 advertises no
-            -- collections, so neither appears and the pill starts at the current pearl.
+            -- Stack number (spec 0253, owner 2026-11-23): one numeral, this output's current stack, in a 28 px cap; a
+            -- switch rolls it like an odometer. With 2+ stacks hovering 400 ms (or a click) fans out every stack's
+            -- numeral as its own button (up to 8, then "+N"). A named 28 px cap (Settings > Panels > Top bar > Stack
+            -- style) replaces it. Tier 2 advertises no collections, so neither appears and the pill starts at the current pearl.
             local show_collections=#collections>0
             local cap_style=ui.resolve_for_check(ui.bind("bar.stack.style"))=="name"
             local cur=1
             for i,collection in ipairs(collections) do if collection.id==collection_current then cur=i end end
+            -- The number the switcher shows ("Stack N"), else the stack's place in the list.
+            local function stack_number(i) return tostring(collections[i] and collections[i].index or i) end
             local current_collection_name=""
             if collections[cur] then
                 local current=collections[cur]
@@ -60,24 +61,15 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
             -- The counter ramps in 3 s on a stable key (a fresh key snaps), so the fan is pinned until it catches up.
             local pinned=ui.animate("workspaces.stack.pin:"..props.instance.iid,clicks,3,"linear")<clicks-.001
             local fanned=not cap_style and #collections>1 and (fan>=.999 or pinned)
-            local limit=fanned and t.stack_fan_max or t.stack_collapsed_max
+            local limit=t.stack_fan_max
             local first=#collections>limit and math.clamp(cur-limit//2,1,#collections-limit+1) or 1
             local last=math.min(#collections,first+limit-1)
             local more=#collections-(last-first+1)
             local more_text="+"..more
             local more_width=more>0 and math.ceil(ui.text_width(more_text,stack_family,t.cap_font))+t.stack_gap or 0
-            local ring_total=t.stack_ring+t.stack_accent_ring
-            -- Size, outer diameter (with the rings) and slot (outer + gap) of stack i's pearl.
-            local function stack_size(i)
-                local size=fanned and t.stack_fan_size or i==cur and t.stack_current or t.stack_other
-                local outer=i==cur and size+2*ring_total or size
-                return size,outer,outer+t.stack_gap
-            end
-            local strand_width=more_width
-            for i=first,last do strand_width+=select(3,stack_size(i)) end
             local cap_name=cap_style and measure.ellipsize(current_collection_name,math.ceil(ui.text_width(string.rep("n",t.cap_chars),stack_family,t.cap_font)),stack_family,t.cap_font) or ""
             local cap_name_width=cap_style and math.ceil(ui.text_width(cap_name,stack_family,t.cap_font)) or 0
-            local stack_control_width=cap_style and t.cap_pad_left+t.cap_icon+t.cap_gap+cap_name_width+t.cap_pad_right or strand_width+2*t.strand_pad
+            local stack_control_width=cap_style and t.cap_pad_left+t.cap_icon+t.cap_gap+cap_name_width+t.cap_pad_right or fanned and (last-first+1)*t.stack_slot+more_width+2*t.strand_pad or t.cap_height
             -- The control's trailing pad plus the capsule gap puts the current pearl 6 px after the strand.
             local collection_width=show_collections and stack_control_width+2*capsule_gap+1 or 0
             local active_left,active_width,active_accent,active_icon_mode
@@ -103,46 +95,27 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
             -- The stack control's width (the fan opening or closing) moves the workspaces at once, so the pill and the
             -- active capsule take it at once too; only the workspaces' own changes slide (a trailing capsule was a dark circle).
             local pill_width=collection_width+ui.animate("workspaces.pill.width:"..props.instance.iid,natural_width,.16,"out-cubic")
-            -- One stack's pearl layers, centred in a slot that starts at x.
-            local function stack_nodes(i,k,x)
-                local size,outer,slot=stack_size(i)
-                local cx,cy,on=x+slot/2,t.cap_height/2,i==cur
-                local nodes={}
-                -- Stacked cards: a rounded square on a fainter card peeking out behind it; the current one carries the rings and glow.
-                local function card(id,w,h,dx,fill,opacity)
-                    return ui.Box{id=id,position="absolute",left=cx-w/2+dx,top=cy-h/2,width=w,height=h,radius=w*t.stack_corner,fill=fill,opacity=opacity}
-                end
-                if on then
-                    nodes[1]=card("stack-glow",outer+2*t.stack_glow,outer+2*t.stack_glow,0,ui.alpha("primary",.3))
-                    nodes[2]=card("stack-accent",outer,outer,0,"primary")
-                    nodes[3]=card("stack-white",size+2*t.stack_ring,size+2*t.stack_ring,0,t.pearl_white)
-                end
-                nodes[#nodes+1]=card("stack-back-"..k,size,size,2,ui.alpha(pearl_accent(i-1),.5),not on and t.stack_other_alpha or nil)
-                nodes[#nodes+1]=card("stack-pearl-"..k,size,size,-1,pearl_accent(i-1),not on and t.stack_other_alpha or nil)
-                if fanned then
-                    nodes[#nodes+1]=centered_text{id="stack-number-"..k,position="absolute",left=cx-size/2,top=cy-10*t.line_height/2,text=tostring(i),width=size,font_size=10,font_weight=600,family="IBM Plex Sans",text_align="center",color=t.pearl_dark}
-                end
-                return nodes
+            local number_height=t.stack_font*t.line_height
+            -- Stack i's numeral, `top` px into its slot; the current stack's (`on`) in the accent.
+            local function numeral(id,i,width,top,on)
+                return centered_text{id=id,position="absolute",left=0,top=top,width=width,text=stack_number(i),font_size=t.stack_font,font_weight=on and 600 or 500,family=stack_family,text_align="center",color=on and "primary" or "onSurfaceVariant"}
             end
-            local strand_nodes,fan_buttons={},{}
-            if show_collections and not cap_style then
-                local x=0
+            -- A switch rolls the numeral like an odometer: two numerals slide through a clipped box, nothing else lays out.
+            -- Animated only while stacks show, so the first frame with stacks (startup, a drag ghost) snaps instead of rolling up from 1.
+            local roll=show_collections and ui.animate("workspaces.stack.roll:"..props.instance.iid,cur,t.stack_roll,"out-cubic") or cur
+            local base=math.floor(roll+.001)
+            local step=math.max(0,roll-base)
+            local fan_buttons={}
+            if show_collections and fanned then
                 for i=first,last do
-                    local slot=select(3,stack_size(i))
                     local k=i-first+1
-                    if not fanned then for _,node in stack_nodes(i,k,x) do strand_nodes[#strand_nodes+1]=node end end
-                    if fanned then
-                        -- Fanned, each pearl is its own button: the current one keeps the fan out, the others go. Only "+N" (and the cap style) opens the switcher.
-                        fan_buttons[k]=kit.Button{id="stack-strand-"..k,width=slot,height=t.cap_height,padding=0,radius=t.cap_radius,shrink=0,fill="transparent",hover_fill="transparent",
-                            aria_label=tostring(collections[i].name or collections[i].label or collections[i].index or i),
-                            on_activate=c.popouts and (i==cur and ui.action("collection.fan") or ui.action("collection.switch",collections[i].id)) or nil,
-                            table.unpack(stack_nodes(i,k,0))}
-                    end
-                    x+=slot
+                    -- Fanned, each numeral is its own button: the current one keeps the fan out, the others go. Only "+N" (and the cap style) opens the switcher.
+                    fan_buttons[k]=kit.Button{id="stack-strand-"..k,width=t.stack_slot,height=t.cap_height,padding=0,radius=t.cap_radius,shrink=0,fill="transparent",hover_fill="transparent",
+                        aria_label=tostring(collections[i].name or collections[i].label or collections[i].index or i),
+                        on_activate=c.popouts and (i==cur and ui.action("collection.fan") or ui.action("collection.switch",collections[i].id)) or nil,
+                        numeral("stack-number-"..k,i,t.stack_slot,(t.cap_height-number_height)/2,i==cur)}
                 end
                 if more>0 then
-                    local chip=ui.Text{id="stack-more",position="absolute",left=x,top=(t.cap_height-t.cap_font*t.line_height)/2,text=more_text,width=more_width,height=t.cap_font*t.line_height,font_size=t.cap_font,family=stack_family,color="ink2"}
-                    strand_nodes[#strand_nodes+1]=chip
                     fan_buttons[#fan_buttons+1]=kit.Button{id="stack-strand-more",width=more_width,height=t.cap_height,padding=0,radius=t.cap_radius,shrink=0,fill="transparent",hover_fill="transparent",
                         aria_label=current_collection_label,on_activate=c.popouts and ui.action("collection.switcher.open") or nil,
                         ui.Text{id="stack-more-text",position="absolute",left=0,top=(t.cap_height-t.cap_font*t.line_height)/2,text=more_text,width=more_width,height=t.cap_font*t.line_height,font_size=t.cap_font,family=stack_family,color="ink2"}}
@@ -153,7 +126,8 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
                     cap_style and ui.Row{id="collection-content",width=stack_control_width,height=t.cap_height,padding_left=t.cap_pad_left,padding_right=t.cap_pad_right,gap=t.cap_gap,align="center",
                         ui.Text{id="collection-icon",text="stacks",width=t.cap_icon,height=t.cap_icon,shrink=0,family=kit.tokens.fonts.icon,font_size=t.cap_icon,color="onSurfaceVariant",text_align="center"},
                         ui.Text{id="collection-name",text=cap_name,width=cap_name_width,height=math.ceil(ui.text_line_height(stack_family,t.cap_font)),shrink=0,font_size=t.cap_font,family=stack_family,color="onSurface"}}
-                    or ui.Box{id="strand",position="absolute",left=t.strand_pad,top=0,width=strand_width,height=t.cap_height,table.unpack(strand_nodes)}})
+                    or ui.Box{id="stack-number",position="absolute",left=0,top=(t.cap_height-number_height)/2,width=t.cap_height,height=number_height,clip_children=true,
+                        numeral("now",base,t.cap_height,-step*number_height,true),step>.001 and numeral("next",base+1,t.cap_height,(1-step)*number_height,true) or nil}})
                 or nil
             return ui.Row{id="capsule",width=pill_width,height=t.pill_height,padding_left=5,padding_right=5,gap=capsule_gap,radius=t.pill_radius,fill=c.islands and "transparent" or c.base,clip_children=false,align="center",
             -- QML workspaceThread: a 1 px primary -> secondary -> tertiary line at 12 % behind the pearls, inset 16 px.

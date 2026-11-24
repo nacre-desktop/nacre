@@ -820,6 +820,23 @@ fn bar_golden(frame: &bead_test::Frame, name: &str) -> Result<()> {
     )
 }
 
+/// The stack control's numerals, left to right (spec 0253): one at rest, one per stack when fanned.
+fn stack_numbers(h: &Harness) -> Vec<String> {
+    let mut numbers: Vec<_> = h
+        .scene()
+        .layers
+        .iter()
+        .filter(|layer| layer.id.contains("stack-number"))
+        .flat_map(|layer| &h.scene().primitives[layer.own.clone()])
+        .filter_map(|primitive| match primitive {
+            bead::render::Primitive::Text { rect, text, .. } => Some((rect.x, text.clone())),
+            _ => None,
+        })
+        .collect();
+    numbers.sort_by(|a, b| a.0.total_cmp(&b.0));
+    numbers.into_iter().map(|(_, text)| text).collect()
+}
+
 fn bar_texts(h: &Harness) -> Vec<(String, bead::render::Rect)> {
     let mut texts = Vec::new();
     for layer in &h.scene().layers {
@@ -1260,10 +1277,10 @@ fn no_border_bar_floats_islands_on_a_thread_that_fades_with_windows() -> Result<
     )
 }
 
-/// Styling phase 1: the stack pearls at 2 and 5 stacks (collapsed to three around the current one and "+2", then fanned
-/// with numbers on hover), in both bar variants and both schemes, and the narrow 1366 px bar that keeps the app icons.
+/// Spec 0253: the stack number at 2 and 5 stacks (one numeral at rest, every stack's numeral fanned on hover), in both
+/// bar variants and both schemes, and the narrow 1366 px bar that keeps the app icons.
 #[test]
-fn bar_stack_pearls_collapse_fan_and_narrow_bars_keep_app_icons() -> Result<()> {
+fn bar_stack_number_fans_and_narrow_bars_keep_app_icons() -> Result<()> {
     let bar = |frame: bool, palette: &str, width, stacks: usize, scale| -> Result<Harness> {
         let mut values = super::initial_models()?;
         values.extend(parity_models());
@@ -1298,7 +1315,6 @@ fn bar_stack_pearls_collapse_fan_and_narrow_bars_keep_app_icons() -> Result<()> 
         Ok(h)
     };
     let has_icons = |h: &Harness| bar_texts(h).iter().any(|(text, _)| text == "terminal");
-    let more = |h: &Harness| bar_texts(h).iter().any(|(text, _)| text == "+2");
     for (frame, tag) in [(false, "a"), (true, "b")] {
         for scale in [1., 1.5] {
             let mut h = bar(frame, "palette.json", 1920, 5, scale)?;
@@ -1306,7 +1322,11 @@ fn bar_stack_pearls_collapse_fan_and_narrow_bars_keep_app_icons() -> Result<()> 
                 has_icons(&h),
                 "the 1920 px bar shows the active pearl's app icon"
             );
-            assert!(more(&h), "5 stacks fold to three pearls and +2");
+            assert_eq!(
+                stack_numbers(&h),
+                ["3"],
+                "at rest the mark is the current stack's number alone"
+            );
             bar_golden(
                 &h.pose((0., 0.), 1.)?,
                 &format!("bar-stacks-{tag}5-{scale}"),
@@ -1405,7 +1425,35 @@ fn bar_stack_pearls_collapse_fan_and_narrow_bars_keep_app_icons() -> Result<()> 
             .any(|node| node.action.as_deref() == Some("collection.switcher.open")),
         "a fanned strand never opens the desk switcher on a click"
     );
+    assert_eq!(stack_numbers(&h), ["1", "2", "3", "4", "5"]);
     bar_golden(&h.pose((0., 0.), 1.)?, "bar-stacks-fan-1")?;
+    // Three stacks fanned on the frame bar: three number buttons, the current one (3) in the accent; dark and light.
+    for (palette, name) in [
+        ("palette.json", "bar-stacks-fan3-1.5"),
+        (
+            "tests/fixtures/palette-light.json",
+            "bar-stacks-fan3-light-1.5",
+        ),
+    ] {
+        let mut h = bar(true, palette, 1920, 3, 1.5)?;
+        let badge = h
+            .session
+            .view_nodes()
+            .iter()
+            .find(|node| node.action.as_deref() == Some("collection.fan"))
+            .map(|node| bead::ui::rect(&node.draw))
+            .ok_or("stack mark missing")?;
+        h.script([Input::Pointer {
+            x: badge.x + badge.w / 2.,
+            y: badge.y + badge.h / 2.,
+        }])?;
+        std::thread::sleep(std::time::Duration::from_millis(500));
+        h.update(BTreeMap::new())?;
+        settle_harness_animations(&mut h)?;
+        assert_eq!(stack_numbers(&h), ["1", "2", "3"], "{name}");
+        assert_eq!(goes(&h), 2, "{name}: each other stack is a button");
+        bar_golden(&h.pose((0., 0.), 1.)?, name)?;
+    }
     // A click counts on the strand's store and fans it at once (the 3 s pin), no hover wait.
     let mut h = bar(false, "palette.json", 1920, 5, 1.)?;
     h.script([
@@ -2211,7 +2259,7 @@ fn collection_switcher_badge_and_bounded_rename_menu_render() -> Result<()> {
                         .map(|(_, action, _)| action),
                     Some(a) if a == "collection.switcher.open" || a == "collection.fan"
                 ));
-                // D2: the strand of pearls replaces the chip; no icon, name or chevron in the pill.
+                // D2: the stack number replaces the chip; no icon, name or chevron in the pill.
                 let texts: Vec<_> = bar
                     .scene()
                     .primitives
@@ -2241,33 +2289,16 @@ fn collection_switcher_badge_and_bounded_rename_menu_render() -> Result<()> {
                         .ok_or_else(|| "stack geometry missing".into())
                 };
                 let active_rect = bounds("active-capsule")?;
-                // Pearls follow the switcher order; the current one is 13 px, the others 8 px, and the
-                // active workspace capsule comes after the last of them.
-                let current = if name == "number" { 2 } else { 1 };
-                let bright = bounds(&format!("stack-pearl-{current}"))?;
-                let last = bounds(if single {
-                    "stack-pearl-1"
-                } else {
-                    "stack-pearl-3"
-                })?;
-                assert!(
-                    (bright.1 - 13.).abs() <= 1. && active_rect.0 > last.0 + last.1,
-                    "the current pearl leads the active capsule: {scale}: {active_rect:?} after {bright:?}"
-                );
-                if !single {
-                    let other = bounds(&format!("stack-pearl-{}", 3 - current))?;
-                    assert!(
-                        (other.1 - 8.).abs() <= 1.,
-                        "other pearls are small at {scale}: {other:?}"
-                    );
-                }
-                let pearls = (1..=3)
-                    .filter(|i| bounds(&format!("stack-pearl-{i}")).is_ok())
-                    .count();
+                // Spec 0253: one numeral, the current stack's number, and the active workspace capsule after it.
+                let current = if name == "number" { "2" } else { "1" };
                 assert_eq!(
-                    pearls,
-                    if single { 1 } else { 3 },
-                    "one pearl per stack at {scale}: {name}"
+                    stack_numbers(&bar),
+                    [current],
+                    "the mark shows the current stack's number at {scale}: {name}"
+                );
+                assert!(
+                    active_rect.0 > rect.x + rect.w,
+                    "the stack mark leads the active capsule: {scale}: {active_rect:?} after {rect:?}"
                 );
                 if single {
                     // The owner's case, one stack: hovering it shows no name tooltip (a dark pill-height circle over
@@ -4346,16 +4377,16 @@ fn bar_counts_stay_whole_on_every_output_scale_and_after_hotplug() -> Result<()>
     Ok(())
 }
 
-/// Stacks belong to an output on nacre-niri: every bar shows all of them (owner 2026-11-18: "the laptop and the
-/// external monitor should have different ones"), in stack order, and only the current stack of the bar's own
-/// output carries the white ring. A switch swaps stacks between screens, so the ring must move along the strand.
+/// Stacks belong to an output on nacre-niri (owner 2026-11-18: "the laptop and the external monitor should have
+/// different ones"): each bar's mark shows the number of its own output's current stack (spec 0253). A switch swaps
+/// stacks between screens, so each bar's number follows.
 #[test]
-fn every_output_strand_shows_all_stacks_with_its_own_highlighted() -> Result<()> {
-    let pearls = |collections: Value,
-                  output: &str,
-                  current: &str,
-                  shot: Option<&str>|
-     -> Result<(usize, Option<usize>)> {
+fn every_output_bar_shows_its_own_current_stack_number() -> Result<()> {
+    let numbers = |collections: Value,
+                   output: &str,
+                   current: &str,
+                   shot: Option<&str>|
+     -> Result<Vec<String>> {
         let mut values = super::initial_models()?;
         values.extend(parity_models());
         values.extend(BTreeMap::from([
@@ -4378,61 +4409,36 @@ fn every_output_strand_shows_all_stacks_with_its_own_highlighted() -> Result<()>
         if let Some(name) = shot {
             bar_golden(&h.pose((0., 0.), 1.)?, name)?;
         }
-        let x_of = |own: std::ops::Range<usize>| {
-            h.scene().primitives[own]
-                .iter()
-                .find_map(|primitive| match primitive {
-                    bead::render::Primitive::Rounded { rect, .. } => Some(rect.x),
-                    _ => None,
-                })
-        };
-        let layers = &h.scene().layers;
-        let white = layers
-            .iter()
-            .find(|layer| layer.id.ends_with("stack-white"))
-            .and_then(|layer| x_of(layer.own.clone()));
-        let pearls: Vec<f32> = layers
-            .iter()
-            .filter(|layer| layer.id.contains("stack-pearl-"))
-            .filter_map(|layer| x_of(layer.own.clone()))
-            .collect();
-        // The highlighted pearl's place in the strand, left to right (pearl x is its left edge, the white ring's is wider).
-        Ok((
-            pearls.len(),
-            white.map(|white| pearls.iter().filter(|x| **x < white).count()),
-        ))
+        Ok(stack_numbers(&h))
     };
     let live = Value::list(vec![
         serde_json::json!({"id":"niri-collection:1","label":"1","index":1,"active":true,"output":"DP-1"}),
         serde_json::json!({"id":"niri-collection:4","label":"2","index":2,"active":false,"output":"eDP-1"}),
     ]);
     assert_eq!(
-        pearls(
+        numbers(
             live.clone(),
             "eDP-1",
             "niri-collection:4",
             Some("bar-screens-edp")
         )?,
-        (2, Some(1))
+        ["2"]
     );
     assert_eq!(
-        pearls(
+        numbers(
             live.clone(),
             "DP-1",
             "niri-collection:1",
             Some("bar-screens-dp")
         )?,
-        (2, Some(0))
+        ["1"]
     );
-    // Super+Ctrl+Tab on DP-1 swaps the two stacks between the screens: each bar's ring moves to the other pearl.
+    // Super+Ctrl+Tab on DP-1 swaps the two stacks between the screens: each bar's number follows.
     assert_eq!(
-        pearls(live.clone(), "DP-1", "niri-collection:4", None)?,
-        (2, Some(1))
+        numbers(live.clone(), "DP-1", "niri-collection:4", None)?,
+        ["2"]
     );
-    assert_eq!(
-        pearls(live, "eDP-1", "niri-collection:1", None)?,
-        (2, Some(0))
-    );
+    assert_eq!(numbers(live, "eDP-1", "niri-collection:1", None)?, ["1"]);
     let more = Value::list(vec![
         serde_json::json!({"id":"d1","label":"1","index":1,"output":"DP-1"}),
         serde_json::json!({"id":"d2","label":"2","index":2,"output":"DP-1"}),
@@ -4441,17 +4447,21 @@ fn every_output_strand_shows_all_stacks_with_its_own_highlighted() -> Result<()>
         serde_json::json!({"id":"e2","label":"2","index":2,"output":"eDP-1"}),
     ]);
     assert_eq!(
-        pearls(more.clone(), "DP-1", "d2", None)?.0,
-        3,
-        "five stacks collapse to three around the current one"
+        numbers(more.clone(), "DP-1", "d3", None)?,
+        ["3"],
+        "one numeral whatever the stack count"
     );
-    assert_eq!(pearls(more, "eDP-1", "e2", None)?, (3, Some(2)));
+    assert_eq!(
+        numbers(more, "eDP-1", "e2", None)?,
+        ["2"],
+        "the stack's own index (the switcher's \"Stack N\"), not its place in the list"
+    );
     let single = Value::list(vec![
         serde_json::json!({"id":"a","label":"1","index":1,"output":"eDP-1"}),
     ]);
     assert_eq!(
-        pearls(single, "eDP-1", "a", None)?,
-        (1, Some(0)),
+        numbers(single, "eDP-1", "a", None)?,
+        ["1"],
         "one output, one stack"
     );
     Ok(())
