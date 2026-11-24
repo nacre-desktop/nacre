@@ -7,6 +7,7 @@ use crate::brain_http::{Activity, Request};
 use crate::{brain_launch::percent_encode, brain_web, Result};
 use serde_json::{json, Value};
 use std::io::{BufRead, BufReader, ErrorKind, Read, Write};
+use std::os::unix::fs::DirBuilderExt;
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
@@ -143,7 +144,11 @@ fn serve_client(stream: UnixStream, activity: &Activity) -> Result<()> {
 /// Bind the app socket (0600, same-user peers only) and serve it until the worker exits.
 pub fn listen(path: &PathBuf, activity: Arc<Activity>) -> Result<()> {
     if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent)?;
+        // 0700 like the daemon's own: a umask-mode folder made here would make the daemon refuse it.
+        std::fs::DirBuilder::new()
+            .recursive(true)
+            .mode(0o700)
+            .create(parent)?;
     }
     let _ = std::fs::remove_file(path);
     let listener = UnixListener::bind(path)?;
