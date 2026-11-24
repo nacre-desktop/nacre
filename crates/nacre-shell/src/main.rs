@@ -1066,6 +1066,8 @@ fn start(
         // even when benchmarking the content panels with GL.
         views.insert(pearls::GUIDE_VIEW.into(), pearls::guide_spec(&colors)?);
         options.panels = Some(bead::wayland::Panels::new("launcher".into(), views)?);
+        // N0231: a closed launcher or dashboard parks warm 2 s after its close settles.
+        options.warm_source_budget = reload::WARM_SOURCE_BUDGET;
         // B0052: Settings and the AI sidebar are separate on-demand processes.
         if let Some(socket) = &options.command_socket {
             app::configure(socket, daemon_socket.clone(), palette.clone());

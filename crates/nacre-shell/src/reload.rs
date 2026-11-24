@@ -259,6 +259,12 @@ fn suppress_widget_drag_hover(
         false
     }
 }
+/// N0231: an admission bound on what a parked launcher or dashboard Runtime keeps (session, Luau,
+/// stores, rows, scene copies), not a measurement; Bead charges the worker stack and rasters on top.
+pub(crate) const WARM_PANEL_BYTES: usize = 16 * bead::core::cache::MIB;
+/// N0231: Bead's dormant budget, room for the parked launcher and one dashboard page with their
+/// stacks and rasters (docs/specs/0231-warm-panels.md). Zero is the cold reopen of before.
+pub(crate) const WARM_SOURCE_BUDGET: usize = 4 * WARM_PANEL_BYTES;
 const WIDGET_HOVER_PREVIEW_RENEW: std::time::Duration = std::time::Duration::from_millis(1500);
 const WIDGET_HOVER_PREVIEW_DEDUPE: std::time::Duration = std::time::Duration::from_millis(1400);
 fn widget_floating_action(
@@ -735,6 +741,9 @@ pub struct Runtime {
     slider_release_serial: u64,
     slider_local_active: bool,
     launcher_memory: Option<crate::launcher::Memory>,
+    /// N0231: what this view last wrote to `launcher_memory`. A commit or release that leaves it
+    /// unchanged keeps a newer write of the trigger (the bar's open of a parked launcher).
+    launcher_remembered: Option<BTreeMap<String, bead::core::Value>>,
     icon_warmer: Option<crate::icon_warm::IconWarmer>,
     wallpaper_warmer: Option<std::sync::Arc<crate::wallpaper_warm::Warmer>>,
     connection_status: Option<std::sync::Arc<dyn bead::core::source::Source>>,
@@ -941,7 +950,10 @@ impl Drop for Runtime {
             && let Some(memory) = &self.launcher_memory
             && let Ok(mut saved) = memory.lock()
         {
-            *saved = crate::launcher::remember(&self.session.stores);
+            let state = crate::launcher::remember(&self.session.stores);
+            if self.launcher_remembered.as_ref() != Some(&state) {
+                *saved = state;
+            }
             if self.trace {
                 println!(
                     "PANEL_VIEW_STATE_RELEASED view=launcher entries={}",
@@ -2707,6 +2719,7 @@ impl Runtime {
             slider_release_serial: 0,
             slider_local_active: false,
             launcher_memory: None,
+            launcher_remembered: None,
             icon_warmer: None,
             wallpaper_warmer: None,
             connection_status: None,
@@ -5580,6 +5593,47 @@ impl SceneSource for Runtime {
                     })
             })
             .collect()
+    }
+
+    // N0231: only the launcher and the dashboard on Today (the page it opens on) park when
+    // closed; other views and pages reopen cold.
+    fn warm_retained_bytes(&self) -> Option<usize> {
+        let today = self
+            .dashboard
+            .as_ref()
+            .is_some_and(|dashboard| dashboard.borrow().page() == crate::dashboard::Page::Today);
+        (self.launcher.is_some() || today).then_some(WARM_PANEL_BYTES)
+    }
+    // Bead has staged PanelVisibility(true), which re-leases a parked dashboard's topics. Show
+    // what a fresh open would: the launcher from its trigger's state, the dashboard projected anew.
+    fn resume(&mut self) -> Result<Option<Scene>, Box<dyn Error>> {
+        if !self.session.sources_current() {
+            return Err("view sources changed while parked".into());
+        }
+        let values = match (&self.launcher, &self.launcher_memory) {
+            (Some(_), Some(memory)) => memory
+                .lock()
+                .map_err(|_| "launcher view state unavailable")?
+                .clone(),
+            _ => BTreeMap::new(),
+        };
+        if let Some(dashboard) = &self.dashboard {
+            dashboard.borrow().invalidate_projection();
+        }
+        // As on a cold open, a changed query starts from no rows and may settle briefly.
+        if let Some(menu) = &self.launcher
+            && values.get("launcher.search.text") != self.session.stores.get("launcher.search.text")
+        {
+            menu.forget_results();
+        }
+        self.launcher_initial_projection
+            .set(self.launcher.is_some());
+        let scene = self.stage(UiEvent::Model(values));
+        self.launcher_initial_projection.set(false);
+        Ok(Some(match scene? {
+            Some(scene) => scene,
+            None => self.session.current_scene(),
+        }))
     }
 
     fn wakeup_at(&self) -> Option<std::time::Instant> {
@@ -10708,7 +10762,11 @@ impl SceneSource for Runtime {
                 && let Some(memory) = &self.launcher_memory
                 && let Ok(mut saved) = memory.lock()
             {
-                *saved = crate::launcher::remember(&self.session.stores);
+                let state = crate::launcher::remember(&self.session.stores);
+                if self.launcher_remembered.as_ref() != Some(&state) {
+                    *saved = state.clone();
+                    self.launcher_remembered = Some(state);
+                }
             }
             if let Some(file) = &mut self.state_file
                 && let Err(error) = file.save(&self.session.stores)
@@ -11160,6 +11218,8 @@ mod prompt_runtime_tests;
 mod session_menu_runtime_tests;
 #[cfg(test)]
 mod shell_route_smoke_tests;
+#[cfg(test)]
+mod warm_park_tests;
 #[cfg(test)]
 mod widget_app_tests;
 #[cfg(test)]

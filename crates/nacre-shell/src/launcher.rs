@@ -1946,6 +1946,12 @@ impl Menu {
         Ok(delta)
     }
 
+    /// N0231: a resumed launcher's next query clears the old rows while it is pending, as on a
+    /// cold open, instead of keeping them as typing does.
+    pub fn forget_results(&self) {
+        self.view.borrow_mut().result_request = None;
+    }
+
     /// Start the initial query while markup loads. Keep first-projection route
     /// restoration enabled; a different restored route supersedes this request.
     pub fn prime_initial(&self, stores: &Stores) -> Result<(), bead::ui::Diagnostic> {
