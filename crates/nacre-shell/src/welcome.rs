@@ -286,6 +286,9 @@ pub fn window_spec(
                 .map_err(|e| e.to_string())
         }),
     );
+    // Row 72: without it Bead's minimum is the preferred 1100x800, which overrides a tiled height
+    // on a 1280x800 screen and pushes Skip/Next off it; 720x540 is the smallest golden layout.
+    spec.min_size = (720, 540);
     spec.model = Arc::new(|args| {
         // `nacre welcome [home|colors|shortcuts|apps|ready|help]`; anything else shows the first page.
         let page = args

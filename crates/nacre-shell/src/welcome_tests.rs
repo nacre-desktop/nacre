@@ -609,3 +609,47 @@ fn a_resize_projects_the_new_window_size() {
         Some(&Value::Number(800.))
     );
 }
+
+/// Row 72: on a 1280x800 screen niri tiles Welcome under the 50 px bar; its minimum must fit there
+/// (the preferred 1100x800 as the minimum pushed Skip/Next off the screen).
+#[test]
+fn the_welcome_window_minimum_fits_a_1280x800_screen_under_the_bar() {
+    let palette = root().join("palette.json");
+    let colors = bead::render::Palette::read(&palette).unwrap();
+    let spec = window_spec(root(), palette, colors, None, false).unwrap();
+    assert_eq!(
+        spec.min_size,
+        (720, 540),
+        "the smallest golden Welcome layout"
+    );
+    assert!(spec.min_size.0 <= 1280 && spec.min_size.1 <= 800 - 50);
+}
+
+/// Row 72: at the height niri tiles Welcome to under the bar on a 1280x800 screen, every page keeps
+/// the footer (Next/Skip) inside the window; the tour scrolls above it.
+#[test]
+fn every_welcome_page_keeps_next_on_screen_at_the_tiled_height() {
+    for (width, height) in [(1190, 740), (1100, 740)] {
+        for page in ["welcome", "colors", "shortcuts", "apps", "ready", "help"] {
+            let h = harness(
+                page_model(page, "", true, true, (width, height)),
+                width,
+                height,
+                1.,
+                "palette.json",
+            );
+            let next = h
+                .session
+                .view_nodes()
+                .iter()
+                .find(|n| n.id.ends_with("next"))
+                .map(|n| bead::ui::rect(&n.draw))
+                .unwrap_or_else(|| panic!("{page}: Next missing"));
+            assert!(
+                next.y + next.h <= height as f32,
+                "{page} at {width}x{height}: Next ends at {}",
+                next.y + next.h
+            );
+        }
+    }
+}
