@@ -56,10 +56,13 @@ gets no extras. Selecting Hyprland adds `hypr-config`.
   `~/.config/nacre` and `~/.local/state/nacre` is user-authored or changed
   (custom.kdl, widgets.json, plugins, settings, backups) and stays; the plan
   lists each kept file. `--purge` removes those two dirs and `~/.cache/nacre`
-  (every file listed); `--purge-data` also `~/.local/share/nacre` (chats, AI,
-  Brain data). `--keep-data` is accepted as an alias of the default. Empty
-  directories Nacre created are pruned; shared base directories are not. It
-  does not call systemctl or pacman; it prints both next steps.
+  (every file listed), plus a fixed list of Nacre-named seeds an older setup
+  never recorded: Nacre-named theme outputs, `~/.local/share/nacre/branding`,
+  `~/.local/share/icons/Nacre-Papirus-v3-*` and `hicolor/*/apps/nacre*.svg`
+  (never through a linked directory); `--purge-data` also `~/.local/share/nacre`
+  (chats, AI, Brain data). `--keep-data` is accepted as an alias of the default.
+  Empty directories Nacre created are pruned; shared base directories are not.
+  It does not call systemctl or pacman; it prints both next steps.
 - `nacre status --files` prints `module, path, state` (managed, edited, missing,
   replaced, link) for every owned path.
 

@@ -365,6 +365,39 @@ class InstallModuleTests(unittest.TestCase):
         self.assertEqual(list(legacy.iterdir()), [legacy / "another-app.json"])
         self.assertEqual((legacy / "another-app.json").read_text(), "preserve")
 
+    def test_purge_removes_unrecorded_older_seeds_but_not_their_neighbours(self):
+        seeds = (  # As r406 setup seeded them, never recorded in a manifest.
+            ".local/share/color-schemes/Nacre.colors",
+            ".local/share/nacre/branding/nacre.svg",
+            ".local/share/icons/Nacre-Papirus-v3-teal-dark/32x32/places/folder.svg",
+            ".local/share/icons/hicolor/scalable/apps/nacre.svg",
+        )
+        mine = (
+            ".local/share/icons/MyTheme/index.theme",
+            ".local/share/icons/hicolor/scalable/apps/firefox.svg",
+            ".config/gtk-3.0/gtk.css",  # A shared theme output Nacre never wrote.
+        )
+        outside = self.home.parent / "elsewhere/index.theme"
+        for path in (*(self.home / p for p in (*seeds, *mine)), outside):
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("theme\n")
+        link = self.home / ".local/share/icons/Nacre-Papirus-v3-linked"
+        link.symlink_to(outside.parent)
+        nacre_modules.uninstall(self.home, apply=True)
+        for relative in (*seeds, *mine):
+            self.assertTrue((self.home / relative).is_file(), relative)
+        with contextlib.redirect_stdout(io.StringIO()) as output:
+            nacre_modules.main(
+                ["uninstall", "--purge", "--yes"], self.home, configure.ROOT
+            )
+        for relative in seeds:
+            self.assertFalse((self.home / relative).exists(), relative)
+            self.assertIn(f"remove (--purge): ~/{relative}", output.getvalue())
+        for relative in mine:
+            self.assertTrue((self.home / relative).is_file(), relative)
+        self.assertFalse(link.is_symlink())
+        self.assertTrue(outside.is_file())
+
     def test_upgrading_an_existing_install_keeps_its_modules(self):
         configure.apply(self.home, configure.ROOT)
         everything = nacre_modules.resolve(self.home, nacre_modules.EXTRAS)

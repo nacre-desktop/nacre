@@ -320,6 +320,29 @@ def _legacy_shell_state_files(home):
     return sorted(found)
 
 
+def _unrecorded_seeds(home, recorded):
+    """Nacre-named defaults an older setup seeded without recording them (r406)."""
+    icons = home / ".local/share/icons"
+    found = [p for p in theme_outputs() if "nacre" in p.lower()]
+    found.append(".local/share/nacre/branding")
+    if icons.is_dir() and not icons.is_symlink():
+        found += [
+            p.relative_to(home).as_posix()
+            for p in (
+                *icons.glob("Nacre-Papirus-v3-*"),
+                *icons.glob("hicolor/*/apps/nacre*.svg"),
+            )
+        ]
+    return [
+        p
+        for p in found
+        if p not in recorded
+        and ((home / p).exists() or (home / p).is_symlink())
+        # Never act through a linked directory, which may lead out of HOME.
+        and not any((home / parent).is_symlink() for parent in Path(p).parents[:-1])
+    ]
+
+
 def _files_under(home, directory):
     root = home / directory
     if root.is_symlink() or root.is_file():
@@ -344,6 +367,10 @@ def uninstall(home, *, purge=False, purge_data=False, apply=False):
         + ((OWN_DIRS[2],) if purge_data else ())
         if (home / d).exists()
     ]
+    if purge:
+        purged += [
+            p for p in _unrecorded_seeds(home, owned(home)) if not _under(p, purged)
+        ]
     actions = removal_plan(
         home,
         [path for path in owned(home) if not _under(path, purged)],
@@ -385,7 +412,7 @@ def uninstall(home, *, purge=False, purge_data=False, apply=False):
             _prune(home, Path(path))
         for directory in purged:
             target = home / directory
-            if target.is_symlink():
+            if target.is_symlink() or not target.is_dir():
                 target.unlink()  # Never empty the directory a user linked here.
             else:
                 shutil.rmtree(target)
@@ -596,7 +623,8 @@ def main(argv, home, root):
     remove.add_argument(
         "--purge",
         action="store_true",
-        help="also remove ~/.config/nacre, ~/.local/state/nacre and ~/.cache/nacre",
+        help="also remove ~/.config/nacre, ~/.local/state/nacre, ~/.cache/nacre and"
+        " the Nacre icons, branding and theme files an older setup left unrecorded",
     )
     remove.add_argument(
         "--purge-data",

@@ -82,8 +82,9 @@ systemctl --user daemon-reload
 
 The plan lists every file that will be removed, restored or kept. Files you
 changed stay unless you purge. `--purge` removes Nacre's settings, state and
-cache. Your AI chats and Brain data stay unless you add `--purge-data`; Brain
-notes and your own wallpapers are never removed. The repository entry and its
+cache, and the Nacre icons, branding and theme files an older release seeded.
+Your AI chats and Brain data stay unless you add `--purge-data`; Brain notes and
+your own wallpapers are never removed. The repository entry and its
 key stay in pacman's configuration until you remove them.
 
 See [recovery and troubleshooting](recovery.md) if setup or removal reports a
