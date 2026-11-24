@@ -377,7 +377,7 @@ impl ControlCenter {
             }
         })
     }
-    fn data(&self, topic: &str) -> Option<Arc<Json>> {
+    pub(crate) fn data(&self, topic: &str) -> Option<Arc<Json>> {
         let snapshot = self
             .topics
             .borrow()

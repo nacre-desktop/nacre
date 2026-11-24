@@ -82,10 +82,11 @@ model hints are dropped. The tests assert that only hints arrive while parked.
 
 - Dashboard: nothing that evicts. Its close drops every daemon lease (be3d40187); the preview gate and
   the poster thread send hints only, and `awake` is false while closed.
-- Launcher: the menu topic and the query actor send hints. The quick controls (`controls`,
-  `notifications`, `dashboard.updates`, `capabilities`) keep their leases while parked and send hints
-  only. The prefs subscription delivers a payload, so a settings change evicts a parked launcher; its
-  next open is cold with the new settings.
+- Launcher: the menu topic and the query actor send hints. Its close drops the quick controls' own
+  leases and subscriptions (`controls`, `notifications`, `dashboard.updates`, `capabilities`; row 73),
+  so they send nothing while parked; PanelVisibility(true), which Bead stages before `resume`, leases
+  them again and the first frame draws the tiles it closed on. The prefs subscription delivers a
+  payload, so a settings change evicts a parked launcher; its next open is cold with the new settings.
 - Both: a language switch (`Reload`) and a shell source change (file watcher) evict.
 - `resume` fails, and Bead runs the factory, when the accepted sources or the palette file changed.
 
@@ -116,6 +117,9 @@ behaviour left; it writes the same values as before whenever the launcher's stat
   search on the first resumed frame, one factory call.
 - `a_parked_dashboard_reopens_on_fresh_data_without_a_factory_call`: the daemon's count changes while
   parked; the first resumed frame draws the fresh count, one factory call.
+- `a_closed_launcher_holds_no_quick_lease_and_reopens_on_its_tiles` (`control_center_tests.rs`, row 73):
+  the close releases the four quick leases and wakes nothing, a closed model change leases nothing, and a
+  cold or `resume` reopen leases them again and draws the closed-on tiles on its first frame.
 - `parked_panels_keep_less_than_their_charge_and_both_fit_the_budget`: the table above (printed as
   `WARM_PARKED` / `WARM_BUDGET` on stderr); it fails if a parked panel keeps more heap than its charge
   less the stack, or the two charges exceed the budget.

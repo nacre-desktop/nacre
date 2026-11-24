@@ -3684,6 +3684,121 @@ async fn closed_control_panels_hold_no_lease_and_reopen_on_the_values_they_showe
     Ok(())
 }
 
+/// Row 73: a closed launcher, kept alive or parked warm (N0231), holds none of its quick
+/// controls' leases and nothing it holds wakes it; a model change while closed leases nothing.
+/// Reopening, cold or through Bead's PanelVisibility(true) + resume(), leases them again, and
+/// the first frame draws the tiles the launcher closed on.
+// A sync test: the launcher Runtime must not drop inside an async context.
+#[test]
+fn a_closed_launcher_holds_no_quick_lease_and_reopens_on_its_tiles() -> bead_test::Result<()> {
+    use bead::wayland::{SceneSource, UiEvent};
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()?;
+    let _guard = rt.enter();
+    crate::i18n::init();
+    let mut lab = rt.block_on(lab(&[
+        "notifications.set_dnd",
+        "night_light.set",
+        "stay_awake.set",
+    ]));
+    let h = Harness::load(
+        &root(),
+        Path::new("ui/main.luau"),
+        &root().join("palette.json"),
+        BTreeMap::new(),
+        bead_test::Config {
+            width: 1920,
+            height: 1200,
+            scale: 1.,
+        },
+    )?;
+    let mut runtime = crate::reload::Runtime::new(h.session)
+        .with_launcher(None)?
+        .with_launcher_quick(Quick::lease(lab.client.clone()).unwrap())?;
+    runtime.isolate_state(&lab.dir.join("row73"));
+    let wakes = Arc::new(AtomicUsize::new(0));
+    let woken = wakes.clone();
+    runtime.services(Box::new(move |_| {
+        woken.fetch_add(1, Ordering::Relaxed);
+    }));
+    runtime.stage(UiEvent::PanelVisibility(true))?;
+    runtime.commit();
+    let shown = |runtime: &crate::reload::Runtime| {
+        [
+            "launcher.quick",
+            "launcher.updates.count",
+            "launcher.hint_ai",
+        ]
+        .map(|key| runtime.session.stores.get(key).cloned())
+    };
+    let ready = |shown: &[Option<Value>; 3]| {
+        matches!(&shown[0], Some(Value::List(rows)) if rows.iter().all(|row| row["status"] != "—"))
+            && shown[1] == Some(Value::Number(0.))
+            && shown[2] == Some(Value::Bool(true))
+    };
+    for _ in 0..500 {
+        runtime.stage(UiEvent::Model(BTreeMap::new()))?;
+        runtime.commit();
+        if ready(&shown(&runtime)) {
+            break;
+        }
+        rt.block_on(tokio::time::sleep(Duration::from_millis(10)));
+    }
+    let open = shown(&runtime);
+    assert!(ready(&open), "the quick controls are projected: {open:?}");
+    let own: BTreeSet<String> = [
+        "controls",
+        "notifications",
+        "dashboard.updates",
+        "capabilities",
+    ]
+    .map(String::from)
+    .into();
+    while lab.subs.try_recv().is_ok() {}
+    for resume in [false, true] {
+        runtime.stage(UiEvent::PanelVisibility(false))?;
+        runtime.commit();
+        let closed = wakes.load(Ordering::Relaxed);
+        assert_eq!(shown(&runtime), open, "closing changes no tile");
+        assert_eq!(
+            rt.block_on(changed(&mut lab.unsubs, own.len())),
+            own,
+            "a closed launcher holds none of its quick-control leases"
+        );
+        runtime.stage(UiEvent::Model(BTreeMap::new()))?;
+        runtime.commit();
+        rt.block_on(tokio::time::sleep(Duration::from_millis(50)));
+        assert!(
+            lab.subs.try_recv().is_err(),
+            "a closed model change leases nothing"
+        );
+        assert_eq!(
+            wakes.load(Ordering::Relaxed),
+            closed,
+            "nothing wakes a closed launcher"
+        );
+        // No await before this frame: the fresh leases have no data yet.
+        runtime.stage(UiEvent::PanelVisibility(true))?;
+        if resume {
+            runtime.resume()?;
+        }
+        runtime.commit();
+        assert_eq!(
+            shown(&runtime),
+            open,
+            "the first frame after reopening (resume={resume}) draws the tiles it closed on"
+        );
+        assert_eq!(
+            rt.block_on(changed(&mut lab.subs, own.len())),
+            own,
+            "leased again"
+        );
+    }
+    Ok(())
+}
+
 /// 0280: the dock keeps the frame height on every page, and `cc.page=detail` with an empty or
 /// unknown `cc.detail` renders the overview, so a bare back row cannot occur.
 #[test]

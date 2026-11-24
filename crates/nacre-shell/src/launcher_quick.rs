@@ -29,28 +29,19 @@ const ITEMS: [(&str, &str, &str, &str); 3] = [
     ),
 ];
 
+/// Its topics live in `control` alone, so parking it there (row 73) releases every lease.
 pub struct Quick {
     control: ControlCenter,
-    updates: Option<Arc<dyn Source>>,
-    capabilities: Option<Arc<dyn Source>>,
 }
 
 impl Quick {
     pub fn new(client: Option<Client>, topics: Vec<(&'static str, Arc<dyn Source>)>) -> Self {
-        let updates = topics
-            .iter()
-            .find(|(name, _)| *name == "dashboard.updates")
-            .map(|(_, source)| source.clone());
-        let capabilities = topics
-            .iter()
-            .find(|(name, _)| *name == "capabilities")
-            .map(|(_, source)| source.clone());
-        let control = ControlCenter::new(client, topics, None, Vec::new());
         Self {
-            control,
-            updates,
-            capabilities,
+            control: ControlCenter::new(client, topics, None, Vec::new()),
         }
+    }
+    pub(crate) fn control(&self) -> &ControlCenter {
+        &self.control
     }
 
     pub fn lease(client: Client) -> source::Result<Self> {
@@ -78,8 +69,8 @@ impl Quick {
 
     pub fn project(&self, stores: &Stores) -> BTreeMap<String, Value> {
         if stores.get("panel.open") == Some(&Value::Bool(false)) {
-            // Keep the last visible frame intact during the closing animation.
-            // Runtime retirement releases its stores, subscriptions and leases together.
+            // Keep the last visible frame intact during the closing animation; the closed
+            // Runtime has parked the leases (row 73).
             return BTreeMap::new();
         }
         self.control.poll_quick();
@@ -109,23 +100,20 @@ impl Quick {
             })
             .collect();
         let count = self
-            .updates
-            .as_ref()
-            .map(|source| source.snapshot())
+            .control
+            .data("dashboard.updates")
             .filter(|updates| {
-                updates.connected
-                    && updates.data["health"]["available"] == true
-                    && updates.data["health"]["stale"] != true
+                updates["health"]["available"] == true && updates["health"]["stale"] != true
             })
-            .and_then(|updates| updates.data["count"].as_u64())
+            .and_then(|updates| updates["count"].as_u64())
             .filter(|count| *count <= u64::from(u32::MAX))
             .map(|count| count as f64)
             .unwrap_or(-1.);
-        let capabilities = self.capabilities.as_ref().map(|source| source.snapshot());
+        let capabilities = self.control.data("capabilities");
         let enabled = |name: &str| {
             capabilities
                 .as_ref()
-                .is_some_and(|snapshot| snapshot.connected && snapshot.data["flags"][name] == true)
+                .is_some_and(|data| data["flags"][name] == true)
         };
         let message = self.control.quick_message();
         BTreeMap::from([

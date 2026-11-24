@@ -715,7 +715,6 @@ pub struct Runtime {
     title_rev: std::cell::Cell<(u64, f64)>,
     launcher_subscription: Option<bead::core::source::Subscription>,
     launcher_quick: Option<std::rc::Rc<crate::launcher_quick::Quick>>,
-    launcher_quick_subscription: Vec<bead::core::source::Subscription>,
     calendar: Option<std::rc::Rc<crate::calendar::Calendar>>,
     calendar_subscription: Option<bead::core::source::Subscription>,
     i18n_subscription: Option<bead::ui::i18n::Subscription>,
@@ -2695,7 +2694,6 @@ impl Runtime {
             title_rev: std::cell::Cell::new((0, 0.)),
             launcher_subscription: None,
             launcher_quick: None,
-            launcher_quick_subscription: Vec::new(),
             calendar: None,
             calendar_subscription: None,
             i18n_subscription: None,
@@ -3329,7 +3327,8 @@ impl Runtime {
         self.fonts = crate::font_sources::Selector::default().with_ascii();
         Ok(self)
     }
-    /// Quick control leases, projections and pending calls die with the launcher runtime.
+    /// Quick control projections and pending calls die with the launcher runtime; its leases
+    /// are parked while the launcher is closed (row 73).
     pub fn with_launcher_quick(
         mut self,
         quick: crate::launcher_quick::Quick,
@@ -6175,7 +6174,8 @@ impl SceneSource for Runtime {
         }
         if let Some(quick) = &self.launcher_quick {
             match quick.subscribe(wakeup.clone()) {
-                Ok(subscriptions) => self.launcher_quick_subscription = subscriptions,
+                // Its control centre parks like a panel's (row 73), so it shares that slot.
+                Ok(subscriptions) => self.control_subscription = subscriptions,
                 Err(_) => eprintln!("SOURCE_ERROR code=launcher_quick_subscription"),
             }
         }
@@ -9283,9 +9283,12 @@ impl SceneSource for Runtime {
                         }
                     }
                 }
-                // The same for the control centre and the popouts built on it, and the meter's
-                // `audio.peak` capture; topics the bar also reads stay subscribed by their count.
-                if let Some(control) = &self.control {
+                // The same for the control centre and the popouts built on it, the launcher's
+                // quick controls (kept alive or parked warm, N0231: Bead stages this before
+                // resume()), and the meter's `audio.peak` capture; topics the bar also reads stay
+                // subscribed by their count.
+                let quick = self.launcher_quick.as_deref().map(|quick| quick.control());
+                if let Some(control) = self.control.as_deref().or(quick) {
                     let parked = control.parked();
                     if !open && !parked {
                         self.control_subscription.clear();
