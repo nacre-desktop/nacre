@@ -304,6 +304,9 @@ fn silent_bus(home: &Path, name: &str) -> Result<SilentBus> {
 }
 
 const READY_HANG_GUARD: Duration = Duration::from_secs(30);
+// A backend that hangs while its parent (the daemon) lives: a plain long sleep outlived the test.
+const HANG: &str =
+    "while kill -0 $PPID 2>/dev/null; do /usr/bin/sleep 1 </dev/null >/dev/null 2>&1; done";
 
 fn wait_for_silent_bus_connections(connected: &[&AtomicBool]) -> bool {
     let deadline = Instant::now() + READY_HANG_GUARD;
@@ -3080,7 +3083,7 @@ fn daemon_ready_while_every_external_backend_hangs() -> Result<()> {
         "checkupdates",
     ] {
         let path = bin.join(name);
-        fs::write(&path, "#!/bin/sh\nexec /usr/bin/sleep 3000\n")?;
+        fs::write(&path, format!("#!/bin/sh\n{HANG}\n"))?;
         fs::set_permissions(&path, fs::Permissions::from_mode(0o755))?;
     }
     // N0067: every LED and backlight attribute is a FIFO nobody writes to: any read blocks forever.
@@ -3112,7 +3115,7 @@ fn daemon_ready_while_every_external_backend_hangs() -> Result<()> {
     fs::write(
         bin.join("parec"),
         format!(
-            "#!/bin/sh\necho started > '{}'\nexec /usr/bin/sleep 3000\n",
+            "#!/bin/sh\necho started > '{}'\n{HANG}\n",
             spectrum_started.display()
         ),
     )?;
@@ -3120,7 +3123,7 @@ fn daemon_ready_while_every_external_backend_hangs() -> Result<()> {
     fs::write(
         bin.join("pactl"),
         format!(
-            "#!/bin/sh\necho started > '{}'\nexec /usr/bin/sleep 3000\n",
+            "#!/bin/sh\necho started > '{}'\n{HANG}\n",
             audio_started.display()
         ),
     )?;
@@ -3128,7 +3131,7 @@ fn daemon_ready_while_every_external_backend_hangs() -> Result<()> {
     fs::write(
         bin.join("checkupdates"),
         format!(
-            "#!/bin/sh\necho started > '{}'\nexec /usr/bin/sleep 3000\n",
+            "#!/bin/sh\necho started > '{}'\n{HANG}\n",
             check_started.display()
         ),
     )?;
