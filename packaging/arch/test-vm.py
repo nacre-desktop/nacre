@@ -2,7 +2,9 @@
 """Fresh Arch tty1 gate; run under a resource slot with QEMU/KVM and virgl.
 
 Archives become a guest-only signed repository; --repo accepts a published root.
---upgrade-from installs an older archive set first, then upgrades to --packages.
+--upgrade-from installs an older archive set first, then upgrades to --packages;
+given a published repo URL, it installs that repo with its own installer, upgrades
+with plain pacman -Syu, and runs `nacre update` only once the session has started.
 """
 
 import argparse
@@ -120,6 +122,11 @@ def leftovers(before, after, managed=()):
     return changed, bad
 
 
+def upgrade_source(value):
+    """A published repo root stays a URL; anything else is an archive directory."""
+    return value.rstrip("/") if re.match(r"https?://", value) else Path(value)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -131,10 +138,15 @@ def main():
     parser.add_argument("--base", type=Path, required=True)
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--lock", type=Path, required=True)
-    parser.add_argument("--upgrade-from", type=Path, help="older archive directory")
+    parser.add_argument(
+        "--upgrade-from",
+        type=upgrade_source,
+        help="older archive directory or published repo URL",
+    )
     args = parser.parse_args()
     if args.upgrade_from and not args.packages:
         parser.error("--upgrade-from needs --packages")
+    old = args.upgrade_from if isinstance(args.upgrade_from, str) else None
     out = args.out.resolve()
     out.mkdir(parents=True, exist_ok=False)
     rows = []
@@ -196,6 +208,7 @@ sudo systemctl daemon-reload; sudo systemctl restart getty@tty1.service
 for i in $(seq 60); do systemctl --user is-active --quiet nacre-shell.service && break; sleep 2; done
 systemctl --user is-active nacre-shell.service
 """)
+        pid = guest("systemctl --user show -p MainPID --value nacre-shell.service")
         time.sleep(10)
         command = (
             "hyprctl -j monitors"
@@ -229,6 +242,9 @@ systemctl --user is-active nacre-shell.service
             "PY"
         )
         guest("systemctl --user is-active nacre-shell.service")
+        now = guest("systemctl --user show -p MainPID --value nacre-shell.service")
+        if pid.strip() in ("", "0") or now != pid:
+            raise RuntimeError("nacre-shell.service restarted during the session check")
 
     def interrupted(signum, frame):
         raise RuntimeError("Interrupted by signal " + str(signum))
@@ -303,17 +319,20 @@ printf '%s\\n' 'Server = https://mirror.osbeck.com/archlinux/$repo/os/$arch' 'Se
 """)
             before = inventory("before")
             finish("repository")
-            url = args.repo.rstrip("/") if args.repo else "http://127.0.0.1:8080"
+            url = old or (
+                args.repo.rstrip("/") if args.repo else "http://127.0.0.1:8080"
+            )
             if args.packages:
                 guest("mkdir -p /tmp/repo-key; chmod 700 /tmp/repo-key")
                 fingerprint = guest("""export GNUPGHOME=/tmp/repo-key
  gpg --batch --pinentry-mode loopback --passphrase '' --quick-generate-key 'VM gate <vm@example.invalid>' ed25519 sign 1d
  gpg --batch --with-colons --list-secret-keys | awk -F: '$1=="fpr" {print $10; exit}'
 """).splitlines()[-1]
-                publish(args.upgrade_from or args.packages)
+                publish(args.packages if old else args.upgrade_from or args.packages)
                 guest("""GNUPGHOME=/tmp/repo-key gpg --armor --export > /tmp/repository/nacre-repo.asc
  nohup python -m http.server 8080 --bind 127.0.0.1 --directory /tmp/repository </dev/null >/tmp/repo-http.log 2>&1 & echo $! >/tmp/repo-http.pid
 """)
+            if args.packages and not old:
                 bootstrap = render_bootstrap(ROOT).replace(FINGERPRINT, fingerprint)
             else:
                 with urlopen(url + "/install-arch.sh", timeout=60) as response:
@@ -338,26 +357,35 @@ printf '%s\\n' 'Server = https://mirror.osbeck.com/archlinux/$repo/os/$arch' 'Se
                 f"printf 'y\\n' | nacre setup --non-interactive --profile default --layout us --compositor {args.tier} --yes --install-deps",
                 timeout=600,
             )
-            managed = [
-                "/home/tester/" + line.split("\t")[1].removeprefix("~/")
-                for line in guest("nacre status --files").splitlines()
-                if "\t~/" in line
-            ]
+
+            def managed_files():
+                return [
+                    "/home/tester/" + line.split("\t")[1].removeprefix("~/")
+                    for line in guest("nacre status --files").splitlines()
+                    if "\t~/" in line
+                ]
+
+            managed = [] if old else managed_files()  # r406 has no `status --files`
             finish("session")
             session("screenshot.png")
             if args.upgrade_from:
                 finish("upgrade")
                 edit = "/home/tester/" + USER_EDIT[args.tier]
-                if edit not in managed:
+                # r406 may not seed the file; the published path logs a SKIP instead.
+                editable = (
+                    guest(f"test -e {edit} && echo yes || true").strip() == "yes"
+                    if old
+                    else True
+                )
+                if not editable:
+                    print("SKIP: user edit target absent in the old install: " + edit)
+                elif not old and edit not in managed:
                     raise RuntimeError("Edit target is not a managed file: " + edit)
-                comment = "//" if edit.endswith(".kdl") else "#"
-                guest(
-                    f"echo '{comment} vm-gate user edit' >> {edit}; sha256sum {edit} >/tmp/edit.sha256"
-                )
-                publish(args.packages)
-                transcript = guest(
-                    ENVIRONMENT + "python - <<'PY'\n" + UPDATE + "PY", timeout=1200
-                )
+                else:
+                    comment = "//" if edit.endswith(".kdl") else "#"
+                    guest(
+                        f"echo '{comment} vm-gate user edit' >> {edit}; sha256sum {edit} >/tmp/edit.sha256"
+                    )
                 version = next(
                     m[1]
                     for p in args.packages.rglob("nacre-*.pkg.tar.zst")
@@ -367,19 +395,53 @@ printf '%s\\n' 'Server = https://mirror.osbeck.com/archlinux/$repo/os/$arch' 'Se
                         )
                     )
                 )
-                # The outcome, not the exit status, proves the update ran.
-                installed = guest("pacman -Q nacre").strip()
-                if installed != "nacre " + version:
-                    raise RuntimeError(f"nacre update left {installed}, not {version}")
-                if not re.search(
-                    rf"^nacre \S+ -> {re.escape(version)}\s*$", transcript, re.M
-                ):
-                    raise RuntimeError("Update summary lacks nacre -> " + version)
-                if f"compositor={args.tier};" not in transcript:
-                    raise RuntimeError("Setup review chose another compositor")
-                finish("upgrade-session")
-                session("screenshot-upgrade.png", "uwsm stop;")
-                guest("sha256sum -c /tmp/edit.sha256")  # The user edit survived.
+
+                def check_installed():
+                    installed = guest("pacman -Q nacre").strip()
+                    if installed != "nacre " + version:
+                        raise RuntimeError(f"{installed}, not nacre {version}")
+
+                def update():
+                    return guest(
+                        ENVIRONMENT + "python - <<'PY'\n" + UPDATE + "PY", timeout=1200
+                    )
+
+                def reviewed(transcript):
+                    if f"compositor={args.tier};" not in transcript:
+                        raise RuntimeError("Setup review chose another compositor")
+
+                if old:
+                    # Like a user: the old installer's own repo section, now served by the guest.
+                    guest(
+                        "sudo sed -i 's|^Server = .*|Server = http://127.0.0.1:8080/arch/dev/$arch|' /etc/pacman.d/nacre-dev.conf\n"
+                        "sudo pacman-key --add /tmp/repository/nacre-repo.asc\n"
+                        f"sudo pacman-key --lsign-key {fingerprint}\n"
+                        "sudo pacman -Syu --noconfirm",
+                        timeout=1800,
+                    )
+                    check_installed()
+                    finish("upgrade-session")
+                    session("screenshot-upgrade.png", "uwsm stop;")
+                    managed = managed_files()
+                    finish("upgrade-update")
+                    transcript = update()
+                    if "Update complete" not in transcript:
+                        raise RuntimeError("nacre update did not run the updater")
+                    reviewed(transcript)
+                else:
+                    publish(args.packages)
+                    transcript = update()
+                    # The outcome, not the exit status, proves the update ran.
+                    check_installed()
+                    if not re.search(
+                        rf"^nacre \S+ -> {re.escape(version)}\s*$", transcript, re.M
+                    ):
+                        raise RuntimeError("Update summary lacks nacre -> " + version)
+                    reviewed(transcript)
+                    finish("upgrade-session")
+                    session("screenshot-upgrade.png", "uwsm stop;")
+                if editable:
+                    guest("sha256sum -c /tmp/edit.sha256")  # The user edit survived.
             finish("update")
             update = guest(
                 "nacre --help 2>&1 | grep -qw update || echo 'SKIP: update absent in candidate'"

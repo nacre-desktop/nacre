@@ -129,6 +129,23 @@ class VMGateTests(unittest.TestCase):
             self.assertIn("inventory failed", (out / "failure.txt").read_text())
             self.assertFalse(any("uninstall" in str(call) for call in calls))
 
+    def test_upgrade_source_is_a_url_or_a_directory(self):
+        self.assertEqual(
+            vm.upgrade_source("https://nacre-desktop.github.io/nacre/"),
+            "https://nacre-desktop.github.io/nacre",
+        )
+        self.assertEqual(vm.upgrade_source("/tmp/old"), Path("/tmp/old"))
+
+    def test_upgrade_from_needs_packages(self):
+        argv = ["test-vm.py", "--tier", "niri", "--repo", "http://x", "--base", "b"]
+        argv += ["--out", "o", "--lock", "l", "--upgrade-from", "https://x"]
+        with (
+            patch.object(sys, "argv", argv),
+            contextlib.redirect_stderr(io.StringIO()),
+            self.assertRaises(SystemExit),
+        ):
+            vm.main()
+
     def test_renderer_embeds_frontend_and_keeps_production_trust(self):
         bootstrap = vm.render_bootstrap(vm.ROOT)
         self.assertNotIn("@NACRE_PACMAN_FRONTEND@", bootstrap)
