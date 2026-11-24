@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 //! Lazy dashboard projections. No service/backend, polling, ranking or actions.
 use crate::i18n::{tr, tr_n};
+use crate::nacre_source::kept;
 use bead::core::{
     Value,
     source::{self, Callback, Publisher, Snapshot, Source, Subscription},
@@ -358,7 +359,7 @@ pub fn spec(
 struct ReadOnly {
     publisher: Publisher,
 }
-pub(crate) fn unavailable_audio_source() -> source::Result<Arc<dyn Source>> {
+pub(crate) fn unavailable_source() -> source::Result<Arc<dyn Source>> {
     Ok(Arc::new(ReadOnly::unavailable()?))
 }
 impl ReadOnly {
@@ -429,40 +430,6 @@ impl Source for ReadOnly {
 }
 fn invalid() -> source::Error {
     source::Error::new("validation", "invalid dashboard snapshot", false)
-}
-/// A page topic across a close (row 73). `last` is what the page showed; it stands in until
-/// `live` has data, so a reopened page draws it on its first frame, never "loading".
-struct Kept {
-    live: Arc<dyn Source>,
-    last: std::sync::Mutex<Option<Arc<Snapshot>>>,
-}
-impl Source for Kept {
-    fn snapshot(&self) -> Arc<Snapshot> {
-        let live = self.live.snapshot();
-        let mut last = self.last.lock().unwrap_or_else(|p| p.into_inner());
-        if live.connected || live.revision > 0 {
-            *last = None;
-        }
-        last.clone().unwrap_or(live)
-    }
-    fn subscribe(&self, callback: Callback) -> source::Result<Subscription> {
-        self.live.subscribe(callback)
-    }
-    fn invoke(&self, method: String, params: Json) -> source::Reply<'_> {
-        self.live.invoke(method, params)
-    }
-    fn reconnect(&self) -> source::Reply<'_> {
-        self.live.reconnect()
-    }
-    fn stop(&self) -> source::Reply<'_> {
-        self.live.stop()
-    }
-}
-fn kept(live: Arc<dyn Source>, last: Arc<Snapshot>) -> Arc<dyn Source> {
-    Arc::new(Kept {
-        live,
-        last: std::sync::Mutex::new(Some(last)),
-    })
 }
 /// What Today draws from `dashboard.system`: the host card, and a label, the whole-percent reading and
 /// its arc (at that percent) per gauge. Its wake compares these, so the 1 Hz samples that move none of

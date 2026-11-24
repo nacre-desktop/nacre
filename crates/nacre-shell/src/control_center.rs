@@ -7,7 +7,7 @@
 //! and writes the edit draft (`cc.order`, a list of `{id}`; `cc.edited`) to `control-center.tiles` through the
 //! published `settings.set` route. Closed, it holds nothing: the topic leases belong to the panel.
 use crate::i18n::tr;
-use crate::nacre_source::{CallGuard, CallTicket, CallWake, Client};
+use crate::nacre_source::{CallGuard, CallTicket, CallWake, Client, kept};
 use bead::core::{
     Stores, Value,
     source::{Source, Subscription},
@@ -81,8 +81,10 @@ type Notify = Arc<dyn Fn(bead::wayland::UiEvent) + Send + Sync>;
 pub struct ControlCenter {
     client: Option<Client>,
     views: Vec<String>,
-    topics: Vec<(&'static str, Arc<dyn Source>)>,
-    store: Option<Arc<dyn Source>>,
+    topics: RefCell<Vec<(&'static str, Arc<dyn Source>)>>,
+    store: RefCell<Option<Arc<dyn Source>>>,
+    /// Closed with its daemon leases dropped (row 73), see [`Self::park`].
+    parked: std::cell::Cell<bool>,
     notify: RefCell<Option<Notify>>,
     st: RefCell<St>,
 }
@@ -293,8 +295,9 @@ impl ControlCenter {
         Self {
             client,
             views,
-            topics,
-            store,
+            topics: RefCell::new(topics),
+            store: RefCell::new(store),
+            parked: Default::default(),
             notify: Default::default(),
             st: Default::default(),
         }
@@ -309,16 +312,62 @@ impl ControlCenter {
             Arc::new(move |_| notify(bead::wayland::UiEvent::Model(BTreeMap::new())))
         };
         let mut subscriptions = Vec::new();
-        for (_, source) in &self.topics {
+        for (_, source) in self.topics.borrow().iter() {
             subscriptions.push(source.subscribe(callback.clone())?);
         }
-        if let Some(store) = &self.store {
+        if let Some(store) = self.store.borrow().as_ref() {
             subscriptions.push(store.subscribe(callback.clone())?);
         }
         if let Some(client) = &self.client {
             subscriptions.push(client.subscribe(callback)?);
         }
         Ok(subscriptions)
+    }
+    pub(crate) fn parked(&self) -> bool {
+        self.parked.get()
+    }
+    /// Closed: drop the panel's own topic leases, so the daemon stops serving a hidden panel
+    /// (row 73: `controls` reads lights and runs its tools every 2 s while leased); each keeps
+    /// the snapshot it showed. Topics an always-on surface holds stay subscribed by their count.
+    pub(crate) fn park(&self) -> bead::core::source::Result<()> {
+        if self.client.is_none() {
+            return Ok(());
+        }
+        let off = crate::dashboard::unavailable_source()?;
+        for (_, source) in self.topics.borrow_mut().iter_mut() {
+            *source = kept(off.clone(), source.snapshot());
+        }
+        if let Some(store) = self.store.borrow_mut().as_mut() {
+            *store = kept(off.clone(), store.snapshot());
+        }
+        self.parked.set(true);
+        Ok(())
+    }
+    /// Reopened: lease each topic again; it shows the parked snapshot until it has data.
+    pub(crate) fn resume(&self) {
+        let Some(client) = &self.client else {
+            return;
+        };
+        // A link that dropped while closed reads stale, as held leases would have.
+        let link = client.snapshot().connected;
+        let last = |source: &Arc<dyn Source>| {
+            let mut last = source.snapshot();
+            Arc::make_mut(&mut last).connected &= link;
+            last
+        };
+        for (name, source) in self.topics.borrow_mut().iter_mut() {
+            match client.view_topic(name) {
+                Ok(live) => *source = kept(live, last(source)),
+                Err(error) => eprintln!("SOURCE_ERROR code=control_resume {name} {error}"),
+            }
+        }
+        if let Some(store) = self.store.borrow_mut().as_mut() {
+            match client.lease_topic(STORE_TOPIC) {
+                Ok(live) => *store = kept(Arc::new(live), last(store)),
+                Err(error) => eprintln!("SOURCE_ERROR code=control_resume {STORE_TOPIC} {error}"),
+            }
+        }
+        self.parked.set(false);
     }
     fn waker(&self) -> CallWake {
         let notify = self.notify.borrow().clone();
@@ -329,8 +378,13 @@ impl ControlCenter {
         })
     }
     fn data(&self, topic: &str) -> Option<Arc<Json>> {
-        let source = &self.topics.iter().find(|(name, _)| *name == topic)?.1;
-        let snapshot = source.snapshot();
+        let snapshot = self
+            .topics
+            .borrow()
+            .iter()
+            .find(|(name, _)| *name == topic)?
+            .1
+            .snapshot();
         (snapshot.connected && snapshot.data.is_object()).then(|| snapshot.data.clone())
     }
     /// The daemon's advertised method at v1 on a live link, with the boot it was seen on.
@@ -1100,14 +1154,16 @@ impl ControlCenter {
     /// until the next attempt, else the busy text, else "none saved"; unavailable when the topic is.
     /// The Updates page: the status popout's projection (summary, checked, health, packages) under `cc.`.
     fn updates_page(&self) -> Vec<(String, Value)> {
-        let Some((_, source)) = self
+        let Some(snapshot) = self
             .topics
+            .borrow()
             .iter()
             .find(|(name, _)| *name == "dashboard.updates")
+            .map(|(_, source)| source.snapshot())
         else {
             return Vec::new();
         };
-        crate::status_views::core_updates_values(&source.snapshot())
+        crate::status_views::core_updates_values(&snapshot)
             .into_iter()
             .filter_map(|(key, value)| Some((key.strip_prefix("status.")?.to_owned(), value)))
             .filter(|(key, _)| key.starts_with("updates_"))
@@ -1236,7 +1292,7 @@ impl ControlCenter {
     // ---- the tile store ---------------------------------------------------------------------
 
     fn stored(&self) -> Option<(Arc<Json>, u64)> {
-        let snapshot = self.store.as_ref()?.snapshot();
+        let snapshot = self.store.borrow().as_ref()?.snapshot();
         if !snapshot.connected || !snapshot.data.is_object() {
             return None;
         }

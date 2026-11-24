@@ -9267,6 +9267,26 @@ impl SceneSource for Runtime {
                         }
                     }
                 }
+                // The same for the control centre and the popouts built on it, and the meter's
+                // `audio.peak` capture; topics the bar also reads stay subscribed by their count.
+                if let Some(control) = &self.control {
+                    let parked = control.parked();
+                    if !open && !parked {
+                        self.control_subscription.clear();
+                        control.park()?;
+                    } else if open && parked {
+                        control.resume();
+                        if let Some(wakeup) = self.wakeup.clone() {
+                            match control.subscribe(wakeup) {
+                                Ok(subscriptions) => self.control_subscription = subscriptions,
+                                Err(_) => eprintln!("SOURCE_ERROR code=control_subscription"),
+                            }
+                        }
+                    }
+                }
+                for status in self.status.iter().chain(self.dock_status.values()) {
+                    status.show(open);
+                }
                 crate::placement::panel_visible(&mut self.panel_shown, open);
                 if self.chat.is_some() {
                     crate::app::notify_panel_visibility(open);

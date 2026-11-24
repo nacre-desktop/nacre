@@ -89,6 +89,10 @@ struct Peak {
     client: crate::nacre_source::Client,
     notify: RefCell<Option<Wake>>,
     held: RefCell<Option<Held>>,
+    /// The panel is closed (row 73): no capture, and the meter keeps `shown`, the level it drew,
+    /// through the closing frames and until the reopened lease has a sample.
+    hidden: std::cell::Cell<bool>,
+    shown: std::cell::Cell<f64>,
 }
 struct Held {
     topic: crate::nacre_source::LeasedTopic,
@@ -303,8 +307,19 @@ impl Status {
             client,
             notify: RefCell::new(None),
             held: RefCell::new(None),
+            hidden: Default::default(),
+            shown: Default::default(),
         });
         self
+    }
+    /// The panel opened or closed (row 73): a closed view holds no `audio.peak` lease.
+    pub fn show(&self, open: bool) {
+        if let Some(peak) = &self.peak {
+            peak.hidden.set(!open);
+        }
+        if !open {
+            self.park();
+        }
     }
     /// Release the meter's capture (the view is hidden, or the microphone is not live).
     pub fn park(&self) {
@@ -312,11 +327,17 @@ impl Status {
             peak.held.borrow_mut().take();
         }
     }
-    /// Hold the `audio.peak` lease while `live`; returns the latest level, 0..1.
+    /// Hold the `audio.peak` lease while `live` and shown; returns the level to draw, 0..1.
     fn peak_level(&self, live: bool) -> f64 {
         let Some(peak) = &self.peak else {
             return 0.;
         };
+        if !peak.hidden.get() {
+            peak.shown.set(self.peak_reading(peak, live));
+        }
+        peak.shown.get()
+    }
+    fn peak_reading(&self, peak: &Peak, live: bool) -> f64 {
         if !live {
             self.park();
             return 0.;
@@ -346,6 +367,9 @@ impl Status {
                 .as_f64()
                 .filter(|level| level.is_finite())
                 .map_or(0., |level| level.clamp(0., 1.))
+        } else if !snapshot.connected && snapshot.revision == 0 {
+            // A fresh lease has no sample yet: keep the level drawn, as `Kept` does.
+            peak.shown.get()
         } else {
             0.
         }

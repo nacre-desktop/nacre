@@ -213,7 +213,7 @@ pub(crate) fn core_sound_with_root(
         factory: Arc::new(move |open| {
             let source: Arc<dyn bead::core::source::Source> = match client.as_ref() {
                 Some(client) => Arc::new(client.lease_topic("audio").map_err(|e| e.to_string())?),
-                None => crate::dashboard::unavailable_audio_source().map_err(|e| e.to_string())?,
+                None => crate::dashboard::unavailable_source().map_err(|e| e.to_string())?,
             };
             let session = bead::ui::Session::new(
                 root.clone(),

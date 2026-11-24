@@ -6,7 +6,7 @@ use crate::launcher_quick::Quick;
 use crate::nacre_source::Config;
 use bead_test::{Harness, Input, source::FakeSource};
 use nacre_protocol::{Capability, ErrorCode, Failure, Message, Reply, framing};
-use std::{path::Path, sync::Mutex};
+use std::{collections::BTreeSet, path::Path, sync::Mutex};
 use tokio::{io::BufReader, net::UnixListener, sync::mpsc};
 
 fn root() -> std::path::PathBuf {
@@ -247,6 +247,7 @@ struct Lab {
     client: Client,
     calls: mpsc::UnboundedReceiver<(String, Json)>,
     fail: Arc<Mutex<BTreeMap<String, ErrorCode>>>,
+    subs: mpsc::UnboundedReceiver<Vec<String>>,
     unsubs: mpsc::UnboundedReceiver<Vec<String>>,
 }
 impl Drop for Lab {
@@ -299,6 +300,7 @@ async fn lab_full(
     let listener = UnixListener::bind(&socket).unwrap();
     std::fs::set_permissions(&socket, std::fs::Permissions::from_mode(0o600)).unwrap();
     let (calls_tx, calls) = mpsc::unbounded_channel();
+    let (subs_tx, subs) = mpsc::unbounded_channel();
     let (unsubs_tx, unsubs) = mpsc::unbounded_channel();
     let fail: Arc<Mutex<BTreeMap<String, ErrorCode>>> = Default::default();
     let failing = fail.clone();
@@ -358,6 +360,7 @@ async fn lab_full(
             while let Some(message) = incoming.recv().await {
                 match message {
                     Message::Sub { topics } => {
+                        let _ = subs_tx.send(topics.clone());
                         for topic in topics {
                             let data = if topic == STORE_TOPIC {
                                 store(tiles.clone(), rev)
@@ -428,6 +431,7 @@ async fn lab_full(
         client,
         calls,
         fail,
+        subs,
         unsubs,
     }
 }
@@ -3547,6 +3551,136 @@ async fn a_closed_dock_reopens_on_the_overview_after_a_status_click() -> bead_te
         Some(&Value::Text("network".into()))
     );
     drop(lab);
+    Ok(())
+}
+
+/// The topics named in the lab's next `Sub` (`subs`) or `Unsub` messages, `count` of them.
+async fn changed(rx: &mut mpsc::UnboundedReceiver<Vec<String>>, count: usize) -> BTreeSet<String> {
+    let mut topics = BTreeSet::new();
+    tokio::time::timeout(Duration::from_secs(5), async {
+        while topics.len() < count {
+            topics.extend(rx.recv().await.expect("lease change"));
+        }
+    })
+    .await
+    .expect("the leases changed");
+    topics
+}
+/// Leased `names`, once each has its first snapshot.
+async fn leased(lab: &Lab, names: &[&'static str]) -> Vec<(&'static str, Arc<dyn Source>)> {
+    let topics: Vec<_> = names
+        .iter()
+        .map(|name| (*name, lab.client.view_topic(name).unwrap()))
+        .collect();
+    for _ in 0..500 {
+        if topics.iter().all(|(_, topic)| topic.snapshot().connected) {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+    topics
+}
+
+/// Row 73: a closed control centre, notification history or battery popout holds none of its own
+/// daemon leases (`controls` reads lights and runs tools every 2 s while leased); reopening leases
+/// them again and the first frame draws the values the panel closed on, never a missing tile.
+#[tokio::test(flavor = "current_thread")]
+async fn closed_control_panels_hold_no_lease_and_reopen_on_the_values_they_showed()
+-> bead_test::Result<()> {
+    use bead::wayland::{SceneSource, UiEvent};
+    let session = |view: &str| -> bead_test::Result<bead::ui::Session> {
+        let palette = root().join("palette.json");
+        let colors = bead::render::Palette::read(&palette)?;
+        let cold = crate::sound::fallback(colors.get("surface")?);
+        Ok(bead::ui::Session::new(
+            root(),
+            view.into(),
+            palette,
+            colors,
+            cold,
+        ))
+    };
+    let shown = |runtime: &crate::reload::Runtime| {
+        ["cc.src", "cc.saved", "cc.writable"].map(|key| runtime.session.stores.get(key).cloned())
+    };
+    // The dock's own status leases (network, Bluetooth, battery, audio) are the bar's topics.
+    for (panel, own) in [
+        (
+            "control",
+            &[
+                "controls",
+                "vpn",
+                "power.profiles",
+                "notifications",
+                "displays",
+                "dashboard.updates",
+                STORE_TOPIC,
+            ][..],
+        ),
+        ("notifications", &["notifications", "controls"][..]),
+        ("battery", &["power.profiles"][..]),
+    ] {
+        let mut lab = lab(&ALL).await;
+        let mut runtime = match panel {
+            "control" => crate::reload::Runtime::new(session("control/main.luau")?)
+                .with_control_center(control_for(&lab).await)?
+                .with_docked_details(lab.client.clone())?,
+            "notifications" => {
+                let topics = leased(&lab, &["notifications", "controls"]).await;
+                crate::reload::Runtime::new(session("control/main.luau")?)
+                    .with_view_edge("top")?
+                    .with_control_center(ControlCenter::new(
+                        Some(lab.client.clone()),
+                        topics,
+                        None,
+                        Vec::new(),
+                    ))?
+            }
+            _ => {
+                let battery = leased(&lab, &["battery"]).await.remove(0).1;
+                let profiles = leased(&lab, &["power.profiles"]).await;
+                crate::reload::Runtime::new(session("status/battery.luau")?)
+                    .with_view_edge("top")?
+                    .with_core_battery_status(battery)?
+                    .with_status_controls(Some(lab.client.clone()), profiles)?
+            }
+        };
+        let own: BTreeSet<String> = own.iter().map(|name| name.to_string()).collect();
+        runtime.isolate_state(&lab.dir.join("row73"));
+        runtime.services(Box::new(|_| {}));
+        runtime.stage(UiEvent::Reload)?;
+        runtime.commit();
+        runtime.stage(UiEvent::PanelVisibility(true))?;
+        runtime.commit();
+        let open = shown(&runtime);
+        assert!(open[0].is_some(), "{panel}: its sources are projected");
+        while lab.subs.try_recv().is_ok() {}
+        for _ in 0..2 {
+            runtime.stage(UiEvent::PanelVisibility(false))?;
+            runtime.commit();
+            assert_eq!(shown(&runtime), open, "{panel}: closing changes no value");
+            assert_eq!(
+                changed(&mut lab.unsubs, own.len()).await,
+                own,
+                "{panel}: a closed panel holds none of its own leases"
+            );
+            // No await before this frame: the fresh leases have no data yet.
+            runtime.stage(UiEvent::PanelVisibility(true))?;
+            runtime.commit();
+            assert_eq!(
+                shown(&runtime),
+                open,
+                "{panel}: the first frame after reopening draws the values it closed on"
+            );
+            assert_eq!(
+                changed(&mut lab.subs, own.len()).await,
+                own,
+                "{panel}: leased again"
+            );
+        }
+        drop(runtime);
+        drop(lab);
+    }
     Ok(())
 }
 

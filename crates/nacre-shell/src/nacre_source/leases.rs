@@ -232,3 +232,37 @@ impl Source for LeasedTopic {
         })
     }
 }
+/// A view's topic across a close (row 73). `last` is what the view showed; it stands in until
+/// `live` has data, so a reopened view draws it on its first frame, never "loading".
+struct Kept {
+    live: Arc<dyn Source>,
+    last: Mutex<Option<Arc<Snapshot>>>,
+}
+impl Source for Kept {
+    fn snapshot(&self) -> Arc<Snapshot> {
+        let live = self.live.snapshot();
+        let mut last = self.last.lock().unwrap_or_else(|p| p.into_inner());
+        if live.connected || live.revision > 0 {
+            *last = None;
+        }
+        last.clone().unwrap_or(live)
+    }
+    fn subscribe(&self, callback: Callback) -> source::Result<Subscription> {
+        self.live.subscribe(callback)
+    }
+    fn invoke(&self, method: String, params: Value) -> source::Reply<'_> {
+        self.live.invoke(method, params)
+    }
+    fn reconnect(&self) -> source::Reply<'_> {
+        self.live.reconnect()
+    }
+    fn stop(&self) -> source::Reply<'_> {
+        self.live.stop()
+    }
+}
+pub(crate) fn kept(live: Arc<dyn Source>, last: Arc<Snapshot>) -> Arc<dyn Source> {
+    Arc::new(Kept {
+        live,
+        last: Mutex::new(Some(last)),
+    })
+}
