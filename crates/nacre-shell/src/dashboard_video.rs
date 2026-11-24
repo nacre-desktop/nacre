@@ -259,6 +259,169 @@ mod tests {
         assert!(dashboard.video.borrow().is_none());
     }
     #[test]
+    fn closing_today_keeps_the_shown_preview_frame_and_changes_nothing_on_screen()
+    -> bead_test::Result<()> {
+        use bead::core::{Value, source::Source};
+        use bead::wayland::{SceneSource, UiEvent};
+        use bead_test::source::FakeSource;
+        use std::collections::BTreeMap;
+        let dir = std::env::temp_dir().join(format!("bead-today-close-{}", std::process::id()));
+        std::fs::create_dir_all(&dir)?;
+        let (poster, shown) = (dir.join("poster.png"), dir.join("frame.png"));
+        image::RgbaImage::from_pixel(32, 32, image::Rgba([80, 130, 180, 255])).save(&poster)?;
+        image::RgbaImage::from_pixel(4, 4, image::Rgba([200, 40, 40, 255])).save(&shown)?;
+        let shown: Arc<[u8]> = std::fs::read(&shown)?.into();
+        let identity = nacre_protocol::wallpaper::WallpaperFileIdentity::from_metadata(
+            &std::fs::metadata(&poster)?,
+        );
+        let motion = nacre_protocol::wallpaper::WallpaperMotion {
+            kind: nacre_protocol::wallpaper::MotionKind::Video,
+            file_identity: identity.clone(),
+            path: "/fixture/current.mp4".into(),
+        };
+        let pair = serde_json::json!({"revision":1,"palette_revision":1,"path":poster,
+            "file_identity":identity,"presentation":"crop","motion":motion,
+            "palette":{"mode":"dark","colours":{"background":"#000000","onSurface":"#ffffff","primary":"#112233"}}});
+        let source =
+            |data| -> bead_test::Result<Arc<dyn Source>> { Ok(Arc::new(FakeSource::new(data)?)) };
+        let dashboard = super::super::Dashboard::new(
+            super::super::Page::Today,
+            source(super::super::tests::fixture("calendar"))?,
+            None,
+            true,
+        )
+        .with_overview(
+            None,
+            Some(source(
+                serde_json::json!({"available":true,"stale":false,"revision":1,
+                "current":pair,"outputs":{"fixture":pair}}),
+            )?),
+            None,
+        )
+        .with_wallpaper_settings(Some(source(serde_json::json!({
+            "store":"wallpaper-picker","rev":1,"data":{"motionMode":"full"}
+        }))?))
+        .with_prefs(Some(source(serde_json::json!({}))?))
+        .with_video_desktop(Some(crate::desktop::start_services()));
+        dashboard.set_raster_scale(1.5);
+        // The open hero (940x256 at scale 1.5) shows frame 7 of its live preview.
+        *dashboard.video.borrow_mut() = Some(Preview {
+            request: Request {
+                motion,
+                width: 1410,
+                height: 384,
+            },
+            frame: Arc::new(Mutex::new(Some((7, shown.clone())))),
+            unread: Default::default(),
+            child: Default::default(),
+            reader: None,
+        });
+        let root = super::super::tests::root();
+        let mut h = bead_test::Harness::load(
+            &root,
+            std::path::Path::new("dashboard/today/main.luau"),
+            &root.join("palette.json"),
+            BTreeMap::new(),
+            bead_test::Config {
+                width: 1048,
+                height: 714,
+                scale: 1.5,
+            },
+        )?;
+        h.session
+            .stores
+            .commit(BTreeMap::from([("panel.open".into(), Value::Bool(true))]))?;
+        // As live, the poster that covered loading is decoded and held.
+        dashboard.project_with_stores(&h.session.stores);
+        let job = dashboard
+            .poster_job
+            .borrow_mut()
+            .as_mut()
+            .and_then(|job| job.thread.take());
+        job.ok_or("poster job")?
+            .join()
+            .map_err(|_| "poster thread")?;
+        let values = dashboard.project_with_stores(&h.session.stores);
+        assert_eq!(
+            values["dashboard.wallpaper_image"],
+            Value::Text("today-wallpaper:7".into()),
+            "the injected preview matches the open hero's request"
+        );
+        assert!(
+            dashboard
+                .poster
+                .borrow()
+                .as_ref()
+                .is_some_and(|p| p.3.is_some())
+        );
+        let mut runtime = crate::reload::Runtime::new(h.session).with_dashboard_view(dashboard)?;
+        runtime.services(Box::new(|_| {}));
+        let open = runtime.stage(UiEvent::Reload)?.ok_or("open stages")?;
+        runtime.session.commit(open.clone());
+        let before = runtime.session.stores.values().clone();
+        let closing = runtime
+            .stage(UiEvent::PanelVisibility(false))?
+            .ok_or("close stages")?;
+        runtime.session.commit(closing.clone());
+        let after = runtime.session.stores.values();
+        let changed: Vec<_> = after
+            .keys()
+            .chain(before.keys())
+            .filter(|id| before.get(*id) != after.get(*id))
+            .collect::<std::collections::BTreeSet<_>>()
+            .into_iter()
+            .map(|id| format!("{id}: {:?} -> {:?}", before.get(id), after.get(id)))
+            .collect();
+        let hero = |scene: &bead::render::Scene| {
+            scene.primitives.iter().find_map(|p| match p {
+                bead::render::Primitive::Image { path, .. }
+                    if path.to_string_lossy().contains("today-wallpaper") =>
+                {
+                    let bytes = scene.asset_data.get(path);
+                    Some((path.clone(), bytes.map(|b| (b.len(), **b == *shown))))
+                }
+                _ => None,
+            })
+        };
+        let json = |scene: &bead::render::Scene| -> Vec<String> {
+            let text = |p: &bead::render::Primitive| serde_json::to_string(p).unwrap_or_default();
+            scene.primitives.iter().map(text).collect()
+        };
+        let (was, now) = (json(&open), json(&closing));
+        let short = |p: Option<&String>| -> String {
+            p.map_or("-".into(), |p| p.chars().take(200).collect())
+        };
+        let moved: Vec<_> = (0..was.len().max(now.len()))
+            .filter(|i| was.get(*i) != now.get(*i))
+            .map(|i| format!("#{i}: {} -> {}", short(was.get(i)), short(now.get(i))))
+            .collect();
+        println!(
+            "DASH_CLOSE hero_open={:?} hero_close={:?} primitives={} changed_primitives={} changed_stores={changed:?}",
+            hero(&open),
+            hero(&closing),
+            now.len(),
+            moved.len()
+        );
+        assert_eq!(
+            hero(&open),
+            Some(("@today-wallpaper/video".into(), Some((shown.len(), true))))
+        );
+        assert_eq!(
+            hero(&closing),
+            hero(&open),
+            "the close keeps the shown frame"
+        );
+        assert!(changed.iter().any(|c| c.starts_with("panel.open: ")));
+        assert!(
+            !changed.iter().any(|c| c.starts_with("dashboard.")),
+            "the close changes no dashboard value: {changed:?}"
+        );
+        assert!(moved.is_empty(), "the close repaints nothing: {moved:#?}");
+        drop(runtime);
+        std::fs::remove_dir_all(dir)?;
+        Ok(())
+    }
+    #[test]
     fn unconsumed_frames_notify_once() {
         let wakes = Arc::new(std::sync::atomic::AtomicUsize::new(0));
         let counter = wakes.clone();

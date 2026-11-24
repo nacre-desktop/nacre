@@ -564,6 +564,8 @@ pub struct Dashboard {
     poster: std::cell::RefCell<Option<Poster>>,
     poster_job: std::cell::RefCell<Option<PosterJob>>,
     video: std::cell::RefCell<Option<video::Preview>>,
+    /// The preview frame the hero last showed, held like the poster through the closing reveal.
+    video_frame: std::cell::RefCell<Option<(u64, Arc<[u8]>)>>,
     desktop: Option<Arc<bead::services::Desktop>>,
     desktop_subscription: std::cell::RefCell<Option<bead::services::Subscription>>,
     /// Thumbnail of the active player's art, decoded once per path while visible.
@@ -616,6 +618,7 @@ impl Dashboard {
             poster: Default::default(),
             poster_job: Default::default(),
             video: Default::default(),
+            video_frame: Default::default(),
             desktop: None,
             desktop_subscription: Default::default(),
             art: Default::default(),
@@ -731,24 +734,19 @@ impl Dashboard {
         if self.page != Page::Today || !shown {
             self.stop_video();
         }
-        if self.page == Page::Today && !open {
-            values.insert(
-                "dashboard.wallpaper_image".into(),
-                Value::Text("today-wallpaper".into()),
-            );
-        }
         if self.page == Page::Today && shown {
             self.project_wallpaper(stores, &mut values);
         } else if self.page == Page::Today {
-            // Preserve the visible poster through the closing reveal. The existing
-            // panel retirement drops it and joins any pending job after the grace.
+            // Preserve the visible poster or frame (and its image key) through the closing reveal.
+            // The existing panel retirement drops them and joins any pending job after the grace.
             values.insert(
                 "dashboard.wallpaper".into(),
                 Value::Bool(
                     self.poster
                         .borrow()
                         .as_ref()
-                        .is_some_and(|(_, _, _, bytes)| bytes.is_some()),
+                        .is_some_and(|(_, _, _, bytes)| bytes.is_some())
+                        || self.video_frame.borrow().is_some(),
                 ),
             );
         }
@@ -1613,7 +1611,9 @@ impl Dashboard {
             // projection. Poll it on later updates; retirement still joins it.
             *held = None;
         }
-        let frame = self.video.borrow().as_ref().and_then(video::Preview::frame);
+        *self.video_frame.borrow_mut() =
+            self.video.borrow().as_ref().and_then(video::Preview::frame);
+        let frame = self.video_frame.borrow();
         out.insert(
             "dashboard.wallpaper_image".into(),
             Value::Text(frame.as_ref().map_or_else(

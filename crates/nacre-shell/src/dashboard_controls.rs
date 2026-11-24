@@ -688,12 +688,8 @@ impl Dashboard {
                 continue;
             };
             if name == "today-wallpaper" || name.starts_with("today-wallpaper:") {
-                if let Some((_, bytes)) = self
-                    .video
-                    .borrow()
-                    .as_ref()
-                    .and_then(super::video::Preview::frame)
-                {
+                // The projected frame, so pixels match the image key (also while closing).
+                if let Some((_, bytes)) = self.video_frame.borrow().clone() {
                     let key = std::path::PathBuf::from("@today-wallpaper/video");
                     scene.asset_data.insert(key.clone(), bytes);
                     *path = key;

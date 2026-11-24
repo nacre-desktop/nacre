@@ -33,7 +33,8 @@ retained until its request or permission changes, avoiding a respawn loop.
 Playback requires the open Today page, valid motion metadata, enabled motion,
 an unpaused wallpaper, allowed battery mode and an unlocked, awake session.
 Closing, switching tabs or changing those policies stops and reaps the exact
-owned child and joins its reader; the close grace retains only the poster.
+owned child and joins its reader; the close grace retains only the poster and
+the last shown frame, so the closing reveal keeps the image on screen.
 Desktop window coverage continues to govern the desktop wallpaper rather than
 pausing a visible preview above that window. Existing settings defaults apply.
 
