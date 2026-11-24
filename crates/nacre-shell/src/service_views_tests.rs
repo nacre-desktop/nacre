@@ -2084,6 +2084,19 @@ fn workspace_icon_cells_share_one_bar_pill_at_both_scales() -> Result<()> {
             );
             Ok(())
         };
+        // Steps the motion in ~4 ms wall-clock slices until `moving` sees it under way (a fixed 50 ms sleep overshot
+        // the whole motion on a loaded host); the asserts below then judge that early frame.
+        let until_moving =
+            |h: &mut Harness, moving: &dyn Fn(&Harness) -> Result<bool>| -> Result<()> {
+                for _ in 0..250 {
+                    std::thread::sleep(std::time::Duration::from_millis(4));
+                    h.update(BTreeMap::new())?;
+                    if moving(h)? || h.session.preview_deadline().is_none() {
+                        break;
+                    }
+                }
+                Ok(())
+            };
         let before_switch = capsule_bounds(&h)?;
         move_capsule(
             &mut h,
@@ -2093,8 +2106,10 @@ fn workspace_icon_cells_share_one_bar_pill_at_both_scales() -> Result<()> {
                 serde_json::json!({"id":"three","index":3,"label":"3","icon_mode":false}),
             ],
         )?;
-        std::thread::sleep(std::time::Duration::from_millis(50));
-        h.update(BTreeMap::new())?;
+        until_moving(&mut h, &|h: &Harness| {
+            let at = capsule_bounds(h)?;
+            Ok(at.0 > before_switch.0 && at.1 < before_switch.1)
+        })?;
         let switch_mid = capsule_bounds(&h)?;
         assert!(
             switch_mid.0 > before_switch.0 && switch_mid.0 < before_switch.0 + 34.,
@@ -2117,8 +2132,9 @@ fn workspace_icon_cells_share_one_bar_pill_at_both_scales() -> Result<()> {
                 serde_json::json!({"id":"four","index":4,"label":"4","active":true,"icon_mode":false}),
             ],
         )?;
-        std::thread::sleep(std::time::Duration::from_millis(50));
-        h.update(BTreeMap::new())?;
+        until_moving(&mut h, &|h: &Harness| {
+            Ok(capsule_bounds(h)?.0 > before_add.0 + 1. && pill_width(h)? > pill_before_add + 1.)
+        })?;
         let add_mid = capsule_bounds(&h)?;
         let pill_add_mid = pill_width(&h)?;
         assert!(
@@ -2154,8 +2170,9 @@ fn workspace_icon_cells_share_one_bar_pill_at_both_scales() -> Result<()> {
                 serde_json::json!({"id":"two","index":2,"label":"2","active":true,"icon_mode":false}),
             ],
         )?;
-        std::thread::sleep(std::time::Duration::from_millis(50));
-        h.update(BTreeMap::new())?;
+        until_moving(&mut h, &|h: &Harness| {
+            Ok(capsule_bounds(h)?.0 < before_remove.0 && pill_width(h)? < pill_before_remove)
+        })?;
         let remove_mid = capsule_bounds(&h)?;
         let pill_remove_mid = pill_width(&h)?;
         assert!(
