@@ -24,7 +24,7 @@ local function HintRow()
         chips[index]=ui.Box{id="hint"..index,width=math.floor(#label*6.1+14),height=24,radius=6,border_width=1,border_color=ui.alpha("onSurface",.12),
             ui.Text{position="absolute",left=0,top=3,width=math.floor(#label*6.1+14),height=18,text=label,font_size=11.333,text_align="center",color="onSurfaceVariant"}}
     end
-    return ui.Row{id="hints",position="absolute",right=34,top=29,height=24,gap=6,visible=ui.bind("launcher.hints"),table.unpack(chips)}
+    return ui.Row{id="hints",position="absolute",right=34,top=535,height=24,gap=6,visible=ui.bind("launcher.hints"),table.unpack(chips)}
 end
 local function Chooser()
     local id=ui.resolve_for_check(ui.bind("launcher.chooser"))
@@ -93,8 +93,6 @@ if ui.resolve_for_check(ui.bind("launcher.subtitle"))==ui.resolve_for_check(ui.b
     table.remove(content,2)
 end
 local body={
-    kit.TextInput{id="search",text=ui.bind("launcher.search.text"),placeholder=ui.tr("bead.launcher.search-placeholder"),
-        height=49,padding=15,radius=12,font_size=16,width="fill",fill=ui.tint("surface","onSurface",.07),border_width=1.5,border_color=ui.alpha("primary",.55)},
     ui.Row{grow=1,
         ui.memo("launcher.sidebar",{},function() return Sidebar{} end),
         ui.Box{width=18,height="fill",
@@ -104,6 +102,8 @@ local body={
         show_quick and ui.Box{width=M.quick_width+M.quick_gap,height=0,shrink=0} or nil,
     },
     show_quick and ui.memo("launcher.quick",{},function() return Quick{} end) or ui.Box{id="quick",position="absolute",visible=false,width=0,height=0},
+    kit.TextInput{id="search",text=ui.bind("launcher.search.text"),placeholder=ui.tr("bead.launcher.search-placeholder"),
+        height=49,padding=15,radius=12,font_size=16,width="fill",fill=ui.tint("surface","onSurface",.07),border_width=1.5,border_color=ui.alpha("primary",.55)},
     ui.memo("launcher.hints",{},HintRow),
 }
 for index,child in ipairs(body) do panel[index]=child end
