@@ -11,7 +11,7 @@ Method review and history: N0300 (`docs/research/noctalia-vs-nacre-benchmark-202
 | `stage.sh` | builds Noctalia (`NOCTALIA_TAG`, default v5.4.1) and a Nacre checkout (unstripped release) in the `nacre-ci/arch-nacre` image into one stage dir: `bin/` (nacre-shell, nacre-helper, helpers, stock compositor copy, wlr-randr), `noctalia/`, `nacre/` (Luau shell, shell-tools, niri rules), `fonts/`, `pins.json` |
 | `bench.py` | one arm: private D-Bus, headless labwc, nested stock niri 1920x1080@60, private PipeWire, fake UPower/BlueZ, then the shell; samples shell, daemon, niri and labwc trees once a second; runs the N0300 workload, then the frame probe; writes `result.json`, `samples.json`, logs and three screenshots |
 | `run.sh` | runs a comma sequence of arms (an arm lost to lock contention or the desktop gate is retried), then `summarize.py` |
-| `summarize.py` | median [min, max] table, the scoreboard row, top threads by CPU and wakeups |
+| `summarize.py` | median [min, max] table, the scoreboard and panel-latency rows, the row 73 gate, top threads by CPU and wakeups |
 | `host.sh` | the one-command wrapper: `stage` and `run` as detached Platform-slot containers on a build host, `desktop` on the desktop TEST host |
 | `fixtures/` | activation-free D-Bus config, fake UPower/BlueZ, the pactl/wpctl/parec stand-in |
 
@@ -86,7 +86,10 @@ compositor instead of the staged copy. Summarize again any time:
   `combined` is shell + daemon; the summary's `stack` adds niri and labwc.
   `idle` starts 30 s after the bar is mapped and ends at the first interaction.
 - `windows.*.threads`: top threads by CPU and by wakeups, summed per tree,
-  process and thread name.
+  process and thread name. `threads` is the most alive at one sample in the
+  window; `spawned` counts those first seen in it (a pool that starts a thread
+  per task shows churn there, not a leak). Threads that live under a second
+  can be missed by both.
 - `memory.<startup|pre-interaction|post-interaction|end>`: PSS, unreclaimable
   (Pss_Anon + Pss_Shmem + SwapPss) and `gpu_mib` (amdgpu fdinfo resident
   buffers, desktop only; GL buffers are not in PSS, shared buffers count in the
@@ -94,17 +97,26 @@ compositor instead of the staged copy. Summarize again any time:
   the end of idle.
 - `readiness_s`: shell launch to its bar layer listed by the compositor
   (polled at 5 ms).
-- `open_frames.<launcher|dashboard>`: the frame probe, five opens after the
-  measured windows. niri runs with `WAYLAND_DEBUG=client`, which timestamps its
+- `open_frames.<panel>`: the frame probe, five opens per panel after the
+  measured windows, for every panel in `bench.py` `PANELS`: launcher, dashboard
+  and control (Noctalia's control center for both), session (Nacre's power
+  menu) and clipboard. Each open is the one call that shell's key binding sends.
+  niri runs with `WAYLAND_DEBUG=client`, which timestamps its
   own commits to labwc, one per composited frame, for both shells alike.
   `first_ms` is the IPC call (client process start included) to the first
   composited frame, `frames`/`span_ms` the open animation burst (frames closer
   than 100 ms; once the 360 ms open motion has passed, a gap over 25 ms ends it,
   so a later unrelated redraw is not a stall), `max_gap_ms` its longest gap and
-  `late` its gaps over 25 ms. Nacre's dashboard opens with one call, as its key does.
+  `late` its gaps over 25 ms. A screenshot per panel shows that it opened.
 - `power.<window>`: PPT, GPU busy and VRAM means minus the last 30 s of the
   no-shell baseline (host sensors; the baseline already contains the
-  compositors and fixture).
+  compositors and fixture). The summary turns the interaction's PPT into
+  package energy (J above baseline over the window), reported, not gated.
+
+`summarize.py` also prints the v0.1 row 73 gate: per metric the two medians and
+PASS when Nacre's is at or under Noctalia's. Memory is gated as PSS + GPU
+buffers (`pss_gpu_mib`), before first use and at the end of the arm; PSS-only
+growth, stack CPU, GPU busy and energy are reported beside it.
 - `renderer`, `notification_owner`, `wallpaper_video_helper`, `host_swapin_mib`
   and `pins` record the fixture.
 

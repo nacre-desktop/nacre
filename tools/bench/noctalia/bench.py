@@ -38,6 +38,16 @@ PROFILES = {
     "full": (60, 600, 6, 1140),
 }
 LAYER = {"noctalia": "noctalia-bar-default", "nacre": "bead-dev"}
+# Probed panel: (Noctalia panel id, Nacre ui.dispatch call), each the call its key sends.
+# Noctalia's control center stands in for both Nacre drawers; Nacre's session and
+# clipboard are launcher routes.
+PANELS = {
+    "launcher": ("launcher", ("nacre", "launcher", "")),
+    "dashboard": ("control-center", ("drawers", "toggle", "dashboard")),
+    "control": ("control-center", ("drawers", "toggle", "right")),
+    "session": ("session", ("nacre", "menu", "power")),
+    "clipboard": ("clipboard", ("nacre", "clipboard")),
+}
 CLK_TCK = os.sysconf("SC_CLK_TCK")
 PAGE = os.sysconf("SC_PAGE_SIZE")
 NIRI_CONFIG = """input {
@@ -409,7 +419,8 @@ class Tree:
         self.roots = []
         self.threads = {}
 
-    def sample(self, table):
+    def sample(self, table, t=None):
+        t = time.monotonic() if t is None else t
         pids = set()
         for root in self.roots:
             if root in table:
@@ -420,7 +431,9 @@ class Tree:
             p, u, s = memory(pid)
             pss, unrec, swap = pss + p, unrec + u, swap + s
             for tid, start, comm, cpu, ctx in threads(pid):
-                self.threads[f"{pid}:{tid}:{start}"] = (comm, cpu, ctx)
+                key = f"{pid}:{tid}:{start}"
+                first = self.threads.get(key, (0, 0, 0, t))[3]
+                self.threads[key] = (comm, cpu, ctx, first, t)  # t: first and last seen
             if self.with_gpu:
                 ns, kib = gpu(pid)
                 gpu_time, gpu_kib = gpu_time + ns, gpu_kib + kib
@@ -1093,25 +1106,16 @@ class Arm:
     # ---- workload
 
     def open_panel(self, panel):
+        noctalia, nacre = PANELS[panel]
         if self.arm == "noctalia":
-            self.run(
-                [
-                    self.noctalia,
-                    "msg",
-                    "panel-toggle",
-                    "launcher" if panel == "launcher" else "control-center",
-                ]
-            )
-        elif panel == "launcher":
-            self.dispatch("nacre", "launcher", "")
+            self.run([self.noctalia, "msg", "panel-toggle", noctalia])
         else:
-            # One call, as the product's Super+O key sends.
-            self.dispatch("drawers", "toggle", "dashboard")
+            self.dispatch(*nacre)
 
-    def close_panels(self):
+    def close_panels(self, *panels):
         if self.arm == "noctalia":
-            for panel in ("launcher", "control-center"):
-                self.run([self.noctalia, "msg", "panel-close", panel])
+            for panel in panels or ("launcher", "dashboard"):
+                self.run([self.noctalia, "msg", "panel-close", PANELS[panel][0]])
         else:
             self.dispatch("nacre", "close")
 
@@ -1180,7 +1184,7 @@ class Arm:
             with log_path.open(errors="replace") as handle:
                 handle.seek(offset)
                 results.append(frame_stats(handle.read(), opened))
-            self.close_panels()
+            self.close_panels(panel)
             time.sleep(1.5)
         return results
 
@@ -1220,7 +1224,7 @@ class Arm:
         }
         for name, tree in self.trees.items():
             if tree.roots:
-                row["trees"][name] = tree.sample(table)
+                row["trees"][name] = tree.sample(table, row["t"])
         if self.args.render_node:  # host sensors mean nothing on a shared build host
             row.update(sensors(self.card))
         row["memavailable_kib"] = meminfo().get("MemAvailable")
@@ -1340,7 +1344,7 @@ class Arm:
             check=False,
         )
         noise["end"] = {"loadavg": read("/proc/loadavg"), "pswpin": swapin_pages()}
-        frames = {panel: self.open_frames(panel) for panel in ("launcher", "dashboard")}
+        frames = {panel: self.open_frames(panel) for panel in PANELS}
         self.screenshots()
         shell_log = read(self.logs / "shell.log") or ""
         return {
@@ -1413,11 +1417,11 @@ class Arm:
         self.close_panels()
         time.sleep(1)
         self.run(["grim", str(self.out / "idle.png")], timeout=30)
-        for panel in ("launcher", "dashboard"):
+        for panel in PANELS:  # also the evidence that each probed panel opened
             self.open_panel(panel)
             time.sleep(1.5)
             self.run(["grim", str(self.out / f"{panel}.png")], timeout=30)
-            self.close_panels()
+            self.close_panels(panel)
             time.sleep(1)
 
 
@@ -1441,38 +1445,75 @@ def window(a, b, name):
 
 
 def top_threads(a, b, limit=12):
-    """CPU and wakeups per (tree, process, thread name), summed over same-named threads."""
+    """CPU and wakeups per (tree, process, thread name), summed over same-named threads.
+
+    threads is the most alive at one sample in the window, spawned the threads first seen
+    in it: a short-lived pool thread per task is churn, not a leak.
+    """
     groups = {}
     for tree, table in b["threads"].items():
         before = a["threads"].get(tree, {})
         process = {
-            key.split(":")[0]: comm
-            for key, (comm, _, _) in table.items()
+            key.split(":")[0]: entry[0]
+            for key, entry in table.items()
             if key.split(":")[0] == key.split(":")[1]
         }
-        for key, (comm, cpu, ctx) in table.items():
+        for key, (comm, cpu, ctx, first, last) in table.items():
+            if last < a["t"]:
+                continue  # exited before the window
             old = before.get(key, (comm, 0, 0))
             name = (tree, process.get(key.split(":")[0], "?"), comm)
-            row = groups.setdefault(name, [0, 0, 0])
+            row = groups.setdefault(name, [0, 0, []])
             row[0] += cpu - old[1]
             row[1] += ctx - old[2]
-            row[2] += 1
+            row[2].append((first, last))
     seconds = b["t"] - a["t"]
     rows = [
         {
             "tree": tree,
             "process": process,
             "thread": comm,
-            "threads": count,
+            "threads": max(
+                sum(f <= at <= last for f, last in spans)
+                for at in (max(first, a["t"]) for first, _ in spans)
+            ),
+            "spawned": sum(first > a["t"] for first, _ in spans),
             "cpu_ms": round(cpu / 1e6, 1),
             "ctx_per_s": round(ctx / seconds, 2),
         }
-        for (tree, process, comm), (cpu, ctx, count) in groups.items()
+        for (tree, process, comm), (cpu, ctx, spans) in groups.items()
     ]
     return {
         "by_cpu": sorted(rows, key=lambda r: -r["cpu_ms"])[:limit],
         "by_wakeups": sorted(rows, key=lambda r: -r["ctx_per_s"])[:limit],
     }
+
+
+# Three pool threads over 10 s, two alive at once; one that exited earlier is not counted.
+_POOL = {"1:2:0": ("w", 0, 0, 0, 9)}
+assert top_threads(
+    {"t": 10, "threads": {"d": {"1:1:0": ("d", 0, 0, 0, 10), **_POOL}}},
+    {
+        "t": 20,
+        "threads": {
+            "d": {
+                "1:1:0": ("d", 5e6, 4, 0, 20),
+                **_POOL,
+                "1:3:0": ("w", 1e6, 1, 12, 13),
+                "1:4:0": ("w", 1e6, 1, 13, 15),
+                "1:5:0": ("w", 1e6, 1, 17, 18),
+            }
+        },
+    },
+)["by_cpu"][1] == {
+    "tree": "d",
+    "process": "d",
+    "thread": "w",
+    "threads": 2,
+    "spawned": 3,
+    "cpu_ms": 3.0,
+    "ctx_per_s": 0.3,
+}
 
 
 def power(samples, lo, hi, baseline):

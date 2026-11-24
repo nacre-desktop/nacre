@@ -17,6 +17,28 @@ ARMS = ("noctalia", "nacre")
 TREES = ("shell", "daemon", "niri", "labwc", "combined")
 WINDOWS = ("idle", "interaction", "cycle1", "cycles_rest", "rest")
 POINTS = ("startup", "pre-interaction", "post-interaction", "end")
+# v0.1 row 73: Nacre at or under Noctalia on each (lower is better), plus every
+# probed panel's first frame.
+GATE = [
+    ("idle CPU %", "idle.combined.cpu_pct"),
+    ("idle wakeups/s", "idle.combined.ctx_per_s"),
+    ("launch to bar s", "readiness_s"),
+    (
+        "memory before first use, PSS+GPU MiB",
+        "memory.pre-interaction.combined.pss_gpu_mib",
+    ),
+    ("memory after first use, PSS+GPU MiB", "memory.end.combined.pss_gpu_mib"),
+    ("interaction CPU %", "interaction.combined.cpu_pct"),
+]
+REPORTED = [
+    ("PSS-only growth MiB", "memory_growth_mib"),
+    ("interaction stack CPU %", "interaction.stack.cpu_pct"),
+    ("interaction GPU %", "interaction.combined.gpu_pct"),
+    (
+        "interaction package energy above baseline J",
+        "power.interaction.energy_j.above_baseline",
+    ),
+]
 
 
 def flatten(result):
@@ -36,10 +58,23 @@ def flatten(result):
         for tree, values in trees.items():
             for key, value in values.items():
                 flat[f"memory.{point}.{tree}.{key}"] = value
+        # GL buffers sit outside PSS, so the gated memory is both (row 73).
+        both = trees["combined"]
+        flat[f"memory.{point}.combined.pss_gpu_mib"] = both["pss_mib"] + both["gpu_mib"]
     flat["memory_growth_mib"] = result["memory_growth_mib"]
     for name, data in result["power"].items():
         for key, values in data.items():
             flat[f"power.{name}.{key}.above_baseline"] = values["above_baseline"]
+    ppt = result["power"].get("interaction", {}).get("ppt_uw")
+    seconds = (result["windows"].get("interaction", {}).get("shell") or {}).get(
+        "seconds"
+    )
+    if (
+        ppt and seconds
+    ):  # package energy the interaction adds over the no-shell baseline
+        flat["power.interaction.energy_j.above_baseline"] = (
+            ppt["above_baseline"] * seconds
+        )
     for panel, probes in result["open_frames"].items():
         for key in ("first_ms", "frames", "max_gap_ms", "late"):
             seen = [p[key] for p in probes if p]
@@ -66,13 +101,14 @@ def cell(entry, digits=3):
 
 def hotspots(results, window, limit=10):
     """Median per tree/process/thread CPU (% of a core) and wakeups/s across runs of one arm."""
-    cpu, wake = defaultdict(list), defaultdict(list)
+    cpu, wake, pool = defaultdict(list), defaultdict(list), defaultdict(list)
     for result in results:
         data = result["windows"].get(window, {})
         seconds = next((v["seconds"] for v in data.values() if v and "seconds" in v), 0)
         for row in data.get("threads", {}).get("by_cpu", []):
             name = f"{row['tree']}/{row['process']}/{row['thread']}"
             cpu[name].append(row["cpu_ms"] / 10 / seconds if seconds else 0)
+            pool[name].append((row["threads"], row.get("spawned")))
         for row in data.get("threads", {}).get("by_wakeups", []):
             wake[f"{row['tree']}/{row['process']}/{row['thread']}"].append(
                 row["ctx_per_s"]
@@ -86,7 +122,13 @@ def hotspots(results, window, limit=10):
         }
         return sorted(ranked.items(), key=lambda kv: -kv[1])[:limit]
 
-    return top(cpu), top(wake)
+    counts = {  # median most alive at once, median spawned in the window
+        k: tuple(
+            statistics.median(x) if None not in x else "?" for x in zip(*v, strict=True)
+        )
+        for k, v in pool.items()
+    }
+    return top(cpu), top(wake), counts
 
 
 def main():
@@ -139,21 +181,56 @@ def main():
         f"| {pair('interaction.combined.gpu_pct', 1)} "
         f"| {pair('memory.pre-interaction.combined.pss_mib', 0)} "
         f"| {pair('memory.pre-interaction.combined.unreclaimable_mib', 0)} "
-        f"| {pair('memory.pre-interaction.combined.gpu_mib', 0)} | {pair('memory_growth_mib', 1)} "
+        f"| {pair('memory.pre-interaction.combined.gpu_mib', 0)} "
+        f"| {pair('memory.pre-interaction.combined.pss_gpu_mib', 0)} "
+        f"| {pair('memory.end.combined.pss_gpu_mib', 0)} | {pair('memory_growth_mib', 1)} "
         f"| {pair('readiness_s', 3)} | {pair('frames.launcher.first_ms', 0)} "
         f"| {pair('frames.launcher.late', 0)} "
-        f"| {pair('power.idle.ppt_uw.above_baseline')} | {pair('power.interaction.ppt_uw.above_baseline')} |"
+        f"| {pair('power.idle.ppt_uw.above_baseline')} | {pair('power.interaction.ppt_uw.above_baseline')} "
+        f"| {pair('power.interaction.energy_j.above_baseline', 0)} |"
     )
     print("\nscoreboard row (Noctalia / Nacre):")
     print(row)
+    panels = [
+        m.split(".")[1]
+        for m in metrics
+        if m.startswith("frames.") and m.endswith(".first_ms")
+    ]
+    print("\npanel open latency row (first frame ms, late frames; Noctalia / Nacre):")
+    print(
+        f"| {args.label} | {counts} | {pins.get('nacre', '?')[:9]} | "
+        + " | ".join(
+            f"{pair(f'frames.{p}.first_ms', 0)} ({pair(f'frames.{p}.late', 0)})"
+            for p in panels
+        )
+        + " |  ← "
+        + ", ".join(panels)
+    )
+    print("\nrow 73 gate (medians, Noctalia / Nacre; Nacre must be at or under):")
+    gate = GATE + [
+        (f"{p} open, first frame ms", f"frames.{p}.first_ms") for p in panels
+    ]
+    for label, metric in gate + REPORTED:
+        values = [table[arm].get(metric) for arm in ARMS]
+        verdict = (
+            "report"
+            if (label, metric) in REPORTED
+            else "n/a"
+            if None in values
+            else "PASS"
+            if values[1][0] <= values[0][0]
+            else "FAIL"
+        )
+        print(f"  {verdict:6} {label}: {pair(metric, 3)}")
     for arm in ARMS:
         if not runs.get(arm):
             continue
         for window in ("idle", "interaction"):
-            cpu, wake = hotspots(runs[arm], window)
+            cpu, wake, counts = hotspots(runs[arm], window)
             print(f"\n{arm} {window}: top threads by CPU (median % of one core)")
             for name, value in cpu:
-                print(f"  {value:8.3f} %  {name}")
+                alive, spawned = counts[name]
+                print(f"  {value:8.3f} %  {name} (alive {alive}, spawned {spawned})")
             print(f"{arm} {window}: top threads by wakeups (median ctx/s)")
             for name, value in wake:
                 print(f"  {value:8.2f} /s {name}")

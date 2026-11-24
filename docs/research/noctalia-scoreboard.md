@@ -8,12 +8,12 @@ History and the original method: [N0300](noctalia-vs-nacre-benchmark-20261112.md
 
 ## Rows
 
-| Row | Runs N/Nc | Nacre | Noctalia | Idle CPU % | Idle niri CPU % | Idle wakeups/s | Interaction CPU % | Interaction stack CPU % | Interaction GPU % | PSS MiB | Unreclaimable MiB | GPU buffers MiB | Growth MiB | Launch s | Launcher first frame ms | Launcher late frames | PPT idle W | PPT interaction W |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| N0300 desktop 2026-11-13 (baseline, prior harness) | 3/3 | 382f36de6 | v5.4.1 | 0.12 / 0.42 | n/a | 7.1 / 15.3 | 1.2 / 23.5 | n/a | host busy +9.9 / +2.9 pp | 119 / 127 | 63 / 68 | n/a | +3.7 / +31.4 | 0.219 / 0.113 | n/a | n/a | -0.05 / -0.25 | +0.58 / +0.45 |
-| desktop smoke 2026-11-13 (`short`, one run each; indicative) | 1/1 | 5cb5e22a2 | v5.4.1 | 0.127 / 0.079 | 0.022 / 0.025 | 8.0 / 15.2 | 1.3 / 17.4 | 3.1 / 18.6 | 2.8 / 0.0 | 119 / 131 | 62 / 71 | 99 / 0 | +2.1 / +49.8 | 0.131 / 0.018 | 18 / 12 | 0 / 0 | +0.08 / -0.27 | +0.93 / +0.73 |
-| dev-2 2026-11-13 (`short`, software rendering) | 2/2 | 26fd8a62e | v5.4.1 | 0.074 / 0.063 | 0.117 / 0.194 | 9.2 / 10.5 | 13.4 / 9.0 | 124.4 / 110.0 | n/a | 190 / 110 | 122 / 58 | n/a | +2.6 / +25.7 | 0.159 / 0.262 | 17 / 13 | 0 / 0 | n/a | n/a |
-| desktop 2026-11-16, 3/3 `chunk` at f3997131c (Bead 285aede6) | 3/3 | f3997131c | v5.4.1 | 0.127 / 0.034 | 0.023 / 0.028 | 6.8 / 4.2 | 1.1 / 5.1 | 2.7 / 6.3 | 2.9 / 0.0 | 133 / 116 | 63 / 57 | 101 / 0 | +1.7 / +42.8 | 0.133 / 0.028 | 19 / 12 | 0 / 0 | -0.23 / -0.13 | +0.13 / -0.02 |
+| Row | Runs N/Nc | Nacre | Noctalia | Idle CPU % | Idle niri CPU % | Idle wakeups/s | Interaction CPU % | Interaction stack CPU % | Interaction GPU % | PSS MiB | Unreclaimable MiB | GPU buffers MiB | PSS+GPU MiB | PSS+GPU after use MiB | Growth MiB | Launch s | Launcher first frame ms | Launcher late frames | PPT idle W | PPT interaction W | Interaction energy J |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| N0300 desktop 2026-11-13 (baseline, prior harness) | 3/3 | 382f36de6 | v5.4.1 | 0.12 / 0.42 | n/a | 7.1 / 15.3 | 1.2 / 23.5 | n/a | host busy +9.9 / +2.9 pp | 119 / 127 | 63 / 68 | n/a | n/a | n/a | +3.7 / +31.4 | 0.219 / 0.113 | n/a | n/a | -0.05 / -0.25 | +0.58 / +0.45 | n/a |
+| desktop smoke 2026-11-13 (`short`, one run each; indicative) | 1/1 | 5cb5e22a2 | v5.4.1 | 0.127 / 0.079 | 0.022 / 0.025 | 8.0 / 15.2 | 1.3 / 17.4 | 3.1 / 18.6 | 2.8 / 0.0 | 119 / 131 | 62 / 71 | 99 / 0 | 218 / 131 | n/a | +2.1 / +49.8 | 0.131 / 0.018 | 18 / 12 | 0 / 0 | +0.08 / -0.27 | +0.93 / +0.73 | n/a |
+| dev-2 2026-11-13 (`short`, software rendering) | 2/2 | 26fd8a62e | v5.4.1 | 0.074 / 0.063 | 0.117 / 0.194 | 9.2 / 10.5 | 13.4 / 9.0 | 124.4 / 110.0 | n/a | 190 / 110 | 122 / 58 | n/a | n/a | n/a | +2.6 / +25.7 | 0.159 / 0.262 | 17 / 13 | 0 / 0 | n/a | n/a | n/a |
+| desktop 2026-11-16, 3/3 `chunk` at f3997131c (Bead 285aede6) | 3/3 | f3997131c | v5.4.1 | 0.127 / 0.034 | 0.023 / 0.028 | 6.8 / 4.2 | 1.1 / 5.1 | 2.7 / 6.3 | 2.9 / 0.0 | 133 / 116 | 63 / 57 | 101 / 0 | 234 / 116 | 211 / 158 | +1.7 / +42.8 | 0.133 / 0.028 | 19 / 12 | 0 / 0 | -0.23 / -0.13 | +0.13 / -0.02 | +7.9 / -1.4 |
 
 Columns: CPU is % of one core. "Idle", "Interaction", PSS, unreclaimable and
 GPU buffers are shell + daemon (Noctalia has no daemon). "Stack" adds the nested
@@ -26,6 +26,24 @@ IPC open call (client start included) to the first frame niri composites; late
 frames are animation gaps over 25 ms. PPT is package power above the arm's own
 no-shell baseline. Rows before N0308 used one-tick CPU over the last idle
 minute and host-global GPU busy; their columns are not comparable cell for cell.
+PSS+GPU is the memory v0.1 row 73 gates (GL buffers are outside PSS): at the end
+of idle, and "after use" at the end of the arm. Interaction energy is that PPT
+over the interaction window, in joules; it is reported, not gated. The 11-16 row's
+new cells come from re-summarizing its runs.
+
+Panel open latency (first frame ms, late frames in brackets; Noctalia / Nacre),
+five opens per panel, each the one call that shell's key sends. Noctalia's
+control center stands in for Nacre's dashboard and control panel; Nacre's session
+(power menu) and clipboard are launcher routes:
+
+| Row | Runs N/Nc | Nacre | Launcher | Dashboard | Control | Session | Clipboard |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| desktop 2026-11-16 at f3997131c | 3/3 | f3997131c | 19 / 12 (0 / 0) | 19 / 12 (0 / 0) | n/a | n/a | n/a |
+
+`summarize.py` prints both rows and the row 73 gate: Nacre at or under Noctalia on
+idle CPU, idle wakeups, launch, PSS+GPU before and after first use, interaction
+CPU (shell + daemon against Noctalia's whole shell) and every panel's first frame.
+At f3997131c only interaction CPU fails (5.1 against 1.1 %).
 
 Row notes:
 
