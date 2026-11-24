@@ -181,10 +181,20 @@ pub(crate) fn hot_retain(keep: &[(ActiveWallpaper, u32, u32)]) {
         .iter()
         .filter_map(|(pair, width, height)| hot_key(pair, *width, *height))
         .collect();
-    hot()
-        .lock()
-        .unwrap_or_else(|p| p.into_inner())
-        .retain(|(path, _)| keys.contains(path));
+    let released: Hot = {
+        let mut hot = hot().lock().unwrap_or_else(|p| p.into_inner());
+        let (kept, released) = std::mem::take(&mut *hot)
+            .into_iter()
+            .partition(|(path, _)| keys.contains(path));
+        *hot = kept;
+        released
+    };
+    // B0387: freeing the 4K window (~200 MB) took ~20 ms on the caller, Strand's worker, mid close slide.
+    if !released.is_empty() {
+        let _ = std::thread::Builder::new()
+            .name("wallpaper-release".into())
+            .spawn(move || drop(released));
+    }
 }
 /// (entries, resident bytes) of the held window.
 pub(crate) fn hot_resident() -> (usize, usize) {
