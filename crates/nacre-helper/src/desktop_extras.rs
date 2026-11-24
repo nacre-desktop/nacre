@@ -194,6 +194,10 @@ fn record_clip_timestamp(paths: &Paths, row: &str) -> Result<()> {
     Ok(())
 }
 fn store_clip(paths: &Paths, content: &[u8]) -> Result<()> {
+    // Password-manager copies are never stored, so they never reach history or the topic.
+    if env::var("CLIPBOARD_STATE").is_ok_and(|value| value == "sensitive") {
+        return Ok(());
+    }
     let output = crate::process::run_bytes(
         "cliphist",
         &["store".into()],
@@ -202,9 +206,6 @@ fn store_clip(paths: &Paths, content: &[u8]) -> Result<()> {
     )?;
     if !output.status.success() {
         return Err("cliphist store failed".into());
-    }
-    if env::var("CLIPBOARD_STATE").is_ok_and(|value| value == "sensitive") {
-        return Ok(());
     }
     let rows = clip_rows()?;
     if let Some(row) = rows.first() {
@@ -269,7 +270,8 @@ fn is_image_label(label: &str) -> bool {
             .iter()
             .any(|x| label.to_lowercase().contains(x))
 }
-/// One clipboard row for the daemon topic: no content, only the shown label.
+/// One clipboard row for the daemon topic: no content, only the shown label
+/// (cleaned, at most 200 characters), so entry text does reach the topic.
 pub(crate) struct ClipRow {
     pub id: String,
     pub label: String,
@@ -1152,6 +1154,30 @@ mod tests {
             env::set_var("PATH", path);
         }
         env::remove_var("NACRE_DESKTOP_SCOPE_LOG");
+        Ok(())
+    }
+
+    #[test]
+    #[allow(unsafe_code)]
+    fn sensitive_clipboard_entry_never_reaches_cliphist() -> Result<()> {
+        let _guard = crate::process::SCOPE_TEST_LOCK
+            .lock()
+            .unwrap_or_else(|error| error.into_inner());
+        let root = tempfile::tempdir()?;
+        let marker = root.path().join("called");
+        let fake = root.path().join("cliphist");
+        fs::write(&fake, format!("#!/bin/sh\ntouch {}\n", marker.display()))?;
+        fs::set_permissions(&fake, fs::Permissions::from_mode(0o700))?;
+        let old_path = env::var_os("PATH");
+        env::set_var("PATH", root.path());
+        env::set_var("CLIPBOARD_STATE", "sensitive");
+        let result = store_clip(&Paths::new(root.path()), b"hunter2");
+        env::remove_var("CLIPBOARD_STATE");
+        if let Some(path) = old_path {
+            env::set_var("PATH", path);
+        }
+        result?;
+        assert!(!marker.exists(), "sensitive copy was stored");
         Ok(())
     }
 

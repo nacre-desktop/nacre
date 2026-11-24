@@ -630,11 +630,13 @@ fn run() -> Result<i32> {
             service::execute,
         );
     }
-    if tool == "menu-backend"
-        && arguments
-            .first()
-            .is_some_and(|action| action == "install" || action == "remove")
-    {
+    if tool == "menu-backend" && arguments.first().is_some_and(|action| action == "install") {
+        // Same path as the UI, so the AUR review policy applies.
+        return nacre_helper::aur_review::package_install(
+            arguments.get(1).map(String::as_str).unwrap_or(""),
+        );
+    }
+    if tool == "menu-backend" && arguments.first().is_some_and(|action| action == "remove") {
         let command = nacre_helper::menu_registry::package_command(
             &arguments[0],
             arguments.get(1).map(String::as_str).unwrap_or(""),

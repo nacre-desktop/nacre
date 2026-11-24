@@ -1,5 +1,6 @@
 //! Clipboard topic over the native cliphist index (N0026). Previews are the
-//! single-line labels the dashboard already shows; content never leaves cliphist.
+//! single-line labels (up to 200 characters of each entry's text) the dashboard
+//! already shows; sensitive copies are never stored, and full content stays in cliphist.
 use super::{down, ok, publish, settle, Gate, QUIET};
 use crate::{
     daemon::hub::{failure, Shared},
