@@ -396,7 +396,16 @@ impl Brain {
     fn connect(socket: &Path, helper: &Path) -> Option<(UnixStream, UnixStream)> {
         for attempt in 0..100 {
             match UnixStream::connect(socket) {
-                Ok(s) => return s.try_clone().ok().map(|r| (s, r)),
+                Ok(s) => {
+                    if let Err(error) = Self::check_peer(&s) {
+                        eprintln!(
+                            "nacre-shell: refusing Brain socket {}: {error}",
+                            socket.display()
+                        );
+                        return None;
+                    }
+                    return s.try_clone().ok().map(|r| (s, r));
+                }
                 Err(_) if attempt == 0 => {
                     if let Ok(mut child) = bead::services::process::command(helper)
                         .args(["brain-control", "serve"])
@@ -413,6 +422,42 @@ impl Brain {
             std::thread::sleep(Duration::from_millis(100));
         }
         None
+    }
+
+    /// Refuse a socket whose peer runs as another user, as every daemon client does
+    /// (`protocol.md`, security review A3); mirrors `nacre_source::check_peer`.
+    fn check_peer(stream: &UnixStream) -> std::io::Result<()> {
+        use std::os::fd::AsRawFd;
+        let mut cred = libc::ucred {
+            pid: 0,
+            uid: u32::MAX,
+            gid: 0,
+        };
+        let mut size = std::mem::size_of::<libc::ucred>() as libc::socklen_t;
+        // SAFETY: getsockopt writes at most `size` bytes into the local `cred`.
+        let status = unsafe {
+            libc::getsockopt(
+                stream.as_raw_fd(),
+                libc::SOL_SOCKET,
+                libc::SO_PEERCRED,
+                (&raw mut cred).cast(),
+                &mut size,
+            )
+        };
+        if status != 0 {
+            return Err(std::io::Error::last_os_error());
+        }
+        Self::check_peer_uid(cred.uid)
+    }
+
+    fn check_peer_uid(uid: u32) -> std::io::Result<()> {
+        if uid != nix::unistd::geteuid().as_raw() {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::PermissionDenied,
+                "Brain socket peer UID differs",
+            ));
+        }
+        Ok(())
     }
 
     fn store(st: &mut State, key: &str, message: &Json) {

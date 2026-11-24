@@ -825,3 +825,12 @@ fn brain_window_goldens() {
     );
     golden("brain-unavailable-1", &mut harness(model, 1280, 800, 1.));
 }
+
+#[test]
+fn the_brain_socket_refuses_a_peer_owned_by_another_user() {
+    let (own, _peer) = UnixStream::pair().unwrap();
+    assert!(Brain::check_peer(&own).is_ok());
+    let uid = nix::unistd::geteuid().as_raw();
+    assert!(Brain::check_peer_uid(uid).is_ok());
+    assert!(Brain::check_peer_uid(uid.wrapping_add(1)).is_err());
+}
