@@ -151,6 +151,12 @@ fn overview_hover_title_and_app_glyph_render_through_topic_projection_at_both_sc
         )]))?;
         settle_harness_animations(&mut h)?;
         assert!(title_is(&h, "Renamed focus"));
+        // The focused window's own glyph waits behind the overview's choice.
+        h.update(BTreeMap::from([(
+            "bead.focused_app_glyph".into(),
+            Value::Text("terminal".into()),
+        )]))?;
+        assert!(!title_is(&h, "terminal"));
 
         topic["overviewOpen"] = serde_json::Value::Bool(false);
         h.update(crate::reload::overview_title_values(
@@ -161,6 +167,10 @@ fn overview_hover_title_and_app_glyph_render_through_topic_projection_at_both_sc
         assert!(
             title_is(&h, "Renamed focus"),
             "leaving overview restores the focused title"
+        );
+        assert!(
+            title_is(&h, "terminal"),
+            "outside the overview the title shows its window's app glyph"
         );
         assert_eq!(
             band(&h).ok_or("bar title band missing after hover")?,
@@ -1601,7 +1611,7 @@ fn bar_status_states_render_every_attention_state() -> Result<()> {
             ("bar.stack.style".into(), Value::Text("name".into())),
             ("bar.collections".into(), groups.clone()),
             ("bar.collection.current".into(), Value::Text("niri-collection:1".into())),
-            ("bead.title.app_glyph".into(), Value::Text("terminal".into())),
+            ("bead.focused_app_glyph".into(), Value::Text("terminal".into())),
             (
                 "bead.focused_title".into(),
                 Value::Text(

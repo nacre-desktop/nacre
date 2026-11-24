@@ -40,10 +40,12 @@ local function title_children(shown,text_width,show_icon,show_text)
     local kids={}
     local visible=ui.bind("bead.desktop.titlevisible")
     if show_icon then
-        local icon=ui.resolve_for_check(ui.bind("bead.title.app_icon")) or ""
+        -- The overview's selected tile, else the focused window the title shows (same lookup, host side).
+        local app=ui.resolve_for_check(ui.bind("bead.overview.open")) and "bead.title.app_" or "bead.focused_app_"
+        local icon=ui.resolve_for_check(ui.bind(app.."icon")) or ""
         -- D3 kit ask 1: the real icon renders untinted until the kit has a palette-tinted monochrome image.
         kids[#kids+1]=icon~="" and ui.Image{id="title-icon",visible=visible,icon=icon,width=t.title_icon,height=t.title_icon,shrink=0}
-            or centered_text{id="title-icon",visible=visible,text=ui.bind("bead.title.app_glyph"),width=t.title_icon,shrink=0,family="Material Symbols Rounded",font_size=t.title_icon,color="secondary",text_align="center"}
+            or centered_text{id="title-icon",visible=visible,text=ui.bind(app.."glyph"),width=t.title_icon,shrink=0,family="Material Symbols Rounded",font_size=t.title_icon,color="secondary",text_align="center"}
     end
     if show_text then
         kids[#kids+1]=centered_text{id="title",visible=visible,text=shown,height=24,width=text_width,max_width=text_width,family=font,font_size=t.title_font,color=t.title_ink,text_align="center"}

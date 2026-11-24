@@ -424,6 +424,8 @@ fn is_bar_widget_context(key: &str) -> bool {
                 | "bead.title.app_id"
                 | "bead.title.app_glyph"
                 | "bead.title.app_icon"
+                | "bead.focused_app_glyph"
+                | "bead.focused_app_icon"
                 | "bead.title.rev"
                 | "bead.viewport.width"
                 | "bead.viewport.height"
@@ -816,6 +818,8 @@ pub struct Runtime {
     backend: Option<std::sync::Arc<crate::backends::Native>>,
     subscription: Option<bead::backends::Subscription>,
     last_focused_window: Option<bead::backends::Id>,
+    /// The app whose glyph and icon `bead.focused_app_*` hold (`None`: not sent yet).
+    focused_app: Option<String>,
     desktop: Option<std::sync::Arc<bead::services::Desktop>>,
     /// Held only while the committed view actually renders a seconds-resolution clock form.
     clock_seconds_lease: Option<bead::services::ClockSecondsLease>,
@@ -1305,6 +1309,8 @@ impl Runtime {
                             | "bead.title.app_id"
                             | "bead.title.app_glyph"
                             | "bead.title.app_icon"
+                            | "bead.focused_app_glyph"
+                            | "bead.focused_app_icon"
                             | "bead.viewport.width"
                             | "bead.viewport.height"
                     )
@@ -2777,6 +2783,7 @@ impl Runtime {
             backend: None,
             subscription: None,
             last_focused_window: None,
+            focused_app: None,
             desktop: None,
             clock_seconds_lease: None,
             desktop_subscription: None,
@@ -4773,15 +4780,41 @@ impl Runtime {
         self.attach_backend(backend)?;
         Ok(self)
     }
+    /// `bead.focused_title` plus the app glyph and icon of the same window, which the title shows
+    /// outside the overview. The icon lookup reads desktop entries, so it reruns only when the app changes.
+    fn focused_title_values(
+        &mut self,
+        snapshot: &bead::backends::Snapshot,
+        values: &mut BTreeMap<String, bead::core::Value>,
+    ) {
+        let (title, window) = focused_title(
+            snapshot,
+            self.output.as_deref(),
+            self.last_focused_window.as_ref(),
+        );
+        let app_id = window
+            .as_ref()
+            .and_then(|id| snapshot.windows.iter().find(|shown| &shown.id == id))
+            .map_or("", |shown| shown.app_id.as_str());
+        if self.focused_app.as_deref() != Some(app_id) {
+            values.extend(title_app_values(
+                "bead.focused_app_",
+                app_id,
+                &self.workspaces,
+            ));
+            self.focused_app = Some(app_id.to_owned());
+        }
+        self.last_focused_window = window;
+        values.insert("bead.focused_title".into(), bead::core::Value::Text(title));
+    }
     fn attach_backend(
         &mut self,
         backend: std::sync::Arc<crate::backends::Native>,
     ) -> Result<(), Box<dyn Error>> {
         let snapshot = backend.snapshot();
         let mut values = backend_values(&snapshot, self.output.as_deref(), &self.workspaces)?;
-        let (title, focused_window) = focused_title(&snapshot, self.output.as_deref(), None);
-        self.last_focused_window = focused_window;
-        values.insert("bead.focused_title".into(), bead::core::Value::Text(title));
+        (self.last_focused_window, self.focused_app) = (None, None);
+        self.focused_title_values(&snapshot, &mut values);
         self.session.stores = self.session.stores.reconcile(&values)?;
         for name in [
             "backend.workspace.switch",
@@ -9021,10 +9054,7 @@ impl SceneSource for Runtime {
                 let values = if let Some(backend) = &self.backend {
                     let snapshot = backend.snapshot();
                     let mut values = backend_values(&snapshot, Some(&name), &self.workspaces)?;
-                    let (title, focused_window) =
-                        focused_title(&snapshot, Some(&name), self.last_focused_window.as_ref());
-                    self.last_focused_window = focused_window;
-                    values.insert("bead.focused_title".into(), bead::core::Value::Text(title));
+                    self.focused_title_values(&snapshot, &mut values);
                     values
                 } else {
                     BTreeMap::from([(
@@ -9060,12 +9090,6 @@ impl SceneSource for Runtime {
                 }
                 let mut values =
                     backend_values(&snapshot, self.output.as_deref(), &self.workspaces)?;
-                let (title, focused_window) = focused_title(
-                    &snapshot,
-                    self.output.as_deref(),
-                    self.last_focused_window.as_ref(),
-                );
-                self.last_focused_window = focused_window;
                 let title_only =
                     backend_title_only(&values, |id| self.session.stores.get(id).cloned());
                 if !title_only {
@@ -9077,7 +9101,7 @@ impl SceneSource for Runtime {
                         snapshot.windows.len()
                     );
                 }
-                values.insert("bead.focused_title".into(), bead::core::Value::Text(title));
+                self.focused_title_values(&snapshot, &mut values);
                 // Keep the complete backend model current (including window titles); the
                 // view-read filter in update_model prevents unrelated bar work.
                 let scene = self.session.update_model(values)?;
@@ -10829,7 +10853,7 @@ pub(crate) fn overview_title_values(
         .filter(|title| !title.is_empty())
         .or_else(|| chosen.and_then(|window| window["appId"].as_str()))
         .unwrap_or_default();
-    BTreeMap::from([
+    let mut values = BTreeMap::from([
         (
             "bead.overview.open".into(),
             bead::core::Value::Bool(overview_open),
@@ -10846,25 +10870,35 @@ pub(crate) fn overview_title_values(
             "bead.title.app_id".into(),
             bead::core::Value::Text(app_id.to_owned()),
         ),
+    ]);
+    values.extend(title_app_values("bead.title.app_", app_id, workspaces));
+    values
+}
+
+/// The bar title's app glyph and, D3 (spec 0237), the real themed app icon from the desktop
+/// entry when there is one, stored as `{prefix}glyph` and `{prefix}icon`. No app: the desk glyph.
+fn title_app_values(
+    prefix: &str,
+    app_id: &str,
+    workspaces: &crate::workspace_rows::Rows,
+) -> [(String, bead::core::Value); 2] {
+    let glyph = if app_id.is_empty() {
+        "desktop_windows"
+    } else {
+        workspaces.app_glyph(app_id)
+    };
+    [
         (
-            "bead.title.app_glyph".into(),
-            bead::core::Value::Text(
-                if app_id.is_empty() {
-                    "desktop_windows"
-                } else {
-                    workspaces.app_glyph(app_id)
-                }
-                .to_owned(),
-            ),
+            format!("{prefix}glyph"),
+            bead::core::Value::Text(glyph.to_owned()),
         ),
-        // D3 (spec 0237): the real themed app icon from the desktop entry, when there is one.
         (
-            "bead.title.app_icon".into(),
+            format!("{prefix}icon"),
             bead::core::Value::Text(
                 crate::workspace_rows::desktop_icon_name(app_id).unwrap_or_default(),
             ),
         ),
-    ])
+    ]
 }
 
 #[cfg(test)]
