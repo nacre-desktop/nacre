@@ -107,7 +107,10 @@ async fn serve(
             }
         }
     });
-    helpers::cleanup()?;
+    // Never fatal: an error here would fail every start until systemd stops restarting.
+    if let Err(error) = helpers::cleanup() {
+        tracing::warn!(error = %error, "Stale helper transfer cleanup failed");
+    }
     // Held in every mode, safe mode included: a power press must never reach logind's poweroff.
     let _power_key_inhibitor = power_key::inhibit().await;
     let hub = hub::Hub::new(uuid::Uuid::new_v4().to_string(), counter.safe, frame).shared();

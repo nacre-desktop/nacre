@@ -156,7 +156,7 @@ fn reply(directory: &Path, value: Value) -> Result<nacre_protocol::helpers::Help
             let path = directory.join(file);
             let file = std::fs::OpenOptions::new()
                 .read(true)
-                .custom_flags(nix::libc::O_NOFOLLOW)
+                .custom_flags(nix::libc::O_NOFOLLOW | nix::libc::O_NONBLOCK)
                 .open(&path)?;
             let metadata = file.metadata()?;
             if !metadata.is_file()

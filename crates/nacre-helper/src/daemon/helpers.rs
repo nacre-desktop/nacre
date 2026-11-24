@@ -69,9 +69,10 @@ impl Transfer {
         {
             return Err("Invalid helper packet name".into());
         }
+        // O_NONBLOCK: a FIFO must fail the is_file check below, not block the daemon's one thread.
         let file = OpenOptions::new()
             .read(true)
-            .custom_flags(nix::libc::O_NOFOLLOW)
+            .custom_flags(nix::libc::O_NOFOLLOW | nix::libc::O_NONBLOCK)
             .open(self.directory()?.join(name))?;
         let metadata = file.metadata()?;
         if !metadata.is_file()
@@ -345,21 +346,12 @@ fn cleanup_at(parent: &std::path::Path, prefix: &str) -> Result<()> {
             || metadata.uid() != nix::unistd::getuid().as_raw()
             || metadata.mode() & 0o777 != 0o700
         {
-            return Err("Unsafe stale helper transfer directory".into());
+            let path = entry.path();
+            tracing::warn!(path = %path.display(), "Skipping unsafe stale helper transfer folder");
+            continue;
         }
-        for file in fs::read_dir(entry.path())? {
-            let file = file?;
-            let metadata = fs::symlink_metadata(file.path())?;
-            if !file.file_name().to_string_lossy().starts_with("packet-")
-                || !metadata.is_file()
-                || metadata.file_type().is_symlink()
-                || metadata.uid() != nix::unistd::getuid().as_raw()
-                || metadata.mode() & 0o777 != 0o600
-                || metadata.nlink() != 1
-            {
-                return Err("Unsafe stale helper transfer packet".into());
-            }
-        }
+        // remove_dir_all unlinks links instead of following them, so stale entries of any type
+        // (a FIFO, a 0644 packet) go with their directory instead of failing every restart.
         fs::remove_dir_all(entry.path())?;
     }
     Ok(())
@@ -512,6 +504,12 @@ mod tests {
         fs::write(&public, b"{}")?;
         fs::set_permissions(&public, fs::Permissions::from_mode(0o644))?;
         assert!(transfer.request("packet-public").is_err());
+        // Without O_NONBLOCK this open waits for a writer forever.
+        nix::unistd::mkfifo(
+            &directory.join("packet-fifo"),
+            nix::sys::stat::Mode::S_IRWXU,
+        )?;
+        assert!(transfer.request("packet-fifo").is_err());
         assert_eq!(fs::read(&target)?, b"private sentinel");
         Ok(())
     }
@@ -533,16 +531,19 @@ mod tests {
         let own = root.path().join(format!("{prefix}stale"));
         fs::create_dir(&own)?;
         fs::set_permissions(&own, fs::Permissions::from_mode(0o700))?;
+        // Stale packets that open() would refuse must not block the restart cleanup.
         let packet = own.join("packet-old");
         fs::write(&packet, b"fixture")?;
-        fs::set_permissions(&packet, fs::Permissions::from_mode(0o600))?;
+        fs::set_permissions(&packet, fs::Permissions::from_mode(0o644))?;
+        nix::unistd::mkfifo(&own.join("packet-fifo"), nix::sys::stat::Mode::S_IRWXU)?;
         let other = root.path().join("helper-packets-other-endpoint");
         fs::create_dir(&other)?;
         cleanup_at(root.path(), &prefix)?;
         assert!(!own.exists());
         assert!(other.exists());
         symlink(&other, &own)?;
-        assert!(cleanup_at(root.path(), &prefix).is_err());
+        cleanup_at(root.path(), &prefix)?;
+        assert!(fs::symlink_metadata(&own)?.file_type().is_symlink());
         assert!(other.exists());
         Ok(())
     }

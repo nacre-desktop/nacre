@@ -36,7 +36,7 @@ impl Counter {
         let path = folder.join("daemon-crashes.json");
         let previous = match fs::OpenOptions::new()
             .read(true)
-            .custom_flags(nix::libc::O_NOFOLLOW)
+            .custom_flags(nix::libc::O_NOFOLLOW | nix::libc::O_NONBLOCK)
             .open(&path)
         {
             Ok(file) => {
