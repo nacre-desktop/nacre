@@ -1579,6 +1579,67 @@ fn workspace_app_icons_style_shows_every_window() -> Result<()> {
     Ok(())
 }
 
+/// Owner bug 2026-11-24: a measured wallpaper with a fully dark or bright cell (0.0, 1.0) in
+/// bead.desktop.wallpaper.luma made every bar action fail ("Rust-owned and read-only to actions":
+/// Luau hands 0.0 back as 0), so a press-drag on any bar item blanked the bar. Bead B0393 compares
+/// store numbers numerically; this guards it end to end with a real Luau action (the stack click).
+#[test]
+fn bar_actions_survive_whole_numbers_in_the_wallpaper_luma() -> Result<()> {
+    let mut cells = vec![0.5; crate::wallpaper_luma::COLS * crate::wallpaper_luma::ROWS];
+    (cells[0], cells[1]) = (0., 1.);
+    let mut values = super::initial_models()?;
+    values.extend(parity_models());
+    let rows: Vec<_> = (1..=5)
+        .map(|i| serde_json::json!({"id":format!("stack:{i}"),"label":i.to_string(),"index":i,"output":"eDP-1","active":i == 3}))
+        .collect();
+    values.extend([
+        ("bar.frame".into(), Value::Bool(false)),
+        ("bar.height".into(), Value::Number(44.)),
+        ("bar.collections".into(), Value::list(rows)),
+        ("bar.collection.output".into(), Value::Text("eDP-1".into())),
+        (
+            "bar.collection.current".into(),
+            Value::Text("stack:3".into()),
+        ),
+        (
+            crate::wallpaper_luma::STORE.into(),
+            crate::wallpaper_luma::store_value_for_test(1., 0., cells),
+        ),
+    ]);
+    let mut h = Harness::load(
+        &root(),
+        Path::new("bar/main.luau"),
+        &root().join("palette.json"),
+        values,
+        Config {
+            width: 1920,
+            height: 44,
+            scale: 1.,
+        },
+    )?;
+    settle_harness_animations(&mut h)?;
+    let strand = h
+        .session
+        .view_nodes()
+        .iter()
+        .find(|node| node.action.as_deref() == Some("collection.fan"))
+        .map(|node| bead::ui::rect(&node.draw))
+        .ok_or("stack strand missing")?;
+    h.script([
+        Input::Click {
+            x: strand.x + strand.w / 2.,
+            y: strand.y + strand.h / 2.,
+        },
+        Input::Release,
+    ])?;
+    assert_eq!(
+        h.session.stores.get("bar.stack.fan"),
+        Some(&Value::Number(1.)),
+        "the stack click's Luau action ran"
+    );
+    Ok(())
+}
+
 /// D1/D2/D3 (spec 0237): every attention state the bar can show at once: Ethernet + VPN lock,
 /// a connected Bluetooth device with its battery, a low battery with its percent, headphones,
 /// Do Not Disturb (badge hidden), a running recording, the named stack cap, a real app icon

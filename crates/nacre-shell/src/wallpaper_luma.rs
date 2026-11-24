@@ -189,6 +189,16 @@ impl Drop for Watch {
 }
 
 #[cfg(test)]
+pub(crate) fn store_value_for_test(on_surface: f32, surface: f32, cells: Vec<f32>) -> Value {
+    Luma {
+        on_surface,
+        surface,
+        cells,
+    }
+    .store_value()
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
 
