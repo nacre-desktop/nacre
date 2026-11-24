@@ -4516,7 +4516,10 @@ async fn failed_activation_retires_its_early_preview_outside_the_view() {
 fn strand_frames_reports_one_line_per_burst() {
     let t0 = Instant::now();
     let at = |ms: u64| t0 + Duration::from_millis(ms);
-    let mut log = FrameLog::default();
+    let mut log = FrameLog {
+        opening: true,
+        ..FrameLog::default()
+    };
     assert_eq!(
         log.frame(at(0), false),
         None,
@@ -4532,8 +4535,10 @@ fn strand_frames_reports_one_line_per_burst() {
         .expect("the settle frame closes the burst");
     assert_eq!(
         line,
-        "STRAND_FRAMES frames=4 duration_ms=58 interval_mean=14.5 p95=34.0 max=34.0 stages=2 stage_mean_ms=5.0 stage_max_ms=6.0"
+        "STRAND_FRAMES phase=open frames=4 duration_ms=58 interval_mean=14.5 p95=34.0 max=34.0 stages=2 stage_mean_ms=5.0 stage_max_ms=6.0"
     );
+    // Only a visit's first burst is its open storyboard.
+    assert!(!log.opening);
     assert!(log.last.is_none() && log.intervals.is_empty() && log.stages.is_empty());
     assert_eq!(
         log.frame(at(90), false),

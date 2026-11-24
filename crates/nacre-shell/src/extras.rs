@@ -218,6 +218,8 @@ struct FrameLog {
     stages: Vec<f32>,
     /// Set by a stage that built a scene: whether an animation still runs after it.
     built: Option<bool>,
+    /// The next burst is the open storyboard (`phase=open`); later ones are moves and glides.
+    opening: bool,
 }
 impl FrameLog {
     /// One built scene; the first one at rest after motion closes the burst and returns its line.
@@ -236,8 +238,14 @@ impl FrameLog {
         let stages = std::mem::take(&mut self.stages);
         gaps.sort_by(f32::total_cmp);
         let mean = |v: &[f32]| v.iter().sum::<f32>() / v.len().max(1) as f32;
+        let phase = if std::mem::take(&mut self.opening) {
+            "open"
+        } else {
+            "move"
+        };
         Some(format!(
-            "STRAND_FRAMES frames={} duration_ms={:.0} interval_mean={:.1} p95={:.1} max={:.1} stages={} stage_mean_ms={:.1} stage_max_ms={:.1}",
+            "STRAND_FRAMES phase={} frames={} duration_ms={:.0} interval_mean={:.1} p95={:.1} max={:.1} stages={} stage_mean_ms={:.1} stage_max_ms={:.1}",
+            phase,
             gaps.len(),
             gaps.iter().sum::<f32>(),
             mean(&gaps),
@@ -1445,7 +1453,10 @@ impl Extras {
         if opening {
             // A visit starts its own STRAND_FRAMES burst: a close cut short by this open left its last frame time,
             // and the first interval spanned the whole closed time (the live "220 ms hitch" after a reopen).
-            state.frames = FrameLog::default();
+            state.frames = FrameLog {
+                opening: true,
+                ..FrameLog::default()
+            };
             state.visit += 1;
             state.wallpaper_shown = None;
             state.wallpaper_focus = None;
