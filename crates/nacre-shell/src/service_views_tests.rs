@@ -1640,6 +1640,63 @@ fn bar_actions_survive_whole_numbers_in_the_wallpaper_luma() -> Result<()> {
     Ok(())
 }
 
+/// Owner bug 2026-11-24: hovering a long title showed a full-width grey tooltip over the title that ran
+/// past the bar. Hover keeps the middle-ellipsized title in its slot and draws nothing below the bar.
+#[test]
+fn hovering_a_long_title_keeps_it_in_the_bar() -> Result<()> {
+    let full = "nacre-desktop/nacre: A wallpaper-themed desktop shell for niri built on the Bead framework. - Brave Origin";
+    let mut values = super::initial_models()?;
+    values.insert("bead.focused_title".into(), Value::Text(full.into()));
+    let mut h = Harness::load(
+        &root(),
+        Path::new("bar/main.luau"),
+        &root().join("palette.json"),
+        values,
+        Config {
+            width: 1920,
+            height: 50,
+            scale: 1.,
+        },
+    )?;
+    settle_harness_animations(&mut h)?;
+    let band = h
+        .session
+        .view_nodes()
+        .iter()
+        .find(|node| node.id.ends_with("title-band"))
+        .map(|node| bead::ui::rect(&node.draw))
+        .ok_or("bar title band missing")?;
+    h.script([Input::Pointer {
+        x: band.x + band.w / 2.,
+        y: band.y + band.h / 2.,
+    }])?;
+    settle_harness_animations(&mut h)?;
+    let texts: Vec<_> = h
+        .scene()
+        .primitives
+        .iter()
+        .filter_map(|primitive| match primitive {
+            bead::render::Primitive::Text { text, rect, .. } => Some((text.clone(), *rect)),
+            _ => None,
+        })
+        .collect();
+    assert!(
+        !texts.iter().any(|(text, _)| text == full),
+        "no full-width copy of the title on hover: {texts:?}"
+    );
+    assert!(
+        texts
+            .iter()
+            .any(|(text, _)| text.starts_with("nacre-desktop") && text.contains('…')),
+        "the hovered title stays middle-ellipsized: {texts:?}"
+    );
+    assert!(
+        texts.iter().all(|(_, rect)| rect.y + rect.h <= 50.),
+        "nothing draws below the bar: {texts:?}"
+    );
+    Ok(())
+}
+
 /// D1/D2/D3 (spec 0237): every attention state the bar can show at once: Ethernet + VPN lock,
 /// a connected Bluetooth device with its battery, a low battery with its percent, headphones,
 /// Do Not Disturb (badge hidden), a running recording, the named stack cap, a real app icon

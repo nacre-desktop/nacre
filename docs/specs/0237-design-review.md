@@ -65,8 +65,10 @@ needs data. Sizes and colours come from `shell/bar/tokens.luau` and palette role
   colour (`context.pearl_accent` by workspace index). It follows the title width retarget
   (collapses while the width is in flight, re-extends as it settles); a true restart-on-focus
   needs kit ask 4 (`-- D16:` marker).
-- Titles clamp to one line with an ellipsis in the middle (`middle_ellipsize`, max 550 px);
-  hovering a truncated title shows the full title in a tooltip. Click/hover behaviour is unchanged.
+- Titles clamp to one line with an ellipsis in the middle (`middle_ellipsize`, max 550 px).
+  Hover changes nothing about the title: the full-title hover tooltip was removed after the owner's
+  2026-11-24 report (it covered the title in grey, ran wide and spilled under the bar). The middle
+  ellipsis keeps both ends. Click/hover behaviour is otherwise unchanged.
 
 ### Motion
 

@@ -69,16 +69,6 @@ local function trace(iid)
     return ui.Row{id="title-trace-row",position="absolute",left=0,right=0,top=header-t.title_trace_inset-t.title_trace_height-(header-t.title_height)/2,height=t.title_trace_height,justify="center",visible=ui.bind("bead.desktop.titlevisible"),
         ui.Box{id="title-trace",width=width,height=t.title_trace_height,radius=1,fill=ui.alpha(trace_accent(),alpha)}}
 end
--- Hover shows the full title when it is truncated.
--- Hover shows the full title when it is truncated; the node only exists then, so an ordinary
--- title change still patches one text primitive without a layout.
-local function title_tooltip(full,shown)
-    if shown==full then return nil end
-    local hovered=ui.resolve_for_check(ui.bind("bead.hovered")) or ""
-    local text_w=math.ceil(ui.text_width(full,font,t.title_font))
-    return kit.Tooltip{id="title-tooltip",edge="top",bar_size=-8,width=text_w+2*kit.tokens.spacing.sm,height=30,padding=kit.tokens.spacing.sm,visible=string.find(hovered,"title-band",1,true)~=nil,
-        ui.Text{text=full,height=30-2*kit.tokens.spacing.sm,width=text_w,font_size=t.title_font,family=font,color="onSurface"}}
-end
 local function active_app()
     local title_app=ui.resolve_for_check(ui.bind("bead.title.app_id"))
     if title_app and title_app~="" then return title_app end
@@ -126,7 +116,6 @@ return {id="title",title="Title",icon="title",category="bar",data={topics={},act
             table.unpack(title_children(shown,animated_width,true,true)),
         },
         trace(props.instance.iid),
-        title_tooltip(full,type(shown)=="string" and shown or full),
         kit.Tooltip{id="tray-tooltip",edge="top",bar_size=-8,left=0,width="100%",height=30,padding=3,visible=ui.bind("bead.desktop.tray.tooltip.visible"),
             ui.Text{text=ui.bind("bead.desktop.tray.tooltip"),height=24,width="100%",font_size=13,color="onSurface"},
         },
@@ -181,7 +170,6 @@ return {id="title",title="Title",icon="title",category="bar",data={topics={},act
             table.insert(row,ui.Row(content))
             if centered and show_text then
                 table.insert(row,trace(props.instance.iid))
-                table.insert(row,title_tooltip(title_text,shown))
             end
             table.insert(row,kit.Tooltip{id="tray-tooltip",edge="top",bar_size=-8,left=0,width="100%",height=30,padding=3,visible=ui.bind("bead.desktop.tray.tooltip.visible"),
                 ui.Text{text=ui.bind("bead.desktop.tray.tooltip"),height=24,width="100%",font_size=13,color="onSurface"}})
