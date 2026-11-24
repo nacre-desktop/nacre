@@ -283,6 +283,8 @@ pub(super) struct WallpaperHistory {
     pool_ready: bool,
     sleeping: bool,
     selection_stable: bool,
+    /// Published as `next_rotation_ms`; set by the rotation task each time it re-plans.
+    pub(super) next_rotation_ms: Option<u64>,
 }
 struct PreviousTraversal {
     target: String,
@@ -577,11 +579,13 @@ pub async fn rotation(hub: Shared, paths: Paths, env: Env) -> Result<()> {
             || (active_wallpaper && settings_ready && pool_ready);
         // N0320: the daemon's `session.state`, paused until logind has been read.
         paused = watch_session && super::session_policy::locked_or_asleep(&hub);
-        super::active_wallpaper::set_rotation_readiness(&hub, pool_ready, paused)?;
         let due = plan.as_ref().map_or(i64::MAX, |plan| {
             (plan.anchor_ms.max(attempted) + plan.interval_ms).max(retry)
         });
         let armed = plan.as_ref().is_some_and(|plan| plan.enabled) && !paused && !blocked;
+        hub.borrow_mut().wallpaper_history.next_rotation_ms =
+            u64::try_from(due).ok().filter(|_| armed && pool_ready);
+        super::active_wallpaper::set_rotation_readiness(&hub, pool_ready, paused)?;
         tokio::select! {
             () = (env.sleep)(due), if armed => {}
             result = changed_wallpaper_state(&mut notices, &hub, &mut active_identity, watch_session) => {

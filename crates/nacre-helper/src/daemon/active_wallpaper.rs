@@ -782,6 +782,7 @@ pub fn initial(hub: &Shared) -> Result<()> {
             outputs: BTreeMap::new(),
             focused_accent: None,
             error: None,
+            next_rotation_ms: None,
         })?,
     )?;
     Ok(())
@@ -815,6 +816,7 @@ pub(super) fn refresh_previous_availability(hub: &Shared) -> Result<()> {
         return Ok(());
     };
     let mut state: WallpaperActive = serde_json::from_value(data)?;
+    state.next_rotation_ms = hub.borrow().wallpaper_history.next_rotation_ms;
     let (pool_ready, sleeping, has_settings, committed_source) = {
         let hub = hub.borrow();
         (

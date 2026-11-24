@@ -506,6 +506,55 @@ async fn disabled_rotation_does_nothing() {
 }
 
 #[tokio::test(flavor = "current_thread")]
+async fn rotation_publishes_its_next_due_time() {
+    let fixture =
+        Fixture::new(json!({"rotationEnabled":true,"rotationMinutes":5,"rotationShuffle":false}));
+    let (hub, _settings) = hub_with_settings(&fixture.paths).await;
+    super::super::session_policy::initial_state(&hub).unwrap();
+    super::super::active_wallpaper::initial(&hub).unwrap();
+    let due = || {
+        hub.borrow()
+            .snapshot(super::super::active_wallpaper::TOPIC)
+            .unwrap()["next_rotation_ms"]
+            .as_i64()
+    };
+    LocalSet::new()
+        .run_until(async {
+            let task = tokio::task::spawn_local(rotation(
+                hub.clone(),
+                fixture.paths.clone(),
+                fixture.env(),
+            ));
+            quiet().await;
+            assert_eq!(due(), None, "paused until logind has been read");
+            session_state(&hub, 1, false, false);
+            fixture.parked(300_000).await;
+            assert_eq!(due(), Some(T0 + 300_000));
+            std::fs::write(fixture.dir.join("fail"), "").unwrap();
+            fixture.advance(300_000);
+            fixture.parked(360_000).await;
+            assert_eq!(
+                due(),
+                Some(T0 + 360_000),
+                "a failed change publishes its retry"
+            );
+            std::fs::remove_file(fixture.dir.join("fail")).unwrap();
+            fixture.advance(360_000);
+            fixture.parked(660_000).await;
+            assert_eq!(
+                due(),
+                Some(T0 + 660_000),
+                "the next interval counts from the change"
+            );
+            session_state(&hub, 2, true, false);
+            fixture.unarmed().await;
+            assert_eq!(due(), None, "nothing is scheduled while locked");
+            task.abort();
+        })
+        .await;
+}
+
+#[tokio::test(flavor = "current_thread")]
 async fn manual_navigation_readiness_tracks_active_and_unavailable_wallpaper() {
     let fixture = Fixture::new(json!({"rotationEnabled":false,"rotationMinutes":5}));
     let (hub, _settings) = hub_with_settings(&fixture.paths).await;

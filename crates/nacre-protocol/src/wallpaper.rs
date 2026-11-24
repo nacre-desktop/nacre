@@ -70,6 +70,11 @@ pub struct WallpaperActive {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(length(max = 256))]
     pub error: Option<String>,
+    /// Unix epoch ms of the next scheduled rotation, so the shell can warm the fade first.
+    /// Absent while rotation is off, paused (locked or asleep) or has fewer than two wallpapers.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(range(min = 0, max = 9007199254740991_u64))]
+    pub next_rotation_ms: Option<u64>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]

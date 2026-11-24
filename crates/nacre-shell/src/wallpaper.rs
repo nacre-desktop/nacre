@@ -2072,6 +2072,7 @@ mod tests {
             outputs: BTreeMap::from([("DP-1".into(), profile.clone())]),
             focused_accent: None,
             error: None,
+            next_rotation_ms: None,
         };
         let expected_pair = profile.clone();
         let socket = root.join("daemon.sock");
@@ -2358,6 +2359,7 @@ mod tests {
             outputs: BTreeMap::from([("DP-1".into(), pair(4))]),
             focused_accent: None,
             error: None,
+            next_rotation_ms: None,
         };
         let publisher = Publisher::new(
             "wallpaper-watch-boot".into(),
@@ -3021,6 +3023,7 @@ mod tests {
             outputs: BTreeMap::from([("DP-1".into(), pair)]),
             focused_accent: None,
             error: None,
+            next_rotation_ms: None,
         }
     }
 }
