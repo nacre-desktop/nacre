@@ -330,6 +330,7 @@ def files(root, home, profile, keyboard, destination, common, *, validate_config
     )
     entry += 'layout { background-color "transparent"; }\n'
     entry += "hotkey-overlay { skip-at-startup; }\n"
+    entry += "gestures { hot-corners { off; }; }\n"  # as config/niri/wallpaper.kdl
     entry += (
         "environment {\n"
         '    NACRE_COMPOSITOR "niri"\n'

@@ -19,3 +19,10 @@ overview {
         color "#00000070"
     }
 }
+
+// The overview opens from Super+Tab; niri's top-left hot corner sits under the bar's logo.
+gestures {
+    hot-corners {
+        off
+    }
+}

@@ -26,6 +26,8 @@ class NiriConfigTests(unittest.TestCase):
             wallpaper,
         )
         self.assertIn("place-within-backdrop true", wallpaper)
+        # The overview opens from Super+Tab only; niri 26.04's top-left hot corner is off.
+        self.assertRegex(wallpaper, r"gestures \{\s*hot-corners \{\s*off\s*\}\s*\}")
 
     def test_tabs_capture_cycle_and_floating_sizes_are_lowered(self):
         generated = config.render(config.load(), backend="niri")
