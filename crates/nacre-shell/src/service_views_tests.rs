@@ -537,6 +537,19 @@ fn calendar_source_recovers_without_overwriting_a_browsed_month() -> Result<()> 
     Ok(())
 }
 
+/// Records the host events a test routes. Background watchers (panels, wallpaper luma,
+/// graphs) send `Model` wakeups at any time, which raced the exact event checks under load.
+fn routed(
+    events: &std::sync::Arc<std::sync::Mutex<Vec<bead::wayland::UiEvent>>>,
+) -> Box<dyn Fn(bead::wayland::UiEvent) + Send + Sync> {
+    let events = events.clone();
+    Box::new(move |event| {
+        if !matches!(event, bead::wayland::UiEvent::Model(_)) {
+            events.lock().unwrap().push(event);
+        }
+    })
+}
+
 #[test]
 fn real_bar_calendar_action_enqueues_a_view_and_audio_scroll_does_not_toggle_it() -> Result<()> {
     use bead::wayland::{SceneSource, UiEvent};
@@ -621,8 +634,7 @@ fn real_bar_calendar_action_enqueues_a_view_and_audio_scroll_does_not_toggle_it(
         .with_shared_desktop(host.clone(), true)?
         .with_popout_trigger()?;
     let events = Arc::new(Mutex::new(Vec::new()));
-    let output = events.clone();
-    runtime.services(Box::new(move |event| output.lock().unwrap().push(event)));
+    runtime.services(routed(&events));
     let regions = runtime.input_regions();
     let prepare = regions
         .iter()
@@ -2883,8 +2895,7 @@ fn status_pill_click_routes_switch_escape_and_reopen() -> Result<()> {
         .with_shared_desktop(host.clone(), true)?
         .with_popout_trigger()?;
     let events = Arc::new(Mutex::new(Vec::new()));
-    let output = events.clone();
-    runtime.services(Box::new(move |event| output.lock().unwrap().push(event)));
+    runtime.services(routed(&events));
     events.lock().unwrap().clear();
 
     runtime.stage(UiEvent::Click {
@@ -3047,8 +3058,7 @@ fn bar_logo_and_super_space_apply_the_same_home_favorites_request() -> Result<()
         crate::reload::Runtime::new(h.session).with_launcher_trigger(memory.clone())?;
     runtime.isolate_state(&std::env::temp_dir().join(format!("n0219-logo-{}", std::process::id())));
     let events = Arc::new(Mutex::new(Vec::new()));
-    let output = events.clone();
-    runtime.services(Box::new(move |event| output.lock().unwrap().push(event)));
+    runtime.services(routed(&events));
     events.lock().unwrap().clear();
     memory
         .lock()
@@ -3106,8 +3116,7 @@ fn owner_key_routes_open_the_launcher_with_routes_and_toggle_like_qml() -> Resul
         .with_launcher_trigger(memory.clone())?
         .with_popout_trigger()?;
     let events = Arc::new(Mutex::new(Vec::new()));
-    let output = events.clone();
-    runtime.services(Box::new(move |event| output.lock().unwrap().push(event)));
+    runtime.services(routed(&events));
     events.lock().unwrap().clear();
     let mut send = |target: &str,
                     method: &str,

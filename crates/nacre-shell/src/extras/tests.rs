@@ -3861,14 +3861,7 @@ fn wallpaper_picker_uses_active_middle_then_visible_query_and_pointer_selection(
         Value::Text("wallpaper:commit:/wallpapers/last.jpg".into()),
         "pointer selection controls the next keyboard activation"
     );
-    // One strand holds stills, animated images and videos together.
-    let all = session
-        .update(BTreeMap::from([(
-            "extras.query".into(),
-            Value::Text(String::new()),
-        )]))?
-        .expect("clearing the search");
-    session.commit(all);
+    // One strand holds stills, animated images and videos together (the query is already empty).
     let behavior_path = root.join("extras/behavior.luau");
     let behavior =
         bead::ui::script::Script::load(&std::fs::read(&behavior_path)?, &behavior_path).unwrap();
