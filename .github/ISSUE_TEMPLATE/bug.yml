@@ -1,0 +1,56 @@
+name: Bug report
+description: Something in Nacre doesn't work as documented.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected and what you saw instead. Screenshots help.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Press Super+W
+        2. Pick a video wallpaper
+        3. ...
+    validations:
+      required: true
+  - type: dropdown
+    id: compositor
+    attributes:
+      label: Compositor
+      options:
+        - nacre-niri
+        - niri
+        - Hyprland
+    validations:
+      required: true
+  - type: dropdown
+    id: distribution
+    attributes:
+      label: Distribution
+      options:
+        - Arch Linux
+        - CachyOS
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: Package versions
+      description: The output of `pacman -Q nacre nacre-niri`.
+    validations:
+      required: true
+  - type: textarea
+    id: report
+    attributes:
+      label: Support report
+      description: |
+        The output of `nacre doctor --report`. Nothing is uploaded; read it before you share it, because free-text log lines can contain paths.
+        For a shell crash, add `journalctl --user -u nacre-shell.service --no-pager -n 50`.
+      render: markdown
