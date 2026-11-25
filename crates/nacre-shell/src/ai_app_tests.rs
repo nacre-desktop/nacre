@@ -142,6 +142,22 @@ fn chats_group_running_first_and_name_the_provider() {
 }
 
 #[test]
+fn an_open_chat_waiting_for_input_is_running_with_a_waiting_badge() {
+    crate::i18n::init();
+    let mut reply = chats_reply();
+    let chats = reply["chats"].as_array_mut().unwrap();
+    assert!(chats[1].get("session").is_none_or(Json::is_null));
+    chats[1]["session"] = json!("ai-general-chat-claude-default-1");
+    let rows = chat_rows(&reply, now() + DAY_MS);
+    assert_eq!(rows.len(), 2);
+    assert!(rows.iter().all(|row| row["running"] == true));
+    assert_eq!(rows[0]["group"], "Running");
+    assert_eq!(rows[1]["group"], "");
+    assert_eq!(rows[0]["working"], true);
+    assert_eq!(rows[1]["working"], false);
+}
+
+#[test]
 fn usage_rows_are_rings_for_windows_and_lines_otherwise() {
     crate::i18n::init();
     let state: AiUsageState = serde_json::from_value(usage()).unwrap();

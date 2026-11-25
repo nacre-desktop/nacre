@@ -202,9 +202,12 @@ pub(crate) fn chat_rows(reply: &Json, now: u64) -> Vec<Json> {
     let Some(list) = parse::<Chats>(reply) else {
         return Vec::new();
     };
+    // Owner 2026-11-25: every chat with an open session is Running, working or waiting for input.
+    let open =
+        |c: &nacre_protocol::ai_app::Chat| c.state == ChatState::Running || c.session.is_some();
     let group = |c: &nacre_protocol::ai_app::Chat| {
         let updated = (c.updated_at.max(0.) * 1000.) as u64;
-        if c.state == ChatState::Running {
+        if open(c) {
             0
         } else if now.saturating_sub(updated) < DAY_MS {
             1
@@ -237,7 +240,7 @@ pub(crate) fn chat_rows(reply: &Json, now: u64) -> Vec<Json> {
                 None => c.project.clone(),
             };
             json!({"key":c.id,"title":c.title,"provider":c.provider,"project":project,"age":age,
-                "running":c.state==ChatState::Running,"resumable":c.resumable,"group":heading.unwrap_or_default()})
+                "running":open(c),"working":c.state==ChatState::Running,"resumable":c.resumable,"group":heading.unwrap_or_default()})
         })
         .collect()
 }
