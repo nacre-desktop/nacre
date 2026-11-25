@@ -1145,7 +1145,9 @@ async fn run(config: Config, shared: Arc<Shared>, mut commands: mpsc::Receiver<C
                             match message {
                                 Message::Snap{topic,seq,data}=>{
                                     if !session.available.contains(&topic){continue;}
-                                    registry_dirty |= config.topics.iter().any(|name| name == "daemon");
+                                    // Only the registry topic itself signals new methods (as for
+                                    // Patch below); other snapshots must not re-read the registry.
+                                    registry_dirty |= topic == "daemon";
                                     if apply_snapshot(&shared,&mut mirrors,&session.boot,&topic,seq,data).is_err(){break;}
                                 },
                                 Message::Patch{topic,base,seq,data}=>{

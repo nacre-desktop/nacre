@@ -865,6 +865,106 @@ async fn early_registry_refresh_with_status_reading_subscriber_keeps_link_live()
     client.stop().await.unwrap();
 }
 
+/// Only the `daemon` topic signals new methods: a snapshot of any other topic
+/// must not trigger the ~150 KB `daemon.status` read, a `daemon` patch must.
+#[tokio::test(flavor = "current_thread")]
+async fn a_non_daemon_snapshot_does_not_reread_the_method_registry() {
+    let lab = Lab::new();
+    let listener = lab.bind();
+    let (reads, mut read_rx) = tokio::sync::mpsc::unbounded_channel();
+    let (out, mut out_rx) = tokio::sync::mpsc::unbounded_channel::<Message>();
+    let topics = ["daemon", "aux"].map(String::from);
+    let advertised = topics.clone();
+    let replies = out.clone();
+    let server = tokio::spawn(async move {
+        let (stream, _) = listener.accept().await.unwrap();
+        let (read, mut writer) = stream.into_split();
+        let mut reader = framing::Reader::new(BufReader::new(read));
+        assert!(matches!(next(&mut reader).await, Message::Hello { .. }));
+        framing::write(
+            &mut writer,
+            &Message::Welcome {
+                proto: 1,
+                min: 1,
+                boot: "boot".into(),
+                methods: nacre_protocol::core_methods(),
+                topics: advertised.iter().map(|t| (t.clone(), 1)).collect(),
+                frame_ms: None,
+            },
+        )
+        .await
+        .unwrap();
+        // A separate writer lets the test inject messages while this loop reads.
+        tokio::spawn(async move {
+            while let Some(message) = out_rx.recv().await {
+                if framing::write(&mut writer, &message).await.is_err() {
+                    break;
+                }
+            }
+        });
+        while let Some(message) = reader.next().await.unwrap() {
+            match message {
+                Message::Sub { topics } => {
+                    for topic in topics {
+                        let data = serde_json::json!({});
+                        let snap = Message::Snap {
+                            topic,
+                            seq: 0,
+                            data,
+                        };
+                        replies.send(snap).unwrap();
+                    }
+                }
+                Message::Call { id, m, .. } => {
+                    assert_eq!(m, "daemon.status");
+                    reads.send(()).unwrap();
+                    let ok = serde_json::json!({"boot":"boot","topics":advertised,"methods":nacre_protocol::core_methods()});
+                    let reply = Reply::Ok { ok };
+                    replies.send(Message::Ret { id, reply }).unwrap();
+                }
+                _ => {}
+            }
+        }
+    });
+    let client = Client::start(Config::new(lab.socket(), topics.to_vec())).unwrap();
+    tokio::time::timeout(Duration::from_secs(2), read_rx.recv())
+        .await
+        .expect("the first registry read")
+        .unwrap();
+    // The registry backoff starts at 50 ms, so a stray read would land inside this window.
+    let quiet = Duration::from_millis(500);
+    tokio::time::sleep(Duration::from_millis(100)).await;
+    let data = serde_json::json!({"n": 1});
+    out.send(Message::Snap {
+        topic: "aux".into(),
+        seq: 1,
+        data,
+    })
+    .unwrap();
+    assert!(
+        tokio::time::timeout(quiet, read_rx.recv()).await.is_err(),
+        "a non-daemon snapshot re-read the method registry"
+    );
+    let data = serde_json::json!({"generation": 2});
+    out.send(Message::Patch {
+        topic: "daemon".into(),
+        base: 0,
+        seq: 1,
+        data,
+    })
+    .unwrap();
+    tokio::time::timeout(Duration::from_secs(2), read_rx.recv())
+        .await
+        .expect("a daemon patch must trigger one registry read")
+        .unwrap();
+    assert!(
+        tokio::time::timeout(quiet, read_rx.recv()).await.is_err(),
+        "exactly one read follows the daemon patch"
+    );
+    client.stop().await.unwrap();
+    server.await.unwrap();
+}
+
 async fn next(reader: &mut framing::Reader<BufReader<tokio::net::unix::OwnedReadHalf>>) -> Message {
     tokio::time::timeout(Duration::from_secs(5), reader.next())
         .await
