@@ -146,8 +146,10 @@ fn fingerprint(methods: &BTreeMap<String, Method>) -> u64 {
 fn gates_methods(topic: &str, old: &Value, new: &Value) -> bool {
     let changed = |field: fn(&Value) -> &Value| field(old) != field(new);
     let outputs = |value: &Value| value["outputs"].as_object().is_some_and(|o| o.is_empty());
-    changed(|v| &v["available"])
-        || changed(|v| &v["health"]["available"])
+    // Leased dashboard topics flip availability on every panel open and close (row 73), and no
+    // method gates on it; a method that ever does needs its own field here.
+    let leased = topic.starts_with("dashboard.");
+    !leased && (changed(|v| &v["available"]) || changed(|v| &v["health"]["available"]))
         || topic == "compositor"
             && (changed(|v| &v["backend"])
                 || changed(|v| &v["capabilities"])
@@ -1146,6 +1148,21 @@ mod tests {
         });
     }
     thread_local!(pub(super) static REBUILDS: std::cell::Cell<u64> = const { std::cell::Cell::new(0) });
+    #[test]
+    fn leased_dashboard_availability_does_not_rebuild_the_registry() {
+        let mut hub = Hub::new("fixture".into(), false, Duration::from_millis(16));
+        let player = |available: bool| json!({"health":{"available":available},"players":{}});
+        hub.publish("dashboard.player", player(false)).unwrap();
+        hub.publish("dashboard.system", json!({"available":false}))
+            .unwrap();
+        let built = REBUILDS.with(std::cell::Cell::get);
+        for available in [true, false, true] {
+            hub.publish("dashboard.player", player(available)).unwrap();
+            hub.publish("dashboard.system", json!({"available":available}))
+                .unwrap();
+        }
+        assert_eq!(REBUILDS.with(std::cell::Cell::get), built);
+    }
     #[test]
     fn registry_is_rebuilt_only_when_a_service_or_method_gate_changes() {
         let mut hub = Hub::new("fixture".into(), false, Duration::from_millis(16));
