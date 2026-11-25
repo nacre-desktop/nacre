@@ -171,7 +171,8 @@ def main():
             for arm in ARMS
         )
 
-    pins = next(iter(runs.values()))[0].get("pins", {})
+    # The Nacre arm's stage names the measured commit (Noctalia arms may be reused).
+    pins = (runs.get("nacre") or next(iter(runs.values())))[0].get("pins", {})
     counts = "/".join(str(len(runs.get(arm, []))) for arm in ARMS)
     row = (
         f"| {args.label} | {counts} | {pins.get('nacre', '?')[:9]} | {pins.get('noctalia_tag', '?')} "

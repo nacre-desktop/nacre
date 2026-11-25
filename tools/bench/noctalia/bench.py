@@ -552,7 +552,10 @@ class Arm:
 
     def base_env(self):
         keep = ("LANG", "LC_ALL", "TERM", "USER", "LOGNAME", "SHELL")
-        keep += ("BEAD_WORKER_BUSY_MIN_PCT",)  # diagnostic arms only (Bead B0388)
+        keep += (
+            "BEAD_WORKER_BUSY_MIN_PCT",
+            "BEAD_RENDERER",
+        )  # B0388 diagnostics; GPU arm
         env = {key: value for key, value in os.environ.items() if key in keep}
         libs = self.stage / "noctalia/lib"  # a kept build's libraries the host upgraded
         if self.arm == "noctalia" and libs.is_dir():

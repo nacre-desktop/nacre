@@ -15,6 +15,7 @@ History and the original method: [N0300](noctalia-vs-nacre-benchmark-20261112.md
 | dev-2 2026-11-13 (`short`, software rendering) | 2/2 | 26fd8a62e | v5.4.1 | 0.074 / 0.063 | 0.117 / 0.194 | 9.2 / 10.5 | 13.4 / 9.0 | 124.4 / 110.0 | n/a | 190 / 110 | 122 / 58 | n/a | n/a | n/a | +2.6 / +25.7 | 0.159 / 0.262 | 17 / 13 | 0 / 0 | n/a | n/a | n/a |
 | desktop 2026-11-16, 3/3 `chunk` at f3997131c (Bead 285aede6) | 3/3 | f3997131c | v5.4.1 | 0.127 / 0.034 | 0.023 / 0.028 | 6.8 / 4.2 | 1.1 / 5.1 | 2.7 / 6.3 | 2.9 / 0.0 | 133 / 116 | 63 / 57 | 101 / 0 | 234 / 116 | 211 / 158 | +1.7 / +42.8 | 0.133 / 0.028 | 19 / 12 | 0 / 0 | -0.23 / -0.13 | +0.13 / -0.02 | +7.9 / -1.4 |
 | desktop 2026-11-25 at 37939e8ae (Bead a797e500), with lease drop | 3/3 | 37939e8ae | v5.4.1 | 0.122 / 0.032 | 0.022 / 0.027 | 6.8 / 4.2 | 1.2 / 3.3 | 3.0 / 4.6 | 2.9 / 0.0 | 129 / 117 | 64 / 58 | 101 / 0 | 230 / 117 | 204 / 163 | +0.8 / +45.7 | 0.132 / 0.017 | 18 / 12 | 0 / 0 | +0.04 / -0.16 | +0.58 / -0.21 | +35 / -13 |
+| desktop 2026-11-25 at a4c7a110b (Bead 4e25ba4b), warm parking | 3/3 | a4c7a110b | v5.4.1 | 0.122 / 0.030 | 0.022 / 0.026 | 6.8 / 4.2 | 1.2 / 3.2 | 3.0 / 4.5 | 2.9 / 0.0 | 129 / 113 | 64 / 58 | 101 / 0 | 230 / 113 | 204 / 162 | +0.8 / +50.1 | 0.132 / 0.018 | 18 / 12 | 0 / 0 | +0.04 / -0.27 | +0.58 / -0.19 | +35 / -12 |
 
 Columns: CPU is % of one core. "Idle", "Interaction", PSS, unreclaimable and
 GPU buffers are shell + daemon (Noctalia has no daemon). "Stack" adds the nested
@@ -41,6 +42,7 @@ control center stands in for Nacre's dashboard and control panel; Nacre's sessio
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | desktop 2026-11-16 at f3997131c | 3/3 | f3997131c | 19 / 12 (0 / 0) | 19 / 12 (0 / 0) | n/a | n/a | n/a |
 | desktop 2026-11-25 at 37939e8ae | 3/3 | 37939e8ae | 18 / 12 (0 / 0) | 18 / 12 (0 / 0) | 18 / 12 (0 / 0) | 18 / 12 (0 / 0) | 18 / 12 (0 / 0) |
+| desktop 2026-11-25 at a4c7a110b | 3/3 | a4c7a110b | 18 / 12 (0 / 0) | 18 / 12 (0 / 0) | 18 / 12 (0 / 0) | 18 / 12 (0 / 0) | 18 / 12 (0 / 0) |
 
 `summarize.py` prints both rows and the row 73 gate: Nacre at or under Noctalia on
 idle CPU, idle wakeups, launch, PSS+GPU before and after first use, interaction
@@ -97,6 +99,23 @@ Row notes:
   MiB and shell +19.4 MiB from first use. All five panels open in 12 ms against
   18 ms. Noctalia's interaction draws +0.58 W over its no-shell baseline (35 J);
   Nacre's is within baseline noise.
+- **Desktop 2026-11-25 at a4c7a110b**: N0231 warm parking (Bead B0392) and
+  Shell's control-centre and sound lease drops on top of the row above; three
+  Nacre arms 03:02-03:34 with `BEAD_WORKER_BUSY_MIN_PCT=0` (a few log lines a
+  minute), the same three Noctalia arms. Panels stay parked (launcher 23 warm
+  opens to 1 cold, dashboard 11 to 1; warm first content 18 ms against 42-55 ms
+  cold), but interaction CPU only moves 3.27 to 3.21 %: a warm reopen still
+  costs a Resume relayout and model jobs, and the bar's eager Luau animations
+  (`bar.thread.fade`, title width) rebuild the whole bar every frame. Parked
+  panels add 4.4 MiB of PSS.
+- **GPU bar check** (not a row; one Nacre arm on the same stage with
+  `BEAD_RENDERER=femtovg-gl`, so the bar draws through Bead's GL presenter on
+  the AMD iGPU and panels stay on CPU): interaction CPU 3.30 against 3.21 %,
+  shell main unchanged (0.85 against 0.83 %), but PSS+GPU 204 / 237 MiB before
+  and after first use against 113 / 162 (Mesa: 37 MiB of GPU buffers and +37
+  MiB PSS), so it would fail the memory gate against Noctalia's 204. The bar
+  is mostly static; Nacre's CPU drawing is in panels and animations. GPU
+  drawing is off the v0.1 table.
 
 Pins: Noctalia v5.4.1 is `815aebe1cfd79c9a18197441eea92f0b275035fc` (built from
 source in the row's stage); stock niri is the distribution package of the day
