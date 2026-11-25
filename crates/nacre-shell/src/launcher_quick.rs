@@ -32,12 +32,15 @@ const ITEMS: [(&str, &str, &str, &str); 3] = [
 /// Its topics live in `control` alone, so parking it there (row 73) releases every lease.
 pub struct Quick {
     control: ControlCenter,
+    /// A prepared launcher is closed from birth; only a shown one freezes while closed.
+    shown: std::cell::Cell<bool>,
 }
 
 impl Quick {
     pub fn new(client: Option<Client>, topics: Vec<(&'static str, Arc<dyn Source>)>) -> Self {
         Self {
             control: ControlCenter::new(client, topics, None, Vec::new()),
+            shown: std::cell::Cell::new(false),
         }
     }
     pub(crate) fn control(&self) -> &ControlCenter {
@@ -68,7 +71,10 @@ impl Quick {
     }
 
     pub fn project(&self, stores: &Stores) -> BTreeMap<String, Value> {
-        if stores.get("panel.open") == Some(&Value::Bool(false)) {
+        if stores.get("panel.open") == Some(&Value::Bool(true)) {
+            self.shown.set(true);
+        }
+        if self.shown.get() && stores.get("panel.open") == Some(&Value::Bool(false)) {
             // Keep the last visible frame intact during the closing animation; the closed
             // Runtime has parked the leases (row 73).
             return BTreeMap::new();

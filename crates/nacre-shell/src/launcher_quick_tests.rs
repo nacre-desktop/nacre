@@ -108,7 +108,7 @@ fn only_a_valid_count_is_projected_and_closing_does_not_rewrite_the_last_frame()
         Some(json!({"health": health(true, false), "do_not_disturb": false})),
         Some(json!({"health": health(true, false), "count": 4})),
     );
-    let out = quick.project(&Stores::default());
+    let out = quick.project(&stores(&[("panel.open", Value::Bool(true))]));
     assert_eq!(out["launcher.updates.count"], Value::Number(4.));
     let closed = quick.project(&stores(&[("panel.open", Value::Bool(false))]));
     assert!(
@@ -169,4 +169,21 @@ fn optional_prefix_hints_follow_capability_publications() {
     let second = quick.project(&Stores::default());
     assert_eq!(second["launcher.hint_ai"], Value::Bool(false));
     assert_eq!(second["launcher.hint_brain"], Value::Bool(true));
+}
+
+#[test]
+fn a_never_shown_launcher_projects_its_rows_and_freezes_only_after_one_open() {
+    let quick = make(
+        Some(json!({"health": health(true, false), "night_light": {"enabled": false}})),
+        None,
+        None,
+    );
+    let closed = stores(&[("panel.open", Value::Bool(false))]);
+    assert_eq!(
+        rows(&quick.project(&closed)).len(),
+        3,
+        "prepared launcher bakes its rows"
+    );
+    quick.project(&stores(&[("panel.open", Value::Bool(true))]));
+    assert!(quick.project(&closed).is_empty());
 }
