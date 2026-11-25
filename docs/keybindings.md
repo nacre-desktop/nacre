@@ -7,6 +7,17 @@ the launcher and **Settings → Keyboard & mouse → Keyboard shortcuts**. The f
 generated tables, including Hyprland's resize mode, are in
 [usage](usage.md#shortcut-reference).
 
+## How shortcuts are organized
+
+- **Super+key** opens or toggles the main thing for that letter.
+- **Super+Shift+key** acts on the window (moves it), or opens the second thing
+  on that letter: Browser on B, Widgets on W, Capture an area on S, New AI chat
+  on A.
+- **Super+Ctrl+key** navigates or manages structure: workspaces, tabs, desks,
+  menus, palettes and detaching a panel.
+- **Super+Alt+key** resizes or adjusts.
+- **Super+Ctrl+Shift+key** moves a window across that structure.
+
 ## Everyday
 
 | Key | Action |
