@@ -17,6 +17,7 @@ generated tables, including Hyprland's resize mode, are in
   menus, palettes and detaching a panel.
 - **Super+Alt+key** resizes or adjusts.
 - **Super+Ctrl+Shift+key** moves a window across that structure.
+- **Shift** with a navigation key reverses the direction (Tab / Shift+Tab).
 
 ## Everyday
 
