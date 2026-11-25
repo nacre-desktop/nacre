@@ -10254,24 +10254,6 @@ impl SceneSource for Runtime {
                             ("bluetooth.reveal".into(), bead::core::Value::Bool(false)),
                         ]))?
                     }
-                    "escape"
-                        if !self.dock_status.is_empty()
-                            && self.session.stores.get("cc.page")
-                                != Some(&bead::core::Value::Text("home".into())) =>
-                    {
-                        self.session.update(BTreeMap::from([
-                            ("cc.page".into(), bead::core::Value::Text("home".into())),
-                            ("cc.scroll".into(), bead::core::Value::Number(0.)),
-                            (
-                                "network.secret".into(),
-                                bead::core::Value::Text(String::new()),
-                            ),
-                            (
-                                "bluetooth.secret".into(),
-                                bead::core::Value::Text(String::new()),
-                            ),
-                        ]))?
-                    }
                     // Esc closes an open Settings drop-down before anything else.
                     "escape"
                         if matches!(
@@ -10292,6 +10274,9 @@ impl SceneSource for Runtime {
                             .unwrap_or_default();
                         self.session.update(changes)?
                     }
+                    // Owner 2026-11-25: a dock page closes as it is, with no step back to the overview first.
+                    // Bead closes the panel and then hands the view the key, so a page change here swapped a
+                    // status variant or a sub-page for the overview mid-slide; the next plain open shows it.
                     "escape" if self.session.stores.get("panel.open").is_some() => {
                         // A half-typed password never outlives its panel.
                         let mut values = std::collections::BTreeMap::from([(

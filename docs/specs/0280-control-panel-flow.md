@@ -38,12 +38,16 @@ round (265e4a9ad) go away: the panel node is the body.
   that is already on screen closes the panel; a click on another icon switches to that section. The
   bar cannot see the dock's page, so the dock judges the repeat (`reload.rs`, the dock's model arm).
   The same rule toggles the `nacre controls <page>` IPC route. An unknown detail id shows the overview
-  but keeps `cc.page=detail`, so Escape there goes "back" to the overview first and closes on the second press.
-- Overview tile chevron, the volume end button, the battery header, the Notifications heading: open
-  the detail page in place (`detail` action). The panel does not move or resize.
-- Back arrow or Escape on a detail page: back to the overview. Escape on the overview: close.
-- Close: Escape, click outside (catcher), lip click (toggle), or pointer leave after the grace
-  period (hover-opened only, below). Closing resets to the overview.
+  but keeps `cc.page=detail`.
+- Overview rows (owner 2026-11-25, no chevrons): on Wi-Fi and Bluetooth the switch toggles and the rest
+  of the row opens the page; a toggle-only row toggles from anywhere on it; VPN, Power mode and the
+  page and action rows open or act from anywhere on it. The volume end button, the battery header and
+  the Notifications heading also open their page in place (`detail` action). The panel does not move
+  or resize. The Wi-Fi and Bluetooth pages have no radio switch of their own.
+- The "‹ Control centre" pill (or the back arrow) on a page: back to the overview.
+- Close: Escape (on any page, owner 2026-11-25: it closes on the page it shows, with no step back
+  first), click outside (catcher), lip click (toggle), or pointer leave after the grace period
+  (hover-opened only, below). The next plain open shows the overview.
 
 ## Hover-close policy
 
@@ -108,7 +112,8 @@ Evidence per item:
   judges the repeat in `reload.rs`), 16c413295 (Updates section). Tests `status_pill_click_routes_switch_escape_and_reopen`
   (service_views_tests, the bar emits `CompanionSelect` then `CompanionModel` per icon; test b) and
   `a_pointer_leave_never_closes_the_dock_by_itself` (switch keeps it open, repeat closes it).
-- Overview chevrons and back arrow open and leave a page in place: `docked_pages_keep_the_surface_route_actions_and_return_home`.
+- Overview rows and the back pill open and leave a page in place: `tiles_dispatch_host_actions_and_the_detail_page_opens_in_place`,
+  `docked_pages_keep_the_surface_route_actions`; Escape closes on the page shown: `escape_closes_the_dock_on_the_page_it_shows`.
 - Hover-close 450 ms and the press pin: Bead 56a46431 (`DOCK_EXIT_MS` 450, `edge_panel_pin`), on main via the pin
   dc014a640 (now 285aede6). Guarded in Bead by `docked_panels_get_a_longer_exit_grace_and_reentry_cancels_the_close`
   and `pinning_clears_hover_ownership_and_its_pending_exit`; Nacre's side (test d) is
@@ -129,7 +134,7 @@ QML sidebar is not re-captured here.
 2. Click each top-right status icon (Wi-Fi, Bluetooth, sound, battery, updates, notifications): each opens its own section, with the panel size unchanged.
 3. With a section open, click a different icon: it switches. Click the icon of the open section: the panel closes.
 4. Open the panel by hover only and move the pointer off: it closes about 0.5 s after leaving both dock and lip, and not sooner. Move back within that time: it stays.
-5. Hover-open, then click inside (a tile chevron): the panel pins and stays open after the pointer leaves; Escape goes back to the overview, Escape again closes.
+5. Hover-open, then click inside (the Bluetooth row): the panel pins and stays open after the pointer leaves; Escape closes it on the Bluetooth page, and the next hover opens the overview.
 6. Open Bluetooth and move the pointer around the list: the panel never shrinks or closes by itself.
 7. Updates icon: the page lists the pending packages with old and new versions; Refresh and Update now respond.
 8. The lip tab sits on the panel's inner edge while it is open and lights on hover; after close, the next lip hover opens the overview again, not the last section.

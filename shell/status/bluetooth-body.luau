@@ -93,9 +93,11 @@ if visible then
                 font_size=T.icons.medium*4/3,width=T.icons.medium*4/3,height=24,shrink=0,color=scanning and "primary" or (scan_on and "onSurface" or "onSurfaceVariant")},
             ui.Text{id="scan-label",text=ui.bind("bluetooth.scan_label"),height=24,width=inner_w-T.icons.medium*4/3-T.spacing.xs,text_align="center",font_size=CAPTION,
                 color=scan_on and "onSurface" or "onSurfaceVariant"}}})
-    if embedded then table.insert(head,ui.Box{id="heading-space",grow=1,height=1}) end
-    table.insert(head,kit.Switch{id="bluetooth-power",checked=ui.bind("bluetooth.power_checked"),aria_label=ui.tr("bead.panel.bluetooth-radio"),
-        on_activate=enabled and ui.action("bluetooth.toggle_power") or nil})
+    -- docked, the control centre's Bluetooth row switch is the power switch
+    if not embedded then
+        table.insert(head,kit.Switch{id="bluetooth-power",checked=ui.bind("bluetooth.power_checked"),aria_label=ui.tr("bead.panel.bluetooth-radio"),
+            on_activate=enabled and ui.action("bluetooth.toggle_power") or nil})
+    end
 end
 add(ui.Row(head),36)
 if visible and get("bluetooth.power_message")~="" then

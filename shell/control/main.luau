@@ -82,14 +82,18 @@ local function header(title,back,tools,arrow)
     local row={id="header",width=INNER,height=HEADER,gap=HEADER_GAP,align="center"}
     if back and (arrow or not wide) then row[#row+1]=tool("back","arrow_back",ui.tr("bead.panel.control-back"),back)
     elseif back then
-        -- The "‹ Control centre" chip: returns to the overview (or, on the catalog, to the editor).
+        -- The "‹ Control centre" pill: returns to the overview (or, on the catalog, to the editor). It is as tall as the
+        -- title line, so both centre on the row; the chevron's own side bearing is most of its left inset.
         local label=ui.tr("bead.panel.control-overview")
-        local chip_w=textw(label,CAPTION)+T.spacing.xl+T.spacing.compact
-        row[#row+1]=kit.Button{id="back",width=chip_w,height=30,padding=0,radius=15,shrink=0,fill=ui.alpha("onSurface",.07),hover_fill=ui.alpha("onSurface",.12),
+        local icon=T.icons.medium*4/3
+        local text_w=textw(label,CAPTION)+T.spacing.xs
+        local chip_w=T.spacing.xs+icon+2+text_w+T.spacing.sm
+        row.gap=T.spacing.md
+        row[#row+1]=kit.Button{id="back",width=chip_w,height=HEAD,padding=0,radius=T.radii.full,shrink=0,fill=ui.alpha("onSurface",.07),hover_fill=ui.alpha("onSurface",.12),
             focus_ring=false,aria_label=ui.tr("bead.panel.control-back"),on_activate=back,
-            ui.Row{id="back-row",width=chip_w,height=30,gap=T.spacing.xs,align="center",justify="center",
-                glyph("back-icon","chevron_left","onSurfaceVariant",14*4/3),
-                ui.Text{id="back-label",text=label,width=chip_w-T.spacing.xl-T.spacing.xs,height=18,shrink=0,font_size=CAPTION,font_weight=500,color="onSurfaceVariant"}}}
+            ui.Row{id="back-row",width=chip_w,height=HEAD,padding_left=T.spacing.xs,align="center",
+                glyph("back-icon","chevron_left","onSurfaceVariant",icon),
+                ui.Text{id="back-label",text=label,width=text_w,height=18,shrink=0,font_size=CAPTION,font_weight=500,color="onSurfaceVariant"}}}
     end
     row[#row+1]=ui.Text{id="title",text=title,height=HEAD,grow=1,shrink=1,font_size=T.text.headline*4/3,font_weight=500,color="onSurface"}
     for _,item in ipairs(tools or {}) do row[#row+1]=item end
@@ -179,36 +183,29 @@ local function chip(id,label,icon,action,on,count,h)
             ui.Text{id=id.."-label",text=label,width=text_w,height=18,shrink=0,font_size=CAPTION,font_weight=500,color=ink}},
         badge},w
 end
--- A section row on a hairline: icon, name over detail, then a switch, a chevron and a count badge as given. Only the
--- row's own button reacts to the pointer; nothing is boxed, and the hairline is part of the row's height (h + 1).
+-- A section row on a hairline: icon, name over detail, then one right-hand column as wide as the switch for the switch
+-- or a count badge. The main button is the whole row but the switch, so a click anywhere on it acts, and the switch
+-- keeps its own focus target. Nothing is boxed; the hairline is part of the row's height (h + 1).
 local RULE=ui.alpha("onSurface",.07)
+local SWITCH=T.spacing.huge+T.spacing.lg -- kit.Switch's width
 local function sect_row(p,w,h)
-    local trail,n=0,1
-    for _,part in ipairs({p.switch and 46 or false,p.badge and 22 or false,p.go and HEAD or false}) do
-        if part then trail=trail+part n=n+1 end
-    end
-    local gap=T.spacing.xs
-    local main_w=w-trail-(n-1)*gap
+    local main_w=p.switch and w-SWITCH or w
     local icon_px=T.icons.large*4/3
-    local text_w=main_w-2-icon_px-2-T.spacing.md
+    local text_w=w-SWITCH-T.spacing.xs-(icon_px+2)-2*T.spacing.md
     local lines={ui.Text{id="label",text=p.label,width=text_w,height=22,font_size=BODY,font_weight=500,color="onSurface"}}
     if p.detail and p.detail~="" then lines[2]=ui.Text{id="detail",text=p.detail,width=text_w,height=18,font_size=CAPTION,color="onSurfaceVariant"} end
-    local row={id="row",width=w,height=h,gap=gap,align="center",
-        kit.Button{id="main",width=main_w,height=h,padding=0,padding_left=2,radius=T.radii.small,fill="transparent",hover_fill=ui.alpha("onSurface",.05),
-            aria_label=p.label,on_activate=p.main,
-            ui.Row{id="main-row",width=main_w,height=h,padding_left=2,gap=T.spacing.md,align="center",
-                glyph("icon",p.icon,p.on and "primary" or "onSurfaceVariant"),
-                ui.Column(table.move(lines,1,#lines,1,{id="text",width=text_w,height=#lines*20,shrink=0}))}}}
-    if p.switch then row[#row+1]=kit.Switch{id="switch",checked=p.on==true,aria_label=p.label,on_activate=p.toggle} end
+    local inner={id="main-row",width=main_w,height=h,padding_left=T.spacing.xs,gap=T.spacing.md,align="center",
+        glyph("icon",p.icon,p.on and "primary" or "onSurfaceVariant"),
+        ui.Column(table.move(lines,1,#lines,1,{id="text",width=text_w,height=lines[2] and 40 or 22,shrink=0}))}
     if p.badge then
-        local text=tostring(p.badge)
-        row[#row+1]=ui.Box{id="badge",width=22,height=18,radius=T.radii.full,fill="error",align="center",justify="center",shrink=0,
-            ui.Text{id="count",text=text,width=22,height=18,text_align="center",font_size=T.text.caption,font_weight=600,color="onError"}}
+        inner[#inner+1]=ui.Box{id="badge-column",width=SWITCH,height=h,align="center",justify="center",shrink=0,
+            ui.Box{id="badge",width=22,height=18,radius=T.radii.full,fill="error",align="center",justify="center",shrink=0,
+                ui.Text{id="count",text=tostring(p.badge),width=22,height=18,text_align="center",font_size=T.text.caption,font_weight=600,color="onError"}}}
     end
-    if p.go then
-        row[#row+1]=kit.IconButton{id="detail",text="chevron_right",aria_label=p.go_label or p.label,width=HEAD,height=HEAD,padding=0,radius=T.radii.full,shrink=0,
-            font_size=17*4/3,fill="transparent",hover_fill=ui.alpha("onSurface",.08),color="onSurfaceVariant",on_activate=p.go}
-    end
+    local row={id="row",width=w,height=h,align="center",
+        kit.Button{id="main",width=main_w,height=h,padding=0,radius=T.radii.small,fill="transparent",hover_fill=ui.alpha("onSurface",.05),
+            aria_label=p.aria or p.label,on_activate=p.main,ui.Row(inner)}}
+    if p.switch then row[#row+1]=kit.Switch{id="switch",checked=p.on==true,aria_label=p.label,on_activate=p.toggle} end
     return ui.Column{id=p.id,width=w,height=h+1,gap=0,shrink=0,ui.Row(row),ui.Box{id="rule",width=w,height=1,shrink=0,fill=RULE}}
 end
 local function build_tile(t,w,h,embedded)
@@ -240,16 +237,16 @@ local function build_tile(t,w,h,embedded)
             ui.Box{id="rule",width=w,height=1,shrink=0,fill=RULE}}
     elseif t.kind=="button" then
         local action=t.open and ui.action("cc.do","open:"..t.open) or s.press and act(t,"press") or opener
-        return sect_row({id="tile-"..t.id,icon=t.icon,label=label,main=action,go=action,go_label=label,
+        return sect_row({id="tile-"..t.id,icon=t.icon,label=label,main=action,
             badge=t.id=="updates" and get("cc.updates")>0 and get("cc.updates") or nil},w,h)
     end
-    -- A toggle: the row's main press toggles (or opens the page when it cannot); a switch shows the state, and only
-    -- rows with a detail page (Wi-Fi, Bluetooth, VPN, Power mode) get the chevron.
+    -- A toggle: the switch shows and flips the state. Rows with a detail page too (Wi-Fi, Bluetooth, VPN, Power mode)
+    -- open it from the rest of the row; the others toggle from anywhere on it (or open the page when they cannot).
     local split=(t.dock or t.navigate) and opener or nil
     local toggles=s.toggle and not t.navigate
     return sect_row({id="tile-"..t.id,icon=s.icon or t.icon,label=label,detail=s.status,on=s.on==true,
-        main=(t.navigate or not s.toggle) and opener or act(t,"toggle"),switch=toggles or nil,toggle=toggles and act(t,"toggle") or nil,
-        go=split,go_label=ui.tr("bead.panel.control-details",{name=label})},w,h)
+        main=split or toggles and act(t,"toggle") or opener,switch=toggles or nil,toggle=toggles and act(t,"toggle") or nil,
+        aria=split and ui.tr("bead.panel.control-details",{name=label})},w,h)
 end
 local notice=require("../ui/components/notice-row")
 local NOTICE_H=notice.height

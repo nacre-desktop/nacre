@@ -1263,6 +1263,8 @@ fn control_center_pages_match_goldens() -> bead_test::Result<()> {
         ] {
             let mut out = base();
             out.insert("cc.detail".into(), Value::Text(detail.into()));
+            // The Updates row's count badge sits in the switch column.
+            out.insert("cc.updates".into(), Value::Number(3.));
             let mut h = harness(out, page, scale)?;
             let ids = node_ids(&h);
             match page {
@@ -1505,6 +1507,7 @@ fn dragging_a_tile_over_another_reorders_the_draft_and_a_new_press_starts_a_new_
 
 #[test]
 fn tiles_dispatch_host_actions_and_the_detail_page_opens_in_place() -> bead_test::Result<()> {
+    crate::i18n::init();
     let mut h = harness(base(), "home", 1.)?;
     let action = |h: &Harness, part: &str| {
         let node = h
@@ -1515,24 +1518,34 @@ fn tiles_dispatch_host_actions_and_the_detail_page_opens_in_place() -> bead_test
             .unwrap_or_else(|| panic!("no node {part}"));
         (node.action.clone(), node.action_arg.clone())
     };
-    // D4: the Wi-Fi tile's main press toggles and its split chevron opens the page; a toggle tile toggles.
-    assert_eq!(
-        action(&h, "tile-network.row.main"),
+    // Owner 2026-11-25: no chevrons. On Wi-Fi and Bluetooth the switch toggles and the rest of the row opens the
+    // page; a toggle-only row toggles from anywhere on it; a page or action row opens or acts from anywhere on it.
+    let toggle = |source: &str| {
         (
-            Some("cc.do".into()),
-            Some(Value::Text("toggle:network.wifi".into()))
+            Some(String::from("cc.do")),
+            Some(Value::Text(format!("toggle:{source}"))),
         )
-    );
+    };
+    for (tile, source) in [
+        ("network", "network.wifi"),
+        ("bluetooth", "bluetooth.power"),
+    ] {
+        assert_eq!(
+            action(&h, &format!("tile-{tile}.row.main")),
+            (Some("detail".into()), Some(Value::Text(tile.into())))
+        );
+        assert_eq!(
+            action(&h, &format!("tile-{tile}.row.switch")),
+            toggle(source)
+        );
+    }
+    h.assert_accessible("Open Wi-Fi details", accesskit::Role::Button)?;
+    for part in ["tile-dnd.row.main", "tile-dnd.row.switch"] {
+        assert_eq!(action(&h, part), toggle("notifications.dnd"));
+    }
     assert_eq!(
-        action(&h, "tile-network.row.detail"),
-        (Some("detail".into()), Some(Value::Text("network".into())))
-    );
-    assert_eq!(
-        action(&h, "tile-dnd.row.main"),
-        (
-            Some("cc.do".into()),
-            Some(Value::Text("toggle:notifications.dnd".into()))
-        )
+        action(&h, "tile-battery.row.main"),
+        (Some("detail".into()), Some(Value::Text("battery".into())))
     );
     assert_eq!(
         action(&h, "tile-clipboard.row.main"),
@@ -1541,6 +1554,27 @@ fn tiles_dispatch_host_actions_and_the_detail_page_opens_in_place() -> bead_test
             Some(Value::Text("open:clipboard".into()))
         )
     );
+    let nodes = h.session.view_nodes();
+    assert!(!nodes.iter().any(|n| n.id.ends_with(".row.detail")));
+    // One switch column at the row's right edge: the main button is the rest of the row (all of a page row),
+    // and the row and its switch are separate focus targets.
+    let rect = |part: &str| {
+        let node = nodes.iter().find(|n| n.id.ends_with(part)).unwrap();
+        assert!(node.focusable, "{part}");
+        bead::ui::rect(&node.draw)
+    };
+    let full = rect("tile-clipboard.row.main");
+    for tile in ["network", "bluetooth", "dnd"] {
+        let main = rect(&format!("tile-{tile}.row.main"));
+        let switch = rect(&format!("tile-{tile}.row.switch"));
+        for (got, want) in [
+            (main.x, full.x),
+            (main.x + main.w, switch.x),
+            (switch.x + switch.w, full.x + full.w),
+        ] {
+            assert!((got - want).abs() < 0.5, "{tile}: {got} != {want}");
+        }
+    }
     // The level slider sends percent steps for its own source.
     assert_eq!(
         action(&h, "tile-volume.level.hits.value-10"),
@@ -1549,12 +1583,7 @@ fn tiles_dispatch_host_actions_and_the_detail_page_opens_in_place() -> bead_test
             Some(Value::Text("set:audio.output:50".into()))
         )
     );
-    // DND is a plain toggle (no chevron); the Notifications heading opens the in-panel list.
-    assert!(
-        !node_ids(&h)
-            .iter()
-            .any(|i| i.contains("tile-dnd.row.detail"))
-    );
+    // The Notifications heading opens the in-panel list.
     let (x, y) = centre(&h, "notices-title");
     h.script([Input::Click { x, y }, Input::Release])?;
     assert_eq!(
@@ -1901,7 +1930,7 @@ async fn audio_picker_rechecks_device_kind_and_uses_the_published_node_id() {
 
 // B0076: the real dock composes the same controlled adapters as bar popouts.
 #[tokio::test(flavor = "current_thread")]
-async fn docked_pages_keep_the_surface_route_actions_and_return_home() -> bead_test::Result<()> {
+async fn docked_pages_keep_the_surface_route_actions() -> bead_test::Result<()> {
     use bead::wayland::{SceneSource, UiEvent};
     let mut methods = ALL.to_vec();
     methods.push("power.set_profile");
@@ -1925,8 +1954,9 @@ async fn docked_pages_keep_the_surface_route_actions_and_return_home() -> bead_t
     runtime.stage(UiEvent::Reload)?;
     runtime.commit();
     for (page, part, action, arg) in [
-        ("network", "wifi-radio", "network.toggle_wifi", ""),
-        ("bluetooth", "bluetooth-power", "bluetooth.toggle_power", ""),
+        // The overview row's switch turns Wi-Fi and Bluetooth on and off; their pages have none (owner 2026-11-25).
+        ("network", "wifi-radio", "", ""),
+        ("bluetooth", "bluetooth-power", "", ""),
         (
             "battery",
             "profiles.power-saver",
@@ -1950,6 +1980,18 @@ async fn docked_pages_keep_the_surface_route_actions_and_return_home() -> bead_t
             flip.as_ref(),
             "{page}: a page change slides the new page in"
         );
+        // At both reference scales the dock's new page is a reviewed golden.
+        for scale in [1., 1.5] {
+            let mut h = harness(runtime.session.stores.values().clone(), "detail", scale)?;
+            golden(&format!("docked-{page}"), &mut h, scale)?;
+        }
+        // No border: the same page in the 480 px sheet (Wi-Fi is the reviewed one).
+        if page == "network" {
+            let mut values = runtime.session.stores.values().clone();
+            values.insert("cc.sheet".into(), Value::Bool(true));
+            values.insert("view.width".into(), Value::Number(480.));
+            golden("sheet-network", &mut harness(values, "detail", 1.)?, 1.)?;
+        }
         let nodes = runtime.session.view_nodes();
         assert!(
             nodes
@@ -1957,6 +1999,10 @@ async fn docked_pages_keep_the_surface_route_actions_and_return_home() -> bead_t
                 .any(|node| node.id == "control-center.detail.header.back"),
             "{page}"
         );
+        if action.is_empty() {
+            assert!(!nodes.iter().any(|node| node.id.contains(part)), "{page}");
+            continue;
+        }
         let node = nodes
             .iter()
             .find(|node| node.id.contains(part))
@@ -1970,18 +2016,6 @@ async fn docked_pages_keep_the_surface_route_actions_and_return_home() -> bead_t
         if !arg.is_empty() {
             assert_eq!(node.action_arg, Some(Value::Text(arg.into())));
         }
-        // At both reference scales the dock's new page is a reviewed golden.
-        for scale in [1., 1.5] {
-            let mut h = harness(runtime.session.stores.values().clone(), "detail", scale)?;
-            golden(&format!("docked-{page}"), &mut h, scale)?;
-        }
-        // No border: the same page in the 480 px sheet (Wi-Fi is the reviewed one).
-        if page == "network" {
-            let mut values = runtime.session.stores.values().clone();
-            values.insert("cc.sheet".into(), Value::Bool(true));
-            values.insert("view.width".into(), Value::Number(480.));
-            golden("sheet-network", &mut harness(values, "detail", 1.)?, 1.)?;
-        }
         let rect = bead::ui::rect(&node.draw);
         runtime.stage(UiEvent::Click {
             x: rect.x + rect.w / 2.,
@@ -1989,11 +2023,6 @@ async fn docked_pages_keep_the_surface_route_actions_and_return_home() -> bead_t
         })?;
         runtime.commit();
         let expected = match page {
-            "network" => ("network.set_wifi", json!({"enabled":false})),
-            "bluetooth" => (
-                "bluetooth.set_power",
-                json!({"adapter":"hci0","powered":false}),
-            ),
             "battery" => ("power.set_profile", json!({"profile":"power-saver"})),
             _ => ("audio.set_mute", json!({"target":"sink","muted":true})),
         };
@@ -2001,19 +2030,6 @@ async fn docked_pages_keep_the_surface_route_actions_and_return_home() -> bead_t
             call(&mut lab).await,
             (expected.0.into(), expected.1),
             "{page}"
-        );
-        runtime.stage(UiEvent::Command {
-            command: "escape".into(),
-            shift: false,
-        })?;
-        runtime.commit();
-        assert_eq!(
-            runtime.session.stores.get("cc.page"),
-            Some(&Value::Text("home".into()))
-        );
-        assert_eq!(
-            runtime.session.stores.get("panel.open"),
-            Some(&Value::Bool(true))
         );
     }
     for event in [
@@ -2787,12 +2803,10 @@ fn the_vpn_tile_opens_its_page_and_each_row_switches_its_profile() -> bead_test:
             .unwrap_or_else(|| panic!("no node {part} in {:?}", node_ids(h)));
         (node.action.clone(), node.action_arg.clone())
     };
-    for part in ["tile-vpn.row.main", "tile-vpn.row.detail"] {
-        assert_eq!(
-            action(&h, part),
-            (Some("detail".into()), Some(Value::Text("vpn".into())))
-        );
-    }
+    assert_eq!(
+        action(&h, "tile-vpn.row.main"),
+        (Some("detail".into()), Some(Value::Text("vpn".into())))
+    );
     let h = vpn_view("detail", "vpn", 1.)?;
     assert_eq!(
         action(&h, "vpn-work.main"),
@@ -3550,6 +3564,101 @@ async fn a_closed_dock_reopens_on_the_overview_after_a_status_click() -> bead_te
         runtime.session.stores.get("cc.detail"),
         Some(&Value::Text("network".into()))
     );
+    drop(lab);
+    Ok(())
+}
+
+/// Owner 2026-11-25: Esc closes the dock on the page it shows. Bead closes the panel (PanelVisibility(false)) and
+/// then hands the view the key; neither may swap a status variant or a sub-page for the overview during the
+/// slide-out. The next plain open shows the overview, the next status click its own section.
+#[tokio::test]
+async fn escape_closes_the_dock_on_the_page_it_shows() -> bead_test::Result<()> {
+    use bead::wayland::{SceneSource, UiEvent};
+    let mut methods = ALL.to_vec();
+    methods.push("power.set_profile");
+    let lab = lab(&methods).await;
+    let control = control_for(&lab).await;
+    let palette_path = root().join("palette.json");
+    let colors = bead::render::Palette::read(&palette_path)?;
+    let cold = crate::sound::fallback(colors.get("surface")?);
+    let session = bead::ui::Session::new(
+        root(),
+        "control/main.luau".into(),
+        palette_path,
+        colors,
+        cold,
+    );
+    let mut runtime = crate::reload::Runtime::new(session)
+        .with_control_center(control)?
+        .with_docked_details(lab.client.clone())?;
+    runtime.isolate_state(&lab.dir.join("dock-escape"));
+    runtime.services(Box::new(|_| {}));
+    runtime.stage(UiEvent::Reload)?;
+    runtime.commit();
+    // The page the scene paints: `detail:<id>` for a section, `home` for the overview.
+    fn shown(runtime: &crate::reload::Runtime) -> String {
+        let scene = runtime.session.current_scene();
+        let has = |part: &str| scene.layers.iter().any(|layer| layer.id.contains(part));
+        match (has("detail.header.back"), has("home.status")) {
+            (true, false) => format!("detail:{:?}", runtime.session.stores.get("cc.detail")),
+            (false, true) => "home".to_owned(),
+            other => format!("{other:?}"),
+        }
+    }
+    // Bead's Esc on a panel: the close, then the key for the view.
+    fn close(runtime: &mut crate::reload::Runtime, want: &str) -> bead_test::Result<()> {
+        for event in [
+            UiEvent::PanelVisibility(false),
+            UiEvent::Command {
+                command: "escape".into(),
+                shift: false,
+            },
+        ] {
+            runtime.stage(event)?;
+            runtime.commit();
+            assert_eq!(shown(runtime), want, "during the close");
+        }
+        assert_eq!(
+            runtime.session.stores.get("panel.open"),
+            Some(&Value::Bool(false))
+        );
+        Ok(())
+    }
+    let section = |page: &str| format!("detail:{:?}", Some(Value::Text(page.into())));
+    let pick = |page: &str| {
+        UiEvent::Model(BTreeMap::from([
+            ("cc.page".into(), Value::Text("detail".into())),
+            ("cc.detail".into(), Value::Text(page.into())),
+        ]))
+    };
+    // Two status variants: the click opens the dock on its section, then Esc.
+    for page in ["battery", "network"] {
+        runtime.stage(UiEvent::PanelVisibility(true))?;
+        runtime.stage(pick(page))?;
+        runtime.commit();
+        assert_eq!(shown(&runtime), section(page));
+        close(&mut runtime, &section(page))?;
+    }
+    // The full control centre, then its Wi-Fi page, then Esc.
+    runtime.stage(UiEvent::PanelVisibility(true))?;
+    runtime.commit();
+    assert_eq!(shown(&runtime), "home", "a plain open shows the overview");
+    runtime.stage(pick("network"))?;
+    runtime.commit();
+    close(&mut runtime, &section("network"))?;
+    runtime.stage(UiEvent::PanelVisibility(true))?;
+    runtime.commit();
+    assert_eq!(
+        shown(&runtime),
+        "home",
+        "the next plain open shows the overview"
+    );
+    close(&mut runtime, "home")?;
+    // The next status click opens its own section (its model may land before the open).
+    runtime.stage(pick("bluetooth"))?;
+    runtime.stage(UiEvent::PanelVisibility(true))?;
+    runtime.commit();
+    assert_eq!(shown(&runtime), section("bluetooth"));
     drop(lab);
     Ok(())
 }

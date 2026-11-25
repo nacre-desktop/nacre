@@ -472,7 +472,7 @@
   "bead.panel.control-bluetooth": "Bead control center: name of the Bluetooth toggle tile, shown under its icon and in the edit lists.",
   "bead.panel.control-brightness": "Bead control center: name of the full-width screen brightness slider tile, shown under its icon and in the edit lists.",
   "bead.panel.control-clipboard": "Bead control center: name of the clipboard action tile that opens the clipboard history, shown under its icon and in the edit lists.",
-  "bead.panel.control-details": "Bead control center: accessible name of a tile chevron that opens the detail page; {name} is the tile name.",
+  "bead.panel.control-details": "Bead control center: accessible name of a row that opens its detail page (its switch has the plain name); {name} is the tile name.",
   "bead.panel.control-displays": "Bead control center: name of the display settings action tile, shown under its icon and in the edit lists.",
   "bead.panel.control-dnd": "Bead control center: name of the do-not-disturb toggle tile, shown under its icon and in the edit lists.",
   "bead.panel.control-edit": "Bead control center: accessible name of the header button that opens the tile editor.",

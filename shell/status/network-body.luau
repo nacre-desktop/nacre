@@ -170,9 +170,9 @@ put(ui.Row{id="wifi-row",width=content,height=head_height,align="center",gap=T.s
     ui.Text{id="wifi-label",visible=not embedded,text=ui.tr("bead.panel.wifi"),height=(T.text.body+1)*4/3*LINE,width=content-pill_width(ui.tr("bead.panel.network-scan"),"refresh")-46-T.spacing.md*2,shrink=0,font_size=(T.text.body+1)*4/3,
         color=enabled and "onSurface" or "onSurfaceVariant"},
     pill("scan",ui.tr("bead.panel.network-scan"),"refresh",ui.action("network.scan"),scan_on),
-    ui.Box{id="heading-space",visible=embedded,grow=1,height=1},
-    kit.Switch{id="wifi-radio",checked=ui.bind("network.wifi_checked"),aria_label=ui.tr("bead.panel.wifi-radio"),
-        on_activate=enabled and ui.action("network.toggle_wifi") or nil}},head_height)
+    -- docked, the control centre's Wi-Fi row switch is the radio switch
+    not embedded and kit.Switch{id="wifi-radio",checked=ui.bind("network.wifi_checked"),aria_label=ui.tr("bead.panel.wifi-radio"),
+        on_activate=enabled and ui.action("network.toggle_wifi") or nil} or nil},head_height)
 if adapter_text~="" and adapter_text~=nil then put(adapter_note,adapter_note.props.height) end
 put(list_node,list_shown)
 if #rows==0 and checked then
