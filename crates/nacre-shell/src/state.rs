@@ -19,7 +19,6 @@ pub struct File {
 }
 fn durable(id: &str, value: &Value) -> bool {
     match value {
-        Value::Bool(_) => id == "open" || id.ends_with(".open"),
         Value::Text(s) => s.len() <= 256 && (id.ends_with(".page") || id.ends_with(".route")),
         _ => false,
     }
@@ -184,10 +183,21 @@ impl File {
                     return Err("panel state exceeds32KiB".into());
                 }
                 let saved: Saved = serde_json::from_slice(&bytes)?;
-                if saved.version != 1 || saved.values.iter().any(|(id, v)| !durable(id, v)) {
+                // Files from before open bits left the durable set still carry them; drop, don't reject.
+                let legacy_open = |id: &str, v: &Value| {
+                    matches!(v, Value::Bool(_)) && (id == "open" || id.ends_with(".open"))
+                };
+                if saved.version != 1
+                    || saved
+                        .values
+                        .iter()
+                        .any(|(id, v)| !durable(id, v) && !legacy_open(id, v))
+                {
                     return Err("invalid panel state schema".into());
                 }
-                saved.values
+                let mut values = saved.values;
+                values.retain(|id, v| durable(id, v));
+                values
             }
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => BTreeMap::new(),
             Err(error) => return Err(error.into()),
@@ -423,8 +433,27 @@ mod tests {
             .unwrap();
         file.save(&stores).unwrap();
         let (_, values) = File::open(path.clone()).unwrap();
-        assert_eq!(values.len(), 2);
-        assert_eq!(values["panel.open"], Value::Bool(false));
+        assert_eq!(values.len(), 1);
+        assert_eq!(values["panel.page"], Value::Text("sound".into()));
+        // Live open bits alone never write the file; legacy files that hold them still load.
+        let before = std::fs::metadata(&path).unwrap().modified().unwrap();
+        let toggled = Stores::default()
+            .reconcile(&BTreeMap::from([
+                ("panel.open".into(), Value::Bool(true)),
+                ("panel.page".into(), Value::Text("sound".into())),
+            ]))
+            .unwrap();
+        file.save(&toggled).unwrap();
+        assert_eq!(
+            std::fs::metadata(&path).unwrap().modified().unwrap(),
+            before
+        );
+        std::fs::write(
+            &path,
+            b"{\"version\":1,\"values\":{\"panel.open\":true,\"panel.page\":\"x\"}}",
+        )
+        .unwrap();
+        assert_eq!(File::open(path.clone()).unwrap().1.len(), 1);
         assert_eq!(
             std::fs::metadata(&path).unwrap().permissions().mode() & 0o777,
             0o600
