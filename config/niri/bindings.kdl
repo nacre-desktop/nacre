@@ -86,5 +86,6 @@ binds {
     Super+K repeat=false hotkey-overlay-title="Nacre:shortcuts" { spawn "nacrectl" "ui" "nacre" "menu" "learn.shortcuts" ""; }
     Super+F1 repeat=false hotkey-overlay-title="Nacre:shortcuts" { spawn "nacrectl" "ui" "nacre" "menu" "learn.shortcuts" ""; }
     Super+A repeat=false hotkey-overlay-title="Nacre:ai-sidebar" { spawn "nacrectl" "ui" "nacre" "left"; }
+    Super+Shift+A repeat=false hotkey-overlay-title="Nacre:ai-new-chat" { spawn-sh "kitty --class nacre-ai-task --title 'New chat' -- nacre-ai window --worker-command new"; }
     Super+Ctrl+D repeat=false hotkey-overlay-title="Nacre:detach-panel" { spawn "nacrectl" "ui" "pearls" "detach"; }
 }

@@ -72,6 +72,7 @@ onto the current one; see [monitor workspaces](configuration.md#monitor-workspac
 | Key | Action |
 | --- | --- |
 | Super+A | AI sidebar (when the AI add-on is installed) |
+| Super+Shift+A | New AI chat with your default assistant (when the AI add-on is installed) |
 | Super+B | Brain (when Brain is installed) |
 | Super+N | Capture a note in Brain |
 

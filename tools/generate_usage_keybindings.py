@@ -43,6 +43,7 @@ LABELS = {
     "palette": "Command palette",
     "shortcuts": "Shortcut list",
     "ai-sidebar": "Optional AI sidebar",
+    "ai-new-chat": "Optional new AI chat with the default assistant",
     "detach-panel": "Detach the open panel",
     "put-away": "Put away the window; close after 30 seconds (opt-in)",
     "restore": "Undo the last put-away within 30 seconds (opt-in)",

@@ -1476,6 +1476,17 @@
       },
       {
         "kind": "binding",
+        "keys": "SUPER + SHIFT + A",
+        "action": "application.launch",
+        "parameters": {
+          "command": "kitty --class nacre-ai-task --title 'New chat' -- nacre-ai window --worker-command new"
+        },
+        "options": {
+          "description": "Nacre:ai-new-chat"
+        }
+      },
+      {
+        "kind": "binding",
         "keys": "SUPER + CTRL + D",
         "action": "application.launch",
         "parameters": {

@@ -3,6 +3,7 @@ hl.bind("SUPER + CTRL + SPACE", hl.dsp.exec_cmd("nacrectl ui nacre mode palette"
 hl.bind("SUPER + K", hl.dsp.exec_cmd("nacrectl ui nacre menu learn.shortcuts ''"), {description="Nacre:shortcuts"})
 hl.bind("SUPER + F1", hl.dsp.exec_cmd("nacrectl ui nacre menu learn.shortcuts ''"), {description="Nacre:shortcuts"})
 hl.bind("SUPER + A", hl.dsp.exec_cmd("nacrectl ui nacre left"), {description="Nacre:ai-sidebar"})
+hl.bind("SUPER + SHIFT + A", hl.dsp.exec_cmd("kitty --class nacre-ai-task --title 'New chat' -- nacre-ai window --worker-command new"), {description="Nacre:ai-new-chat"})
 hl.bind("SUPER + CTRL + D", hl.dsp.exec_cmd("nacrectl ui pearls detach"), {description="Nacre:detach-panel"})
 hl.unbind("SUPER + mouse:272")
 local drag_route = nil

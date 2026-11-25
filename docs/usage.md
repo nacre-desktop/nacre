@@ -306,6 +306,7 @@ For custom bindings and the trash opt-in, see [configuration](configuration.md).
 | Super + Ctrl + Space | Command palette |
 | Super + K / Super + F1 | Shortcut list |
 | Super + A | Optional AI sidebar |
+| Super + Shift + A | Optional new AI chat with the default assistant |
 | Super + Ctrl + D | Detach the open panel |
 | Super + left mouse button | Move a panel or window by dragging |
 | left mouse button (release) | Finish dragging a panel or window |
@@ -375,6 +376,7 @@ Number keys select existing workspaces on the focused output; their numbers can 
 | Super + Ctrl + Space | Command palette |
 | Super + K / Super + F1 | Shortcut list |
 | Super + A | Optional AI sidebar |
+| Super + Shift + A | Optional new AI chat with the default assistant |
 | Super + Ctrl + D | Detach the open panel |
 
 ## Personal trash shortcuts (opt-in, Hyprland only)
