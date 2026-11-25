@@ -56,18 +56,6 @@ class PublicNamesTests(unittest.TestCase):
                     "siver" + "teh <92440237+siver" + "teh@users.noreply.github.com>",
                     "",
                 )
-            if name == "crates/nacre-helper/src/brain_git.rs":
-                # The private-vault committer uses the owner's explicitly
-                # approved Git attribution, never a private runtime alias.
-                identity = "siver" + "teh"
-                email = "92440237+" + identity + "@users.noreply.github.com"
-                for value in (
-                    identity,
-                    email,
-                    "user.name=" + identity,
-                    "user.email=" + email,
-                ):
-                    text = text.replace('"' + value + '"', '""')
             if name in (
                 "brain/registry-seed.json",
                 "crates/nacre-helper/src/brain-migrate-vocabulary.json",
