@@ -82,7 +82,7 @@ fn note(title: &str, recorded: &str, header: &str, body: &str) -> String {
 
 fn registry() -> String {
     let mut registry: Value =
-        serde_json::from_str(include_str!("../../../brain/registry-seed.json")).unwrap();
+        serde_json::from_str(include_str!("fixtures/brain-registry.json")).unwrap();
     let area = |name: &str, parent: &str, status: &str, created: &str| serde_json::json!({"name":name,"aliases":[],"patterns":[],"status":status,"created":created,"updated":created,"parent":parent,"title_only":false,"uses":[],"merged_into":null});
     let areas = registry["areas"].as_array_mut().unwrap();
     areas.push(area("Photon Garden", "Nacre", "proposed", "2026-06-01"));
@@ -99,6 +99,11 @@ const FRESH: &str = "checkpoints/20260610T100000Z-fresh-handoff.md";
 
 fn fixture(root: &Path) {
     write(root, "registry.json", &registry());
+    write(
+        root,
+        "vocabulary.json",
+        include_str!("fixtures/brain-vocabulary.json"),
+    );
     write(root, ".gitignore", ".brain-state/\ncredentials/\n");
     write(
         root,

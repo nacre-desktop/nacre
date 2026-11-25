@@ -36,6 +36,16 @@ fn call(home: &Path, vault: &Path, tool: &str, args: &[&str], body: &str) -> Out
     child.wait_with_output().unwrap()
 }
 
+/// The legacy taxonomy test data, for tests that resolve against its names.
+fn legacy(vault: &Path) {
+    fs::create_dir_all(vault).unwrap();
+    fs::write(
+        vault.join("registry.json"),
+        include_str!("fixtures/brain-registry.json"),
+    )
+    .unwrap();
+}
+
 fn note_path(output: &Output) -> PathBuf {
     assert!(
         output.status.success(),
@@ -96,6 +106,7 @@ fn memory_topics_only_deduplicate_exact_category_slugs() {
         let root = tempfile::tempdir().unwrap();
         let home = root.path().join("home");
         let vault = root.path().join("vault");
+        legacy(&vault);
         fs::create_dir_all(&home).unwrap();
         let mut args = vec![
             "nacre-ai-memory".to_owned(),
@@ -189,6 +200,7 @@ fn area_aliases_passed_as_worlds_supply_their_parent_world() {
     let root = tempfile::tempdir().unwrap();
     let home = root.path();
     let vault = home.join("brain");
+    legacy(&vault);
     for (value, expected_world, expected_area) in [
         ("Bead green", "Nacre", "Bead"),
         ("desktop", "Nacre", "Desktop"),
@@ -229,6 +241,7 @@ fn title_mention_classifies_nacre_compositors() {
     let root = tempfile::tempdir().unwrap();
     let home = root.path();
     let vault = home.join("brain");
+    legacy(&vault);
     let output = call(
         home,
         &vault,
@@ -310,4 +323,45 @@ fn concurrent_explicit_area_creation_has_one_registry_entry() {
     assert_eq!(entries.len(), 1, "{registry}");
     assert_eq!(entries[0]["status"], "auto");
     assert_eq!(entries[0]["parent"], "Nacre");
+}
+
+#[test]
+fn a_fresh_vault_is_seeded_with_only_the_neutral_personal_world() {
+    let root = tempfile::tempdir().unwrap();
+    let home = root.path();
+    let vault = home.join("brain");
+    let output = call(
+        home,
+        &vault,
+        "nacre-brain",
+        &[
+            "note",
+            "--title",
+            "Seed check",
+            "--source",
+            "taxonomy fixture",
+            "--world",
+            "personal",
+            "--area",
+            "Preferences",
+        ],
+        "Synthetic body.",
+    );
+    let note = fs::read_to_string(note_path(&output)).unwrap();
+    assert!(
+        note.lines().any(|line| line == "Worlds: Personal"),
+        "{note}"
+    );
+    let registry: serde_json::Value =
+        serde_json::from_slice(&fs::read(vault.join("registry.json")).unwrap()).unwrap();
+    let names = |key: &str| -> Vec<String> {
+        registry[key]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|entry| entry["name"].as_str().unwrap().to_owned())
+            .collect()
+    };
+    assert_eq!(names("worlds"), ["Personal"]);
+    assert_eq!(names("areas"), ["Preferences", "Background"]);
 }

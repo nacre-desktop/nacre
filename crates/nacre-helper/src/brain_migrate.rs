@@ -916,8 +916,7 @@ pub fn run(args: &[String]) -> Result<i32> {
                     .iter()
                     .map(|n| (n.path.clone(), n.bytes.clone()))
                     .collect();
-                let vocab: serde_json::Value =
-                    serde_json::from_slice(include_bytes!("brain-migrate-vocabulary.json"))?;
+                let vocab = crate::brain_web::vocabulary(&root)?;
                 let registry: serde_json::Value = serde_json::from_slice(&virtual_registry)?;
                 let generated = generated::generate(
                     current,

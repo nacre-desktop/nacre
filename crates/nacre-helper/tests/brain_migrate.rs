@@ -16,8 +16,10 @@ use std::{
 // Owner-approved Git attribution, split so public-name checks stay exact.
 const OWNER: &str = concat!("siver", "teh");
 const OWNER_EMAIL: &str = concat!("92440237+Siver", "teh@users.noreply.github.com");
-// The owner-approved Nacre world page; split so public-name checks stay exact.
-const NACRE_WORLD_PAGE: &str = concat!("wiki/siver", "teh-ai.md");
+// The legacy taxonomy test data: a vault with its own registry and vocabulary.
+const NACRE_WORLD_PAGE: &str = "wiki/nacre.md";
+const REGISTRY: &str = include_str!("fixtures/brain-registry.json");
+const VOCABULARY: &str = include_str!("fixtures/brain-vocabulary.json");
 
 const STEPS: &[&str] = &[
     "meta", "inbox", "archive", "digests", "wiki", "links", "index",
@@ -107,6 +109,8 @@ fn fixture(root: &Path, count: usize) {
     ] {
         fs::create_dir_all(root.join(dir)).unwrap();
     }
+    fs::write(root.join("registry.json"), REGISTRY).unwrap();
+    fs::write(root.join("vocabulary.json"), VOCABULARY).unwrap();
     fs::write(root.join("wiki/entity-nacre-desktop.md"), "# Desktop\n\nEntity: area\nName: Desktop\nParent: Nacre\nReviewed: 2026-01-01\nStatus: curated\n\n## Current facts\n\n- Synthetic current fact must survive migration. (confirmed 2026-01-01; [[devices/fixture-0005]])\n").unwrap();
     fs::write(root.join(NACRE_WORLD_PAGE), "# Nacre\n\nEntity: world\nName: Nacre\nReviewed: 2026-01-01\nStatus: curated\n\n## Current facts\n\n- Synthetic world fact must survive migration.\n").unwrap();
     // This decoy's bytes and inode timestamps must survive, and credentials must not
@@ -261,6 +265,8 @@ fn fixture(root: &Path, count: usize) {
             "wiki",
             "raw",
             ".gitignore",
+            "registry.json",
+            "vocabulary.json",
         ],
     );
     git(root, &["commit", "-m", "fixture [no-publish]"]);
@@ -556,8 +562,7 @@ fn synthetic_vault_migration(performance: bool) {
         original_body_hashes,
         "note body checksum changed outside rewritten link targets"
     );
-    let vocabulary: serde_json::Value =
-        serde_json::from_str(include_str!("../src/brain-migrate-vocabulary.json")).unwrap();
+    let vocabulary: serde_json::Value = serde_json::from_str(VOCABULARY).unwrap();
     let canonical_worlds: std::collections::BTreeSet<_> = vocabulary["worlds"]
         .as_array()
         .unwrap()
@@ -1201,4 +1206,47 @@ Already broken: [[../projects/style-missing]], [[style-nowhere]] and [gone](../r
     success(call(&home, &together, "all", "--apply", None));
     assert_eq!(snapshot(&together), result, "rerun was not a no-op");
     assert_eq!(head(&together), head_before, "rerun created a commit");
+}
+
+#[test]
+fn an_existing_registry_is_byte_identical_after_migrate_and_consolidate() {
+    let temp = tempfile::tempdir().unwrap();
+    let home = temp.path().join("home");
+    let vault = temp.path().join("vault");
+    fs::create_dir_all(&home).unwrap();
+    fs::create_dir_all(vault.join("projects")).unwrap();
+    // The vault's own taxonomy in the helper's saved form, with no seed world in it.
+    let entry = |name: &str, parent: Option<&str>| serde_json::json!({"name":name,"aliases":[],"patterns":[],"status":"seed","created":"2026-01-01","updated":"2026-01-01","parent":parent,"title_only":false,"uses":[],"merged_into":null});
+    let own = serde_json::to_string_pretty(&serde_json::json!({"version":1,"worlds":[entry("Acme", None)],"areas":[entry("Widgets", Some("Acme"))]})).unwrap();
+    fs::write(vault.join("registry.json"), &own).unwrap();
+    fs::write(vault.join(".gitignore"), ".brain-state/\ncredentials/\n").unwrap();
+    fs::write(
+        vault.join("projects/widget-notes.md"),
+        "# Widget notes\n\nRecorded: 2026-01-02T09:00:00+00:00\nConfidence: reported\nSource: synthetic-fixture\nWorlds: Acme\nAreas: Widgets\n\nThe widget line ships on Fridays.\n",
+    )
+    .unwrap();
+    git(&vault, &["init", "-b", "main"]);
+    git(&vault, &["config", "user.name", OWNER]);
+    git(&vault, &["config", "user.email", OWNER_EMAIL]);
+    git(&vault, &["add", "-A"]);
+    git(&vault, &["commit", "-m", "fixture [no-publish]"]);
+    remote(&vault);
+    success(call(&home, &vault, "all", "--apply", None));
+    assert_eq!(
+        fs::read_to_string(vault.join("registry.json")).unwrap(),
+        own
+    );
+    let consolidate = Command::new(helper())
+        .args(["nacre-brain-maintain", "consolidate"])
+        .env_clear()
+        .env("HOME", &home)
+        .env("PATH", "/usr/bin:/bin")
+        .env("NACRE_BRAIN", &vault)
+        .output()
+        .unwrap();
+    success(consolidate);
+    assert_eq!(
+        fs::read_to_string(vault.join("registry.json")).unwrap(),
+        own
+    );
 }

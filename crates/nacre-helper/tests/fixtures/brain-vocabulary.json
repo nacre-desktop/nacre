@@ -1,12 +1,10 @@
 {
   "worlds": [
     {
-      "name": "Siverteh",
+      "name": "Personal",
       "page": "wiki/personal.md",
       "description": "The owner: background, interests, preferences and working style.",
       "aliases": [
-        "Sivert",
-        "Personal",
         "personal",
         "Personal life",
         "Owner",
@@ -109,13 +107,10 @@
     },
     {
       "name": "Nacre",
-      "page": "wiki/siverteh-ai.md",
-      "description": "Nacre, the owner's desktop OS project (formerly Siverteh OS / Siverteh AI).",
+      "page": "wiki/nacre.md",
+      "description": "Nacre, the owner's desktop OS project.",
       "aliases": [
         "nacre",
-        "Siverteh OS",
-        "Siverteh AI",
-        "Siverteh AI and OS",
         "Observatory",
         "os",
         "Nacre OS",
@@ -491,6 +486,6 @@
   ],
   "redirects": {
     "wiki/entity-desktop.md": "Desktop",
-    "wiki/entity-siverteh-ai-and-os.md": "Nacre"
+    "wiki/entity-nacre-os.md": "Nacre"
   }
 }

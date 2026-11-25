@@ -47,7 +47,6 @@ const SPELLING: &[(&str, &str)] = &[
     ("artefact", "artifact"),
     ("cancelled", "canceled"),
 ];
-const VOCABULARY: &[u8] = include_bytes!("brain-migrate-vocabulary.json");
 
 static INDEX: LazyLock<Mutex<Option<Index>>> = LazyLock::new(|| Mutex::new(None));
 static DIRTY: AtomicBool = AtomicBool::new(true);
@@ -568,7 +567,7 @@ impl Index {
                 grams_index.entry(g).or_default().push(id);
             }
         }
-        // Registry worlds/areas, migration entities and wiki entity pages.
+        // Registry worlds/areas and wiki entity pages (migration entities have pages).
         let mut names: Vec<(String, Vec<String>)> = Vec::new();
         for key in ["worlds", "areas"] {
             for entry in registry[key].as_array().into_iter().flatten() {
@@ -590,20 +589,6 @@ impl Index {
                         .collect(),
                 ));
             }
-        }
-        let vocabulary: Value = serde_json::from_slice(VOCABULARY).unwrap_or_default();
-        for entity in vocabulary["entities"].as_array().into_iter().flatten() {
-            let aliases = entity["aliases"]
-                .as_array()
-                .into_iter()
-                .flatten()
-                .map(|a| str_of(a).to_owned());
-            names.push((
-                str_of(&entity["name"]).to_owned(),
-                std::iter::once(str_of(&entity["name"]).to_owned())
-                    .chain(aliases)
-                    .collect(),
-            ));
         }
         for doc in &docs {
             let name = str_of(&doc.meta["name"]);
@@ -1189,6 +1174,7 @@ mod tests {
         assert_eq!(scanned.len(), 1);
         assert_eq!(scanned[0].0, "public.md");
     }
+    const LEGACY: &str = include_str!("../tests/fixtures/brain-registry.json");
     fn note(root: &Path, path: &str, body: &str) {
         let p = root.join(path);
         fs::create_dir_all(p.parent().unwrap()).unwrap();
@@ -1239,6 +1225,7 @@ mod tests {
     fn ranks_aliases_compounds_typos_and_filters() {
         let t = tempfile::tempdir().unwrap();
         let root = t.path();
+        note(root, "registry.json", LEGACY);
         note(root, "projects/board.md", "# Smash-Board firmware\nRecorded: 2026-11-01\nWorlds: Newbringer\nAreas: Smash-Board\n\nFlashing the board.\n");
         note(
             root,

@@ -190,6 +190,15 @@ pub(crate) fn registry(root: &Path) -> Result<Value> {
         "../../../brain/registry-seed.json"
     ))?)
 }
+/// The vault's own migration vocabulary (world/area pages, entities, redirects).
+/// None ships with Nacre, so a vault without `vocabulary.json` gets `null`.
+pub(crate) fn vocabulary(root: &Path) -> Result<Value> {
+    let path = root.join("vocabulary.json");
+    if fs::symlink_metadata(&path).is_ok() {
+        return Ok(serde_json::from_str(&read(&path, 2 * 1024 * 1024)?)?);
+    }
+    Ok(Value::Null)
+}
 /// Graph node id of a registry area.
 pub(crate) fn area_id(name: &str) -> String {
     format!("area:{}", slug_id(name).trim_start_matches("world:"))

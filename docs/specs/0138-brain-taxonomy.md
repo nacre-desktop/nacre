@@ -1,7 +1,7 @@
 # N0138 — Brain taxonomy and writer validation
 
-Implements overhaul U2. Registry names, aliases and patterns start from the owner’s
-seed vocabulary; explicit valid names grow the taxonomy under the vault lock.
+Implements overhaul U2. Registry names, aliases and patterns start from a neutral
+seed (one Personal world; row 81); explicit valid names grow the taxonomy under the vault lock.
 Seed entries retain their original spellings and status. No live migration or
 installation is included. Viewer routes, UI and git internals are outside scope.
 
@@ -46,9 +46,8 @@ replacement is trusted; retain parity fixtures until then. No installer ran in
 this unit. The lead must install the built native helper and atomically replace
 the pinned agents’ standalone memory script; exact commands are in `.lead/report.md`.
 
-The public-name regression guard permits the owner identifier only in the
-explicitly requested `brain/registry-seed.json` vocabulary data; runtime names
-and the other forbidden identifier remain guarded.
+The public-name regression guard covers the seed too; the owner's taxonomy is
+vault data (`registry.json`, `vocabulary.json`) and test fixtures, never shipped.
 
 The simplicity review removed duplicate fuzzy searches after resolution and the
 Python category writer. The native module includes validation and growth that the

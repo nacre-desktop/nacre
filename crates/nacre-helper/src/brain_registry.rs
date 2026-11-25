@@ -1220,23 +1220,27 @@ mod tests {
         );
     }
 
+    const LEGACY: &[u8] = include_bytes!("../tests/fixtures/brain-registry.json");
     #[test]
     fn seed_aliases_and_area_world_resolution() {
-        let r = seed().unwrap();
-        for w in &r.worlds {
-            for alias in std::iter::once(&w.name).chain(w.aliases.iter()) {
-                assert!(resolve(&r, alias).is_some(), "world alias {alias}");
+        let legacy: Registry = serde_json::from_slice(LEGACY).unwrap();
+        for r in [seed().unwrap(), legacy.clone()] {
+            for w in &r.worlds {
+                for alias in std::iter::once(&w.name).chain(w.aliases.iter()) {
+                    assert!(resolve(&r, alias).is_some(), "world alias {alias}");
+                }
+            }
+            for a in &r.areas {
+                for alias in std::iter::once(&a.name).chain(a.aliases.iter()) {
+                    assert_eq!(
+                        resolve(&r, alias).unwrap().2,
+                        Some(a.name.as_str()),
+                        "area alias {alias}"
+                    );
+                }
             }
         }
-        for a in &r.areas {
-            for alias in std::iter::once(&a.name).chain(a.aliases.iter()) {
-                assert_eq!(
-                    resolve(&r, alias).unwrap().2,
-                    Some(a.name.as_str()),
-                    "area alias {alias}"
-                );
-            }
-        }
+        let r = legacy;
         assert_eq!(resolve(&r, "dev-1").unwrap().1, "Infrastructure");
         assert_eq!(resolve(&r, "desktop").unwrap().2, Some("Desktop"));
         assert_eq!(resolve(&r, "Bead green").unwrap().2, Some("Bead"));
@@ -1298,6 +1302,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let root = dir.path();
         let _lock = brain_git::acquire_vault_lock(root).unwrap();
+        fs::write(root.join("registry.json"), LEGACY).unwrap();
         let categories = resolve_locked_at(
             root,
             "Renderer evidence",
@@ -1316,7 +1321,11 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let root = dir.path();
         let _lock = brain_git::acquire_vault_lock(root).unwrap();
-        let initial_count = seed().unwrap().areas.len();
+        fs::write(root.join("registry.json"), LEGACY).unwrap();
+        let initial_count = serde_json::from_slice::<Registry>(LEGACY)
+            .unwrap()
+            .areas
+            .len();
         let categories = resolve_locked_at(
             root,
             "Evidence",
@@ -1434,7 +1443,7 @@ mod tests {
 
     #[test]
     fn migration_proposes_three_notes_over_two_days_without_changing_seed_worlds() {
-        let seed_bytes = include_bytes!("../../../brain/registry-seed.json");
+        let seed_bytes = LEGACY;
         let before: Registry = serde_json::from_slice(seed_bytes).unwrap();
         let candidates = vec![
             (
@@ -1520,7 +1529,7 @@ mod tests {
 
     #[test]
     fn migration_classifier_uses_proposed_registry_snapshot_in_memory() {
-        let seed_bytes = include_bytes!("../../../brain/registry-seed.json");
+        let seed_bytes = LEGACY;
         let candidates = vec![
             (
                 "Novel Review Cluster".into(),

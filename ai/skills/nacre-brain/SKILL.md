@@ -28,7 +28,7 @@ nacre-brain search QUERY [--json] [--limit N] [--world W] [--area A] \
   [--kind K] [--since YYYY-MM-DD] [--include-archive]
 ```
 
-Ranked, typo-tolerant and alias-aware ("smash card" finds Smash-Board). One line
+Ranked, typo-tolerant and alias-aware ("work flow" finds Workflow). One line
 per note (`PATH:LINE:TEXT`); `--json` adds snippets and a `didYouMean`. Archive
 is excluded unless `--include-archive`. Exit 1 means no match.
 
@@ -47,8 +47,8 @@ nacre-brain note --kind runbooks --title 'Short factual title' \
 nacre-ai-memory --title T --source S --confidence reported --world W --area A
 ```
 
-- Pass `--world` AND `--area` with canonical names from the table below, from
-  `registry.json` in the vault, or from the pack. Aliases resolve automatically.
+- Pass `--world` AND `--area` with canonical names from `registry.json` in the
+  vault or from the pack. Aliases resolve automatically.
   Never invent near-duplicate names (check first: `nacre-brain search --area X`).
 - A new explicit `--area` is created at once. A new subject inferred from a
   `Subject: title` becomes a proposed area and is promoted after repeated use.
@@ -60,19 +60,11 @@ nacre-ai-memory --title T --source S --confidence reported --world W --area A
   `unverified` for ideas. Each call creates a unique file, so concurrent chats
   are safe.
 
-## Seed worlds and areas
+## Worlds and areas
 
-| World | Areas |
-|---|---|
-| personal world (first in `registry.json`) | Preferences, Background |
-| Newbringer | HK416, Guns, White motor, Smash-Board, Stations, Game, Demo sites |
-| Nacre | Desktop, Bead, Compositors, Orient, Packages, Performance, Helper, Nacre AI |
-| AI & agents | Lead workflow, Brain, Inspiration |
-| Home & devices | Desktop PC, Laptop, Home server, Phone, Peripherals |
-| Infrastructure | dev-1, prod, Network, CI |
-| Side projects | Temporium, MusikKI, Electronics bench |
-
-Growth beyond this is automatic and registry-owned; never a free-form world.
+A new vault starts with one world, Personal (areas Preferences and Background).
+Reuse the worlds and areas in the vault's `registry.json`; pass a new `--world`
+only for a genuinely new domain (a project, a job). Growth is registry-owned.
 
 ## Git
 

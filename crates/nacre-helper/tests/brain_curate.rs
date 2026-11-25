@@ -104,7 +104,12 @@ impl Fixture {
         write(
             root,
             "registry.json",
-            include_str!("../../../brain/registry-seed.json"),
+            include_str!("fixtures/brain-registry.json"),
+        );
+        write(
+            root,
+            "vocabulary.json",
+            include_str!("fixtures/brain-vocabulary.json"),
         );
         write(root, ".gitignore", ".brain-state/\ncredentials/\n");
         write(root, DEV1, "# dev-1\n\nEntity: area\nName: dev-1\nParent: Infrastructure\nWorlds: Infrastructure\nAreas: dev-1\nReviewed: 2026-05-01\nStatus: curated\nSource: synthetic-fixture\n\nThe shared synthetic build host.\n\n## Current facts\n\n- dev-1 tailscale address is 100.64.0.5. (confirmed 2026-05-01; [[devices/20260501T090000Z-dev-1-old]])\n\n## Do and don't\n\n- Never run captures on dev-1.\n");
@@ -347,7 +352,9 @@ fn good_pages_commit_with_their_packs_and_reruns_change_nothing() {
     let dev1_before = read(&f.vault, DEV1);
     let ci_before = read(&f.vault, CI);
     let world_before = read(&f.vault, "wiki/world-infrastructure.md");
+    let registry_before = read(&f.vault, "registry.json");
     let out = ok(&f.curate(&["--world", "Infrastructure"]));
+    assert_eq!(read(&f.vault, "registry.json"), registry_before);
     assert!(out.contains(&format!("curate: {CI}: committed")), "{out}");
     assert!(out.contains(&format!("curate: {DEV1}: committed")), "{out}");
     assert!(

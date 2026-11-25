@@ -26,6 +26,11 @@ fn ask_uses_stub_claude_and_validates_evidence() {
     let vault = temp.path().join("vault");
     let stub_dir = temp.path().join("stub");
     fs::create_dir_all(&stub_dir).unwrap();
+    write(
+        &vault,
+        "registry.json",
+        include_str!("fixtures/brain-registry.json"),
+    );
     write(&vault, "devices/smash-board.md", "# Smash-Board\n\nRecorded: 2026-11-01\nConfidence: reported\nWorlds: Nacre\nAreas: Bead\n\nThe Smash-Board status is operational.\n");
     write(&vault, "wiki/area-bead.md", "# Bead\n\nEntity: area\nName: Bead\nParent: Nacre\n\n## Current facts\n\nThe Bead area currently has a synthetic summary.\n");
     write(&vault, "wiki/entity-smash-board.md", "# Smash-Board\n\nEntity: device\nName: Smash-Board\n\n## Current facts\n\nThe calibrator ready marker is amber.\n");

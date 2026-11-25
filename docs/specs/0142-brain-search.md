@@ -25,8 +25,8 @@ match and the CLI's `rg -n -i -F` phrase grep. No new dependency; fully offline.
   does not outrank notes that write the words apart. An exact title match
   doubles the score. Archived notes are excluded unless asked for, and ranked
   ×0.6 when included.
-- **Aliases.** Registry worlds/areas (`registry.json`, else the seed), the
-  migration's entities (`brain-migrate-vocabulary.json`) and vault wiki pages
+- **Aliases.** Registry worlds/areas (`registry.json`, else the seed) and
+  vault wiki pages (migration entities included)
   with `Entity:`/`Name:`/`Aliases:` map alias phrases to canonical names. A query
   span (≤ 4 words, compared as concatenated normalized words) that equals an
   alias adds the canonical name's terms at weight 0.8, or 0.5 for a one-word

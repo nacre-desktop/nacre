@@ -25,6 +25,11 @@ const evidence = path.join(root, ".lead/evidence");
 for (const dir of [home, vault, path.dirname(installedWeb), evidence])
   fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
 fs.cpSync(webSource, installedWeb, { recursive: true });
+// Notes resolve against the legacy taxonomy test data.
+fs.copyFileSync(
+  path.join(root, "crates/nacre-helper/tests/fixtures/brain-registry.json"),
+  path.join(vault, "registry.json"),
+);
 
 function note(rel, title, header, body) {
   const file = path.join(vault, rel);

@@ -193,6 +193,11 @@ fn write(root: &Path, rel: &str, body: &str) {
     fs::write(path, body).unwrap();
 }
 fn fixture(root: &Path) -> Fixture {
+    write(
+        root,
+        "registry.json",
+        include_str!("fixtures/brain-registry.json"),
+    );
     let mut rng = Rng(42);
     let mut notes = Vec::new();
     for family in FAMILIES {

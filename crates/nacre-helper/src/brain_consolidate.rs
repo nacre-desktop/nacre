@@ -55,7 +55,6 @@ const ACTIVE: &[&str] = &[
 ];
 const ADDRESS_WORDS: &[&str] = &["tailscale", "tailnet", "network", "lan", "wifi", "vpn"];
 const SEED: &[u8] = include_bytes!("../../../brain/registry-seed.json");
-const VOCABULARY: &[u8] = include_bytes!("brain-migrate-vocabulary.json");
 
 fn rx(pattern: &str) -> Regex {
     Regex::new(pattern).expect("valid consolidation pattern")
@@ -1300,15 +1299,19 @@ pub(super) struct Derived {
 }
 
 /// Scan facts and render every world/area context pack for `vault`.
-pub(super) fn derive(vault: &Notes, reg: &Value, today: NaiveDate) -> Result<Derived> {
+pub(super) fn derive(
+    vault: &Notes,
+    reg: &Value,
+    vocabulary: &Value,
+    today: NaiveDate,
+) -> Result<Derived> {
     let mut shown = reg.clone();
     if let Some(areas) = shown["areas"].as_array_mut() {
         areas.retain(|a| a["status"].as_str() != Some("proposed"));
     }
-    let vocabulary: Value = serde_json::from_slice(VOCABULARY)?;
-    let names = Names::new(reg, &vocabulary);
+    let names = Names::new(reg, vocabulary);
     let facts = scan_facts(vault, &names, today);
-    let pages = generated::roles(&vocabulary, &shown)
+    let pages = generated::roles(vocabulary, &shown)
         .into_iter()
         .filter(|(_, kind, _, _, _)| kind == "world" || kind == "area")
         .map(|(page, kind, name, _, _)| ((kind, name), page))
@@ -1426,6 +1429,7 @@ struct Run {
 fn plan(
     notes: &[Note],
     registry: &[u8],
+    vocabulary: &Value,
     packs: &Notes,
     today: NaiveDate,
     held: &BTreeSet<String>,
@@ -1525,11 +1529,10 @@ fn plan(
     if let Some(areas) = shown["areas"].as_array_mut() {
         areas.retain(|a| a["status"].as_str() != Some("proposed"));
     }
-    let vocabulary: Value = serde_json::from_slice(VOCABULARY)?;
     let mut generated_paths = BTreeSet::new();
     for (step, taxonomy) in [("digests", &reg), ("wiki", &shown), ("index", &shown)] {
         for (path, bytes) in
-            generated::generate(step, &vault, taxonomy, &vocabulary, &today.to_string())?
+            generated::generate(step, &vault, taxonomy, vocabulary, &today.to_string())?
         {
             if held.contains(&path) {
                 deferred.push((path, "uncommitted edits".to_owned()));
@@ -1581,7 +1584,7 @@ fn plan(
     let Derived {
         facts,
         packs: rendered,
-    } = derive(&vault, &reg, today)?;
+    } = derive(&vault, &reg, vocabulary, today)?;
     for (path, bytes) in &rendered {
         if packs.get(path) == Some(bytes) {
             continue;
@@ -1791,9 +1794,10 @@ pub fn run(args: &[String]) -> Result<i32> {
     let registry = snapshot_file(&root, "registry.json")?
         .map(|(bytes, _)| bytes)
         .unwrap_or_else(|| SEED.to_vec());
+    let vocabulary = brain_web::vocabulary(&root)?;
     let packs = read_packs(&root)?;
     let mut held = BTreeSet::new();
-    let mut run = plan(&notes, &registry, &packs, today, &held)?;
+    let mut run = plan(&notes, &registry, &vocabulary, &packs, today, &held)?;
     for _ in 0..4 {
         if !versioned {
             break;
@@ -1816,7 +1820,7 @@ pub fn run(args: &[String]) -> Result<i32> {
             break;
         }
         held.extend(unclean);
-        run = plan(&notes, &registry, &packs, today, &held)?;
+        run = plan(&notes, &registry, &vocabulary, &packs, today, &held)?;
     }
     let message = {
         let mut m = format!("brain: consolidate — {}", summary(&run));
@@ -2038,8 +2042,10 @@ mod tests {
     use super::*;
 
     fn names() -> Names {
-        let registry: Value = serde_json::from_slice(SEED).unwrap();
-        let vocabulary: Value = serde_json::from_slice(VOCABULARY).unwrap();
+        let registry: Value =
+            serde_json::from_str(include_str!("../tests/fixtures/brain-registry.json")).unwrap();
+        let vocabulary: Value =
+            serde_json::from_str(include_str!("../tests/fixtures/brain-vocabulary.json")).unwrap();
         Names::new(&registry, &vocabulary)
     }
 

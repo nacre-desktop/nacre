@@ -1164,7 +1164,8 @@ fn commit_page(
         .map(|n: Note| (n.path, n.bytes))
         .collect();
     vault.insert(page.path.clone(), new_text.as_bytes().to_vec());
-    let derived = match consolidate::derive(&vault, registry, today) {
+    let vocabulary = brain_web::vocabulary(root)?;
+    let derived = match consolidate::derive(&vault, registry, &vocabulary, today) {
         Ok(derived) => derived,
         Err(error) => {
             return Ok((
