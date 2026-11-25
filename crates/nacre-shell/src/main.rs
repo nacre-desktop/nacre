@@ -1074,6 +1074,9 @@ fn start(
         // N0231: a closed launcher, dashboard or control centre parks warm 2 s after its close
         // settles; Strand, a retained panel, parks when another view replaces it (N0231b).
         options.warm_source_budget = reload::WARM_SOURCE_BUDGET;
+        if let (Some(socket), Some(session)) = (&options.command_socket, &session_state) {
+            prewarm_panels(socket.clone(), session.clone(), reload::WARM_SOURCE_BUDGET);
+        }
         // B0404: a cold Strand opens on its content when that is ready within 120 ms, instead of
         // sliding in on the baked fallback and swapping mid-slide (only fallback panels wait).
         options.panel_fallback_delay_ms = Some(120);
@@ -1514,6 +1517,106 @@ fn select_renderer(options: &mut Options, name: &str) -> Result<(), Box<dyn std:
     Ok(())
 }
 
+/// N0231c: panels prewarmed once, in order, so the first open after a shell start is warm too.
+const PREWARM_VIEWS: [&str; 4] = ["launcher", "dashboard-today", "wallpaper", "control"];
+const PREWARM_SETTLE: std::time::Duration = std::time::Duration::from_secs(10);
+/// Bead parks each prepared panel after 2 s; a prepare while one still lives retires it.
+const PREWARM_SPACING: std::time::Duration = std::time::Duration::from_secs(3);
+
+#[derive(Debug, PartialEq)]
+enum Prewarm {
+    Wait(std::time::Duration),
+    Send(&'static str),
+    Stop(&'static str),
+    Done,
+}
+
+/// The whole prewarm decision. `now` is the time since the shell started; Bead itself skips a
+/// prepare while any panel is targeted, so the sequence ends for good once one is open.
+fn next_prewarm(
+    now: std::time::Duration,
+    last_send: Option<std::time::Duration>,
+    sent: usize,
+    budget: usize,
+    connected: bool,
+    session: &nacre_protocol::session::SessionState,
+    panel_open: bool,
+) -> Prewarm {
+    if budget == 0 || sent >= PREWARM_VIEWS.len() {
+        return Prewarm::Done;
+    }
+    let ready = last_send.map_or(PREWARM_SETTLE, |t| t + PREWARM_SPACING);
+    if let Some(wait) = ready.checked_sub(now).filter(|w| !w.is_zero()) {
+        return Prewarm::Wait(wait);
+    }
+    if !connected {
+        return Prewarm::Stop("disconnected");
+    }
+    if session.locked || session.sleeping || session.preparing_sleep {
+        return Prewarm::Stop("locked");
+    }
+    if panel_open {
+        return Prewarm::Stop("panel_opened");
+    }
+    Prewarm::Send(PREWARM_VIEWS[sent])
+}
+
+// shortcut: a user hover-prepare in the first ~20 s isn't detected; a prewarm prepare of another view retires it, when it matters detect it via the panel state view.
+/// One thread that ends with the sequence: it sleeps between prepares and holds no timer after.
+fn prewarm_panels(
+    socket: PathBuf,
+    session: std::sync::Arc<dyn bead::core::source::Source>,
+    budget: usize,
+) {
+    use bead::services::ipc::{Call, call};
+    let call_panel = move |method: &str, args: Vec<serde_json::Value>| {
+        let request = Call {
+            version: 1,
+            id: 1,
+            target: "bead.panel".into(),
+            method: method.into(),
+            args,
+            output: None,
+        };
+        call(&socket, &request, std::time::Duration::from_millis(800))
+    };
+    let _ = std::thread::Builder::new()
+        .name("panel-prewarm".into())
+        .spawn(move || {
+            let start = std::time::Instant::now();
+            let (mut sent, mut last_send) = (0, None);
+            loop {
+                let snapshot = session.snapshot();
+                // An unreachable host counts as busy: stop rather than guess.
+                let panel_open = call_panel("state", vec![])
+                    .ok()
+                    .and_then(|r| r.result)
+                    .is_none_or(|state| state["target_open"] != false);
+                match next_prewarm(
+                    start.elapsed(),
+                    last_send,
+                    sent,
+                    budget,
+                    snapshot.connected,
+                    &desktop::session_state(&snapshot.data),
+                    panel_open,
+                ) {
+                    Prewarm::Wait(wait) => std::thread::sleep(wait),
+                    Prewarm::Send(view) => {
+                        eprintln!("PANEL_PREWARM view={view}");
+                        let _ = call_panel("prepare", vec![serde_json::json!(view)]);
+                        (sent, last_send) = (sent + 1, Some(start.elapsed()));
+                    }
+                    Prewarm::Stop(reason) => {
+                        eprintln!("PANEL_PREWARM stopped reason={reason}");
+                        return;
+                    }
+                    Prewarm::Done => return,
+                }
+            }
+        });
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1564,5 +1667,74 @@ mod migration_startup_tests {
         });
         proceeded.set(true);
         assert!(proceeded.get());
+    }
+}
+
+#[cfg(test)]
+mod prewarm_tests {
+    use super::*;
+    use nacre_protocol::session::SessionState;
+    use std::time::Duration;
+    const B: usize = 1;
+    fn step(
+        now: u64,
+        last: Option<u64>,
+        sent: usize,
+        session: &SessionState,
+        open: bool,
+    ) -> Prewarm {
+        let last = last.map(Duration::from_secs);
+        next_prewarm(Duration::from_secs(now), last, sent, B, true, session, open)
+    }
+
+    #[test]
+    fn prewarm_waits_sends_in_order_and_stops_on_every_guard() {
+        let calm = SessionState::default();
+        assert_eq!(
+            step(2, None, 0, &calm, false),
+            Prewarm::Wait(PREWARM_SETTLE - Duration::from_secs(2))
+        );
+        assert_eq!(step(10, None, 0, &calm, false), Prewarm::Send("launcher"));
+        assert_eq!(
+            step(11, Some(10), 1, &calm, false),
+            Prewarm::Wait(Duration::from_secs(2))
+        );
+        assert_eq!(
+            step(13, Some(10), 1, &calm, false),
+            Prewarm::Send("dashboard-today")
+        );
+        assert_eq!(
+            step(40, Some(30), 3, &calm, false),
+            Prewarm::Send("control")
+        );
+        assert_eq!(step(50, Some(40), 4, &calm, false), Prewarm::Done);
+        assert_eq!(
+            step(13, Some(10), 1, &calm, true),
+            Prewarm::Stop("panel_opened")
+        );
+        for locked in [
+            SessionState {
+                locked: true,
+                ..calm
+            },
+            SessionState {
+                sleeping: true,
+                ..calm
+            },
+            SessionState {
+                preparing_sleep: true,
+                ..calm
+            },
+        ] {
+            assert_eq!(step(10, None, 0, &locked, false), Prewarm::Stop("locked"));
+        }
+        assert_eq!(
+            next_prewarm(Duration::from_secs(10), None, 0, B, false, &calm, false),
+            Prewarm::Stop("disconnected")
+        );
+        assert_eq!(
+            next_prewarm(Duration::from_secs(10), None, 0, 0, true, &calm, false),
+            Prewarm::Done
+        );
     }
 }

@@ -149,6 +149,19 @@ model hints are dropped. The tests assert that only hints arrive while parked.
   centre shows the overview and a status pill its section; Strand opens with no query, resting on the
   active wallpaper, thumbnails drawn on the first frame or arriving after it, never a blank strand.
 
+## Prewarm after a shell start (N0231c)
+
+Parking only helps from the second open on, so once per shell start a one-shot thread
+(`prewarm_panels`, `main.rs`) sends Bead's panel command `prepare` for `launcher`,
+`dashboard-today`, `wallpaper` and `control`, 3 s apart, starting 10 s after startup. Each
+prepared panel builds without mapping and parks at Bead's 2 s release, so the first user open is
+`cold=false` too. Guards, checked at send time; any failure ends the sequence for good:
+`WARM_SOURCE_BUDGET > 0`, the daemon link connected, `session.state` not locked, sleeping or
+preparing to sleep, and no panel targeted open (`bead.panel state`). Markers:
+`PANEL_PREWARM view=<v>`, `PANEL_PREWARM stopped reason=<disconnected|locked|panel_opened>`, and
+Bead's `PANEL_PREPARE epoch=` (a skipped prepare prints nothing). The thread ends with the sequence.
+A user hover-prepare in the first ~20 s isn't detected; a prewarm prepare of another view retires it.
+
 ## Rollback
 
 `WARM_SOURCE_BUDGET = 0`: Bead keeps the 120 s keep-alive, the cold switch and both allocator trims, as
