@@ -280,10 +280,10 @@ fn suppress_widget_drag_hover(
 pub(crate) const WARM_PANEL_BYTES: usize = 16 * bead::core::cache::MIB;
 /// N0231b: the docked control centre's bound; its Runtime is about the launcher's size.
 pub(crate) const WARM_CONTROL_BYTES: usize = 8 * bead::core::cache::MIB;
-/// N0231: Bead's dormant budget, room for the four parked panels (launcher, Today, control
-/// centre, Strand) with their stacks and rasters (docs/specs/0231-warm-panels.md). Zero is the
-/// cold reopen of before.
-pub(crate) const WARM_SOURCE_BUDGET: usize = 112 * bead::core::cache::MIB;
+/// N0231: Bead's dormant budget, room for the three parked panels (launcher, Today, control
+/// centre) with their stacks and rasters, measured at 67.2 MiB (docs/specs/0231-warm-panels.md).
+/// Zero is the cold reopen of before.
+pub(crate) const WARM_SOURCE_BUDGET: usize = 80 * bead::core::cache::MIB;
 const WIDGET_HOVER_PREVIEW_RENEW: std::time::Duration = std::time::Duration::from_millis(1500);
 const WIDGET_HOVER_PREVIEW_DEDUPE: std::time::Duration = std::time::Duration::from_millis(1400);
 fn widget_floating_action(
@@ -5613,25 +5613,22 @@ impl SceneSource for Runtime {
             .collect()
     }
 
-    // N0231: only the launcher, the dashboard on Today (the page it opens on), the docked
-    // control centre and Strand (N0231b) park when closed; other views and pages reopen cold.
+    // N0231: only the launcher, the dashboard on Today (the page it opens on) and the docked
+    // control centre park when closed; other views and pages reopen cold. Strand keeps its GL
+    // renderer and shared context while parked (about 81 MiB of GPU), so it never parks.
     fn warm_retained_bytes(&self) -> Option<usize> {
         let today = self
             .dashboard
             .as_ref()
             .is_some_and(|dashboard| dashboard.borrow().page() == crate::dashboard::Page::Today);
-        let strand = self
-            .extras
-            .as_ref()
-            .is_some_and(|extras| extras.kind == crate::extras::Kind::Wallpaper);
         // The dock's status pages make the `control` view; the notification history has none.
         if !self.dock_status.is_empty() {
             return Some(WARM_CONTROL_BYTES);
         }
-        (self.launcher.is_some() || today || strand).then_some(WARM_PANEL_BYTES)
+        (self.launcher.is_some() || today).then_some(WARM_PANEL_BYTES)
     }
-    // Bead has staged PanelVisibility(true), which re-leases a parked dashboard's, control centre's
-    // and Strand's topics and opens the dock on its overview and Strand on a new visit. Show what a
+    // Bead has staged PanelVisibility(true), which re-leases a parked dashboard's and control
+    // centre's topics and opens the dock on its overview. Show what a
     // fresh open would: the launcher from its trigger's state, the dashboard projected anew.
     fn resume(&mut self) -> Result<Option<Scene>, Box<dyn Error>> {
         if !self.session.sources_current() {

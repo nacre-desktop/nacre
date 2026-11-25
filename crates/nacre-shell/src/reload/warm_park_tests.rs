@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-//! N0231: a closed launcher, dashboard, control centre or Strand (N0231b) parks in Bead's warm
+//! N0231: a closed launcher, dashboard or control centre parks in Bead's warm
 //! cache and reopens from it, driven through a real panel worker as Bead's panel host drives it.
 use super::*;
 use std::path::PathBuf;
@@ -419,7 +419,7 @@ fn topics(names: &[&str]) -> std::collections::BTreeSet<String> {
 }
 
 #[test]
-fn only_the_launcher_today_the_control_centre_and_strand_opt_in_to_warm_parking() {
+fn only_the_launcher_today_and_the_control_centre_opt_in_to_warm_parking() {
     use crate::dashboard::{Dashboard, Page};
     let (root, palette, colors) = shell();
     let fallback = crate::sound::fallback(colors.get("surface").unwrap());
@@ -457,8 +457,8 @@ fn only_the_launcher_today_the_control_centre_and_strand_opt_in_to_warm_parking(
     for kind in crate::extras::Kind::ALL {
         let extras = crate::extras::Extras::new(kind, client.clone()).unwrap();
         let runtime = runtime().with_extras(extras).unwrap();
-        let bound = (kind == crate::extras::Kind::Wallpaper).then_some(WARM_PANEL_BYTES);
-        assert_eq!(runtime.warm_retained_bytes(), bound, "{}", kind.name());
+        // Strand included: its GL renderer would stay resident while parked.
+        assert_eq!(runtime.warm_retained_bytes(), None, "{}", kind.name());
     }
 }
 
@@ -559,10 +559,10 @@ fn a_parked_control_centre_reopens_on_its_overview_without_a_factory_call() {
     drop(host);
 }
 
-/// N0231b: Strand parks without its daemon leases and reopens through `resume` on a new visit
-/// (no query), drawing what it closed on, then the wallpaper the daemon made active meanwhile.
+/// N0231b: a closed Strand (retained, never parked) releases its own daemon leases and leases
+/// them again on a new visit, which shows the wallpaper the daemon made active meanwhile.
 #[test]
-fn a_parked_strand_reopens_on_a_new_visit_and_the_active_wallpaper_without_a_factory_call() {
+fn a_closed_strand_releases_its_leases_and_a_reopen_leases_them_again() {
     use crate::control_center::tests::changed;
     crate::i18n::init();
     let rt = daemon();
@@ -572,35 +572,20 @@ fn a_parked_strand_reopens_on_a_new_visit_and_the_active_wallpaper_without_a_fac
     )));
     *lab.active.lock().unwrap() = "/fixture/wallpaper-00".into();
     let mut host = strand(lab.client.clone());
-    let opened = host.shown.clone().expect("an open frame");
-    assert!(shows(&opened, "Wallpaper 00"), "{:?}", texts(&opened));
-    host.stage(UiEvent::Model(BTreeMap::from([(
-        "extras.query".into(),
-        bead::core::Value::Text("zzz".into()),
-    )])));
-    let searched = host.shown.clone().expect("a searched frame");
-    assert!(
-        shows(&searched, "No matching wallpapers"),
-        "{:?}",
-        texts(&searched)
-    );
+    assert!(shows(
+        host.shown.as_ref().expect("an open frame"),
+        "Wallpaper 00"
+    ));
     while lab.subs.try_recv().is_ok() {}
-    host.close_and_park();
+    host.stage(UiEvent::PanelVisibility(false));
     let own = topics(&["compositor", "wallpaper.active"]);
     assert_eq!(
         rt.block_on(changed(&mut lab.unsubs, own.len())),
         own,
-        "a parked Strand holds no daemon lease"
+        "a closed Strand holds no daemon lease"
     );
-    // The daemon's active wallpaper moves on while Strand is parked.
     *lab.active.lock().unwrap() = "/fixture/wallpaper-05".into();
-    let first = host.reopen();
-    assert!(
-        !shows(&first, "zzz") && !shows(&first, "No matching wallpapers"),
-        "a reopened Strand starts a new visit: {:?}",
-        texts(&first)
-    );
-    assert!(shows(&first, "Wallpaper"), "{:?}", texts(&first));
+    host.stage(UiEvent::PanelVisibility(true));
     assert_eq!(
         rt.block_on(changed(&mut lab.subs, own.len())),
         own,
@@ -609,8 +594,6 @@ fn a_parked_strand_reopens_on_a_new_visit_and_the_active_wallpaper_without_a_fac
     host.settle();
     let fresh = host.shown.clone().expect("a settled frame");
     assert!(shows(&fresh, "Wallpaper 05"), "{:?}", texts(&fresh));
-    assert_eq!(host.factories.load(Ordering::SeqCst), 1, "no factory call");
-    eprintln!("strand resource_jobs={}", host.resource_jobs);
     drop(host);
     let _ = std::fs::remove_dir_all(&dir);
 }
@@ -631,7 +614,7 @@ fn heap() -> (usize, usize) {
 
 #[cfg(all(target_os = "linux", target_env = "gnu"))]
 #[test]
-fn parked_panels_keep_less_than_their_charge_and_all_four_fit_the_budget() {
+fn parked_panels_keep_less_than_their_charge_and_all_three_fit_the_budget() {
     let output = std::process::Command::new(std::env::current_exe().unwrap())
         .args([
             "--exact",
@@ -668,17 +651,11 @@ fn parked_panel_memory_child() {
     let mut charges = 0;
     let rt = daemon();
     let control_lab = rt.block_on(crate::control_center::tests::lab(&[]));
-    let dir = std::env::temp_dir().join(format!("warm-park-memory-{}", std::process::id()));
-    let strand_lab = rt.block_on(crate::extras::tests::lab_with_catalogue(strand_catalogue(
-        &dir,
-    )));
-    *strand_lab.active.lock().unwrap() = "/fixture/wallpaper-00".into();
-    for view in ["launcher", "dashboard-today", "control", "wallpaper"] {
+    for view in ["launcher", "dashboard-today", "control"] {
         let mut host = match view {
             "launcher" => launcher(Arc::new(std::sync::Mutex::new(launch("")))),
             "dashboard-today" => dashboard(Arc::new(AtomicU64::new(12))),
-            "control" => control(control_lab.client.clone()),
-            _ => strand(strand_lab.client.clone()),
+            _ => control(control_lab.client.clone()),
         };
         let charge = host.close_and_park();
         let jobs = host.resource_jobs;
@@ -714,8 +691,7 @@ fn parked_panel_memory_child() {
     );
     assert!(
         charges + 4096 <= WARM_SOURCE_BUDGET,
-        "the four warm panels must park together: raise WARM_SOURCE_BUDGET"
+        "the three warm panels must park together: raise WARM_SOURCE_BUDGET"
     );
-    drop((control_lab, strand_lab));
-    let _ = std::fs::remove_dir_all(&dir);
+    drop(control_lab);
 }

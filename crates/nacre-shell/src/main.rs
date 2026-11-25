@@ -1072,7 +1072,7 @@ fn start(
         views.insert(pearls::GUIDE_VIEW.into(), pearls::guide_spec(&colors)?);
         options.panels = Some(bead::wayland::Panels::new("launcher".into(), views)?);
         // N0231: a closed launcher, dashboard or control centre parks warm 2 s after its close
-        // settles; Strand, a retained panel, parks when another view replaces it (N0231b).
+        // settles; Strand never parks (its GL renderer would stay resident, N0231b).
         options.warm_source_budget = reload::WARM_SOURCE_BUDGET;
         if let (Some(socket), Some(session)) = (&options.command_socket, &session_state) {
             prewarm_panels(socket.clone(), session.clone(), reload::WARM_SOURCE_BUDGET);
@@ -1518,7 +1518,7 @@ fn select_renderer(options: &mut Options, name: &str) -> Result<(), Box<dyn std:
 }
 
 /// N0231c: panels prewarmed once, in order, so the first open after a shell start is warm too.
-const PREWARM_VIEWS: [&str; 4] = ["launcher", "dashboard-today", "wallpaper", "control"];
+const PREWARM_VIEWS: [&str; 3] = ["launcher", "dashboard-today", "control"];
 const PREWARM_SETTLE: std::time::Duration = std::time::Duration::from_secs(10);
 /// Bead parks each prepared panel after 2 s; a prepare while one still lives retires it.
 const PREWARM_SPACING: std::time::Duration = std::time::Duration::from_secs(3);
@@ -1704,10 +1704,10 @@ mod prewarm_tests {
             Prewarm::Send("dashboard-today")
         );
         assert_eq!(
-            step(40, Some(30), 3, &calm, false),
+            step(16, Some(13), 2, &calm, false),
             Prewarm::Send("control")
         );
-        assert_eq!(step(50, Some(40), 4, &calm, false), Prewarm::Done);
+        assert_eq!(step(19, Some(16), 3, &calm, false), Prewarm::Done);
         assert_eq!(
             step(13, Some(10), 1, &calm, true),
             Prewarm::Stop("panel_opened")
