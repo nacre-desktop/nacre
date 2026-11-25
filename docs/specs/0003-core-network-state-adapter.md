@@ -224,7 +224,7 @@ compatibility fixtures. Focused correctness tests use private `dbus-daemon
 `MemoryMax=2G`.
 
 ```sh
-PATH=/home/siverteh/.rustup/toolchains/1.99.0-x86_64-unknown-linux-gnu/bin:$PATH cargo fmt --check
+PATH="$HOME"/.rustup/toolchains/1.99.0-x86_64-unknown-linux-gnu/bin:$PATH cargo fmt --check
 cargo clippy -j2 --all-targets -- -D warnings
 cargo test -j2 -p nacre-helper core_network_ -- --nocapture
 cargo test -j2 -p nacre-helper --quiet
