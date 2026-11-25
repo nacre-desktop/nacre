@@ -1547,4 +1547,4 @@ impl ControlCenter {
 
 #[cfg(test)]
 #[path = "control_center_tests.rs"]
-mod tests;
+pub(crate) mod tests;

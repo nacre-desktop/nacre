@@ -540,17 +540,21 @@ const SWATCH_ROLES: [&str; 5] = [
 /// How long after start a closed Strand keeps waking to send its once-per-boot catalogue refresh.
 const REFRESH_WINDOW: Duration = Duration::from_secs(30);
 const STRAND_SETTLE: Duration = Duration::from_millis(250);
+/// A topic the view reads; Strand swaps its own across a close (N0231b).
+type Slot = RefCell<Option<Arc<dyn Source>>>;
 pub struct Extras {
     pub kind: Kind,
     client: Client,
-    topic: Option<Arc<dyn Source>>,
+    topic: Slot,
     state: RefCell<State>,
     glyphs: crate::workspace_rows::Rows,
     previews: Option<Previews>,
-    wallpaper_settings: Option<Arc<dyn Source>>,
+    wallpaper_settings: Slot,
     /// The compositor snapshot the peek fallback reads; Strand only.
-    compositor: Option<Arc<dyn Source>>,
+    compositor: Slot,
     wallpaper_actions: Option<Arc<std::sync::Mutex<WallpaperActivationQueue>>>,
+    /// A closed Strand with its daemon leases dropped (N0231b), see [`Self::park`].
+    parked: std::cell::Cell<bool>,
 }
 fn preload_wallpaper_catalogue(state: &mut State, boot: &str, active_path: &str) -> bool {
     if state.catalogue_preloaded || !state.catalogue_result.is_empty() {
@@ -675,16 +679,17 @@ impl Extras {
         Ok(Self {
             kind,
             client,
-            topic,
+            topic: RefCell::new(topic),
             state: RefCell::new(State {
                 warm_gate: crate::shell_control::live(),
                 ..state
             }),
             glyphs: Default::default(),
             previews: None,
-            wallpaper_settings,
+            wallpaper_settings: RefCell::new(wallpaper_settings),
             wallpaper_actions,
-            compositor,
+            compositor: RefCell::new(compositor),
+            parked: Default::default(),
         })
     }
     fn wallpaper_preview(&self) -> Option<Arc<crate::wallpaper::Preview>> {
@@ -756,14 +761,69 @@ impl Extras {
             }
         }
     }
+    fn topic(&self) -> Option<Arc<dyn Source>> {
+        self.topic.borrow().clone()
+    }
+    fn wallpaper_settings(&self) -> Option<Arc<dyn Source>> {
+        self.wallpaper_settings.borrow().clone()
+    }
+    fn compositor(&self) -> Option<Arc<dyn Source>> {
+        self.compositor.borrow().clone()
+    }
+    fn sources(&self) -> [(&Slot, Option<&'static str>); 3] {
+        [
+            (&self.topic, self.kind.topic()),
+            (
+                &self.wallpaper_settings,
+                Some(crate::prefs::WALLPAPER_PICKER),
+            ),
+            (&self.compositor, Some("compositor")),
+        ]
+    }
+    pub(crate) fn parked(&self) -> bool {
+        self.parked.get()
+    }
+    /// N0231b: a closed Strand drops its own topic leases, so it holds none while parked warm;
+    /// each keeps the snapshot it showed. Other kinds keep theirs until their keep-alive ends.
+    pub(crate) fn park(&self) -> bead::core::source::Result<()> {
+        if self.kind != Kind::Wallpaper {
+            return Ok(());
+        }
+        let off = crate::dashboard::unavailable_source()?;
+        for (slot, _) in self.sources() {
+            if let Some(source) = slot.borrow_mut().as_mut() {
+                *source = crate::nacre_source::kept(off.clone(), source.snapshot());
+            }
+        }
+        self.parked.set(true);
+        Ok(())
+    }
+    /// Reopened: lease each topic again; it shows the parked snapshot until it has data.
+    pub(crate) fn resume(&self) {
+        // A link that dropped while closed reads stale, as held leases would have.
+        let link = self.client.snapshot().connected;
+        for (slot, name) in self.sources() {
+            let mut slot = slot.borrow_mut();
+            let (Some(source), Some(name)) = (slot.as_mut(), name) else {
+                continue;
+            };
+            let mut last = source.snapshot();
+            Arc::make_mut(&mut last).connected &= link;
+            match self.client.view_topic(name) {
+                Ok(live) => *source = crate::nacre_source::kept(live, last),
+                Err(error) => eprintln!("SOURCE_ERROR code=extras_resume {name} {error}"),
+            }
+        }
+        self.parked.set(false);
+    }
     pub fn subscribe(&self, wake: CallWake) -> bead::core::source::Result<Vec<Subscription>> {
         let w = wake.clone();
         let mut subscriptions = vec![self.client.subscribe(Arc::new(move |_| w()))?];
-        if let Some(topic) = &self.topic {
+        if let Some(topic) = self.topic() {
             let topic_wake = wake.clone();
             subscriptions.push(topic.subscribe(Arc::new(move |_| topic_wake()))?);
         }
-        if let Some(settings) = &self.wallpaper_settings {
+        if let Some(settings) = self.wallpaper_settings() {
             subscriptions.push(settings.subscribe(Arc::new(move |_| wake()))?);
         }
         Ok(subscriptions)
@@ -809,7 +869,7 @@ impl Extras {
         let mut available = false;
         let mut per_output = false;
         let mut wallpaper_active_path = String::new();
-        if let Some(topic) = &self.topic {
+        if let Some(topic) = self.topic() {
             let snapshot = topic.snapshot();
             let data = &snapshot.data;
             available = snapshot.connected
@@ -881,7 +941,7 @@ impl Extras {
                     state.catalogue_boot = Some(boot.clone());
                 }
             }
-            if let Some(topic) = &self.topic {
+            if let Some(topic) = self.topic() {
                 let active = topic.snapshot();
                 wallpaper_revision = active.data["revision"].as_u64().unwrap_or_default();
             }
@@ -1091,7 +1151,7 @@ impl Extras {
                     state.message = "Wallpaper catalogue unavailable".into();
                 }
             }
-            if let Some(topic) = &self.topic {
+            if let Some(topic) = self.topic() {
                 let snapshot = topic.snapshot();
                 let current = &snapshot.data["current"];
                 if let Some(id) = current["motion"]["path"]
@@ -1353,11 +1413,10 @@ impl Extras {
         }
         if self.kind == Kind::Wallpaper {
             let paused = self
-                .wallpaper_settings
-                .as_ref()
+                .wallpaper_settings()
                 .and_then(|settings| settings.snapshot().data.get("data").cloned())
                 .and_then(|data| data.get("paused").and_then(Json::as_bool));
-            let can_pause = self.topic.as_ref().is_some_and(|topic| {
+            let can_pause = self.topic().is_some_and(|topic| {
                 let current = &topic.snapshot().data["current"];
                 current["motion"]["path"].as_str().is_some()
             });
@@ -1432,7 +1491,7 @@ impl Extras {
         if opening || (open && state.wallpaper_origin.is_none() && state.wallpaper_shown.is_none())
         {
             // Opening may beat the first topic snapshot: keep looking until nothing was previewed.
-            let origin = self.topic.as_ref().and_then(|topic| {
+            let origin = self.topic().and_then(|topic| {
                 let current = &topic.snapshot().data["current"];
                 current["motion"]["path"]
                     .as_str()
@@ -1519,8 +1578,7 @@ impl Extras {
         if let Some(socket) = socket {
             let outputs = peek_outputs(
                 &self
-                    .compositor
-                    .as_ref()
+                    .compositor()
                     .map(|topic| topic.snapshot().data.clone())
                     .unwrap_or_default(),
             );
@@ -1577,8 +1635,7 @@ impl Extras {
     }
     fn peek_fallback(&self, wake: &Option<CallWake>) {
         let Some(plan) = self
-            .compositor
-            .as_ref()
+            .compositor()
             .and_then(|topic| peek_workspace_plan(&topic.snapshot().data))
         else {
             return;
@@ -1627,7 +1684,7 @@ impl Extras {
         };
         drop(state);
         let Some(boot) = boot else { return };
-        let Some(topic) = &self.topic else { return };
+        let Some(topic) = self.topic() else { return };
         let active = topic.snapshot();
         if !active.connected {
             return;
@@ -1840,7 +1897,7 @@ impl Extras {
             state.refreshed = None;
             return;
         } else if let Some(id) = request.strip_prefix("focus:") {
-            let Some(topic) = &self.topic else {
+            let Some(topic) = self.topic() else {
                 return;
             };
             let snapshot = topic.snapshot();
@@ -1855,7 +1912,7 @@ impl Extras {
             .strip_prefix("workspace:")
             .and_then(|s| s.parse::<u16>().ok())
         {
-            let Some(topic) = &self.topic else {
+            let Some(topic) = self.topic() else {
                 return;
             };
             let snapshot = topic.snapshot();
@@ -2139,7 +2196,7 @@ impl Extras {
     }
 
     fn wallpaper_preference(&self, key: &str, update: impl FnOnce(&Json) -> Json) -> Option<Json> {
-        let snapshot = self.wallpaper_settings.as_ref()?.snapshot();
+        let snapshot = self.wallpaper_settings()?.snapshot();
         if !snapshot.connected || snapshot.data.get("error").is_some_and(|e| !e.is_null()) {
             return None;
         }

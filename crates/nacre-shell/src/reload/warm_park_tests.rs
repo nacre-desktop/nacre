@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
-//! N0231: a closed launcher or dashboard parks in Bead's warm cache and reopens from it,
-//! driven through a real panel worker as Bead's panel host drives it.
+//! N0231: a closed launcher, dashboard, control centre or Strand (N0231b) parks in Bead's warm
+//! cache and reopens from it, driven through a real panel worker as Bead's panel host drives it.
 use super::*;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
@@ -308,8 +308,118 @@ fn dashboard(updates: Arc<AtomicU64>) -> Host {
     })
 }
 
+/// The docked control centre as popouts::control_center builds it, on the control tests' daemon.
+fn control(client: crate::nacre_source::Client) -> Host {
+    let (root, palette, colors) = shell();
+    let fallback = crate::popouts::control_center(
+        client.clone(),
+        palette.clone(),
+        colors.clone(),
+        Vec::new(),
+        false,
+    )
+    .unwrap()
+    .fallback;
+    let cold = fallback.clone();
+    Host::new(fallback, move || {
+        let topics = crate::control_center::TOPICS
+            .iter()
+            .filter_map(|name| client.view_topic(name).ok().map(|topic| (*name, topic)))
+            .collect();
+        let store = client
+            .lease_topic(crate::control_center::STORE_TOPIC)
+            .ok()
+            .map(|topic| Arc::new(topic) as Arc<dyn bead::core::source::Source>);
+        let control = crate::control_center::ControlCenter::new(
+            Some(client.clone()),
+            topics,
+            store,
+            Vec::new(),
+        );
+        let session = bead::ui::Session::new(
+            root,
+            "control/main.luau".into(),
+            palette,
+            colors.clone(),
+            cold,
+        );
+        Runtime::panel_session(session, true)
+            .with_view_edge("right")?
+            .with_sheet(480., !crate::placement::Frame::current().bordered)?
+            .with_frame(crate::placement::Attachment::ControlCenter, &colors)?
+            .with_control_center(control)?
+            .with_docked_details(client)
+    })
+}
+
+/// Strand's catalogue: twelve wallpapers, each with a thumbnail at the daemon's largest size.
+fn strand_catalogue(dir: &std::path::Path) -> serde_json::Value {
+    std::fs::create_dir_all(dir).unwrap();
+    (0..12u8)
+        .map(|index| {
+            let file = dir.join(format!("thumb-{index:02}.png"));
+            image::RgbaImage::from_fn(640, 400, |x, y| {
+                image::Rgba([(x / 3) as u8, (y / 2) as u8, index * 20, 255])
+            })
+            .save(&file)
+            .unwrap();
+            serde_json::json!({"id": format!("/fixture/wallpaper-{index:02}"), "kind": "image",
+                "animated": false, "title": format!("Wallpaper {index:02}"), "thumbnail": "",
+                "preview": "", "active": index == 0, "fixture_thumbnail": file})
+        })
+        .collect()
+}
+
+/// Strand as extras::panel builds it, on the extras tests' daemon.
+fn strand(client: crate::nacre_source::Client) -> Host {
+    use crate::extras::{Extras, Kind};
+    let (root, palette, colors) = shell();
+    let fallback = crate::extras::panel(
+        Kind::Wallpaper,
+        client.clone(),
+        palette.clone(),
+        colors.clone(),
+        false,
+        None,
+        None,
+    )
+    .unwrap()
+    .fallback;
+    let cold = fallback.clone();
+    Host::new(fallback, move || {
+        let extras = Extras::new(Kind::Wallpaper, client)?;
+        // Not the host's catalogue snapshot: this daemon's.
+        crate::extras::tests::start_with_empty_wallpaper_catalogue(&extras);
+        let session = bead::ui::Session::new(
+            root,
+            "extras/main.luau".into(),
+            palette,
+            colors.clone(),
+            cold,
+        );
+        Runtime::panel_session(session, true)
+            .with_frame(
+                crate::placement::Attachment::SceneEdge(bead::core::Edge::Bottom),
+                &colors,
+            )?
+            .with_extras(extras)
+    })
+}
+
+fn daemon() -> tokio::runtime::Runtime {
+    tokio::runtime::Builder::new_multi_thread()
+        .worker_threads(1)
+        .enable_all()
+        .build()
+        .unwrap()
+}
+
+fn topics(names: &[&str]) -> std::collections::BTreeSet<String> {
+    names.iter().map(|name| name.to_string()).collect()
+}
+
 #[test]
-fn only_the_launcher_and_the_dashboard_on_today_opt_in_to_warm_parking() {
+fn only_the_launcher_today_the_control_centre_and_strand_opt_in_to_warm_parking() {
     use crate::dashboard::{Dashboard, Page};
     let (root, palette, colors) = shell();
     let fallback = crate::sound::fallback(colors.get("surface").unwrap());
@@ -329,6 +439,26 @@ fn only_the_launcher_and_the_dashboard_on_today_opt_in_to_warm_parking() {
         let view = Dashboard::new(page, Arc::new(source), None, true);
         let runtime = runtime().with_dashboard_view(view).unwrap();
         assert_eq!(runtime.warm_retained_bytes(), bound, "{}", page.name());
+    }
+    // A daemon link that never connects: only the views' shapes matter here.
+    let socket = std::env::temp_dir().join(format!("warm-park-{}.sock", std::process::id()));
+    let client =
+        crate::nacre_source::Client::start(crate::nacre_source::Config::new(socket, Vec::new()))
+            .unwrap();
+    // The notification history is a control centre without the dock's pages.
+    let control = || crate::control_center::ControlCenter::new(None, Vec::new(), None, Vec::new());
+    let history = runtime().with_control_center(control()).unwrap();
+    assert_eq!(history.warm_retained_bytes(), None);
+    let dock = runtime()
+        .with_control_center(control())
+        .and_then(|runtime| runtime.with_docked_details(client.clone()))
+        .unwrap();
+    assert_eq!(dock.warm_retained_bytes(), Some(WARM_CONTROL_BYTES));
+    for kind in crate::extras::Kind::ALL {
+        let extras = crate::extras::Extras::new(kind, client.clone()).unwrap();
+        let runtime = runtime().with_extras(extras).unwrap();
+        let bound = (kind == crate::extras::Kind::Wallpaper).then_some(WARM_PANEL_BYTES);
+        assert_eq!(runtime.warm_retained_bytes(), bound, "{}", kind.name());
     }
 }
 
@@ -379,6 +509,112 @@ fn a_parked_dashboard_reopens_on_fresh_data_without_a_factory_call() {
     eprintln!("dashboard resource_jobs={}", host.resource_jobs);
 }
 
+/// N0231b: the control centre parks without its own daemon leases (the dock's status topics are
+/// the bar's) and reopens through `resume` on the overview, as a cold factory opens.
+#[test]
+fn a_parked_control_centre_reopens_on_its_overview_without_a_factory_call() {
+    use crate::control_center::tests::{changed, lab};
+    crate::i18n::init();
+    let rt = daemon();
+    let mut lab = rt.block_on(lab(&[]));
+    let mut host = control(lab.client.clone());
+    let edit = crate::i18n::tr("bead.panel.control-edit-title", &[]);
+    let overview = crate::i18n::tr("bead.panel.control-notifications", &[]);
+    let opened = host.shown.clone().expect("an open frame");
+    assert!(shows(&opened, &overview), "{:?}", texts(&opened));
+    host.stage(UiEvent::Model(BTreeMap::from([(
+        "cc.page".into(),
+        bead::core::Value::Text("edit".into()),
+    )])));
+    let editing = host.shown.clone().expect("the edit page");
+    assert!(shows(&editing, &edit), "{:?}", texts(&editing));
+    while lab.subs.try_recv().is_ok() {}
+    host.close_and_park();
+    let own = topics(&[
+        "controls",
+        "vpn",
+        "power.profiles",
+        "notifications",
+        "displays",
+        "dashboard.updates",
+        crate::control_center::STORE_TOPIC,
+    ]);
+    assert_eq!(
+        rt.block_on(changed(&mut lab.unsubs, own.len())),
+        own,
+        "a parked control centre holds none of its own leases"
+    );
+    let first = host.reopen();
+    assert!(
+        !shows(&first, &edit) && shows(&first, &overview),
+        "the first reopened frame is the overview: {:?}",
+        texts(&first)
+    );
+    assert_eq!(
+        rt.block_on(changed(&mut lab.subs, own.len())),
+        own,
+        "leased again"
+    );
+    assert_eq!(host.factories.load(Ordering::SeqCst), 1, "no factory call");
+    drop(host);
+}
+
+/// N0231b: Strand parks without its daemon leases and reopens through `resume` on a new visit
+/// (no query), drawing what it closed on, then the wallpaper the daemon made active meanwhile.
+#[test]
+fn a_parked_strand_reopens_on_a_new_visit_and_the_active_wallpaper_without_a_factory_call() {
+    use crate::control_center::tests::changed;
+    crate::i18n::init();
+    let rt = daemon();
+    let dir = std::env::temp_dir().join(format!("warm-park-strand-{}", std::process::id()));
+    let mut lab = rt.block_on(crate::extras::tests::lab_with_catalogue(strand_catalogue(
+        &dir,
+    )));
+    *lab.active.lock().unwrap() = "/fixture/wallpaper-00".into();
+    let mut host = strand(lab.client.clone());
+    let opened = host.shown.clone().expect("an open frame");
+    assert!(shows(&opened, "Wallpaper 00"), "{:?}", texts(&opened));
+    host.stage(UiEvent::Model(BTreeMap::from([(
+        "extras.query".into(),
+        bead::core::Value::Text("zzz".into()),
+    )])));
+    let searched = host.shown.clone().expect("a searched frame");
+    assert!(
+        shows(&searched, "No matching wallpapers"),
+        "{:?}",
+        texts(&searched)
+    );
+    while lab.subs.try_recv().is_ok() {}
+    host.close_and_park();
+    let own = topics(&["compositor", "wallpaper.active"]);
+    assert_eq!(
+        rt.block_on(changed(&mut lab.unsubs, own.len())),
+        own,
+        "a parked Strand holds no daemon lease"
+    );
+    // The daemon's active wallpaper moves on while Strand is parked.
+    *lab.active.lock().unwrap() = "/fixture/wallpaper-05".into();
+    let first = host.reopen();
+    assert!(
+        !shows(&first, "zzz") && !shows(&first, "No matching wallpapers"),
+        "a reopened Strand starts a new visit: {:?}",
+        texts(&first)
+    );
+    assert!(shows(&first, "Wallpaper"), "{:?}", texts(&first));
+    assert_eq!(
+        rt.block_on(changed(&mut lab.subs, own.len())),
+        own,
+        "leased again"
+    );
+    host.settle();
+    let fresh = host.shown.clone().expect("a settled frame");
+    assert!(shows(&fresh, "Wallpaper 05"), "{:?}", texts(&fresh));
+    assert_eq!(host.factories.load(Ordering::SeqCst), 1, "no factory call");
+    eprintln!("strand resource_jobs={}", host.resource_jobs);
+    drop(host);
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
 /// In-use heap (glibc arenas and mmapped chunks) and Bead's charged cache bytes.
 #[cfg(all(target_os = "linux", target_env = "gnu"))]
 fn heap() -> (usize, usize) {
@@ -395,7 +631,7 @@ fn heap() -> (usize, usize) {
 
 #[cfg(all(target_os = "linux", target_env = "gnu"))]
 #[test]
-fn parked_panels_keep_less_than_their_charge_and_both_fit_the_budget() {
+fn parked_panels_keep_less_than_their_charge_and_all_four_fit_the_budget() {
     let output = std::process::Command::new(std::env::current_exe().unwrap())
         .args([
             "--exact",
@@ -430,11 +666,19 @@ fn parked_panel_memory_child() {
     crate::i18n::init();
     let mib = |bytes: usize| bytes as f64 / bead::core::cache::MIB as f64;
     let mut charges = 0;
-    for view in ["launcher", "dashboard-today"] {
-        let mut host = if view == "launcher" {
-            launcher(Arc::new(std::sync::Mutex::new(launch(""))))
-        } else {
-            dashboard(Arc::new(AtomicU64::new(12)))
+    let rt = daemon();
+    let control_lab = rt.block_on(crate::control_center::tests::lab(&[]));
+    let dir = std::env::temp_dir().join(format!("warm-park-memory-{}", std::process::id()));
+    let strand_lab = rt.block_on(crate::extras::tests::lab_with_catalogue(strand_catalogue(
+        &dir,
+    )));
+    *strand_lab.active.lock().unwrap() = "/fixture/wallpaper-00".into();
+    for view in ["launcher", "dashboard-today", "control", "wallpaper"] {
+        let mut host = match view {
+            "launcher" => launcher(Arc::new(std::sync::Mutex::new(launch("")))),
+            "dashboard-today" => dashboard(Arc::new(AtomicU64::new(12))),
+            "control" => control(control_lab.client.clone()),
+            _ => strand(strand_lab.client.clone()),
         };
         let charge = host.close_and_park();
         let jobs = host.resource_jobs;
@@ -449,12 +693,16 @@ fn parked_panel_memory_child() {
             mib(kept),
             mib(parked.1.saturating_sub(released.1)),
             mib(charge),
-            mib(WARM_PANEL_BYTES),
+            mib(if view == "control" {
+                WARM_CONTROL_BYTES
+            } else {
+                WARM_PANEL_BYTES
+            }),
         );
         // The charge less the worker's 2 MiB minimum stack is the heap it may hold.
         assert!(
             kept <= charge - 2 * bead::core::cache::MIB,
-            "{view} keeps {:.2} MiB, more than its charge allows: raise WARM_PANEL_BYTES",
+            "{view} keeps {:.2} MiB, more than its charge allows: raise its bound",
             mib(kept)
         );
         charges += charge;
@@ -466,6 +714,8 @@ fn parked_panel_memory_child() {
     );
     assert!(
         charges + 4096 <= WARM_SOURCE_BUDGET,
-        "the launcher and the dashboard must park together: raise WARM_SOURCE_BUDGET"
+        "the four warm panels must park together: raise WARM_SOURCE_BUDGET"
     );
+    drop((control_lab, strand_lab));
+    let _ = std::fs::remove_dir_all(&dir);
 }

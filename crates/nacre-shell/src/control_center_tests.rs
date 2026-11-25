@@ -242,20 +242,20 @@ fn stale_or_unavailable_topics_publish_no_source() {
 
 // ---- fake daemon -----------------------------------------------------------------------
 
-struct Lab {
+pub(crate) struct Lab {
     dir: std::path::PathBuf,
-    client: Client,
+    pub(crate) client: Client,
     calls: mpsc::UnboundedReceiver<(String, Json)>,
     fail: Arc<Mutex<BTreeMap<String, ErrorCode>>>,
-    subs: mpsc::UnboundedReceiver<Vec<String>>,
-    unsubs: mpsc::UnboundedReceiver<Vec<String>>,
+    pub(crate) subs: mpsc::UnboundedReceiver<Vec<String>>,
+    pub(crate) unsubs: mpsc::UnboundedReceiver<Vec<String>>,
 }
 impl Drop for Lab {
     fn drop(&mut self) {
         let _ = std::fs::remove_dir_all(&self.dir);
     }
 }
-async fn lab(methods: &[&str]) -> Lab {
+pub(crate) async fn lab(methods: &[&str]) -> Lab {
     lab_with(methods, controls()).await
 }
 async fn lab_with(methods: &[&str], published: Json) -> Lab {
@@ -3555,7 +3555,10 @@ async fn a_closed_dock_reopens_on_the_overview_after_a_status_click() -> bead_te
 }
 
 /// The topics named in the lab's next `Sub` (`subs`) or `Unsub` messages, `count` of them.
-async fn changed(rx: &mut mpsc::UnboundedReceiver<Vec<String>>, count: usize) -> BTreeSet<String> {
+pub(crate) async fn changed(
+    rx: &mut mpsc::UnboundedReceiver<Vec<String>>,
+    count: usize,
+) -> BTreeSet<String> {
     let mut topics = BTreeSet::new();
     tokio::time::timeout(Duration::from_secs(5), async {
         while topics.len() < count {

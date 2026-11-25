@@ -1071,7 +1071,8 @@ fn start(
         // even when benchmarking the content panels with GL.
         views.insert(pearls::GUIDE_VIEW.into(), pearls::guide_spec(&colors)?);
         options.panels = Some(bead::wayland::Panels::new("launcher".into(), views)?);
-        // N0231: a closed launcher or dashboard parks warm 2 s after its close settles.
+        // N0231: a closed launcher, dashboard or control centre parks warm 2 s after its close
+        // settles; Strand, a retained panel, parks when another view replaces it (N0231b).
         options.warm_source_budget = reload::WARM_SOURCE_BUDGET;
         // B0404: a cold Strand opens on its content when that is ready within 120 ms, instead of
         // sliding in on the baked fallback and swapping mid-slide (only fallback panels wait).

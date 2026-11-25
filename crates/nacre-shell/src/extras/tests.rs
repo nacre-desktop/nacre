@@ -88,18 +88,23 @@ fn overview_follows_focused_output_and_stable_ids() {
     assert_eq!(workspaces.len(), 1);
     assert_eq!(workspaces[0]["index"], 1);
 }
-struct Lab {
+pub(crate) struct Lab {
     dir: std::path::PathBuf,
-    client: Client,
+    pub(crate) client: Client,
     calls: mpsc::UnboundedReceiver<(String, Json)>,
     activation_release: Option<oneshot::Sender<()>>,
+    /// The topics of each `Sub` and `Unsub` the daemon receives (N0231b).
+    pub(crate) subs: mpsc::UnboundedReceiver<Vec<String>>,
+    pub(crate) unsubs: mpsc::UnboundedReceiver<Vec<String>>,
+    /// The active wallpaper the next `wallpaper.active` subscription reports.
+    pub(crate) active: Arc<std::sync::Mutex<String>>,
 }
 impl Drop for Lab {
     fn drop(&mut self) {
         let _ = std::fs::remove_dir_all(&self.dir);
     }
 }
-fn start_with_empty_wallpaper_catalogue(extras: &Extras) {
+pub(crate) fn start_with_empty_wallpaper_catalogue(extras: &Extras) {
     let mut state = extras.state.borrow_mut();
     state.catalogue = None;
     state.catalogue_boot = None;
@@ -111,6 +116,12 @@ fn start_with_empty_wallpaper_catalogue(extras: &Extras) {
 }
 async fn lab_with_topics(requested_topics: Vec<String>) -> Lab {
     lab_with_activation_behavior(requested_topics, false, false, 0).await
+}
+/// N0231b: a daemon whose catalogue lists `entries` (each `fixture_thumbnail` is its thumbnail).
+pub(crate) async fn lab_with_catalogue(entries: Json) -> Lab {
+    let lab = unconnected_lab_with(Vec::new(), false, false, 0, Some(entries));
+    await_connected(&lab.client).await;
+    lab
 }
 async fn lab_with_activation_gate(
     requested_topics: Vec<String>,
@@ -149,6 +160,21 @@ fn unconnected_lab(
     fail_first_activation: bool,
     stale_menu_activations: usize,
 ) -> Lab {
+    unconnected_lab_with(
+        requested_topics,
+        gate_first_activation,
+        fail_first_activation,
+        stale_menu_activations,
+        None,
+    )
+}
+fn unconnected_lab_with(
+    requested_topics: Vec<String>,
+    gate_first_activation: bool,
+    fail_first_activation: bool,
+    stale_menu_activations: usize,
+    catalogue: Option<Json>,
+) -> Lab {
     use std::os::unix::fs::PermissionsExt;
     static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
     let dir = std::env::temp_dir().join(format!(
@@ -172,6 +198,10 @@ fn unconnected_lab(
         .into_owned();
     std::fs::set_permissions(&socket, std::fs::Permissions::from_mode(0o600)).unwrap();
     let (tx, calls) = mpsc::unbounded_channel();
+    let (subs_tx, subs) = mpsc::unbounded_channel();
+    let (unsubs_tx, unsubs) = mpsc::unbounded_channel();
+    let active = Arc::new(std::sync::Mutex::new("/fixture/current.jpg".to_owned()));
+    let active_path = active.clone();
     let mut offered_topics = BTreeMap::from([
         ("compositor".into(), 1),
         ("shortcuts".into(), 1),
@@ -234,13 +264,18 @@ fn unconnected_lab(
         .unwrap();
         while let Ok(Some(msg)) = reader.next().await {
             match msg {
+                Message::Unsub { topics } => {
+                    let _ = unsubs_tx.send(topics);
+                }
                 Message::Sub { topics } => {
+                    let _ = subs_tx.send(topics.clone());
                     for topic in topics {
                         let data = match topic.as_str() {
                             "compositor" => fixture(),
                             "wallpaper.active" => {
+                                let path = active_path.lock().unwrap().clone();
                                 json!({"available":true,"stale":false,"revision":17,
-                                "current":{"revision":17,"palette_revision":17,"path":"/fixture/current.jpg",
+                                "current":{"revision":17,"palette_revision":17,"path":path,
                                     "file_identity":{"device":"1","inode":"2","size":4,"mtime_sec":1,"mtime_nsec":0,"ctime_sec":1,"ctime_nsec":0},
                                     "presentation":"crop","palette":{"mode":"dark","colours":{"background":"#102030","onSurface":"#f0f0f0","primary":"#22aa88"}}},
                                 "outputs":{}})
@@ -302,12 +337,12 @@ fn unconnected_lab(
                     } else if m == "menu.activate" {
                         json!({"keep_open":true,"view":{"route":"actions.windows","query":"edited"}})
                     } else if m == "wallpaper.catalogue" {
-                        let entries = json!([
+                        let entries = catalogue.clone().unwrap_or_else(|| json!([
                             {"id":"/fixture/current.jpg","kind":"image","animated":false,"title":"Current","thumbnail":"","preview":"","active":true},
                             {"id":"/fixture/next.jpg","kind":"image","animated":false,"title":"Next","thumbnail":"","preview":"","active":false},
                             {"id":"/fixture/next.mp4","kind":"video","animated":false,"title":"Moving","thumbnail":"","preview":"","active":false},
                             {"id":"/fixture/animated.gif","kind":"image","animated":true,"title":"Animated","thumbnail":"","preview":"","active":false}
-                        ]);
+                        ]));
                         let ids = p["ids"].as_array().cloned().unwrap_or_default();
                         let entries: Vec<Json> = entries
                             .as_array()
@@ -315,10 +350,14 @@ fn unconnected_lab(
                             .iter()
                             .map(|entry| {
                                 let mut entry = entry.clone();
+                                let thumbnail = entry
+                                    .as_object_mut()
+                                    .and_then(|entry| entry.remove("fixture_thumbnail"))
+                                    .unwrap_or_else(|| fixture_image.clone().into());
                                 if !ids.is_empty()
                                     && ids.iter().any(|id| id.as_str() == entry["id"].as_str())
                                 {
-                                    entry["thumbnail"] = fixture_image.clone().into();
+                                    entry["thumbnail"] = thumbnail;
                                     entry["palette"] = json!({"mode":"dark","colours":{"background":"#102030","onSurface":"#f0f0f0","primary":"#22aa88"}});
                                     if entry["id"] != "/fixture/next.jpg" && entry["id"] != "/fixture/next.mp4" {
                                         entry["preview"] = fixture_image.clone().into();
@@ -399,6 +438,9 @@ fn unconnected_lab(
         client,
         calls,
         activation_release: gate_first_activation.then_some(activation_release),
+        subs,
+        unsubs,
+        active,
     }
 }
 async fn lab() -> Lab {
@@ -3955,7 +3997,7 @@ pub(crate) async fn retirement() {
                 .reconcile(&BTreeMap::from([("panel.open".into(), Value::Bool(true))]))
                 .unwrap();
             extras.project(&open, Some(Arc::new(|| {})));
-            let topic = extras.topic.as_ref().unwrap();
+            let topic = extras.topic().unwrap();
             let mut ready = false;
             for _ in 0..200 {
                 let snapshot = topic.snapshot();
@@ -3974,7 +4016,7 @@ pub(crate) async fn retirement() {
             ready(&extras, &stores("")).await;
         }
         let subscriptions = extras.subscribe(Arc::new(|| {})).unwrap();
-        let snapshot = extras.topic.as_ref().unwrap().snapshot();
+        let snapshot = extras.topic().unwrap().snapshot();
         let payload = Arc::downgrade(&snapshot.data);
         drop(snapshot);
         drop(subscriptions);
@@ -4082,11 +4124,11 @@ async fn keyboard_search_and_focus_use_the_actual_luau_view() {
 #[tokio::test(flavor = "current_thread")]
 async fn workspace_actions_require_current_available_output_and_membership() {
     let mut lab = lab().await;
-    let mut overview = Extras::new(Kind::Overview, lab.client.clone()).unwrap();
+    let overview = Extras::new(Kind::Overview, lab.client.clone()).unwrap();
     let mut data = fixture();
     data["available"] = json!(false);
     let source = Arc::new(bead_test::source::FakeSource::new(data.clone()).unwrap());
-    overview.topic = Some(source.clone());
+    *overview.topic.borrow_mut() = Some(source.clone());
     overview.act("workspace:1", &stores(""), Arc::new(|| {}));
     assert!(lab.calls.try_recv().is_err());
     data["available"] = json!(true);
@@ -4341,7 +4383,7 @@ async fn previews_lease_only_while_open_and_with_the_setting_and_attach_the_newe
     let lab = lab().await;
     let dir = lab.dir.join("capture");
     let hub = CaptureHub::test_hub(dir.clone());
-    let mut extras = Extras::new(Kind::Overview, lab.client.clone())
+    let extras = Extras::new(Kind::Overview, lab.client.clone())
         .unwrap()
         .with_capture(hub.clone());
     let with_open = |open: bool| {
@@ -4356,7 +4398,7 @@ async fn previews_lease_only_while_open_and_with_the_setting_and_attach_the_newe
     };
     // N0234: windowCapture=false (Hyprland v0.1): open shows icon tiles and leases nothing.
     let compositor = Arc::new(bead_test::source::FakeSource::new(fixture()).unwrap());
-    extras.topic = Some(compositor.clone() as Arc<dyn Source>);
+    *extras.topic.borrow_mut() = Some(compositor.clone() as Arc<dyn Source>);
     let model = extras.project(&with_open(true), Some(wake.clone()));
     assert_eq!(model["extras.available"], Value::Bool(true));
     assert_eq!(hub.lease_count(), 0, "no windowCapture: nothing leased");

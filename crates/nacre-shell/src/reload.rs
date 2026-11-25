@@ -278,9 +278,12 @@ fn suppress_widget_drag_hover(
 /// N0231: an admission bound on what a parked launcher or dashboard Runtime keeps (session, Luau,
 /// stores, rows, scene copies), not a measurement; Bead charges the worker stack and rasters on top.
 pub(crate) const WARM_PANEL_BYTES: usize = 16 * bead::core::cache::MIB;
-/// N0231: Bead's dormant budget, room for the parked launcher and one dashboard page with their
-/// stacks and rasters (docs/specs/0231-warm-panels.md). Zero is the cold reopen of before.
-pub(crate) const WARM_SOURCE_BUDGET: usize = 4 * WARM_PANEL_BYTES;
+/// N0231b: the docked control centre's bound; its Runtime is about the launcher's size.
+pub(crate) const WARM_CONTROL_BYTES: usize = 8 * bead::core::cache::MIB;
+/// N0231: Bead's dormant budget, room for the four parked panels (launcher, Today, control
+/// centre, Strand) with their stacks and rasters (docs/specs/0231-warm-panels.md). Zero is the
+/// cold reopen of before.
+pub(crate) const WARM_SOURCE_BUDGET: usize = 112 * bead::core::cache::MIB;
 const WIDGET_HOVER_PREVIEW_RENEW: std::time::Duration = std::time::Duration::from_millis(1500);
 const WIDGET_HOVER_PREVIEW_DEDUPE: std::time::Duration = std::time::Duration::from_millis(1400);
 fn widget_floating_action(
@@ -5610,17 +5613,26 @@ impl SceneSource for Runtime {
             .collect()
     }
 
-    // N0231: only the launcher and the dashboard on Today (the page it opens on) park when
-    // closed; other views and pages reopen cold.
+    // N0231: only the launcher, the dashboard on Today (the page it opens on), the docked
+    // control centre and Strand (N0231b) park when closed; other views and pages reopen cold.
     fn warm_retained_bytes(&self) -> Option<usize> {
         let today = self
             .dashboard
             .as_ref()
             .is_some_and(|dashboard| dashboard.borrow().page() == crate::dashboard::Page::Today);
-        (self.launcher.is_some() || today).then_some(WARM_PANEL_BYTES)
+        let strand = self
+            .extras
+            .as_ref()
+            .is_some_and(|extras| extras.kind == crate::extras::Kind::Wallpaper);
+        // The dock's status pages make the `control` view; the notification history has none.
+        if !self.dock_status.is_empty() {
+            return Some(WARM_CONTROL_BYTES);
+        }
+        (self.launcher.is_some() || today || strand).then_some(WARM_PANEL_BYTES)
     }
-    // Bead has staged PanelVisibility(true), which re-leases a parked dashboard's topics. Show
-    // what a fresh open would: the launcher from its trigger's state, the dashboard projected anew.
+    // Bead has staged PanelVisibility(true), which re-leases a parked dashboard's, control centre's
+    // and Strand's topics and opens the dock on its overview and Strand on a new visit. Show what a
+    // fresh open would: the launcher from its trigger's state, the dashboard projected anew.
     fn resume(&mut self) -> Result<Option<Scene>, Box<dyn Error>> {
         if !self.session.sources_current() {
             return Err("view sources changed while parked".into());
@@ -9299,6 +9311,28 @@ impl SceneSource for Runtime {
                             match control.subscribe(wakeup) {
                                 Ok(subscriptions) => self.control_subscription = subscriptions,
                                 Err(_) => eprintln!("SOURCE_ERROR code=control_subscription"),
+                            }
+                        }
+                    }
+                }
+                // N0231b: Strand too, and a closed one wakes nothing (its topics send only hints).
+                if let Some(extras) = &self.extras
+                    && extras.kind == crate::extras::Kind::Wallpaper
+                {
+                    let parked = extras.parked();
+                    if !open && !parked {
+                        self.extras_subscription.clear();
+                        extras.park()?;
+                    } else if open && parked {
+                        extras.resume();
+                        let wake = self
+                            .extras_wake
+                            .as_ref()
+                            .and_then(|slot| slot.lock().ok()?.clone());
+                        if let Some(wake) = wake {
+                            match extras.subscribe(wake) {
+                                Ok(subscriptions) => self.extras_subscription = subscriptions,
+                                Err(_) => eprintln!("SOURCE_ERROR code=extras_subscription"),
                             }
                         }
                     }
