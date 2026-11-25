@@ -59,7 +59,7 @@ class Conversation(unittest.TestCase):
             personal = next(
                 world["name"]
                 for world in taxonomy["worlds"]
-                if "Personal" in world["aliases"]
+                if "Personal" in [world["name"], *world["aliases"]]
             )
             self.assertIn(f"Worlds: Climbing, {personal}", body)
             self.assertIn("Topics: training", body)
