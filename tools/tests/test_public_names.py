@@ -56,11 +56,4 @@ class PublicNamesTests(unittest.TestCase):
                     "siver" + "teh <92440237+siver" + "teh@users.noreply.github.com>",
                     "",
                 )
-            if name in (
-                "brain/registry-seed.json",
-                "crates/nacre-helper/src/brain-migrate-vocabulary.json",
-            ):
-                # Owner-approved taxonomy labels are vault classification data,
-                # not application/runtime identifiers. Keep this data exception exact.
-                text = text.replace("siver" + "teh", "")
             self.assertFalse(any(word in text for word in forbidden), name)

@@ -76,7 +76,7 @@ static CUE: LazyLock<Regex> = LazyLock::new(|| {
         r"(?i)\b(?:now|currently|updated?|upgraded?|changed|moved|migrated|switched|replaced|renumbered|reassigned|rotated|bumped|re-?deploy\w*|deploy\w*|install\w*|became|new|latest|from\s+\S+\s+to)\b",
     )
 });
-/// A repo, branch, package or host token (`helios-web`, `owner/repo`, `newbringer-v2-…`).
+/// A repo, branch, package or host token (`helios-web`, `owner/repo`, `project-v2-…`).
 static IDENT: LazyLock<Regex> =
     LazyLock::new(|| rx(r"\b[A-Za-z][A-Za-z0-9]*(?:[-_/@][A-Za-z0-9]+)+\b"));
 /// Notes this many days apart asserting different values contradict each other;
@@ -1445,10 +1445,11 @@ fn plan(
     let mut targets = BTreeSet::new();
     for n in notes {
         let text = String::from_utf8_lossy(&n.bytes);
-        let triaged = retention_target(&n.path, &text, today, CHECKPOINT_DAYS, "inbox");
+        let triage = &vocabulary["triage"];
+        let triaged = retention_target(&n.path, &text, today, CHECKPOINT_DAYS, "inbox", triage);
         let from = triaged.as_deref().unwrap_or(&n.path);
         let Some(dest) =
-            retention_target(from, &text, today, CHECKPOINT_DAYS, "archive").or(triaged)
+            retention_target(from, &text, today, CHECKPOINT_DAYS, "archive", triage).or(triaged)
         else {
             continue;
         };

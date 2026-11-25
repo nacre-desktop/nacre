@@ -123,7 +123,7 @@ THEMES = {
     "music": (
         "Music & sound",
         "#dda9c8",
-        ["music", "musikki", "spotify", "audio", "sound"],
+        ["music", "spotify", "audio", "sound"],
     ),
     "research": (
         "Research & science",

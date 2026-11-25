@@ -196,21 +196,23 @@ pub fn valid_name(name: &str) -> bool {
     {
         return false;
     }
-    // Fixed protocol/product spellings are retained; ordinary names are title-cased on creation.
-    canonical_new(s).chars().count() <= 40
+    canonical_new(s, &[]).chars().count() <= 40
 }
-fn canonical_new(s: &str) -> String {
+/// Spellings a new name keeps (row 82): the product's own, plus every word of the vault's
+/// existing world and area names, so a vault's own casing (for example `GPU`) survives.
+fn spellings(r: &Registry) -> Vec<String> {
+    let names = r.worlds.iter().chain(&r.areas).map(|e| e.name.as_str());
+    let words = names.flat_map(str::split_whitespace).map(str::to_owned);
+    std::iter::once("nacre-niri".to_owned())
+        .chain(words)
+        .collect()
+}
+/// Title-cases a new name, keeping `spellings` (matched without case) as written.
+fn canonical_new(s: &str, spellings: &[String]) -> String {
     s.split_whitespace()
         .map(|w| {
-            if ["dev-1", "prod", "nacre-niri", "HK416"]
-                .iter()
-                .any(|f| f.eq_ignore_ascii_case(w))
-            {
-                return (*["dev-1", "prod", "nacre-niri", "HK416"]
-                    .iter()
-                    .find(|f| f.eq_ignore_ascii_case(w))
-                    .unwrap())
-                .to_owned();
+            if let Some(kept) = spellings.iter().find(|f| f.eq_ignore_ascii_case(w)) {
+                return kept.clone();
             }
             w.split('-')
                 .map(|part| {
@@ -488,10 +490,10 @@ struct ResolveOptions<'a> {
 }
 
 /// Normalize a migration subject with the shared registry name rules.
-pub fn migration_subject(raw: &str) -> Option<(String, String)> {
+pub fn migration_subject(raw: &str, spellings: &[String]) -> Option<(String, String)> {
     let normalized = raw.replace(['_', '-'], " ");
     valid_name(&normalized).then(|| {
-        let name = canonical_new(&normalized);
+        let name = canonical_new(&normalized, spellings);
         (key(&name), name)
     })
 }
@@ -506,8 +508,9 @@ pub fn propose_migration_clusters(
     let mut registry: Registry =
         serde_json::from_slice(registry_bytes).map_err(|_| "Corrupt Brain registry JSON")?;
     let mut groups = BTreeMap::<(String, String), (String, Vec<String>)>::new();
+    let kept = spellings(&registry);
     for (subject, world, date) in candidates {
-        let Some((subject_key, name)) = migration_subject(subject) else {
+        let Some((subject_key, name)) = migration_subject(subject, &kept) else {
             continue;
         };
         let subject = name.as_str();
@@ -633,7 +636,7 @@ fn resolve_inner(
                 }
             }
         } else if allow_new && valid_name(raw) {
-            let n = canonical_new(raw);
+            let n = canonical_new(raw, &spellings(&r));
             r.worlds.push(Entry {
                 name: n.clone(),
                 aliases: vec![],
@@ -668,7 +671,7 @@ fn resolve_inner(
                 }
             }
         } else if allow_new && valid_name(raw) {
-            let n = canonical_new(raw);
+            let n = canonical_new(raw, &spellings(&r));
             let parent = explicit_worlds
                 .first()
                 .cloned()
@@ -818,7 +821,7 @@ fn resolve_inner(
                         }
                     }
                 } else if let Some(parent) = explicit_worlds.first().cloned() {
-                    let n = canonical_new(candidate);
+                    let n = canonical_new(candidate, &spellings(&r));
                     r.areas.push(Entry {
                         name: n.clone(),
                         aliases: vec![],
@@ -1210,13 +1213,13 @@ mod tests {
     #[test]
     fn migration_subject_validates_full_unicode_names() {
         assert_eq!(
-            migration_subject("Ångström_Garden").unwrap().1,
+            migration_subject("Ångström_Garden", &[]).unwrap().1,
             "Ångström Garden"
         );
-        assert!(migration_subject(&"x".repeat(41)).is_none());
+        assert!(migration_subject(&"x".repeat(41), &[]).is_none());
         assert_eq!(
-            migration_subject("Photon_Garden"),
-            migration_subject("PHOTON GARDEN")
+            migration_subject("Photon_Garden", &[]),
+            migration_subject("PHOTON GARDEN", &[])
         );
     }
 
@@ -1292,9 +1295,18 @@ mod tests {
             assert!(valid_name(good), "{good}");
         }
         assert!(similarity("Bead", "Bead green"));
-        assert_eq!(canonical_new("new field"), "New Field");
-        assert_eq!(canonical_new("aurora-sensor NODE"), "Aurora-Sensor Node");
-        assert_eq!(canonical_new("nacre-niri"), "nacre-niri");
+        assert_eq!(canonical_new("new field", &[]), "New Field");
+        assert_eq!(
+            canonical_new("aurora-sensor NODE", &[]),
+            "Aurora-Sensor Node"
+        );
+        // Kept spellings: the product's, and words of the vault's own names (row 82).
+        let none: Registry = serde_json::from_str(r#"{"worlds":[],"areas":[]}"#).unwrap();
+        let ours: Registry =
+            serde_json::from_str(r#"{"worlds":[],"areas":[{"name":"HK416"}]}"#).unwrap();
+        assert_eq!(canonical_new("nacre-niri", &spellings(&none)), "nacre-niri");
+        assert_eq!(canonical_new("hk416 cm4", &spellings(&none)), "Hk416 Cm4");
+        assert_eq!(canonical_new("hk416 cm4", &spellings(&ours)), "HK416 Cm4");
         assert!(!valid_name(&"ß".repeat(40)));
     }
     #[test]

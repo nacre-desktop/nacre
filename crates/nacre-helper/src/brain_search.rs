@@ -290,7 +290,7 @@ fn runs(text: &str) -> Vec<(usize, usize, Vec<&str>)> {
     out
 }
 /// Index terms of text: each word part plus the joined compound
-/// (smash-board -> smash, board, smashboard). Stop words and single
+/// (sensor-node -> sensor, node, sensornode). Stop words and single
 /// characters are not standalone terms.
 fn analyze(text: &str, out: &mut Vec<String>) {
     let folded = casefold(text);

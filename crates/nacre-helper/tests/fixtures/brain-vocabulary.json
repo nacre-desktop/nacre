@@ -487,5 +487,22 @@
   "redirects": {
     "wiki/entity-desktop.md": "Desktop",
     "wiki/entity-nacre-os.md": "Nacre"
+  },
+  "triage": {
+    "projectWorlds": [
+      "Nacre",
+      "Newbringer"
+    ],
+    "deviceAreas": [
+      "Guns",
+      "HK416",
+      "Smash-Board",
+      "White motor",
+      "Desktop PC",
+      "Laptop",
+      "Phone",
+      "Peripherals",
+      "Home server"
+    ]
   }
 }

@@ -462,7 +462,17 @@ fn remap_record(
         _ => false,
     }
 }
-fn inbox_target(text: &str) -> Option<&'static str> {
+/// `triage` is the vault's own `vocabulary.json` "triage" (row 82): `projectWorlds` keep an
+/// infrastructure note with the project, and `deviceAreas` mark device notes.
+fn inbox_target(text: &str, triage: &serde_json::Value) -> Option<&'static str> {
+    let named = |key: &str| -> Vec<String> {
+        triage[key]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(|v| v.as_str().map(str::to_owned))
+            .collect()
+    };
     let (title, head, body) = header_body(text);
     let fields = field_lines(head);
     let t = title.to_lowercase();
@@ -493,8 +503,9 @@ fn inbox_target(text: &str) -> Option<&'static str> {
         .find(|(k, _)| k == "Worlds")
         .map(|(_, v)| lists(v))
         .unwrap_or_default();
+    let project_worlds = named("projectWorlds");
     if worlds.iter().any(|w| w == "Infrastructure")
-        && !worlds.iter().any(|w| w == "Nacre" || w == "Newbringer")
+        && !worlds.iter().any(|w| project_worlds.contains(w))
     {
         return Some("infrastructure");
     }
@@ -503,18 +514,8 @@ fn inbox_target(text: &str) -> Option<&'static str> {
         .find(|(k, _)| k == "Areas")
         .map(|(_, v)| lists(v))
         .unwrap_or_default();
-    let dev = [
-        "Guns",
-        "HK416",
-        "Smash-Board",
-        "White motor",
-        "Desktop PC",
-        "Laptop",
-        "Phone",
-        "Peripherals",
-        "Home server",
-    ];
-    if areas.iter().any(|a|dev.contains(&a.as_str()))&&regex::Regex::new(r"(?i)\b(ip|address|board|battery|cm4|gun|laptop|phone|serial|mac|firmware|hardware|pinout)\b").unwrap().is_match(&format!("{t} {}",body.chars().take(600).collect::<String>())){return Some("devices")}
+    let dev = named("deviceAreas");
+    if areas.iter().any(|a| dev.contains(a))&&regex::Regex::new(r"(?i)\b(ip|address|board|battery|cm4|gun|laptop|phone|serial|mac|firmware|hardware|pinout)\b").unwrap().is_match(&format!("{t} {}",body.chars().take(600).collect::<String>())){return Some("devices")}
     if !worlds.is_empty() {
         Some("projects")
     } else {
@@ -531,6 +532,7 @@ fn retention_target(
     now: chrono::NaiveDate,
     days: i64,
     step: &str,
+    triage: &serde_json::Value,
 ) -> Option<String> {
     let d = date_from(path, text)?;
     let age = (now - d).num_days();
@@ -540,7 +542,7 @@ fn retention_target(
     if step == "archive" && path.starts_with("checkpoints/") && age >= days {
         Some(archived("checkpoints"))
     } else if step == "inbox" && path.starts_with("inbox/") && age >= 3 {
-        inbox_target(text).map(|folder| format!("{folder}/{name}"))
+        inbox_target(text, triage).map(|folder| format!("{folder}/{name}"))
     } else if step == "archive" && path.starts_with("inbox/") && age >= 30 {
         Some(archived("inbox"))
     } else {
@@ -650,7 +652,8 @@ fn metadata_plan(
                 .iter()
                 .chain(labels.iter())
                 .chain(areas.iter())
-                .filter_map(|subject| brain_registry::migration_subject(subject))
+                // Keys only; propose_migration_clusters names them with the registry.
+                .filter_map(|subject| brain_registry::migration_subject(subject, &[]))
                 .collect();
             for subject in subjects.into_values() {
                 candidates.push((subject, cats.worlds[0].clone(), day.clone()));
@@ -858,9 +861,12 @@ pub fn run(args: &[String]) -> Result<i32> {
             }
             "inbox" | "archive" => {
                 let now = chrono::Local::now().date_naive();
+                let vocab = crate::brain_web::vocabulary(&root)?;
                 for n in &current_notes {
                     let text = String::from_utf8_lossy(&n.bytes);
-                    if let Some(dest) = retention_target(&n.path, &text, now, days, current) {
+                    if let Some(dest) =
+                        retention_target(&n.path, &text, now, days, current, &vocab["triage"])
+                    {
                         plan.moves.insert(n.path.clone(), dest);
                     }
                 }
@@ -1400,13 +1406,35 @@ mod tests {
     #[test]
     fn inbox_rules_match_words_instead_of_substrings() {
         let note = |title| format!("# {title}\nWorlds: Nacre\n\nEvidence.\n");
-        assert_eq!(inbox_target(&note("Unlikely scenario")), Some("projects"));
-        assert_eq!(inbox_target(&note("Leaderboard feature")), Some("projects"));
-        assert_eq!(inbox_target(&note("Lead handoff")), Some("checkpoints"));
+        let none = serde_json::Value::Null;
         assert_eq!(
-            inbox_target(&note("Owner prefers a compact layout")),
+            inbox_target(&note("Unlikely scenario"), &none),
+            Some("projects")
+        );
+        assert_eq!(
+            inbox_target(&note("Leaderboard feature"), &none),
+            Some("projects")
+        );
+        assert_eq!(
+            inbox_target(&note("Lead handoff"), &none),
+            Some("checkpoints")
+        );
+        assert_eq!(
+            inbox_target(&note("Owner prefers a compact layout"), &none),
             Some("personal")
         );
+    }
+
+    #[test]
+    fn device_and_project_triage_come_from_the_vault_vocabulary() {
+        let triage = serde_json::json!({"projectWorlds": ["Work"], "deviceAreas": ["Bench"]});
+        let none = serde_json::Value::Null;
+        let device = "# Board pinout\nWorlds: Work\nAreas: Bench\n\nEvidence.\n";
+        assert_eq!(inbox_target(device, &triage), Some("devices"));
+        assert_eq!(inbox_target(device, &none), Some("projects"));
+        let infra = "# Router address\nWorlds: Infrastructure, Work\n\nEvidence.\n";
+        assert_eq!(inbox_target(infra, &triage), Some("projects"));
+        assert_eq!(inbox_target(infra, &none), Some("infrastructure"));
     }
 
     #[test]
