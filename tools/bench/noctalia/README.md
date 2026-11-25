@@ -131,5 +131,8 @@ growth, stack CPU, GPU busy and energy are reported beside it.
 - The Nacre daemon refuses state under a group-writable directory; `host.sh`
   clears group write on its root.
 - Noctalia clones its plugin index from GitHub at start (before the idle window).
+- A kept Noctalia build whose libraries the host has since upgraded runs with
+  the old copies in `stage/noctalia/lib` (Noctalia arm only; `pins.json`
+  `noctalia_lib` lists them).
 - Nacre keeps its product-default renderer (CPU raster for bar and panels) and
   Bead's default `warm_source_budget` (0: no warm dormant panels).

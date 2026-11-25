@@ -14,6 +14,7 @@ History and the original method: [N0300](noctalia-vs-nacre-benchmark-20261112.md
 | desktop smoke 2026-11-13 (`short`, one run each; indicative) | 1/1 | 5cb5e22a2 | v5.4.1 | 0.127 / 0.079 | 0.022 / 0.025 | 8.0 / 15.2 | 1.3 / 17.4 | 3.1 / 18.6 | 2.8 / 0.0 | 119 / 131 | 62 / 71 | 99 / 0 | 218 / 131 | n/a | +2.1 / +49.8 | 0.131 / 0.018 | 18 / 12 | 0 / 0 | +0.08 / -0.27 | +0.93 / +0.73 | n/a |
 | dev-2 2026-11-13 (`short`, software rendering) | 2/2 | 26fd8a62e | v5.4.1 | 0.074 / 0.063 | 0.117 / 0.194 | 9.2 / 10.5 | 13.4 / 9.0 | 124.4 / 110.0 | n/a | 190 / 110 | 122 / 58 | n/a | n/a | n/a | +2.6 / +25.7 | 0.159 / 0.262 | 17 / 13 | 0 / 0 | n/a | n/a | n/a |
 | desktop 2026-11-16, 3/3 `chunk` at f3997131c (Bead 285aede6) | 3/3 | f3997131c | v5.4.1 | 0.127 / 0.034 | 0.023 / 0.028 | 6.8 / 4.2 | 1.1 / 5.1 | 2.7 / 6.3 | 2.9 / 0.0 | 133 / 116 | 63 / 57 | 101 / 0 | 234 / 116 | 211 / 158 | +1.7 / +42.8 | 0.133 / 0.028 | 19 / 12 | 0 / 0 | -0.23 / -0.13 | +0.13 / -0.02 | +7.9 / -1.4 |
+| desktop 2026-11-25 at 37939e8ae (Bead a797e500), with lease drop | 3/3 | 37939e8ae | v5.4.1 | 0.122 / 0.032 | 0.022 / 0.027 | 6.8 / 4.2 | 1.2 / 3.3 | 3.0 / 4.6 | 2.9 / 0.0 | 129 / 117 | 64 / 58 | 101 / 0 | 230 / 117 | 204 / 163 | +0.8 / +45.7 | 0.132 / 0.017 | 18 / 12 | 0 / 0 | +0.04 / -0.16 | +0.58 / -0.21 | +35 / -13 |
 
 Columns: CPU is % of one core. "Idle", "Interaction", PSS, unreclaimable and
 GPU buffers are shell + daemon (Noctalia has no daemon). "Stack" adds the nested
@@ -39,11 +40,13 @@ control center stands in for Nacre's dashboard and control panel; Nacre's sessio
 | Row | Runs N/Nc | Nacre | Launcher | Dashboard | Control | Session | Clipboard |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | desktop 2026-11-16 at f3997131c | 3/3 | f3997131c | 19 / 12 (0 / 0) | 19 / 12 (0 / 0) | n/a | n/a | n/a |
+| desktop 2026-11-25 at 37939e8ae | 3/3 | 37939e8ae | 18 / 12 (0 / 0) | 18 / 12 (0 / 0) | 18 / 12 (0 / 0) | 18 / 12 (0 / 0) | 18 / 12 (0 / 0) |
 
 `summarize.py` prints both rows and the row 73 gate: Nacre at or under Noctalia on
 idle CPU, idle wakeups, launch, PSS+GPU before and after first use, interaction
 CPU (shell + daemon against Noctalia's whole shell) and every panel's first frame.
-At f3997131c only interaction CPU fails (5.1 against 1.1 %).
+At f3997131c and at 37939e8ae only interaction CPU fails (5.1, then 3.3 against
+1.2 %).
 
 Row notes:
 
@@ -79,6 +82,21 @@ Row notes:
   `bead-worker` at 2.6 % of a core (about half of Nacre's total); no Nacre thread
   is above 0.02 % in the idle window. The 90 s after the cycles ("rest") stays
   above idle: shell 0.43 % and daemon 0.35 % against Noctalia's 0.13 %.
+- **Desktop 2026-11-25** (v0.1 row 73 baseline): built natively on the desktop
+  at 37939e8ae (Bead `a797e500`, Shell's dashboard lease drop be3d40187
+  included), Mesa 26.3.1. Noctalia's kept v5.4.1 build loads libjxl 0.12 from
+  `stage/noctalia/lib` (the host has 0.13). Noctalia arms 2, 3 and 6 of the
+  ABBA set ran 00:28-01:11; its Nacre arms failed at the frame probe (the
+  session call lacked the power menu's empty query) and were rerun 01:13-01:45
+  as three Nacre arms; swap 0 B, no host swap-in; per shell the three runs'
+  interaction CPU spans 7 % (Noctalia) and 2 % (Nacre).
+  Against 11-16: interaction CPU 5.1 to 3.3 % (shell 2.5 %: `bead-worker`
+  1.1, main 0.9, `nacre-link` 0.5; daemon 0.8 %), and the rest window is back at
+  idle (daemon 0.35 to 0.014 %, shell 0.43 to 0.015 %): a closed dashboard no
+  longer holds the `dashboard.system` sampler. Growth stays: daemon PSS +26.6
+  MiB and shell +19.4 MiB from first use. All five panels open in 12 ms against
+  18 ms. Noctalia's interaction draws +0.58 W over its no-shell baseline (35 J);
+  Nacre's is within baseline noise.
 
 Pins: Noctalia v5.4.1 is `815aebe1cfd79c9a18197441eea92f0b275035fc` (built from
 source in the row's stage); stock niri is the distribution package of the day

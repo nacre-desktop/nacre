@@ -45,7 +45,7 @@ PANELS = {
     "launcher": ("launcher", ("nacre", "launcher", "")),
     "dashboard": ("control-center", ("drawers", "toggle", "dashboard")),
     "control": ("control-center", ("drawers", "toggle", "right")),
-    "session": ("session", ("nacre", "menu", "power")),
+    "session": ("session", ("nacre", "menu", "power", "")),
     "clipboard": ("clipboard", ("nacre", "clipboard")),
 }
 CLK_TCK = os.sysconf("SC_CLK_TCK")
@@ -552,7 +552,11 @@ class Arm:
 
     def base_env(self):
         keep = ("LANG", "LC_ALL", "TERM", "USER", "LOGNAME", "SHELL")
+        keep += ("BEAD_WORKER_BUSY_MIN_PCT",)  # diagnostic arms only (Bead B0388)
         env = {key: value for key, value in os.environ.items() if key in keep}
+        libs = self.stage / "noctalia/lib"  # a kept build's libraries the host upgraded
+        if self.arm == "noctalia" and libs.is_dir():
+            env["LD_LIBRARY_PATH"] = str(libs)
         env.update(
             PATH=f"{self.private / 'bin'}:{self.stage / 'bin'}:/usr/bin:/bin",
             HOME=str(self.private / "home"),
