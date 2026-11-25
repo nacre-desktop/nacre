@@ -3307,7 +3307,7 @@ async fn the_peek_is_held_while_the_picker_is_open_and_dropped_on_every_close() 
             r#"{"NacrePeekDesktop":{"output":null}}"#,
             "one peek for the focused output, asked when the picker opens"
         );
-        extras.project(&open, Some(wake.clone()));
+        hold_peek(&extras, &open, &wake).await;
         assert!(
             eof.recv_timeout(Duration::from_millis(200)).is_err(),
             "still held while open"
@@ -3316,14 +3316,50 @@ async fn the_peek_is_held_while_the_picker_is_open_and_dropped_on_every_close() 
             extras.act("wallpaper:commit:/fixture/current.jpg", &open, wake.clone());
             extras.project(&open, Some(wake.clone()));
         }
+        extras.project(&closed(&open), Some(wake.clone()));
+        assert!(
+            eof.recv_timeout(STRAND_CLOSE / 2).is_err(),
+            "held while the close by {close} slides away"
+        );
+        assert!(extras.thumb_retry_at().is_some(), "a wake for its end");
+        tokio::time::sleep(STRAND_CLOSE).await;
         extras.project(&closed(&open), Some(wake));
         assert_eq!(
             eof.recv_timeout(Duration::from_secs(2)),
             Ok(true),
-            "closing by {close} releases the hold"
+            "the close by {close} releases the hold once it has slid away"
         );
         let _ = std::fs::remove_file(socket);
     }
+}
+/// Resolve the compositor's answer: the visit holds its peek.
+async fn hold_peek(extras: &Extras, open: &Stores, wake: &CallWake) {
+    for _ in 0..200 {
+        extras.project(open, Some(wake.clone()));
+        if matches!(extras.state.borrow().peek, Some(Peek::Held { .. })) {
+            return;
+        }
+        tokio::time::sleep(Duration::from_millis(5)).await;
+    }
+    panic!("no hold");
+}
+#[tokio::test(flavor = "current_thread")]
+async fn a_reopen_before_the_close_has_slid_away_keeps_the_peek() {
+    let mut lab = lab_with_topics(vec!["wallpaper.active".into()]).await;
+    let (socket, request, eof) = fake_niri("reopen", r#"{"Ok":"Handled"}"#);
+    let (extras, open, wake) = open_picker_on(&mut lab, Some(socket.clone())).await;
+    request.recv_timeout(Duration::from_secs(2)).unwrap();
+    hold_peek(&extras, &open, &wake).await;
+    extras.project(&closed(&open), Some(wake.clone()));
+    extras.project(&open, Some(wake.clone()));
+    tokio::time::sleep(2 * STRAND_CLOSE).await;
+    extras.project(&open, Some(wake));
+    assert!(eof.recv_timeout(Duration::from_millis(100)).is_err());
+    let state = extras.state.borrow();
+    assert!(matches!(state.peek, Some(Peek::Held { .. })) && state.peek_pending.is_none());
+    assert!(state.peek_release_at.is_none(), "the reopen kept the hold");
+    drop(state);
+    let _ = std::fs::remove_file(socket);
 }
 #[test]
 fn the_peek_asks_every_output_or_else_the_focused_one() {

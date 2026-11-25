@@ -190,6 +190,9 @@ struct State {
     peek_pending: Option<Arc<std::sync::Mutex<Option<Vec<crate::backends::niri::PeekHold>>>>>,
     /// Keeps the fallback's workspace call alive until it has been sent.
     peek_call: Option<CallTicket>,
+    /// A closed visit's compositor hold ends here, once the close has slid away (or with the view, if Bead
+    /// retires it first); a reopen before it keeps the hold.
+    peek_release_at: Option<Instant>,
     /// The nacre-niri command socket, when the session runs on niri.
     niri_socket: Option<std::path::PathBuf>,
     wallpaper_prefetched: bool,
@@ -552,6 +555,8 @@ const SWATCH_ROLES: [&str; 5] = [
 /// How long after start a closed Strand keeps waking to send its once-per-boot catalogue refresh.
 const REFRESH_WINDOW: Duration = Duration::from_secs(30);
 const STRAND_SETTLE: Duration = Duration::from_millis(250);
+/// The close storyboard (`close_ms` in shell/extras/tokens.luau).
+const STRAND_CLOSE: Duration = Duration::from_millis(180);
 /// A topic the view reads; Strand swaps its own across a close (N0231b).
 type Slot = RefCell<Option<Arc<dyn Source>>>;
 pub struct Extras {
@@ -1533,6 +1538,7 @@ impl Extras {
             state.visit += 1;
             state.wallpaper_shown = None;
             state.wallpaper_focus = None;
+            state.peek_release_at = None;
         }
         // Warm while open: taken once the open storyboard has settled (the fade run is not primed under it),
         // dropped on every close (the same single site as the peek).
@@ -1548,18 +1554,28 @@ impl Extras {
                 .as_ref()
                 .map(|gate| gate.hold_wallpaper_warm());
         }
+        let settled = !open && state.peek_release_at.is_some_and(|at| Instant::now() >= at);
         drop(state);
         // The one place the desktop peek starts and the one place it ends, whatever closed the picker.
         if opening {
             self.peek_engage(wake);
         } else if closing {
-            self.peek_release(wake);
+            // Owner 2026-11-25: the windows fade back in after the close has slid away, not under it (niri's
+            // per-tile fade and an X11 reconfigure cost the close's commits 2-5 16-27 ms). The workspace fallback
+            // still returns at once: a retired view could not send its switch back.
+            if matches!(self.state.borrow().peek, Some(Peek::Held { .. })) {
+                self.state.borrow_mut().peek_release_at = Some(Instant::now() + STRAND_CLOSE);
+            } else {
+                self.peek_release(wake);
+            }
             if let Some((id, wake)) = landing {
                 self.fire_move(&id, WALLPAPER_MOVE_MS, wake);
             }
             self.release_palette(true); // a hold nothing landed on (the last glide pick was the landing)
         } else if open {
             self.peek_resolve(wake);
+        } else if settled {
+            self.peek_release(wake);
         }
     }
     /// A key burst's glides keep the palette the desktop had (no palette tween on the bar and other panels per
@@ -1670,6 +1686,7 @@ impl Extras {
         let peek = {
             let mut state = self.state.borrow_mut();
             state.peek_pending = None; // a late answer is dropped with its hold
+            state.peek_release_at = None;
             state.peek.take()
         };
         crate::workspace_rows::freeze_active(None);
@@ -2194,6 +2211,7 @@ impl Extras {
             .map(|(_, due)| *due)
             .chain(trailing)
             .chain(state.warm_due)
+            .chain(state.peek_release_at)
             .chain(
                 state
                     .refresh_until
