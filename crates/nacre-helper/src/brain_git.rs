@@ -12,8 +12,6 @@ use std::process::{Command, Output};
 use std::time::Duration;
 
 const LIMIT: u64 = 5 * 1024 * 1024;
-const IDENT_NAME: &str = "siverteh";
-const IDENT_EMAIL: &str = "92440237+Siverteh@users.noreply.github.com";
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 struct QueuedPath {
@@ -53,18 +51,51 @@ struct Candidate {
     path: String,
 }
 
+/// Who vault commits are by (row 80): the vault's own git identity (its config or the
+/// user's global one), else a neutral one; never anyone else's.
+fn identity(root: &Path) -> [(&'static str, String); 4] {
+    let get = |key| {
+        Command::new("git")
+            .arg("-C")
+            .arg(root)
+            .args(["config", "--get", key])
+            .output()
+            .ok()
+            .filter(|out| out.status.success())
+            .map(|out| String::from_utf8_lossy(&out.stdout).trim().to_owned())
+            .filter(|value| !value.is_empty())
+    };
+    let (name, email) = get("user.name")
+        .zip(get("user.email"))
+        .unwrap_or_else(|| ("Nacre Brain".into(), "brain@localhost".into()));
+    [
+        ("GIT_AUTHOR_NAME", name.clone()),
+        ("GIT_AUTHOR_EMAIL", email.clone()),
+        ("GIT_COMMITTER_NAME", name),
+        ("GIT_COMMITTER_EMAIL", email),
+    ]
+}
+/// Only these subcommands write commits; the identity lookup costs two git runs.
+fn commits(args: &[&str]) -> bool {
+    args.iter().any(|arg| {
+        matches!(
+            *arg,
+            "commit" | "commit-tree" | "rebase" | "merge" | "pull" | "cherry-pick" | "revert"
+        )
+    })
+}
 fn git(root: &Path, args: &[&str]) -> Result<Output> {
-    Ok(Command::new("git")
+    let mut command = Command::new("git");
+    command
         .arg("-C")
         .arg(root)
         .args(args)
         .env("GIT_TERMINAL_PROMPT", "0")
-        .env("GIT_LITERAL_PATHSPECS", "1")
-        .env("GIT_AUTHOR_NAME", IDENT_NAME)
-        .env("GIT_AUTHOR_EMAIL", IDENT_EMAIL)
-        .env("GIT_COMMITTER_NAME", IDENT_NAME)
-        .env("GIT_COMMITTER_EMAIL", IDENT_EMAIL)
-        .output()?)
+        .env("GIT_LITERAL_PATHSPECS", "1");
+    if commits(args) {
+        command.envs(identity(root));
+    }
+    Ok(command.output()?)
 }
 fn git_network(root: &Path, args: &[&str]) -> Result<Output> {
     let mut command = Command::new("git");
@@ -73,11 +104,9 @@ fn git_network(root: &Path, args: &[&str]) -> Result<Output> {
         .arg(root)
         .args(args)
         .env("GIT_TERMINAL_PROMPT", "0");
-    command
-        .env("GIT_AUTHOR_NAME", IDENT_NAME)
-        .env("GIT_AUTHOR_EMAIL", IDENT_EMAIL)
-        .env("GIT_COMMITTER_NAME", IDENT_NAME)
-        .env("GIT_COMMITTER_EMAIL", IDENT_EMAIL);
+    if commits(args) {
+        command.envs(identity(root));
+    }
     crate::process::capture(command, None, Duration::from_secs(30))
 }
 fn success(root: &Path, args: &[&str]) -> Result<String> {
@@ -780,19 +809,12 @@ pub fn init(root: &Path, remote: Option<&str>) -> Result<()> {
             .arg(root)
             .args([
                 "-c",
-                "user.name=siverteh",
-                "-c",
-                "user.email=92440237+Siverteh@users.noreply.github.com",
-                "-c",
                 "core.hooksPath=/dev/null",
                 "commit",
                 "-m",
                 "baseline import",
             ])
-            .env("GIT_AUTHOR_NAME", IDENT_NAME)
-            .env("GIT_AUTHOR_EMAIL", IDENT_EMAIL)
-            .env("GIT_COMMITTER_NAME", IDENT_NAME)
-            .env("GIT_COMMITTER_EMAIL", IDENT_EMAIL)
+            .envs(identity(root))
             .output()?;
         if !out.status.success() {
             return Err("unable to create Brain baseline commit".into());
@@ -968,22 +990,8 @@ fn commit_selected(
     let out = Command::new("git")
         .arg("-C")
         .arg(root)
-        .args([
-            "-c",
-            "user.name=siverteh",
-            "-c",
-            "user.email=92440237+Siverteh@users.noreply.github.com",
-            "commit-tree",
-            &tree,
-            "-p",
-            &head,
-            "-m",
-            &message,
-        ])
-        .env("GIT_AUTHOR_NAME", IDENT_NAME)
-        .env("GIT_AUTHOR_EMAIL", IDENT_EMAIL)
-        .env("GIT_COMMITTER_NAME", IDENT_NAME)
-        .env("GIT_COMMITTER_EMAIL", IDENT_EMAIL)
+        .args(["commit-tree", &tree, "-p", &head, "-m", &message])
+        .envs(identity(root))
         .output()?;
     if !out.status.success() {
         return Err("unable to create Brain commit".into());
@@ -1400,6 +1408,40 @@ pub fn push_migration(root: &Path) -> Result<()> {
 mod tests {
     use super::*;
     use tempfile::TempDir;
+
+    #[test]
+    fn commits_carry_the_vaults_identity_or_a_neutral_one() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        let who = || success(root, &["log", "-1", "--format=%an <%ae> / %cn <%ce>"]).unwrap();
+        success(root, &["init", "-q"]).unwrap();
+        // Empty repo values hide any global identity, so the neutral one applies.
+        success(root, &["config", "user.name", ""]).unwrap();
+        success(root, &["config", "user.email", ""]).unwrap();
+        fs::write(root.join("note.md"), "one").unwrap();
+        success(root, &["add", "note.md"]).unwrap();
+        success(
+            root,
+            &["-c", "core.hooksPath=/dev/null", "commit", "-m", "one"],
+        )
+        .unwrap();
+        assert_eq!(
+            who(),
+            "Nacre Brain <brain@localhost> / Nacre Brain <brain@localhost>"
+        );
+        success(root, &["config", "user.name", "Vault Owner"]).unwrap();
+        success(root, &["config", "user.email", "owner@example.invalid"]).unwrap();
+        fs::write(root.join("note.md"), "two").unwrap();
+        success(
+            root,
+            &["-c", "core.hooksPath=/dev/null", "commit", "-am", "two"],
+        )
+        .unwrap();
+        assert_eq!(
+            who(),
+            "Vault Owner <owner@example.invalid> / Vault Owner <owner@example.invalid>"
+        );
+    }
 
     fn command(root: &Path, args: &[&str]) -> Output {
         Command::new("git")
