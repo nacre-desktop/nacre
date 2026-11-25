@@ -26,15 +26,31 @@ fn scope_recovery(session: &mut bead::ui::Session, output: Option<&str>) {
     if let Ok(path) = crate::state::File::path()
         && let Some(parent) = path.parent()
     {
-        let mut key = session.recovery_key();
-        if let Some(output) = output {
-            use std::hash::{Hash, Hasher};
-            let mut hash = std::collections::hash_map::DefaultHasher::new();
-            output.hash(&mut hash);
-            key = format!("{key}-{:016x}", hash.finish());
-        }
+        let key = recovery_key(session.entry(), output);
         session.enable_recovery(parent.join("ui").join(key));
     }
+}
+/// One last-good bundle per view entry (and output), never per install root: a deploy to a new
+/// root overwrites it instead of adding a file, and a broken update can fall back to the previous
+/// good UI. Readable, not hashed, so it stays the same across toolchains. Shells that share
+/// XDG_STATE_HOME share bundles; a stray one only ever reaches Bead's load-or-fallback path.
+fn recovery_key(entry: &std::path::Path, output: Option<&str>) -> String {
+    let safe = |text: &str| {
+        text.chars()
+            .map(|c| {
+                if c.is_ascii_alphanumeric() || c == '.' || c == '-' {
+                    c
+                } else {
+                    '_'
+                }
+            })
+            .collect::<String>()
+    };
+    let mut key = format!("ui-{}", safe(&entry.to_string_lossy()));
+    if let Some(output) = output {
+        key = format!("{key}@{}", safe(output));
+    }
+    key + ".json"
 }
 fn panel_visibility_changes(open: bool, launcher: bool) -> BTreeMap<String, bead::core::Value> {
     let mut changes = BTreeMap::from([("panel.open".into(), bead::core::Value::Bool(open))]);
@@ -11326,5 +11342,110 @@ return ui.Column{id="root",width=400,height=300,
             .expect("the empty wake stages the layout snapshot");
         assert_ne!(positions(&scene), first, "layout never advanced");
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod recovery_key_tests {
+    use super::recovery_key;
+    use std::path::{Path, PathBuf};
+
+    fn shell() -> PathBuf {
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../shell")
+    }
+    fn session(root: &Path, entry: &str) -> bead::ui::Session {
+        let palette = shell().join("palette.json");
+        bead::ui::Session::new(
+            root.to_path_buf(),
+            entry.into(),
+            palette.clone(),
+            bead::render::Palette::read(&palette).unwrap(),
+            bead::render::Scene::empty(100., 100.),
+        )
+    }
+    fn scratch(name: &str) -> PathBuf {
+        let dir =
+            std::env::temp_dir().join(format!("nacre-recovery-{name}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    /// Two deploys of the same shell under different roots share one last-good bundle per view.
+    #[test]
+    fn two_deploys_with_different_roots_land_on_the_same_key() {
+        let dir = scratch("roots");
+        let (a, b) = (dir.join("bead/1111/shell"), dir.join("bead/2222/shell"));
+        for root in [&a, &b] {
+            std::fs::create_dir_all(root).unwrap();
+        }
+        let (first, second) = (session(&a, "bar/main.luau"), session(&b, "bar/main.luau"));
+        assert_ne!(
+            first.recovery_key(),
+            second.recovery_key(),
+            "Bead's own key follows the root"
+        );
+        assert_eq!(
+            recovery_key(first.entry(), Some("DP-1")),
+            recovery_key(second.entry(), Some("DP-1"))
+        );
+        assert_eq!(
+            recovery_key(first.entry(), Some("DP-1")),
+            "ui-bar_main.luau@DP-1.json"
+        );
+        assert_ne!(
+            recovery_key(first.entry(), Some("DP-1")),
+            recovery_key(first.entry(), Some("eDP-1"))
+        );
+        let _ = std::fs::remove_dir_all(dir);
+    }
+
+    /// A last-good bundle that cannot load on this host, older (calls an API this host lacks) or
+    /// newer (written by a host whose syntax this one rejects), only reaches the fallback: no crash,
+    /// no recovery, and the same answer on a retry.
+    #[test]
+    fn a_bundle_that_does_not_load_only_reaches_the_fallback_in_either_direction() {
+        let behavior = br#"return {stores={},actions={},computed={}}"#.to_vec();
+        for (case, main) in [
+            (
+                "older bundle, newer host",
+                &b"return ui.no_such_component{}"[..],
+            ),
+            ("newer bundle, older host", &b"return ui.Box{ ::: }"[..]),
+        ] {
+            let dir = scratch(&case.replace([' ', ','], "-"));
+            let root = dir.join("root");
+            std::fs::create_dir_all(root.join("view")).unwrap();
+            // The installed view is broken too, which is the only time Bead reaches for the bundle.
+            std::fs::write(root.join("view/main.luau"), "return (").unwrap();
+            std::fs::write(root.join("view/behavior.luau"), &behavior).unwrap();
+            let path = dir
+                .join("ui")
+                .join(recovery_key(Path::new("view/main.luau"), None));
+            bead::core::recovery::Bundle {
+                version: 1,
+                entry: "view/main.luau".into(),
+                palette: std::fs::read(shell().join("palette.json")).unwrap(),
+                files: [
+                    (PathBuf::from("view/main.luau"), main.to_vec()),
+                    (PathBuf::from("view/behavior.luau"), behavior.clone()),
+                ]
+                .into(),
+            }
+            .save(&path)
+            .unwrap();
+            let mut view = session(&root, "view/main.luau");
+            view.enable_recovery(path);
+            assert!(
+                view.reload().is_err(),
+                "{case}: the broken view stays an error"
+            );
+            assert!(!view.recovered_on_start(), "{case}: nothing recovered");
+            assert!(
+                view.reload().is_err(),
+                "{case}: a retry does the same, no loop"
+            );
+            let _ = std::fs::remove_dir_all(dir);
+        }
     }
 }
