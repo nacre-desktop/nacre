@@ -48,6 +48,37 @@ pub fn state_home() -> Result<PathBuf, String> {
 pub fn shell_dir() -> Result<PathBuf, String> {
     Ok(state_home()?.join("nacre/shell"))
 }
+/// Last-good UI bundles under the old per-install keys (`ui-<16 hex>.json`, `-<16 hex>` per output)
+/// never match a key since recovery keys became entry plus output; remove only those files.
+// shortcut: 2026-12-25, delete 30 days after the recovery-key release.
+pub fn prune_recovery_bundles() -> std::io::Result<usize> {
+    let dir = shell_dir().map_err(std::io::Error::other)?.join("ui");
+    prune_recovery_bundles_in(&dir)
+}
+fn prune_recovery_bundles_in(dir: &std::path::Path) -> std::io::Result<usize> {
+    let hex16 = |s: &str| s.len() == 16 && s.bytes().all(|b| b.is_ascii_hexdigit());
+    let entries = match std::fs::read_dir(dir) {
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(0),
+        entries => entries?,
+    };
+    let mut removed = 0;
+    for entry in entries {
+        let entry = entry?;
+        let name = entry.file_name();
+        let old = name
+            .to_str()
+            .and_then(|name| name.strip_prefix("ui-"))
+            .and_then(|rest| rest.split_once(".json"))
+            .is_some_and(|(key, tail)| {
+                hex16(key) && (tail.is_empty() || tail.strip_prefix('-').is_some_and(hex16))
+            });
+        if old && entry.file_type()?.is_file() {
+            std::fs::remove_file(entry.path())?;
+            removed += 1;
+        }
+    }
+    Ok(removed)
+}
 // shortcut: 2026-12-12, delete migration 30 days after the N0402 release.
 pub fn migrate() -> Result<(), Box<dyn std::error::Error>> {
     use std::{ffi::CString, os::unix::ffi::OsStrExt};
@@ -214,6 +245,40 @@ impl File {
 #[cfg(test)]
 mod tests {
     use super::*;
+    /// Only bundles under the old per-install keys go; new keys, other names and directories stay.
+    #[test]
+    fn the_recovery_prune_removes_only_old_per_install_bundles() {
+        let dir = std::env::temp_dir().join(format!("nacre-prune-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(dir.join("ui-0123456789abcdef.json-0123456789abcdef")).unwrap();
+        let old = [
+            "ui-0123456789abcdef.json",
+            "ui-fedcba9876543210.json-0123456789abcdef",
+        ];
+        let kept = [
+            "ui-bar_main.luau@DP-1.json",
+            "ui-ui_main.luau.json",
+            "ui-0123456789abcdef.json.tmp",
+            "ui-0123.json",
+            "panels.json",
+        ];
+        for name in old.iter().chain(&kept) {
+            std::fs::write(dir.join(name), b"{}").unwrap();
+        }
+        assert_eq!(prune_recovery_bundles_in(&dir).unwrap(), old.len());
+        for name in old {
+            assert!(!dir.join(name).exists(), "{name} should go");
+        }
+        for name in kept {
+            assert!(dir.join(name).exists(), "{name} should stay");
+        }
+        assert!(
+            dir.join("ui-0123456789abcdef.json-0123456789abcdef")
+                .is_dir()
+        );
+        assert_eq!(prune_recovery_bundles_in(&dir.join("missing")).unwrap(), 0);
+        let _ = std::fs::remove_dir_all(dir);
+    }
     #[test]
     fn migration_preserves_existing_state() {
         const CHILD: &str = "NACRE_STATE_MIGRATION_TEST";

@@ -545,6 +545,11 @@ fn start(
             }
         });
     migrate_before_startup(state::migrate);
+    match state::prune_recovery_bundles() {
+        Ok(0) => {}
+        Ok(removed) => eprintln!("RECOVERY_BUNDLES_PRUNED removed={removed}"),
+        Err(error) => eprintln!("RECOVERY_BUNDLES_PRUNE failed: {error}"),
+    }
     font_sources::provision_installed();
     *ui_started = true;
     let mut forced_safe_mode = false;
