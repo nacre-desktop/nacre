@@ -94,7 +94,7 @@ impl OsdEvent {
 }
 
 pub(crate) fn exports() -> BTreeMap<String, String> {
-    let schema = serde_json::to_value(schemars::schema_for!(OsdEvent)).expect("osd schema");
+    let schema = serde_json::to_value(crate::schema::<OsdEvent>()).expect("osd schema");
     let mut files = BTreeMap::new();
     files.insert(
         "protocol/schema/osd-event.json".into(),

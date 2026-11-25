@@ -120,7 +120,7 @@ pub fn method_descriptors() -> BTreeMap<String, Method> {
                 class: Capability::Desktop,
                 timeout: UI_CALL_TIMEOUT_MS,
                 params,
-                result: serde_json::to_value(schemars::schema_for!(CoreResult))
+                result: serde_json::to_value(crate::schema::<CoreResult>())
                     .expect("finite notifications result schema"),
             },
         )
@@ -128,8 +128,8 @@ pub fn method_descriptors() -> BTreeMap<String, Method> {
     .collect()
 }
 
-fn schema<T: JsonSchema>() -> Value {
-    serde_json::to_value(schemars::schema_for!(T)).expect("finite notifications parameter schema")
+fn schema<T: JsonSchema + 'static>() -> Value {
+    serde_json::to_value(crate::schema::<T>()).expect("finite notifications parameter schema")
 }
 
 pub(crate) fn transcripts() -> BTreeMap<String, String> {

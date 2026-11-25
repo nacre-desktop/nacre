@@ -365,8 +365,8 @@ pub struct AiAck {
 }
 
 fn schemas() -> BTreeMap<String, Value> {
-    fn one<T: JsonSchema>() -> Value {
-        serde_json::to_value(schemars::schema_for!(T)).expect("ai chat schema")
+    fn one<T: JsonSchema + 'static>() -> Value {
+        serde_json::to_value(crate::schema::<T>()).expect("ai chat schema")
     }
     BTreeMap::from([
         ("ai-chat".to_owned(), one::<AiChat>()),

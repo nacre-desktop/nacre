@@ -47,6 +47,21 @@ pub const MAX_SUBSCRIPTIONS: usize = 128;
 pub const MAX_CALLS: usize = 64;
 pub const MAX_EVENTS: usize = 256;
 
+/// `schemars::schema_for!(T)`, generated once per type: the daemon rebuilds its method
+/// registry for every client welcome and gate change (row 73: 2.3 ms a build, mostly schemas).
+pub fn schema<T: JsonSchema + 'static>() -> schemars::Schema {
+    static CACHE: std::sync::LazyLock<
+        std::sync::Mutex<std::collections::HashMap<std::any::TypeId, schemars::Schema>>,
+    > = std::sync::LazyLock::new(Default::default);
+    let mut cache = CACHE
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+    cache
+        .entry(std::any::TypeId::of::<T>())
+        .or_insert_with(|| schemars::schema_for!(T))
+        .clone()
+}
+
 #[derive(
     Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, JsonSchema,
 )]
@@ -203,6 +218,13 @@ mod tests {
     fn core_ui_method_advertises_three_second_deadline() {
         assert_eq!(core_methods()["ui.dispatch"].timeout, UI_CALL_TIMEOUT_MS);
         assert_eq!(UI_CALL_TIMEOUT_MS, 3_000);
+    }
+
+    #[test]
+    fn cached_schema_matches_schema_for() {
+        for _ in 0..2 {
+            assert_eq!(schema::<Capability>(), schemars::schema_for!(Capability));
+        }
     }
 }
 

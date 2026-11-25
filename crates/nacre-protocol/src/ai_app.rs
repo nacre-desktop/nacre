@@ -475,8 +475,8 @@ const TYPES: [(&str, &str); 14] = [
     ("ai-app-note-path", "BrainNotePath"),
 ];
 pub fn schemas() -> BTreeMap<String, Value> {
-    fn one<T: JsonSchema>() -> Value {
-        serde_json::to_value(schemars::schema_for!(T)).expect("ai app schema")
+    fn one<T: JsonSchema + 'static>() -> Value {
+        serde_json::to_value(crate::schema::<T>()).expect("ai app schema")
     }
     [
         one::<Providers>(),

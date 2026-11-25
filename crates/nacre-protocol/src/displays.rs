@@ -161,26 +161,26 @@ fn table() -> Vec<(
     u32,
 )> {
     let schema = |value: schemars::Schema| serde_json::to_value(value).expect("display schema");
-    let pending = schema(schemars::schema_for!(DisplayPending));
+    let pending = schema(crate::schema::<DisplayPending>());
     let changed = json!({"type":"object","properties":{"changed":{"type":"boolean"}},"required":["changed"],"additionalProperties":false});
     vec![
         (
             "display.apply",
-            schema(schemars::schema_for!(DisplayApply)),
+            schema(crate::schema::<DisplayApply>()),
             json!({"type":"object","properties":{"pending":pending},"required":["pending"],"additionalProperties":false}),
             Capability::Desktop,
             30_000,
         ),
         (
             "display.confirm",
-            schema(schemars::schema_for!(PillEmpty)),
+            schema(crate::schema::<PillEmpty>()),
             changed.clone(),
             Capability::Desktop,
             30_000,
         ),
         (
             "display.revert",
-            schema(schemars::schema_for!(PillEmpty)),
+            schema(crate::schema::<PillEmpty>()),
             changed,
             Capability::Desktop,
             30_000,
@@ -215,12 +215,12 @@ pub(crate) fn exports() -> BTreeMap<String, String> {
         (
             "DisplaysState",
             "displays-state",
-            schemars::schema_for!(DisplaysState),
+            crate::schema::<DisplaysState>(),
         ),
         (
             "DisplayApply",
             "display-apply",
-            schemars::schema_for!(DisplayApply),
+            crate::schema::<DisplayApply>(),
         ),
     ] {
         let schema = serde_json::to_value(schema).expect("display schema");

@@ -174,11 +174,11 @@ fn invalid() -> Failure {
 }
 pub fn methods() -> BTreeMap<String, Method> {
     [
-        ("workspace.activate", schemars::schema_for!(WorkspaceActivate)),
-        ("workspace.scroll", schemars::schema_for!(WorkspaceScroll)),
-        ("collection.action", schemars::schema_for!(CollectionAction)),
-        ("window.focus", schemars::schema_for!(WindowFocus)),
-        ("session.request", schemars::schema_for!(SessionRequest)),
+        ("workspace.activate", crate::schema::<WorkspaceActivate>()),
+        ("workspace.scroll", crate::schema::<WorkspaceScroll>()),
+        ("collection.action", crate::schema::<CollectionAction>()),
+        ("window.focus", crate::schema::<WindowFocus>()),
+        ("session.request", crate::schema::<SessionRequest>()),
     ].into_iter().map(|(name, schema)| {
         (name.into(), Method {
             v: 1,
@@ -202,27 +202,27 @@ pub(crate) fn exports() -> BTreeMap<String, String> {
         (
             "WorkspaceActivate",
             "workspace-activate",
-            schemars::schema_for!(WorkspaceActivate),
+            crate::schema::<WorkspaceActivate>(),
         ),
         (
             "WorkspaceScroll",
             "workspace-scroll",
-            schemars::schema_for!(WorkspaceScroll),
+            crate::schema::<WorkspaceScroll>(),
         ),
         (
             "CollectionAction",
             "collection-action",
-            schemars::schema_for!(CollectionAction),
+            crate::schema::<CollectionAction>(),
         ),
         (
             "WindowFocus",
             "window-focus",
-            schemars::schema_for!(WindowFocus),
+            crate::schema::<WindowFocus>(),
         ),
         (
             "SessionRequest",
             "session-request",
-            schemars::schema_for!(SessionRequest),
+            crate::schema::<SessionRequest>(),
         ),
     ] {
         let schema = serde_json::to_value(schema).expect("shell action schema");

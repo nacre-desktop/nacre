@@ -57,10 +57,10 @@ fn invalid() -> Failure {
 
 pub fn methods() -> BTreeMap<String, Method> {
     [
-        ("audio.adjust_volume", schemars::schema_for!(VolumeAdjust), Capability::System),
-        ("audio.step", schemars::schema_for!(VolumeStep), Capability::System),
-        ("audio.toggle_mute", schemars::schema_for!(PillEmpty), Capability::System),
-        ("bluetooth.set_enabled", schemars::schema_for!(BluetoothEnabled), Capability::System),
+        ("audio.adjust_volume", crate::schema::<VolumeAdjust>(), Capability::System),
+        ("audio.step", crate::schema::<VolumeStep>(), Capability::System),
+        ("audio.toggle_mute", crate::schema::<PillEmpty>(), Capability::System),
+        ("bluetooth.set_enabled", crate::schema::<BluetoothEnabled>(), Capability::System),
     ]
     .into_iter()
     .map(|(name, schema, class)| (name.into(), Method {
@@ -81,23 +81,19 @@ pub(crate) fn exports() -> BTreeMap<String, String> {
         (
             "VolumeAdjust",
             "volume-adjust",
-            schemars::schema_for!(VolumeAdjust),
+            crate::schema::<VolumeAdjust>(),
         ),
-        ("PillEmpty", "pill-empty", schemars::schema_for!(PillEmpty)),
+        ("PillEmpty", "pill-empty", crate::schema::<PillEmpty>()),
         (
             "VolumeDirection",
             "volume-direction",
-            schemars::schema_for!(VolumeDirection),
+            crate::schema::<VolumeDirection>(),
         ),
-        (
-            "VolumeStep",
-            "volume-step",
-            schemars::schema_for!(VolumeStep),
-        ),
+        ("VolumeStep", "volume-step", crate::schema::<VolumeStep>()),
         (
             "BluetoothEnabled",
             "bluetooth-enabled",
-            schemars::schema_for!(BluetoothEnabled),
+            crate::schema::<BluetoothEnabled>(),
         ),
     ] {
         let schema = serde_json::to_value(schema).expect("pill control schema");

@@ -107,28 +107,28 @@ fn table() -> Vec<(
     vec![
         (
             "time.zones",
-            schema(schemars::schema_for!(PillEmpty)),
+            schema(crate::schema::<PillEmpty>()),
             json!({"type":"object","properties":{"zones":{"type":"array","items":{"type":"string","maxLength":100},"maxItems":2048}},"required":["zones"],"additionalProperties":false}),
             Capability::System,
             10_000,
         ),
         (
             "time.set_timezone",
-            schema(schemars::schema_for!(TimeSetTimezone)),
+            schema(crate::schema::<TimeSetTimezone>()),
             changed.clone(),
             Capability::System,
             PROMPT_TIMEOUT_MS,
         ),
         (
             "time.set_ntp",
-            schema(schemars::schema_for!(EnabledSet)),
+            schema(crate::schema::<EnabledSet>()),
             changed,
             Capability::System,
             PROMPT_TIMEOUT_MS,
         ),
         (
             "login.install_theme",
-            schema(schemars::schema_for!(PillEmpty)),
+            schema(crate::schema::<PillEmpty>()),
             json!({"type":"object","properties":{"installed":{"type":"boolean"},"manifest":{"type":"string","maxLength":4096},"appearance_published":{"type":"boolean"}},"required":["installed","appearance_published"],"additionalProperties":false}),
             Capability::System,
             PROMPT_TIMEOUT_MS,
@@ -162,13 +162,13 @@ pub(crate) fn exports() -> BTreeMap<String, String> {
         (
             "TimeSetTimezone",
             "time-set-timezone",
-            schemars::schema_for!(TimeSetTimezone),
+            crate::schema::<TimeSetTimezone>(),
         ),
-        ("TimeState", "time-state", schemars::schema_for!(TimeState)),
+        ("TimeState", "time-state", crate::schema::<TimeState>()),
         (
             "CapabilitiesState",
             "capabilities-state",
-            schemars::schema_for!(CapabilitiesState),
+            crate::schema::<CapabilitiesState>(),
         ),
     ] {
         let schema = serde_json::to_value(schema).expect("settings schema");

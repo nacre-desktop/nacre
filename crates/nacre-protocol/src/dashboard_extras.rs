@@ -396,22 +396,22 @@ pub(crate) fn exports() -> BTreeMap<String, String> {
         (
             "DashboardExtrasSnapshot",
             "dashboard-extras-state",
-            schemars::schema_for!(DashboardExtrasSnapshot),
+            crate::schema::<DashboardExtrasSnapshot>(),
         ),
         (
             "DashboardExtrasCall",
             "dashboard-extras-call",
-            schemars::schema_for!(DashboardExtrasCall),
+            crate::schema::<DashboardExtrasCall>(),
         ),
         (
             "FocusStart",
             "dashboard-focus-start",
-            schemars::schema_for!(FocusStart),
+            crate::schema::<FocusStart>(),
         ),
         (
             "EntityTarget",
             "dashboard-extras-target",
-            schemars::schema_for!(EntityTarget),
+            crate::schema::<EntityTarget>(),
         ),
     ];
     let mut luau =

@@ -182,35 +182,35 @@ fn table() -> Vec<(
     vec![
         (
             "shortcuts.refresh",
-            schema(schemars::schema_for!(PillEmpty)),
+            schema(crate::schema::<PillEmpty>()),
             flag("requested"),
             Capability::Desktop,
             10_000,
         ),
         (
             "capabilities.refresh",
-            schema(schemars::schema_for!(PillEmpty)),
+            schema(crate::schema::<PillEmpty>()),
             flag("requested"),
             Capability::Desktop,
             10_000,
         ),
         (
             "launcher.clear_history",
-            schema(schemars::schema_for!(PillEmpty)),
+            schema(crate::schema::<PillEmpty>()),
             flag("changed"),
             Capability::Desktop,
             30_000,
         ),
         (
             "system.status",
-            schema(schemars::schema_for!(PillEmpty)),
-            schema(schemars::schema_for!(SystemStatus)),
+            schema(crate::schema::<PillEmpty>()),
+            schema(crate::schema::<SystemStatus>()),
             Capability::Desktop,
             30_000,
         ),
         (
             "tools.launch",
-            schema(schemars::schema_for!(ToolsLaunch)),
+            schema(crate::schema::<ToolsLaunch>()),
             flag("launched"),
             Capability::Desktop,
             10_000,
@@ -244,17 +244,17 @@ pub(crate) fn exports() -> BTreeMap<String, String> {
         (
             "ShortcutsState",
             "shortcuts-state",
-            schemars::schema_for!(ShortcutsState),
+            crate::schema::<ShortcutsState>(),
         ),
         (
             "SystemStatus",
             "system-status",
-            schemars::schema_for!(SystemStatus),
+            crate::schema::<SystemStatus>(),
         ),
         (
             "ToolsLaunch",
             "tools-launch",
-            schemars::schema_for!(ToolsLaunch),
+            crate::schema::<ToolsLaunch>(),
         ),
     ] {
         let schema = serde_json::to_value(schema).expect("settings schema");

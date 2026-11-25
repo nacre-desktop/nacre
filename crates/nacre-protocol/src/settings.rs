@@ -185,37 +185,37 @@ pub(crate) fn exports() -> BTreeMap<String, String> {
         (
             "SettingsGet",
             "settings-get",
-            schemars::schema_for!(SettingsGet),
+            crate::schema::<SettingsGet>(),
         ),
         (
             "SettingsSet",
             "settings-set",
-            schemars::schema_for!(SettingsSet),
+            crate::schema::<SettingsSet>(),
         ),
         (
             "SettingsPublish",
             "settings-publish",
-            schemars::schema_for!(SettingsPublish),
+            crate::schema::<SettingsPublish>(),
         ),
         (
             "SettingsProviderWrite",
             "settings-provider-write",
-            schemars::schema_for!(SettingsProviderWrite),
+            crate::schema::<SettingsProviderWrite>(),
         ),
         (
             "DesktopSettingsCall",
             "desktop-settings-call",
-            schemars::schema_for!(DesktopSettingsCall),
+            crate::schema::<DesktopSettingsCall>(),
         ),
         (
             "SettingsReadError",
             "settings-read-error",
-            schemars::schema_for!(SettingsReadError),
+            crate::schema::<SettingsReadError>(),
         ),
         (
             "SettingsStore",
             "settings-store",
-            schemars::schema_for!(SettingsStore),
+            crate::schema::<SettingsStore>(),
         ),
     ] {
         let schema = serde_json::to_value(schema).expect("finite settings schema");

@@ -189,39 +189,39 @@ fn table() -> Vec<(&'static str, Value, u32, Value)> {
     vec![
         (
             "colors.catalog",
-            schema(schemars::schema_for!(PillEmpty)),
+            schema(crate::schema::<PillEmpty>()),
             10_000,
-            schema(schemars::schema_for!(ColorsCatalog)),
+            schema(crate::schema::<ColorsCatalog>()),
         ),
         (
             "colors.preview",
-            schema(schemars::schema_for!(ColorsPreview)),
+            schema(crate::schema::<ColorsPreview>()),
             60_000,
-            schema(schemars::schema_for!(ColorsPreviewResult)),
+            schema(crate::schema::<ColorsPreviewResult>()),
         ),
         (
             "colors.apply",
-            schema(schemars::schema_for!(ColorsId)),
+            schema(crate::schema::<ColorsId>()),
             60_000,
-            schema(schemars::schema_for!(ColorsApplied)),
+            schema(crate::schema::<ColorsApplied>()),
         ),
         (
             "colors.export",
-            schema(schemars::schema_for!(ColorsId)),
+            schema(crate::schema::<ColorsId>()),
             60_000,
-            schema(schemars::schema_for!(ColorsExported)),
+            schema(crate::schema::<ColorsExported>()),
         ),
         (
             "colors.targets",
-            schema(schemars::schema_for!(PillEmpty)),
+            schema(crate::schema::<PillEmpty>()),
             10_000,
-            schema(schemars::schema_for!(ColorsTargets)),
+            schema(crate::schema::<ColorsTargets>()),
         ),
         (
             "colors.set_target",
-            schema(schemars::schema_for!(ColorsSetTarget)),
+            schema(crate::schema::<ColorsSetTarget>()),
             60_000,
-            schema(schemars::schema_for!(ColorsChanged)),
+            schema(crate::schema::<ColorsChanged>()),
         ),
     ]
 }
@@ -254,38 +254,38 @@ pub(crate) fn exports() -> BTreeMap<String, String> {
         (
             "ColorsPreview",
             "colors-preview",
-            schemars::schema_for!(ColorsPreview),
+            crate::schema::<ColorsPreview>(),
         ),
-        ("ColorsId", "colors-id", schemars::schema_for!(ColorsId)),
+        ("ColorsId", "colors-id", crate::schema::<ColorsId>()),
         (
             "ColorsSetTarget",
             "colors-set-target",
-            schemars::schema_for!(ColorsSetTarget),
+            crate::schema::<ColorsSetTarget>(),
         ),
         (
             "ColorsCatalog",
             "colors-catalog",
-            schemars::schema_for!(ColorsCatalog),
+            crate::schema::<ColorsCatalog>(),
         ),
         (
             "ColorsPreviewResult",
             "colors-preview-result",
-            schemars::schema_for!(ColorsPreviewResult),
+            crate::schema::<ColorsPreviewResult>(),
         ),
         (
             "ColorsApplied",
             "colors-applied",
-            schemars::schema_for!(ColorsApplied),
+            crate::schema::<ColorsApplied>(),
         ),
         (
             "ColorsExported",
             "colors-exported",
-            schemars::schema_for!(ColorsExported),
+            crate::schema::<ColorsExported>(),
         ),
         (
             "ColorsTargets",
             "colors-targets",
-            schemars::schema_for!(ColorsTargets),
+            crate::schema::<ColorsTargets>(),
         ),
     ] {
         let schema = serde_json::to_value(schema).expect("colors schema");

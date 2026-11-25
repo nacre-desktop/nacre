@@ -130,18 +130,15 @@ fn result_schema(method: &str) -> serde_json::Value {
 
 pub fn methods() -> BTreeMap<String, Method> {
     [
-        ("tray.activate", schemars::schema_for!(TrayItemAction)),
-        (
-            "tray.secondary_activate",
-            schemars::schema_for!(TrayItemAction),
-        ),
-        ("tray.context_menu", schemars::schema_for!(TrayItemAction)),
-        ("tray.scroll", schemars::schema_for!(TrayScroll)),
-        ("brightness.set", schemars::schema_for!(BrightnessSet)),
-        ("brightness.adjust", schemars::schema_for!(BrightnessAdjust)),
+        ("tray.activate", crate::schema::<TrayItemAction>()),
+        ("tray.secondary_activate", crate::schema::<TrayItemAction>()),
+        ("tray.context_menu", crate::schema::<TrayItemAction>()),
+        ("tray.scroll", crate::schema::<TrayScroll>()),
+        ("brightness.set", crate::schema::<BrightnessSet>()),
+        ("brightness.adjust", crate::schema::<BrightnessAdjust>()),
         (
             "keyboard_light.adjust",
-            schemars::schema_for!(KeyboardLightAdjust),
+            crate::schema::<KeyboardLightAdjust>(),
         ),
     ]
     .into_iter()
@@ -176,37 +173,33 @@ pub(crate) fn exports() -> BTreeMap<String, String> {
         (
             "TrayItemAction",
             "tray-item-action",
-            schemars::schema_for!(TrayItemAction),
+            crate::schema::<TrayItemAction>(),
         ),
         (
             "TrayScrollAxis",
             "tray-scroll-axis",
-            schemars::schema_for!(TrayScrollAxis),
+            crate::schema::<TrayScrollAxis>(),
         ),
-        (
-            "TrayScroll",
-            "tray-scroll",
-            schemars::schema_for!(TrayScroll),
-        ),
+        ("TrayScroll", "tray-scroll", crate::schema::<TrayScroll>()),
         (
             "BrightnessSet",
             "brightness-set",
-            schemars::schema_for!(BrightnessSet),
+            crate::schema::<BrightnessSet>(),
         ),
         (
             "BrightnessAdjust",
             "brightness-adjust",
-            schemars::schema_for!(BrightnessAdjust),
+            crate::schema::<BrightnessAdjust>(),
         ),
         (
             "KeyboardLightStep",
             "keyboard-light-step",
-            schemars::schema_for!(KeyboardLightStep),
+            crate::schema::<KeyboardLightStep>(),
         ),
         (
             "KeyboardLightAdjust",
             "keyboard-light-adjust",
-            schemars::schema_for!(KeyboardLightAdjust),
+            crate::schema::<KeyboardLightAdjust>(),
         ),
     ] {
         let schema = serde_json::to_value(schema).expect("bar service schema");

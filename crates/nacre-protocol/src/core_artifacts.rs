@@ -8,20 +8,16 @@ pub(crate) fn generate() -> BTreeMap<String, String> {
     let mut definitions = BTreeMap::new();
     let mut roots = Vec::new();
     for (name, filename, schema) in [
-        (
-            "CoreCall",
-            "core-service-call",
-            schemars::schema_for!(CoreCall),
-        ),
+        ("CoreCall", "core-service-call", crate::schema::<CoreCall>()),
         (
             "CoreResult",
             "core-service-result",
-            schemars::schema_for!(CoreResult),
+            crate::schema::<CoreResult>(),
         ),
         (
             "CoreSnapshot",
             "core-service-state",
-            schemars::schema_for!(CoreSnapshot),
+            crate::schema::<CoreSnapshot>(),
         ),
     ] {
         let value = serde_json::to_value(schema).expect("finite service schema");

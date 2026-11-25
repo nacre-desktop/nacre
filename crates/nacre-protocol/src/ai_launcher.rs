@@ -172,8 +172,8 @@ pub fn methods() -> BTreeMap<String, Method> {
         .collect()
 }
 fn schemas() -> BTreeMap<&'static str, Value> {
-    fn one<T: JsonSchema>() -> Value {
-        serde_json::to_value(schemars::schema_for!(T)).expect("launcher schema")
+    fn one<T: JsonSchema + 'static>() -> Value {
+        serde_json::to_value(crate::schema::<T>()).expect("launcher schema")
     }
     BTreeMap::from([
         ("empty", one::<Empty>()),
