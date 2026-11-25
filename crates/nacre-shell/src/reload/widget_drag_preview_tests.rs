@@ -2232,20 +2232,25 @@ fn passive_workspace_ghost_has_collection_defaults_and_accepts_projection() {
             _ => None,
         })
         .collect();
-    // Spec 0253: the stack is one numeral, the current stack's number (no index here: its place, 2);
-    // the name is not text in the bar.
+    // Spec 0253: a circle per stack, the current one (desk-b, the second) lit at once, with no ease from the
+    // first; the name is not text in the bar.
     assert!(!texts.contains(&"B"), "{texts:?}");
-    let numbers: Vec<_> = scene
-        .layers
-        .iter()
-        .filter(|layer| layer.id.contains("stack-number"))
-        .flat_map(|layer| &scene.primitives[layer.own.clone()])
-        .filter_map(|primitive| match primitive {
-            bead::render::Primitive::Text { text, .. } => Some(text.as_str()),
-            _ => None,
-        })
-        .collect();
-    assert_eq!(numbers, ["2"], "{texts:?}");
+    let count = |part: &str| {
+        scene
+            .layers
+            .iter()
+            .filter(|layer| layer.id.contains(part))
+            .count()
+    };
+    assert_eq!(
+        (
+            count("stack-circle-"),
+            count("stack-lit-1"),
+            count("stack-lit-2")
+        ),
+        (2, 0, 1),
+        "{texts:?}"
+    );
     assert!(ghost.input_regions().is_empty());
 }
 

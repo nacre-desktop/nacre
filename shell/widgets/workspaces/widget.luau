@@ -40,10 +40,10 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
                 -- Stacks belong to an output (nacre-niri), and a switch swaps them between screens, so every bar lists all of them
                 -- in stack order: the highlight then visibly moves when this output's stack changes.
             end
-            -- Stack number (spec 0253, owner 2026-11-23): one numeral, this output's current stack, in a 28 px cap; a
-            -- switch rolls it like an odometer. With 2+ stacks hovering 400 ms (or a click) fans out every stack's
-            -- numeral as its own button (up to 8, then "+N"). A named 28 px cap (Settings > Panels > Top bar > Stack
-            -- style) replaces it. Tier 2 advertises no collections, so neither appears and the pill starts at the current pearl.
+            -- Stack circles (spec 0253, owner pick A 2026-11-25): one circle per stack in a 28 px cap, left to right and
+            -- overlapping like a Venn row, this output's current stack lit. With 2+ stacks hovering 400 ms (or a click) fans out
+            -- every stack's numeral as its own button (up to 8, then "+N"). A named 28 px cap (Settings > Panels > Top bar >
+            -- Stack style) replaces it. Tier 2 advertises no collections, so neither appears and the pill starts at the current pearl.
             local show_collections=#collections>0
             local cap_style=ui.resolve_for_check(ui.bind("bar.stack.style"))=="name"
             local cur=1
@@ -69,7 +69,7 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
             -- The counter ramps in 3 s on a stable key (a fresh key snaps), so the fan is pinned until it catches up.
             local pinned=ui.animate("workspaces.stack.pin:"..props.instance.iid,clicks,3,"linear")<clicks-.001
             local fanned=not cap_style and #collections>1 and (fan>=.999 or pinned)
-            local limit=t.stack_fan_max
+            local limit=fanned and t.stack_fan_max or t.stack_circles_max
             local first=#collections>limit and math.clamp(cur-limit//2,1,#collections-limit+1) or 1
             local last=math.min(#collections,first+limit-1)
             local more=#collections-(last-first+1)
@@ -77,7 +77,7 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
             local more_width=more>0 and math.ceil(ui.text_width(more_text,stack_family,t.cap_font))+t.stack_gap or 0
             local cap_name=cap_style and measure.ellipsize(current_collection_name,math.ceil(ui.text_width(string.rep("n",t.cap_chars),stack_family,t.cap_font)),stack_family,t.cap_font) or ""
             local cap_name_width=cap_style and math.ceil(ui.text_width(cap_name,stack_family,t.cap_font)) or 0
-            local stack_control_width=cap_style and t.cap_pad_left+t.cap_icon+t.cap_gap+cap_name_width+t.cap_pad_right or fanned and (last-first+1)*t.stack_slot+more_width+2*t.strand_pad or t.cap_height
+            local stack_control_width=cap_style and t.cap_pad_left+t.cap_icon+t.cap_gap+cap_name_width+t.cap_pad_right or fanned and (last-first+1)*t.stack_slot+more_width+2*t.strand_pad or t.cap_height+(last-first)*(t.stack_circle-t.strand_overlap)
             -- The control's trailing pad plus the capsule gap puts the current pearl 6 px after the strand.
             local collection_width=show_collections and stack_control_width+2*capsule_gap+1 or 0
             local active_left,active_width,active_accent,active_icon_mode
@@ -103,16 +103,25 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
             -- The stack control's width (the fan opening or closing) moves the workspaces at once, so the pill and the
             -- active capsule take it at once too; only the workspaces' own changes slide (a trailing capsule was a dark circle).
             local pill_width=slide("workspaces.pill.width:"..props.instance.iid,natural_width,.16,collection_width)
-            local number_height=t.stack_font*t.line_height
-            -- Stack i's numeral, `top` px into its slot; the current stack's (`on`) in the accent.
-            local function numeral(id,i,width,top,on)
-                return centered_text{id=id,position="absolute",left=0,top=top,width=width,text=stack_number(i),font_size=t.stack_font,font_weight=on and 600 or 500,family=stack_family,text_align="center",color=on and "primary" or "onSurfaceVariant"}
+            -- At rest the circles (at most `stack_circles_max`, around the current one): dim discs, then the lights on top. A
+            -- light's alpha per slot is a `ui.animated` marker, so a switch eases it from the old circle to the new one with no Luau
+            -- per frame; a plain number at rest, where only the current slot draws one. Built only while stacks show, so the
+            -- first frame with stacks (startup, a drag ghost) snaps.
+            local circles={}
+            if show_collections and not fanned and not cap_style then
+                local lights={}
+                for i=first,last do
+                    local k=i-first+1
+                    local function circle(id,fill)
+                        return ui.Box{id=id,position="absolute",left=(t.cap_height-t.stack_circle)/2+(k-1)*(t.stack_circle-t.strand_overlap),top=(t.cap_height-t.stack_circle)/2,width=t.stack_circle,height=t.stack_circle,radius=t.stack_circle/2,fill=fill}
+                    end
+                    circles[k]=circle("stack-circle-"..k,ui.alpha("onSurfaceVariant",t.stack_dim))
+                    local drive=ui.animated("workspaces.stack.light:"..props.instance.iid..":"..k,i==cur and 1 or 0,ui.motion.duration.switch,ui.motion.curve.out_cubic)
+                    local from,to=ui.range(drive)
+                    if from~=to or to>0 then lights[#lights+1]=circle("stack-lit-"..k,ui.alpha("primary",from==to and to or drive)) end
+                end
+                for _,light in lights do circles[#circles+1]=light end
             end
-            -- A switch rolls the numeral like an odometer: two numerals slide through a clipped box, nothing else lays out.
-            -- Animated only while stacks show, so the first frame with stacks (startup, a drag ghost) snaps instead of rolling up from 1.
-            local roll=show_collections and ui.animate("workspaces.stack.roll:"..props.instance.iid,cur,t.stack_roll,"out-cubic") or cur
-            local base=math.floor(roll+.001)
-            local step=math.max(0,roll-base)
             local fan_buttons={}
             if show_collections and fanned then
                 for i=first,last do
@@ -121,7 +130,7 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
                     fan_buttons[k]=kit.Button{id="stack-strand-"..k,width=t.stack_slot,height=t.cap_height,padding=0,radius=t.cap_radius,shrink=0,fill="transparent",hover_fill="transparent",
                         aria_label=tostring(collections[i].name or collections[i].label or collections[i].index or i),
                         on_activate=c.popouts and (i==cur and ui.action("collection.fan") or ui.action("collection.switch",collections[i].id)) or nil,
-                        numeral("stack-number-"..k,i,t.stack_slot,(t.cap_height-number_height)/2,i==cur)}
+                        centered_text{id="stack-number-"..k,position="absolute",left=0,top=(t.cap_height-t.stack_font*t.line_height)/2,width=t.stack_slot,text=stack_number(i),font_size=t.stack_font,font_weight=i==cur and 600 or 500,family=stack_family,text_align="center",color=i==cur and "primary" or "onSurfaceVariant"}}
                 end
                 if more>0 then
                     fan_buttons[#fan_buttons+1]=kit.Button{id="stack-strand-more",width=more_width,height=t.cap_height,padding=0,radius=t.cap_radius,shrink=0,fill="transparent",hover_fill="transparent",
@@ -130,12 +139,11 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
                 end
             end
             local collection_control=show_collections and (fanned and ui.Row{id="stack-fan",width=stack_control_width,height=t.cap_height,padding_left=t.strand_pad,radius=t.cap_radius,fill="surfaceContainerHighest",shrink=0,table.unpack(fan_buttons)} or kit.Button{id="collection-badge",width=stack_control_width,height=t.cap_height,padding=0,radius=t.cap_radius,shrink=0,
-                    fill="surfaceContainerHighest",hover_fill=ui.tint("surfaceContainerHighest","onSurface",.03),aria_label=current_collection_label,on_activate=c.popouts and ui.action((cap_style or #collections<2) and "collection.switcher.open" or "collection.fan") or nil,
+                    fill="surfaceContainerHighest",hover_fill=ui.tint("surfaceContainerHighest","onSurface",.03),aria_label=cap_style and current_collection_label or ui.tr("bead.bar.stack-position",{index=stack_number(cur),count=tostring(#collections)}),on_activate=c.popouts and ui.action((cap_style or #collections<2) and "collection.switcher.open" or "collection.fan") or nil,
                     cap_style and ui.Row{id="collection-content",width=stack_control_width,height=t.cap_height,padding_left=t.cap_pad_left,padding_right=t.cap_pad_right,gap=t.cap_gap,align="center",
                         ui.Text{id="collection-icon",text="stacks",width=t.cap_icon,height=t.cap_icon,shrink=0,family=kit.tokens.fonts.icon,font_size=t.cap_icon,color="onSurfaceVariant",text_align="center"},
                         ui.Text{id="collection-name",text=cap_name,width=cap_name_width,height=math.ceil(ui.text_line_height(stack_family,t.cap_font)),shrink=0,font_size=t.cap_font,family=stack_family,color="onSurface"}}
-                    or ui.Box{id="stack-number",position="absolute",left=0,top=(t.cap_height-number_height)/2,width=t.cap_height,height=number_height,clip_children=true,
-                        numeral("now",base,t.cap_height,-step*number_height,true),step>.001 and numeral("next",base+1,t.cap_height,(1-step)*number_height,true) or nil}})
+                    or ui.Box{id="stack-circles",position="absolute",left=0,top=0,width=stack_control_width,height=t.cap_height,table.unpack(circles)}})
                 or nil
             return ui.Row{id="capsule",width=pill_width,height=t.pill_height,padding_left=5,padding_right=5,gap=capsule_gap,radius=t.pill_radius,fill=c.islands and "transparent" or c.base,clip_children=false,align="center",
             -- QML workspaceThread: a 1 px primary -> secondary -> tertiary line at 12 % behind the pearls, inset 16 px.

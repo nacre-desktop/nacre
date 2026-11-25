@@ -24,6 +24,7 @@
   "bead.bar.open-session": "Bead top bar: accessible name (screen reader and tooltip) of a button; opens the session menu (lock, log out, power).",
   "bead.bar.open-sound": "Bead top bar: accessible name (screen reader and tooltip) of a button; opens the sound output panel.",
   "bead.bar.reconnecting": "Bead top bar: short badge shown while the connection to the desktop daemon is being re-established. About 92 px wide.",
+  "bead.bar.stack-position": "Bead top bar: accessible name of the stack circles (one circle per stack, the current one lit); {index} is the current stack's number, {count} how many stacks there are.",
   "bead.colors.access-contrast": "Colors window: smallest audited text contrast on the accessibility page; contrast is a number.",
   "bead.colors.access-coverage": "Colors window: explanation under the minimum contrast line.",
   "bead.colors.access-row": "Colors window: one audited text pair with its contrast ratio; the two colours are hex values.",

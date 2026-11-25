@@ -842,7 +842,67 @@ fn bar_golden(frame: &bead_test::Frame, name: &str) -> Result<()> {
     )
 }
 
-/// The stack control's numerals, left to right (spec 0253): one at rest, one per stack when fanned.
+/// The stack circles at rest, left to right (spec 0253): the alpha of each circle's accent light (0 dim, 255 lit).
+fn stack_lights(scene: &bead::render::Scene) -> Vec<u8> {
+    let fill = |id: String| {
+        let layer = scene.layers.iter().find(|layer| layer.id.ends_with(&id))?;
+        scene.primitives[layer.own.clone()]
+            .iter()
+            .find_map(|primitive| match primitive {
+                bead::render::Primitive::Rounded { fill, .. } => Some(fill[3]),
+                _ => None,
+            })
+    };
+    (1..)
+        .map_while(|k| {
+            fill(format!("stack-circle-{k}")).map(|_| fill(format!("stack-lit-{k}")).unwrap_or(0))
+        })
+        .collect()
+}
+
+/// The parity bar with `stacks` stacks on eDP-1, the `current`-th this output's current one, settled.
+fn stack_bar(
+    frame: bool,
+    palette: &str,
+    width: u32,
+    stacks: usize,
+    current: usize,
+    scale: f32,
+) -> Result<Harness> {
+    let mut values = super::initial_models()?;
+    values.extend(parity_models());
+    let rows: Vec<_> = (1..=stacks)
+        .map(|i| serde_json::json!({"id":format!("stack:{i}"),"label":i.to_string(),"index":i,"output":"eDP-1","active":i == current}))
+        .collect();
+    values.extend([
+        ("bar.frame".into(), Value::Bool(frame)),
+        (
+            "bar.height".into(),
+            Value::Number(if frame { 50. } else { 44. }),
+        ),
+        ("bar.collections".into(), Value::list(rows)),
+        ("bar.collection.output".into(), Value::Text("eDP-1".into())),
+        (
+            "bar.collection.current".into(),
+            Value::Text(format!("stack:{current}")),
+        ),
+    ]);
+    let mut h = Harness::load(
+        &root(),
+        Path::new("bar/main.luau"),
+        &root().join(palette),
+        values,
+        Config {
+            width,
+            height: if frame { 50 } else { 44 },
+            scale,
+        },
+    )?;
+    settle_harness_animations(&mut h)?;
+    Ok(h)
+}
+
+/// The fanned stack control's numerals, left to right (spec 0253): one per stack.
 fn stack_numbers(h: &Harness) -> Vec<String> {
     let mut numbers: Vec<_> = h
         .scene()
@@ -1299,42 +1359,12 @@ fn no_border_bar_floats_islands_on_a_thread_that_fades_with_windows() -> Result<
     )
 }
 
-/// Spec 0253: the stack number at 2 and 5 stacks (one numeral at rest, every stack's numeral fanned on hover), in both
-/// bar variants and both schemes, and the narrow 1366 px bar that keeps the app icons.
+/// Spec 0253: the stack circles at 2 and 5 stacks (the current one lit at rest, every stack's numeral fanned on hover),
+/// in both bar variants and both schemes, and the narrow 1366 px bar that keeps the app icons.
 #[test]
-fn bar_stack_number_fans_and_narrow_bars_keep_app_icons() -> Result<()> {
-    let bar = |frame: bool, palette: &str, width, stacks: usize, scale| -> Result<Harness> {
-        let mut values = super::initial_models()?;
-        values.extend(parity_models());
-        let rows: Vec<_> = (1..=stacks)
-            .map(|i| serde_json::json!({"id":format!("stack:{i}"),"label":i.to_string(),"index":i,"output":"eDP-1","active":i == 3.min(stacks)}))
-            .collect();
-        values.extend([
-            ("bar.frame".into(), Value::Bool(frame)),
-            (
-                "bar.height".into(),
-                Value::Number(if frame { 50. } else { 44. }),
-            ),
-            ("bar.collections".into(), Value::list(rows)),
-            ("bar.collection.output".into(), Value::Text("eDP-1".into())),
-            (
-                "bar.collection.current".into(),
-                Value::Text(format!("stack:{}", 3.min(stacks))),
-            ),
-        ]);
-        let mut h = Harness::load(
-            &root(),
-            Path::new("bar/main.luau"),
-            &root().join(palette),
-            values,
-            Config {
-                width,
-                height: if frame { 50 } else { 44 },
-                scale,
-            },
-        )?;
-        settle_harness_animations(&mut h)?;
-        Ok(h)
+fn bar_stack_circles_fan_and_narrow_bars_keep_app_icons() -> Result<()> {
+    let bar = |frame, palette, width, stacks: usize, scale| {
+        stack_bar(frame, palette, width, stacks, stacks.min(3), scale)
     };
     let has_icons = |h: &Harness| bar_texts(h).iter().any(|(text, _)| text == "terminal");
     for (frame, tag) in [(false, "a"), (true, "b")] {
@@ -1345,9 +1375,9 @@ fn bar_stack_number_fans_and_narrow_bars_keep_app_icons() -> Result<()> {
                 "the 1920 px bar shows the active pearl's app icon"
             );
             assert_eq!(
-                stack_numbers(&h),
-                ["3"],
-                "at rest the mark is the current stack's number alone"
+                stack_lights(h.scene()),
+                [0, 0, 255, 0, 0],
+                "at rest five circles, the current stack's (3) lit"
             );
             bar_golden(
                 &h.pose((0., 0.), 1.)?,
@@ -1491,6 +1521,89 @@ fn bar_stack_number_fans_and_narrow_bars_keep_app_icons() -> Result<()> {
     );
     h.update(BTreeMap::new())?;
     assert_eq!(goes(&h), 4, "a click fans without the hover wait");
+    Ok(())
+}
+
+/// Spec 0253 (owner pick A, 2026-11-25): one circle per stack, overlapping left to right, the current one lit: 1, 2 and 3
+/// stacks with each position lit, stacked in one sheet per scheme (the frame bar's left 300 px at 1.5), each named for
+/// screen readers. Seven stacks show five circles around the current one.
+#[test]
+fn bar_stack_circles_light_the_current_stack() -> Result<()> {
+    for (palette, name) in [
+        ("palette.json", "bar-stacks-venn-1.5"),
+        (
+            "tests/fixtures/palette-light.json",
+            "bar-stacks-venn-light-1.5",
+        ),
+    ] {
+        let mut sheet = bead_test::Frame {
+            width: 450,
+            height: 0,
+            pixels: Vec::new(),
+        };
+        for (stacks, current) in [(1, 1), (2, 1), (2, 2), (3, 1), (3, 2), (3, 3)] {
+            let mut h = stack_bar(true, palette, 1920, stacks, current, 1.5)?;
+            let mut lit = vec![0u8; stacks];
+            lit[current - 1] = 255;
+            assert_eq!(stack_lights(h.scene()), lit, "{name}: {current}/{stacks}");
+            h.assert_accessible(
+                &format!("Stack {current} of {stacks}"),
+                accesskit::Role::Button,
+            )?;
+            let frame = h.pose((0., 0.), 1.)?;
+            for row in frame.pixels.chunks(frame.width as usize * 4) {
+                sheet
+                    .pixels
+                    .extend_from_slice(&row[..sheet.width as usize * 4]);
+            }
+            sheet.height += frame.height;
+        }
+        bar_golden(&sheet, name)?;
+    }
+    let h = stack_bar(true, "palette.json", 1920, 7, 6, 1.5)?;
+    assert_eq!(
+        stack_lights(h.scene()),
+        [0, 0, 0, 255, 0],
+        "seven stacks show five circles, the current one (6) among them"
+    );
+    Ok(())
+}
+
+/// Spec 0253: a stack switch eases the light from the old circle to the new one (180 ms, out-cubic) through
+/// `ui.animated` markers. The switch is one Luau build; every frame after it is a relayout, which runs no Luau, and
+/// patches the two fills with no layout pass (the old odometer's eager roll stood still on such frames).
+#[test]
+fn a_stack_switch_eases_the_light_with_no_luau_per_frame() -> Result<()> {
+    let mut h = stack_bar(true, "palette.json", 1920, 3, 1, 1.5)?;
+    assert_eq!(stack_lights(h.scene()), [255, 0, 0]);
+    let built = h
+        .session
+        .update(BTreeMap::from([(
+            "bar.collection.current".into(),
+            Value::Text("stack:2".into()),
+        )]))?
+        .ok_or("a switch rebuilds the bar")?;
+    let started = std::time::Instant::now();
+    h.session.commit(built);
+    let layouts = h.counters().layouts;
+    let (mut between, mut lights) = (0, Vec::new());
+    while started.elapsed() < std::time::Duration::from_millis(300) {
+        std::thread::sleep(std::time::Duration::from_millis(4));
+        let scene = h.session.relayout()?.ok_or("a frame")?;
+        h.session.commit(scene.clone());
+        lights = stack_lights(&scene);
+        if matches!(lights.as_slice(), &[old, new, 0] if old > 0 && old < 255 && new > 0 && new < 255)
+        {
+            between += 1;
+        }
+    }
+    assert_eq!(
+        h.counters().layouts,
+        layouts,
+        "the ease patches its frames: no Luau, no layout"
+    );
+    assert!(between > 0, "no frame between the two circles");
+    assert_eq!(lights, [0, 255, 0], "the light settles on the new circle");
     Ok(())
 }
 
@@ -2446,12 +2559,16 @@ fn collection_switcher_badge_and_bounded_rename_menu_render() -> Result<()> {
                         .ok_or_else(|| "stack geometry missing".into())
                 };
                 let active_rect = bounds("active-capsule")?;
-                // Spec 0253: one numeral, the current stack's number, and the active workspace capsule after it.
-                let current = if name == "number" { "2" } else { "1" };
+                // Spec 0253: a circle per stack, the current one lit, and the active workspace capsule after them.
+                let lit: &[u8] = match name {
+                    "single" => &[255],
+                    "number" => &[0, 255, 0],
+                    _ => &[255, 0, 0],
+                };
                 assert_eq!(
-                    stack_numbers(&bar),
-                    [current],
-                    "the mark shows the current stack's number at {scale}: {name}"
+                    stack_lights(bar.scene()),
+                    lit,
+                    "the current stack's circle is lit at {scale}: {name}"
                 );
                 assert!(
                     active_rect.0 > rect.x + rect.w,
@@ -4538,15 +4655,16 @@ fn bar_counts_stay_whole_on_every_output_scale_and_after_hotplug() -> Result<()>
 }
 
 /// Stacks belong to an output on nacre-niri (owner 2026-11-18: "the laptop and the external monitor should have
-/// different ones"): each bar's mark shows the number of its own output's current stack (spec 0253). A switch swaps
-/// stacks between screens, so each bar's number follows.
+/// different ones"): each bar lights its own output's current stack's circle and names it for screen readers by its
+/// index, the switcher's "Stack N" (spec 0253). A switch swaps stacks between screens, so each bar's light follows.
 #[test]
-fn every_output_bar_shows_its_own_current_stack_number() -> Result<()> {
-    let numbers = |collections: Value,
-                   output: &str,
-                   current: &str,
-                   shot: Option<&str>|
-     -> Result<Vec<String>> {
+fn every_output_bar_lights_its_own_current_stack() -> Result<()> {
+    let lights = |collections: Value,
+                  output: &str,
+                  current: &str,
+                  label: &str,
+                  shot: Option<&str>|
+     -> Result<Vec<u8>> {
         let mut values = super::initial_models()?;
         values.extend(parity_models());
         values.extend(BTreeMap::from([
@@ -4566,39 +4684,51 @@ fn every_output_bar_shows_its_own_current_stack_number() -> Result<()> {
             },
         )?;
         settle_harness_animations(&mut h)?;
+        h.assert_accessible(label, accesskit::Role::Button)?;
         if let Some(name) = shot {
             bar_golden(&h.pose((0., 0.), 1.)?, name)?;
         }
-        Ok(stack_numbers(&h))
+        Ok(stack_lights(h.scene()))
     };
     let live = Value::list(vec![
         serde_json::json!({"id":"niri-collection:1","label":"1","index":1,"active":true,"output":"DP-1"}),
         serde_json::json!({"id":"niri-collection:4","label":"2","index":2,"active":false,"output":"eDP-1"}),
     ]);
     assert_eq!(
-        numbers(
+        lights(
             live.clone(),
             "eDP-1",
             "niri-collection:4",
+            "Stack 2 of 2",
             Some("bar-screens-edp")
         )?,
-        ["2"]
+        [0, 255]
     );
     assert_eq!(
-        numbers(
+        lights(
             live.clone(),
             "DP-1",
             "niri-collection:1",
+            "Stack 1 of 2",
             Some("bar-screens-dp")
         )?,
-        ["1"]
+        [255, 0]
     );
-    // Super+Ctrl+Tab on DP-1 swaps the two stacks between the screens: each bar's number follows.
+    // Super+Ctrl+Tab on DP-1 swaps the two stacks between the screens: each bar's light follows.
     assert_eq!(
-        numbers(live.clone(), "DP-1", "niri-collection:4", None)?,
-        ["2"]
+        lights(
+            live.clone(),
+            "DP-1",
+            "niri-collection:4",
+            "Stack 2 of 2",
+            None
+        )?,
+        [0, 255]
     );
-    assert_eq!(numbers(live, "eDP-1", "niri-collection:1", None)?, ["1"]);
+    assert_eq!(
+        lights(live, "eDP-1", "niri-collection:1", "Stack 1 of 2", None)?,
+        [255, 0]
+    );
     let more = Value::list(vec![
         serde_json::json!({"id":"d1","label":"1","index":1,"output":"DP-1"}),
         serde_json::json!({"id":"d2","label":"2","index":2,"output":"DP-1"}),
@@ -4607,21 +4737,21 @@ fn every_output_bar_shows_its_own_current_stack_number() -> Result<()> {
         serde_json::json!({"id":"e2","label":"2","index":2,"output":"eDP-1"}),
     ]);
     assert_eq!(
-        numbers(more.clone(), "DP-1", "d3", None)?,
-        ["3"],
-        "one numeral whatever the stack count"
+        lights(more.clone(), "DP-1", "d3", "Stack 3 of 5", None)?,
+        [0, 0, 255, 0, 0],
+        "every bar lists all the stacks"
     );
     assert_eq!(
-        numbers(more, "eDP-1", "e2", None)?,
-        ["2"],
-        "the stack's own index (the switcher's \"Stack N\"), not its place in the list"
+        lights(more, "eDP-1", "e2", "Stack 2 of 5", None)?,
+        [0, 0, 0, 0, 255],
+        "the light at the stack's place in the list, the label with its own index (the switcher's \"Stack N\")"
     );
     let single = Value::list(vec![
         serde_json::json!({"id":"a","label":"1","index":1,"output":"eDP-1"}),
     ]);
     assert_eq!(
-        numbers(single, "eDP-1", "a", None)?,
-        ["1"],
+        lights(single, "eDP-1", "a", "Stack 1 of 1", None)?,
+        [255],
         "one output, one stack"
     );
     Ok(())

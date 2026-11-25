@@ -24,6 +24,7 @@
   "bead.bar.open-session": "Open session menu",
   "bead.bar.open-sound": "Open sound panel",
   "bead.bar.reconnecting": "Reconnecting",
+  "bead.bar.stack-position": "Stack {index} of {count}",
   "bead.colors.access-contrast": "Minimum audited text contrast: {contrast}:1.",
   "bead.colors.access-coverage": "Coverage is measured image area; salience weights central and detailed areas separately.",
   "bead.colors.access-row": "{foreground} on {background} — {ratio}:1",

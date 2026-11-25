@@ -1,5 +1,9 @@
 # 0253 Stack number: one mark that shows the stack number
 
+> Revised 2026-11-25 (N0253b, owner pick A): at rest the mark is now a Venn row of circles, one per stack, the
+> current one lit; see [Revision: stack circles](#revision-stack-circles-n0253b). The numeral below survives only in
+> the fan.
+
 ## Problem
 
 Owner, 2026-11-23 22:55, looking at the live bar (laptop eDP-1, scale 1.5, one stack): "i dont
@@ -109,3 +113,32 @@ opens the switcher; with 2+ it fans at once, and clicking another number switche
   `desk-chip-*`) refreshed; new `bar-stacks-fan3-1.5` and `bar-stacks-fan3-light-1.5` (3 stacks
   fanned on the frame bar). `bar-states-*` (the name cap) and every other golden are unchanged.
   No new strings.
+
+## Revision: stack circles (N0253b)
+
+Owner, 2026-11-25: "make the stack thing closer to how it was before ... multiple circles inside eachother with one
+highlighted maybe the vendiagram thing going left to right, and the circles lighting up like first one second one third
+one etc depending on the stack". Shown three variants, the owner picked A: `(○(●)○)`, current stack 2 of 3.
+
+- At rest the 28 px capsule holds one 12 px circle per stack (`stack_circle`), left to right, each overlapping the next
+  by `strand_overlap` (4 px, a third; the same overlap the Colors page strand already borrows). The capsule is
+  `cap_height + (n-1)*(stack_circle-strand_overlap)` wide, so one stack is the old round 28 px cap with one circle.
+- Dim circles: `onSurfaceVariant` at `stack_dim` (30 %), so two dim circles overlap as a darker lens. The current one is
+  lit: a `primary` disc drawn above all the dim ones, so it reads whole, in front.
+- A switch eases the light: each slot's light alpha is `ui.animated` (`ui.motion.duration.switch`, 180 ms, out-cubic),
+  so the old circle fades out while the new one fades in, and the frames patch two fills with no Luau and no layout
+  (row 73). At rest the alpha is a plain number and only the current slot draws a light. Fresh keys start at their
+  target, so the first frame with stacks (startup, a drag ghost) is already right.
+- At most `stack_circles_max` (5) circles at rest, a window around the current one (the fan's window rule), so the lit
+  circle is always visible; with more stacks the fan (hover 400 ms or a click) lists them all as numerals, unchanged.
+- Accessible name of the capsule: "Stack N of M" (`bead.bar.stack-position`; N the stack's index as the switcher shows
+  it, M the count). The name cap keeps "Open desk switcher for {desk}".
+- Fan, switcher, click and hover timings unchanged. Tokens: `stack_circle`, `stack_dim`, `stack_circles_max` added;
+  `stack_roll` and the odometer (two clipped numerals, eager `ui.animate`) deleted.
+- Tests: `stack_lights` reads each circle's light; the 1/2/5-stack cases, the desk-chip cases, each output's bar
+  (and the "Stack N of M" label) and the drag ghost assert the lit circle; `a_stack_switch_eases_the_light_with_no_luau_per_frame`
+  drives a 1 -> 2 switch through relayout frames only (no Luau) and asserts frames between the circles, no layout pass,
+  and the light settled on circle 2. No Model-job counter exists in the headless harness, so none is asserted.
+- Goldens: new `bar-stacks-venn-1.5` and `bar-stacks-venn-light-1.5` (1/1, 1/2, 2/2, 1/3, 2/3, 3/3 stacked, the frame
+  bar's left 300 px); the at-rest stack goldens (`bar-stacks-*` except the fans, `bar-narrow-*`, `bar-screens-*`,
+  `desk-chip-*`) refreshed.
