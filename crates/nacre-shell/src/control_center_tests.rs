@@ -1288,6 +1288,45 @@ fn control_center_pages_match_goldens() -> bead_test::Result<()> {
     Ok(())
 }
 
+/// Owner 2026-11-25 (item 9): the frame drawer opens as one slide from the right. Bead hands the frame its
+/// decorations with the opening panel at its final place from the first frame (`sync_decorations_in`), cold or
+/// from the warm cache, so the frame tiles draw nothing for it: the panel's own reveal art grows its joins with
+/// the slide, and its t=0 frame is empty (`control-s*-t0.00.png`).
+#[test]
+fn the_frame_draws_nothing_for_an_opening_control_centre() -> bead_test::Result<()> {
+    use crate::placement::{Attachment, Chrome, Frame};
+    let _live = crate::placement::LIVE_TEST
+        .lock()
+        .unwrap_or_else(|p| p.into_inner());
+    let h = harness(base(), "home", 1.)?;
+    let colors = bead::render::Palette::read(&root().join("palette.json"))?;
+    let mut scene = h.scene().clone();
+    assert!(scene.motion.as_ref().is_some_and(|m| m.reveal));
+    Chrome::new(Attachment::ControlCenter, &colors)?.decorate_with(Frame::DEFAULT, &mut scene)?;
+    let output = (1920u32, 1200u32);
+    let origin = Frame::DEFAULT.positioner(Attachment::ControlCenter)(&scene, None, (1920, 1200));
+    let frame = Chrome::new(Attachment::Attached(bead::core::Edge::Top), &colors)?;
+    let opening = frame.tiles(
+        Frame::DEFAULT,
+        output,
+        true,
+        Some(bead::wayland::DecorationPanel {
+            scene: &scene,
+            origin,
+        }),
+    )?;
+    let bare = frame.tiles(Frame::DEFAULT, output, true, None)?;
+    assert_eq!(opening.len(), bare.len());
+    for (tile, without) in opening.iter().zip(&bare) {
+        assert!(
+            tile.rect == without.rect && tile.svg == without.svg,
+            "frame tile {:?} draws the panel's join at its final place",
+            tile.rect
+        );
+    }
+    Ok(())
+}
+
 /// The power button's Session page: the session menu's actions with their inline confirmation and the power mode
 /// tile. The frame drawer at both scales; the no-border card (rim and lit edge) at 1.
 #[test]

@@ -536,6 +536,42 @@ async fn secret_stays_out_of_traces_summaries_and_saved_state()
     finish(runtime, script, client, lab).await
 }
 
+/// Owner 2026-11-25: Bead closes the panel, then hands the view Esc. The close cancels the prompt (a parked
+/// panel is never dropped) and Esc clears its buffer, but the closing panel keeps showing it; the next open
+/// shows the list.
+#[tokio::test(flavor = "current_thread")]
+async fn esc_while_the_panel_closes_keeps_the_prompt_until_the_next_open()
+-> Result<(), Box<dyn std::error::Error>> {
+    let (lab, client, mut runtime, script) = setup(|mut reader, writer| {
+        tokio::spawn(async move {
+            let _writer = writer;
+            assert!(matches!(next(&mut reader).await, Message::Unsub { .. }));
+        })
+    })
+    .await?;
+    tap(&runtime, "ap:ap3");
+    project(&mut runtime);
+    click(&mut runtime, "secret.field");
+    type_text(&mut runtime, SECRET);
+    assert_eq!(text(&runtime, "network.view"), "prompt");
+    for event in [
+        UiEvent::PanelVisibility(false),
+        UiEvent::Command {
+            command: "escape".into(),
+            shift: false,
+        },
+    ] {
+        runtime.stage(event).unwrap();
+        runtime.commit();
+        assert_eq!(text(&runtime, "network.view"), "prompt", "during the close");
+    }
+    assert_eq!(text(&runtime, "network.secret"), "");
+    runtime.stage(UiEvent::PanelVisibility(true)).unwrap();
+    runtime.commit();
+    assert_eq!(text(&runtime, "network.view"), "list");
+    finish(runtime, script, client, lab).await
+}
+
 // B0086 (N0061): Scan networks is enabled with Wi-Fi on; the call in flight is the progress.
 #[tokio::test(flavor = "current_thread")]
 async fn scan_networks_is_progress_until_the_daemon_replies()

@@ -734,6 +734,85 @@ async fn the_pin_stays_out_of_traces_summaries_and_saved_state()
     finish(runtime, client, daemon, lab).await
 }
 
+/// Owner 2026-11-25: a parked panel is never dropped (N0231b), so the close itself cancels a pending pairing,
+/// once (Drop, the backstop, sends nothing more). Bead closes the panel, then hands the view Esc; the closing
+/// panel keeps showing the pairing page, and the next open shows the list.
+#[tokio::test(flavor = "current_thread")]
+async fn closing_mid_pairing_cancels_once_and_keeps_the_page_until_the_next_open()
+-> Result<(), Box<dyn std::error::Error>> {
+    let (lab, client, mut runtime, mut daemon) = setup(true).await?;
+    let _pair_id = begin(&mut runtime, &mut daemon).await;
+    prompt(&mut runtime, &mut daemon, "pin", None).await;
+    type_text(&mut runtime, PIN);
+    runtime.stage(UiEvent::PanelVisibility(false)).unwrap();
+    runtime.commit();
+    assert_eq!(text(&runtime, "bluetooth.view"), "pair", "during the close");
+    let (cancel, method, params) = daemon.call().await;
+    assert_eq!(method, "bluetooth.pair.cancel");
+    assert_eq!(params, serde_json::json!({"device":"dev_B"}));
+    runtime
+        .stage(UiEvent::Command {
+            command: "escape".into(),
+            shift: false,
+        })
+        .unwrap();
+    runtime.commit();
+    assert_eq!(text(&runtime, "bluetooth.view"), "pair", "during the close");
+    assert_eq!(text(&runtime, "bluetooth.secret"), "");
+    daemon.ok(cancel);
+    tokio::time::sleep(Duration::from_millis(100)).await;
+    runtime.stage(UiEvent::PanelVisibility(true)).unwrap();
+    runtime.commit();
+    assert_eq!(text(&runtime, "bluetooth.view"), "list");
+    drop(runtime);
+    let rest = daemon.drain().await;
+    assert!(
+        !rest
+            .iter()
+            .any(|msg| matches!(msg, Message::Call { m, .. } if m == "bluetooth.pair.cancel")),
+        "one cancel: {rest:?}"
+    );
+    Source::stop(&client).await?;
+    drop(daemon.out);
+    let _ = daemon.server.await;
+    drop(lab);
+    Ok(())
+}
+
+/// A parked panel is never dropped, so the close stops the scan it started, once.
+#[tokio::test(flavor = "current_thread")]
+async fn closing_mid_scan_stops_it_once() -> Result<(), Box<dyn std::error::Error>> {
+    let (lab, client, mut runtime, mut daemon) = setup(true).await?;
+    press(&mut runtime, "bluetooth.scan");
+    let (id, _, _) = daemon.call().await;
+    daemon.ok(id);
+    daemon.snap("bluetooth", topic(true, true, &[]));
+    until(&mut runtime, |r| flag(r, "bluetooth.scanning")).await;
+    runtime.stage(UiEvent::PanelVisibility(false)).unwrap();
+    runtime.commit();
+    let (_, method, params) = daemon.call().await;
+    assert_eq!(method, "bluetooth.set_discovery");
+    assert_eq!(
+        params,
+        serde_json::json!({"adapter":"hci0","discovering":false})
+    );
+    runtime.stage(UiEvent::PanelVisibility(true)).unwrap();
+    runtime.commit();
+    drop(runtime);
+    let rest = daemon.drain().await;
+    assert!(
+        !rest
+            .iter()
+            .any(|msg| matches!(msg, Message::Call { m, .. } if m == "bluetooth.set_discovery")),
+        "one stop: {rest:?}"
+    );
+    Source::stop(&client).await?;
+    drop(daemon.out);
+    let _ = daemon.server.await;
+    drop(lab);
+    Ok(())
+}
+
 // B0062: the live device list, Find devices, Connect/Disconnect.
 
 /// The fixture topic with changes: `adapter` fields and `(device, field, value)` edits.

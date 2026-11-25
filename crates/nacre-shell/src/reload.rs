@@ -3850,8 +3850,10 @@ impl Runtime {
             if stores.get("cc.detail") == Some(&bead::core::Value::Text("session".into())) {
                 values.extend(menu.project());
             }
+            // As a popout's: a closing dock page keeps its flow page until the next open.
             if let Some(bead::core::Value::Text(page)) = stores.get("cc.detail")
                 && stores.get("cc.page") == Some(&bead::core::Value::Text("detail".into()))
+                && stores.get("panel.open") != Some(&bead::core::Value::Bool(false))
                 && let Some(status) = pages.get(page)
             {
                 values.extend(status.project());
@@ -4001,8 +4003,14 @@ impl Runtime {
         }
         let status = std::rc::Rc::new(status);
         let projector = status.clone();
-        self.session
-            .set_projector(Box::new(move |_| Ok(projector.project())));
+        self.session.set_projector(Box::new(move |stores| {
+            // Closed or closing, the popout keeps what it shows: a flow the close or Esc cancelled
+            // shows its list on the next open, not mid-slide (owner 2026-11-25).
+            if stores.get("panel.open") == Some(&bead::core::Value::Bool(false)) {
+                return Ok(BTreeMap::new());
+            }
+            Ok(projector.project())
+        }));
         self.status = Some(status);
         Ok(self)
     }
@@ -9378,7 +9386,6 @@ impl SceneSource for Runtime {
                     ]));
                 }
                 if !open && !self.dock_status.is_empty() {
-                    self.leave_docked_flow();
                     values.extend(Self::cleared_docked_secrets());
                 }
                 self.session.update(values)?

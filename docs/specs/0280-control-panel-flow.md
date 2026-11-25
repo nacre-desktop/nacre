@@ -47,7 +47,10 @@ round (265e4a9ad) go away: the panel node is the body.
 - The "‹ Control centre" pill (or the back arrow) on a page: back to the overview.
 - Close: Escape (on any page, owner 2026-11-25: it closes on the page it shows, with no step back
   first), click outside (catcher), lip click (toggle), or pointer leave after the grace period
-  (hover-opened only, below). The next plain open shows the overview.
+  (hover-opened only, below). The next plain open shows the overview. The close ends a running flow at
+  once (a Wi-Fi prompt; a pending pairing gets one `bluetooth.pair.cancel`; a scan the panel started is
+  stopped), because a parked panel is never dropped, while the closing page stays as shown; the next
+  open starts fresh. A revealing panel draws its own frame joins as it slides; the frame tiles leave it out.
 
 ## Hover-close policy
 

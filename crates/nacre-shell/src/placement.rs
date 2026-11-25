@@ -794,7 +794,14 @@ impl Chrome {
                 && rect.y <= top + 0.5
                 && rect.x + rect.w >= w - right - 0.5
                 && rect.y + rect.h >= h - bottom - 0.5;
-            if !covers {
+            // A revealing panel grows its own joins with the slide (`RevealArt`). Bead hands it over at
+            // its final place from the first frame, so merged here they stood there before the slide.
+            let reveals = panel
+                .scene
+                .motion
+                .as_ref()
+                .is_some_and(|m| m.reveal && m.art.is_some());
+            if !covers && !reveals {
                 material.push(rect);
             }
         }

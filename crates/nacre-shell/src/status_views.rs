@@ -319,6 +319,11 @@ impl Status {
         }
         if !open {
             self.park();
+            // A parked panel is never dropped (N0231b), so its flows end at the close, not in Drop:
+            // the prompt, a pending pairing (one `bluetooth.pair.cancel`) and a scan it started.
+            self.network_cancel();
+            self.bluetooth_pair_leave();
+            self.bluetooth_stop_scan();
         }
     }
     /// Release the meter's capture (the view is hidden, or the microphone is not live).

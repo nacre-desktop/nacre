@@ -257,6 +257,15 @@ pub(super) fn project(
 }
 
 impl Status {
+    /// Stop a scan this panel started; Drop finds nothing left to stop.
+    pub(super) fn bluetooth_stop_scan(&self) {
+        if let Some(control) = &self.bluetooth_control {
+            let mut control = control.borrow_mut();
+            if let Some((boot, adapter, _)) = control.scan_owned.take() {
+                stop_scan(&control.client, &boot, &adapter);
+            }
+        }
+    }
     /// Find devices: start a discovery on the sole adapter. Never retries.
     pub fn bluetooth_scan(&self, wake: CallWake) {
         let Some(control) = &self.bluetooth_control else {

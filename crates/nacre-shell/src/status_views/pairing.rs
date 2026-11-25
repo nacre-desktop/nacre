@@ -53,6 +53,8 @@ pub(super) struct Flow {
     pair: Option<CallTicket>,
     respond: Option<CallTicket>,
     cancel: Option<CallTicket>,
+    /// `bluetooth.pair.cancel` went out (at most once, from the close, Esc or Drop).
+    cancelled: bool,
     prompt: Option<Shown>,
     outcome: Outcome,
     /// The user cancelled or rejected: the view is back on the list and the result is ignored.
@@ -92,16 +94,19 @@ impl Drop for Flow {
         // A panel that closes mid-pairing must not leave the daemon waiting on a prompt nobody
         // sees: cancel it, and let sent calls finish.
         let pending = self.cancel.take().or_else(|| {
-            self.pair.as_ref().and_then(|_| {
-                call(
-                    &self.client,
-                    &self.boot,
-                    "bluetooth.pair.cancel",
-                    serde_json::json!({"device": self.device}),
-                    None,
-                )
-                .ok()
-            })
+            self.pair
+                .as_ref()
+                .filter(|_| !self.cancelled)
+                .and_then(|_| {
+                    call(
+                        &self.client,
+                        &self.boot,
+                        "bluetooth.pair.cancel",
+                        serde_json::json!({"device": self.device}),
+                        None,
+                    )
+                    .ok()
+                })
         });
         for ticket in [pending, self.respond.take()].into_iter().flatten() {
             detach(ticket);
@@ -297,7 +302,8 @@ impl Status {
         }
         flow.leaving = true;
         flow.stop_ticker();
-        if flow.cancel.is_none() {
+        if !flow.cancelled {
+            flow.cancelled = true;
             flow.cancel = call(
                 &flow.client,
                 &flow.boot,
@@ -424,6 +430,7 @@ fn start(
         pair: Some(ticket),
         respond: None,
         cancel: None,
+        cancelled: false,
         prompt: None,
         outcome: Outcome::Running,
         leaving: false,
