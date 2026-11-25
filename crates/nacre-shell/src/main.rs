@@ -1073,6 +1073,9 @@ fn start(
         options.panels = Some(bead::wayland::Panels::new("launcher".into(), views)?);
         // N0231: a closed launcher or dashboard parks warm 2 s after its close settles.
         options.warm_source_budget = reload::WARM_SOURCE_BUDGET;
+        // B0404: a cold Strand opens on its content when that is ready within 120 ms, instead of
+        // sliding in on the baked fallback and swapping mid-slide (only fallback panels wait).
+        options.panel_fallback_delay_ms = Some(120);
         // B0052: Settings and the AI sidebar are separate on-demand processes.
         if let Some(socket) = &options.command_socket {
             app::configure(socket, daemon_socket.clone(), palette.clone());
