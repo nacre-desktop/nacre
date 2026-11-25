@@ -2903,10 +2903,13 @@ fn status_pill_click_routes_switch_escape_and_reopen() -> Result<()> {
         y: network.1,
     })?;
     runtime.commit();
-    assert!(
-        events.lock().unwrap().is_empty(),
-        "the draggable click waits for release"
-    );
+    {
+        let events = events.lock().unwrap();
+        assert!(
+            events.is_empty(),
+            "the draggable click waits for release: {events:?}"
+        );
+    }
     runtime.stage(UiEvent::Release)?;
     runtime.commit();
     // Owner 2026-11-14: each status click opens that section of the docked control panel.
@@ -2926,10 +2929,13 @@ fn status_pill_click_routes_switch_escape_and_reopen() -> Result<()> {
         y: bluetooth.1,
     })?;
     runtime.commit();
-    assert!(
-        events.lock().unwrap().is_empty(),
-        "the draggable click waits for release"
-    );
+    {
+        let events = events.lock().unwrap();
+        assert!(
+            events.is_empty(),
+            "the draggable click waits for release: {events:?}"
+        );
+    }
     runtime.stage(UiEvent::Release)?;
     runtime.commit();
     opens("bluetooth");
