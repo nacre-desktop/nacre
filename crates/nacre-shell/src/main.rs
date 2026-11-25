@@ -1123,6 +1123,7 @@ fn start(
     };
     if let Some(backend) = &shared_backend {
         let _ = widget_backend.set(backend.clone());
+        app::set_backend(backend.clone());
         // B0194: keyboard and IPC opens (panels, the AI sidebar) follow the focused output.
         let probe = backend.clone();
         let focused: bead::wayland::FocusedOutput = std::sync::Arc::new(move || {

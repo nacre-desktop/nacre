@@ -57,6 +57,11 @@ pub struct Host {
     launcher: PathBuf,
 }
 static HOST: OnceLock<Host> = OnceLock::new();
+/// The shell's compositor backend, set once it exists: an app opened again is brought into focus through it.
+static BACKEND: OnceLock<Arc<crate::backends::Native>> = OnceLock::new();
+pub fn set_backend(backend: Arc<crate::backends::Native>) {
+    let _ = BACKEND.set(backend);
+}
 /// The presentation palette the shell last committed (B0056): an app starts with it, so it wears the wallpaper's colours
 /// and not the bundle's static ones.
 static LIVE: std::sync::Mutex<Option<BTreeMap<String, [u8; 4]>>> = std::sync::Mutex::new(None);
@@ -551,13 +556,22 @@ impl Host {
             args: args.to_vec(),
             output: output.map(str::to_owned),
         };
-        match ipc::call(&self.socket(name), &call, Duration::from_millis(800)) {
-            Ok(reply) if reply.error.is_none() => return Reply::ok(id, Value::Null),
-            Ok(reply) => {
-                let error = reply.error.expect("checked");
-                return Reply::error(id, &error.code, error.message);
+        let window = target == "bead.window";
+        // A deploy swaps the binary: a window app still running the old one is quit and started fresh.
+        if !(window && self.replace_stale(name)) {
+            match ipc::call(&self.socket(name), &call, Duration::from_millis(800)) {
+                Ok(reply) if reply.error.is_none() => {
+                    if window {
+                        focus_app_window(name);
+                    }
+                    return Reply::ok(id, Value::Null);
+                }
+                Ok(reply) => {
+                    let error = reply.error.expect("checked");
+                    return Reply::error(id, &error.code, error.message);
+                }
+                Err(_) => {}
             }
-            Err(_) => {}
         }
         // A lip observation never starts an app (the dwell owns startup).
         if matches!(method, "hover-enter" | "hover-leave") {
@@ -574,6 +588,18 @@ impl Host {
             Ok(()) => Reply::ok(id, Value::Null),
             Err(error) => Reply::error(id, "spawn", error),
         }
+    }
+    /// True when the running window app was replaced and has quit (its socket is gone), so the caller starts a
+    /// fresh one. A stale app that stays up (no clean quit) is kept and focused instead; nothing is ever killed.
+    fn replace_stale(&self, name: &str) -> bool {
+        let socket = self.socket(name);
+        let (Some(exe), Ok(current)) = (peer_exe(&socket), std::env::current_exe()) else {
+            return false;
+        };
+        if !stale_exe(&exe, &current.to_string_lossy()) {
+            return false;
+        }
+        quit_window(&socket, name, 20)
     }
     /// B0093 selector prompt. `open` starts the prompt app for a request. One that is still up is the previous
     /// prompt closing (a chained `pick` then `input`) or a stale one of a killed tool (the tool's own lock makes
@@ -680,6 +706,84 @@ impl Host {
             })
             .map(|_| ())
             .map_err(|e| e.to_string())
+    }
+}
+
+/// Asks a window app to quit through `bead.window close`, the path its own window close takes (it saves what it saves
+/// on close). The app host reports no unsaved state, so an app that does not answer or leave within `polls` x 50 ms is
+/// kept and focused, never killed.
+fn quit_window(socket: &Path, name: &str, polls: u32) -> bool {
+    let close = Call {
+        version: 1,
+        id: 1,
+        target: "bead.window".into(),
+        method: "close".into(),
+        args: vec![],
+        output: None,
+    };
+    if ipc::call(socket, &close, Duration::from_millis(800)).is_ok_and(|r| r.error.is_none()) {
+        for _ in 0..polls {
+            if ipc::call(socket, &close, Duration::from_millis(50)).is_err() {
+                eprintln!("APP_STALE name={name} kept=false");
+                return true;
+            }
+            std::thread::sleep(Duration::from_millis(50));
+        }
+    }
+    eprintln!("APP_STALE name={name} kept=true reason=no_quit");
+    false
+}
+const DELETED: &str = " (deleted)";
+/// A deploy replaces the shell binary: an app whose `/proc/PID/exe` differs from the running shell's is stale.
+/// A shell that is itself stale (its own link ends in " (deleted)") cannot name a binary to start, so nothing is.
+fn stale_exe(app_exe: &str, shell_exe: &str) -> bool {
+    !shell_exe.ends_with(DELETED) && app_exe != shell_exe
+}
+/// The executable of the process listening on an app socket, from the socket's peer credentials.
+fn peer_exe(socket: &Path) -> Option<String> {
+    use std::os::fd::AsRawFd;
+    let stream = std::os::unix::net::UnixStream::connect(socket).ok()?;
+    let mut cred = nix::libc::ucred {
+        pid: 0,
+        uid: 0,
+        gid: 0,
+    };
+    let mut len = size_of::<nix::libc::ucred>() as nix::libc::socklen_t;
+    // SAFETY: `cred` and `len` are valid for SO_PEERCRED's output on a connected socket.
+    let rc = unsafe {
+        nix::libc::getsockopt(
+            stream.as_raw_fd(),
+            nix::libc::SOL_SOCKET,
+            nix::libc::SO_PEERCRED,
+            (&raw mut cred).cast(),
+            &mut len,
+        )
+    };
+    (rc == 0)
+        .then(|| std::fs::read_link(format!("/proc/{}/exe", cred.pid)).ok())
+        .flatten()
+        .map(|path| path.to_string_lossy().into_owned())
+}
+/// The first window with the app's app_id, or None.
+fn app_window<'a>(
+    windows: &'a [bead::backends::Window],
+    name: &str,
+) -> Option<&'a bead::backends::Id> {
+    let app_id = format!("nacre-{name}");
+    windows.iter().find(|w| w.app_id == app_id).map(|w| &w.id)
+}
+/// Bead cannot raise a window it already has, so the compositor focuses it (and switches to its workspace).
+/// No such window (a running app whose window is closed) leaves things as they were.
+fn focus_app_window(name: &str) {
+    use bead::backends::{Action, Backend};
+    let Some(backend) = BACKEND.get() else { return };
+    let snapshot = backend.snapshot();
+    if let Some(window) = app_window(&snapshot.windows, name)
+        && let Err(error) = backend.action(Action::FocusWindow {
+            window: window.clone(),
+        })
+    {
+        eprintln!("APP_FOCUS_ERROR name={name} {error}");
     }
 }
 
@@ -1062,6 +1166,79 @@ mod tests {
     use super::*;
     use std::os::unix::{fs::PermissionsExt, net::UnixListener};
 
+    #[test]
+    fn stale_exe_means_replaced_since_it_started() {
+        let shell = "/home/u/.local/bin/nacre-shell";
+        assert!(!stale_exe(shell, shell));
+        assert!(stale_exe(&format!("{shell}{DELETED}"), shell));
+        assert!(stale_exe("/old/dir/nacre-shell", shell));
+        // A stale shell has no binary to start: nothing is replaced.
+        let gone = format!("{shell}{DELETED}");
+        assert!(!stale_exe(shell, &gone));
+        assert!(!stale_exe(&gone, &gone));
+    }
+    #[test]
+    fn peer_exe_reads_the_listener_executable() {
+        let dir = private_dir("peer-exe");
+        let socket = dir.join("app-x.sock");
+        let _listener = UnixListener::bind(&socket).unwrap();
+        let current = std::env::current_exe().unwrap();
+        assert_eq!(peer_exe(&socket).as_deref(), current.to_str());
+        assert_eq!(peer_exe(&dir.join("none.sock")), None);
+        let _ = std::fs::remove_dir_all(dir);
+    }
+    #[test]
+    fn a_stale_app_that_quits_is_replaced_and_one_that_does_not_is_kept() {
+        let dir = private_dir("quit-window");
+        // Quits: its socket goes away after the close call.
+        let socket = dir.join("app-brain.sock");
+        let (tx, rx) = std::sync::mpsc::channel();
+        let server = ipc::Server::bind(socket.clone(), move |call| {
+            tx.send(call.method.clone()).unwrap();
+            Reply::ok(call.id, Value::Null)
+        })
+        .unwrap();
+        let closer = std::thread::spawn(move || {
+            assert_eq!(rx.recv_timeout(Duration::from_secs(1)).unwrap(), "close");
+            drop(server);
+        });
+        assert!(quit_window(&socket, "brain", 20));
+        closer.join().unwrap();
+        // Stays up (or refuses): kept, so the caller opens and focuses the old window.
+        for (name, refuse) in [("up", false), ("refuses", true)] {
+            let socket = dir.join(format!("app-{name}.sock"));
+            let _server = ipc::Server::bind(socket.clone(), move |call| {
+                if refuse {
+                    Reply::error(call.id, "window", "busy")
+                } else {
+                    Reply::ok(call.id, Value::Null)
+                }
+            })
+            .unwrap();
+            assert!(!quit_window(&socket, name, 2));
+        }
+        let _ = std::fs::remove_dir_all(dir);
+    }
+    #[test]
+    fn the_window_to_focus_is_found_by_the_apps_app_id() {
+        let window = |id: &str, app_id: &str| bead::backends::Window {
+            id: bead::backends::Id(id.into()),
+            title: String::new(),
+            app_id: app_id.into(),
+            workspace: None,
+            output: None,
+            focused: false,
+            floating: false,
+            fullscreen: None,
+            urgent: false,
+        };
+        let windows = [window("a", "kitty"), window("b", "nacre-brain")];
+        assert_eq!(
+            app_window(&windows, "brain").map(|id| id.0.as_str()),
+            Some("b")
+        );
+        assert_eq!(app_window(&windows, "settings"), None);
+    }
     #[test]
     fn widgets_private_relay_uses_the_app_mode_name() {
         assert!(is_widgets_child(Some("widgets")));
