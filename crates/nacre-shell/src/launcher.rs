@@ -19,6 +19,16 @@ use std::{
 };
 
 pub type Memory = Arc<std::sync::Mutex<BTreeMap<String, Value>>>;
+/// What a plain `nacre launcher` open writes, so the prepared launcher already shows Home.
+pub fn plain_open_memory() -> Memory {
+    let plain = crate::key_routes::Launch {
+        query: String::new(),
+        route: None,
+        toggle: false,
+        target_view: None,
+    };
+    Arc::new(std::sync::Mutex::new(plain.model()))
+}
 type MenuRequest = (String, String, String);
 type SourceStamp = (String, u64, bool);
 type PendingQuery = (MenuRequest, Option<SourceStamp>);
@@ -2002,6 +2012,13 @@ impl Menu {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn the_prepared_launcher_starts_on_a_plain_opens_values() {
+        let memory = plain_open_memory();
+        let memory = memory.lock().unwrap();
+        assert_eq!(memory["launcher.engine_route"], Value::Text("home".into()));
+        assert_eq!(memory["launcher.search.text"], Value::Text(String::new()));
+    }
 
     struct PrefixSource {
         fixture: Fixture,

@@ -385,7 +385,7 @@ fn start(
             commands::map_launcher
         }));
     }
-    let launcher_memory = launcher_panel.then(launcher::Memory::default);
+    let launcher_memory = launcher_panel.then(launcher::plain_open_memory);
     if options.report.is_some() && options.seconds.is_none() {
         options.seconds = Some(30.);
     }
