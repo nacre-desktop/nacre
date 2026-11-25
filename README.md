@@ -1,17 +1,24 @@
-<p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/branding/nacre-horizontal-dark.svg"><img src="assets/branding/nacre-horizontal.svg" width="320" alt="Nacre logo"></picture></p>
+<p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/branding/nacre-icon-dark.svg"><img src="assets/branding/nacre-icon-light.svg" width="96" alt="Nacre logo"></picture></p>
+
+<h1 align="center">Nacre</h1>
+
 <p align="center"><strong>NAY-ker</strong> · mother-of-pearl</p>
-<p align="center">A Wayland desktop that takes its colors from your wallpaper.</p>
-<p align="center"><a href="docs/installation.md">Install</a> · <a href="docs/first-boot.md">First boot</a> · <a href="docs/keybindings.md">Keys</a> · <a href="docs/theming.md">Theming</a> · <a href="docs/troubleshooting.md">Help</a></p>
+
+<h3 align="center">Nacre is a desktop that takes its colors from your wallpaper.</h3>
+
+<p align="center">A Wayland desktop on <a href="https://github.com/nacre-desktop/nacre-niri">nacre-niri</a>, with a native shell built on <a href="https://github.com/nacre-desktop/bead">Bead</a> and palettes from <a href="https://github.com/nacre-desktop/orient">Orient</a>.<br>
+Pick a wallpaper and the bar, panels, apps and terminal recolor to match.</p>
+
+<p align="center"><a href="https://nacre-desktop.github.io/nacre/">Website</a> · <a href="docs/installation.md">Install</a> · <a href="docs/first-boot.md">First boot</a> · <a href="#what-you-get">What you get</a> · <a href="docs/keybindings.md">Keys</a> · <a href="docs/theming.md">Theming</a> · <a href="CHANGELOG.md">Changelog</a></p>
+
+<p align="center"><a href="CHANGELOG.md"><img src="https://img.shields.io/badge/version-0.1.0-8cc9cd?style=for-the-badge&labelColor=211d27" alt="Version 0.1.0"></a> <a href="https://github.com/nacre-desktop/nacre/stargazers"><img src="https://img.shields.io/github/stars/nacre-desktop/nacre?style=for-the-badge&label=stars&labelColor=211d27&color=e9e2ef" alt="GitHub stars"></a> <a href="https://github.com/nacre-desktop/nacre/commits/main"><img src="https://img.shields.io/github/last-commit/nacre-desktop/nacre/main?style=for-the-badge&label=last%20commit&labelColor=211d27&color=8cc9cd" alt="Last commit"></a> <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-e9e2ef?style=for-the-badge&labelColor=211d27" alt="License GPL-3.0"></a> <a href="https://github.com/nacre-desktop/bead"><img src="https://img.shields.io/badge/built%20on-Bead-8cc9cd?style=for-the-badge&labelColor=211d27" alt="Built on Bead"></a></p>
+<p align="center"><a href="docs/installation.md"><img src="https://img.shields.io/badge/Arch%20Linux%20%C2%B7%20CachyOS-8cc9cd?style=for-the-badge&logo=archlinux&logoColor=211d27" alt="Arch Linux and CachyOS"></a> <a href="docs/compatibility.md"><img src="https://img.shields.io/badge/nacre--niri%20%C2%B7%20niri%20%C2%B7%20Hyprland-e9e2ef?style=for-the-badge" alt="nacre-niri, niri and Hyprland"></a> <a href="https://nacre-desktop.github.io/nacre/"><img src="https://img.shields.io/badge/website-nacre--desktop.github.io%2Fnacre-8cc9cd?style=for-the-badge&labelColor=211d27" alt="Website"></a></p>
 
 <!-- media: media/hero.gif — pick a new wallpaper in the picker; bar, frame, launcher and terminal recolor together -->
 <p align="center"><img src="assets/screenshots/desktop.png" alt="Nacre's dashboard over an aurora wallpaper: clock, weather, calendar, system and media in the wallpaper's colors"></p>
 
-Pick a wallpaper. The bar, the window frame, the launcher, the terminal and your
-apps follow it. Nacre runs on [nacre-niri](https://github.com/nacre-desktop/nacre-niri),
-its fork of the niri scrolling compositor, with a native shell built on
-[Bead](https://github.com/nacre-desktop/bead). Colors come from
-[Orient](https://github.com/nacre-desktop/orient). Stock niri and Hyprland work
-too, with fewer features (see the [compatibility table](docs/compatibility.md)).
+nacre-niri is Nacre's fork of the niri scrolling compositor. Stock niri and
+Hyprland work too, with fewer features (see the [compatibility table](docs/compatibility.md)).
 
 **Status: Nacre is in active daily use and has not yet been released.**
 
