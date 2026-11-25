@@ -4756,3 +4756,76 @@ fn every_output_bar_lights_its_own_current_stack() -> Result<()> {
     );
     Ok(())
 }
+
+/// Bead stages a launcher model on the slot's current panel: opened over the control centre, the launcher
+/// must send none (the control view rejects launcher state and Bead then retires it cold, B0409), and start
+/// from its memory instead; over a live launcher the model still comes first.
+#[test]
+fn a_launcher_opened_over_another_view_sends_it_no_launcher_model() -> Result<()> {
+    use bead::wayland::{CommandContext, Remote, SceneSource, UiEvent};
+    use std::sync::{Arc, Mutex};
+    let h = calendar(2024, 2, 1, 1.)?;
+    let memory = crate::launcher::Memory::default();
+    let mut runtime = crate::reload::Runtime::new(h.session)
+        .with_launcher_trigger(memory.clone())?
+        .with_popout_trigger()?;
+    let events = Arc::new(Mutex::new(Vec::new()));
+    runtime.services(routed(&events));
+    let send = |runtime: &mut crate::reload::Runtime, view: &str| -> Result<()> {
+        let (reply, received) = std::sync::mpsc::sync_channel(1);
+        runtime.stage(UiEvent::Remote(Arc::new(Remote {
+            call: crate::commands::from_strings(
+                "nacre".into(),
+                "menu".into(),
+                &["power".into(), String::new()],
+            )?,
+            reply,
+            context: CommandContext {
+                panel_open: true,
+                panel_configured: true,
+                panel_view: Some(view.into()),
+                hidden: false,
+            },
+        })))?;
+        assert!(
+            received
+                .recv_timeout(std::time::Duration::from_secs(1))?
+                .error
+                .is_none()
+        );
+        Ok(())
+    };
+    runtime.stage(UiEvent::PanelSelected("control".into()))?;
+    events.lock().unwrap().clear();
+    send(&mut runtime, "control")?;
+    {
+        let events = events.lock().unwrap();
+        assert!(
+            matches!(
+                events.as_slice(),
+                [
+                    UiEvent::ShellHidden(Some(false)),
+                    UiEvent::CompanionVisibility(true)
+                ]
+            ),
+            "no launcher model reaches the control centre: {events:?}"
+        );
+    }
+    assert_eq!(
+        memory.lock().unwrap()["launcher.engine_route"],
+        Value::Text("power".into()),
+        "the launcher starts from its memory"
+    );
+    runtime.stage(UiEvent::PanelSelected("launcher".into()))?;
+    events.lock().unwrap().clear();
+    send(&mut runtime, "launcher")?;
+    assert!(matches!(
+        events.lock().unwrap().as_slice(),
+        [
+            UiEvent::ShellHidden(Some(false)),
+            UiEvent::CompanionModel(_),
+            UiEvent::CompanionVisibility(true)
+        ]
+    ));
+    Ok(())
+}

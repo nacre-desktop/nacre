@@ -875,6 +875,8 @@ pub struct Runtime {
     status_pill_epoch: u64,
     status_pill_scheduled: Option<std::time::Instant>,
     status_pill_route: Option<String>,
+    /// The view of the slot's current panel (Bead's `PanelSelected`): a launcher model only reaches the launcher.
+    selected_view: Option<String>,
     status_owner_dismissed: Option<(String, std::time::Instant)>,
     status_route_center: Option<f32>,
     status_route_anchor: Option<bead::wayland::PanelAnchor>,
@@ -2841,6 +2843,7 @@ impl Runtime {
             status_pill_epoch: 0,
             status_pill_scheduled: None,
             status_pill_route: None,
+            selected_view: None,
             status_owner_dismissed: None,
             status_route_center: None,
             status_route_anchor: None,
@@ -4141,8 +4144,16 @@ impl Runtime {
                         .lock()
                         .map_err(|_| "launcher view state unavailable")? = values.clone();
                 }
-                // Model first: a still-live panel must hold the empty state before its first visible frame.
-                wakeup(UiEvent::CompanionModel(values));
+                // Model first: a still-live launcher must hold the empty state before its first visible frame.
+                // Bead stages the model on the slot's current panel, so another view (which rejects launcher
+                // state and retires cold) gets none; a parked or cold launcher starts from the memory above.
+                if self
+                    .selected_view
+                    .as_deref()
+                    .is_none_or(|view| view == "launcher")
+                {
+                    wakeup(UiEvent::CompanionModel(values));
+                }
                 wakeup(UiEvent::CompanionVisibility(true));
             }
         }
@@ -10024,6 +10035,7 @@ impl SceneSource for Runtime {
             }
             UiEvent::PanelNavigated(_) => None,
             UiEvent::PanelSelected(view) => {
+                self.selected_view = Some(view.clone());
                 if let Some(host) = &self.notice_host {
                     host.panel_changed(Some(&view));
                 }
