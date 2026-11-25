@@ -40,13 +40,14 @@ PROFILES = {
 LAYER = {"noctalia": "noctalia-bar-default", "nacre": "bead-dev"}
 # Probed panel: (Noctalia panel id, Nacre ui.dispatch call), each the call its key sends.
 # Noctalia's control center stands in for both Nacre drawers; Nacre's session and
-# clipboard are launcher routes.
+# clipboard are launcher routes; Nacre's wallpaper picker (Strand) is Super+W's.
 PANELS = {
     "launcher": ("launcher", ("nacre", "launcher", "")),
     "dashboard": ("control-center", ("drawers", "toggle", "dashboard")),
     "control": ("control-center", ("drawers", "toggle", "right")),
     "session": ("session", ("nacre", "menu", "power", "")),
     "clipboard": ("clipboard", ("nacre", "clipboard")),
+    "wallpaper": ("wallpaper", ("nacre", "launcher", ">wallpaper ")),
 }
 CLK_TCK = os.sysconf("SC_CLK_TCK")
 PAGE = os.sysconf("SC_PAGE_SIZE")
@@ -1161,7 +1162,10 @@ class Arm:
         )
 
     def interaction(self, cycles):
-        """N0300's 10 s cycle: launcher, dashboard, 4 workspace switches, 4 notifications."""
+        """N0300's 10 s cycle: launcher, dashboard, 4 workspace switches, 4 notifications.
+
+        The first cycle also opens every other probed panel once, so the memory after
+        first use counts each panel a shell keeps (parks) after its close."""
         for cycle in range(cycles):
             self.cycle_marks.append(time.monotonic())
             start = time.monotonic()
@@ -1171,6 +1175,11 @@ class Arm:
             self.open_panel("dashboard")
             time.sleep(0.8)
             self.close_panels()
+            for panel in PANELS if cycle == 0 else ():
+                if panel not in ("launcher", "dashboard"):
+                    self.open_panel(panel)
+                    time.sleep(0.8)
+                    self.close_panels(panel)
             for index in ("2", "1", "3", "1"):
                 self.focus_workspace(index)
                 time.sleep(0.3)

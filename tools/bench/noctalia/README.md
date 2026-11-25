@@ -23,7 +23,9 @@ desktop-lock hold per arm, so other desktop jobs interleave between arms.
 `full`: 60 s baseline, 600 s idle, 6 cycles, 1140 s rest (N0300's 30 min; on a
 busy desktop, any job queued at a renewal invalidates the arm).
 A cycle is 10 s: launcher open 0.8 s, close, dashboard/control center open
-0.8 s, close, workspaces 2,1,3,1 acknowledged, four notifications.
+0.8 s, close, workspaces 2,1,3,1 acknowledged, four notifications. The first
+cycle also opens and closes every other probed panel once (0.8 s each), so the
+memory after first use counts every panel a shell parks after its close.
 
 ## Commands
 
@@ -100,7 +102,8 @@ compositor instead of the staged copy. Summarize again any time:
 - `open_frames.<panel>`: the frame probe, five opens per panel after the
   measured windows, for every panel in `bench.py` `PANELS`: launcher, dashboard
   and control (Noctalia's control center for both), session (Nacre's power
-  menu) and clipboard. Each open is the one call that shell's key binding sends.
+  menu), clipboard and wallpaper (Nacre's Strand picker, Super+W). Each open is
+  the one call that shell's key binding sends.
   niri runs with `WAYLAND_DEBUG=client`, which timestamps its
   own commits to labwc, one per composited frame, for both shells alike.
   `first_ms` is the IPC call (client process start included) to the first
@@ -136,4 +139,5 @@ are reported beside it.
   the old copies in `stage/noctalia/lib` (Noctalia arm only; `pins.json`
   `noctalia_lib` lists them).
 - Nacre keeps its product-default renderer (CPU raster for bar and panels) and
-  Bead's default `warm_source_budget` (0: no warm dormant panels).
+  its warm-panel budget (N0231: closed panels may park warm, and some are
+  prewarmed after start, before the idle window at 30 s).
