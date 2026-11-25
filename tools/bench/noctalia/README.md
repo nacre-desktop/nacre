@@ -116,7 +116,8 @@ compositor instead of the staged copy. Summarize again any time:
 `summarize.py` also prints the v0.1 row 73 gate: per metric the two medians and
 PASS when Nacre's is at or under Noctalia's. Memory is gated as PSS + GPU
 buffers (`pss_gpu_mib`), before first use and at the end of the arm; PSS-only
-growth, stack CPU, GPU busy and energy are reported beside it.
+growth, interaction CPU (shell + daemon, and the stack), GPU busy and energy
+are reported beside it.
 - `renderer`, `notification_owner`, `wallpaper_video_helper`, `host_swapin_mib`
   and `pins` record the fixture.
 

@@ -45,10 +45,11 @@ control center stands in for Nacre's dashboard and control panel; Nacre's sessio
 | desktop 2026-11-25 at a4c7a110b | 3/3 | a4c7a110b | 18 / 12 (0 / 0) | 18 / 12 (0 / 0) | 18 / 12 (0 / 0) | 18 / 12 (0 / 0) | 18 / 12 (0 / 0) |
 
 `summarize.py` prints both rows and the row 73 gate: Nacre at or under Noctalia on
-idle CPU, idle wakeups, launch, PSS+GPU before and after first use, interaction
-CPU (shell + daemon against Noctalia's whole shell) and every panel's first frame.
-At f3997131c and at 37939e8ae only interaction CPU fails (5.1, then 3.3 against
-1.2 %).
+idle CPU, idle wakeups, launch, PSS+GPU before and after first use and every
+panel's first frame. Interaction CPU (shell + daemon against Noctalia's whole
+shell) is reported beside interaction energy, not gated (owner 2026-11-25: v0.1
+takes only the minimal fixes for it). Nacre still uses more of it: 5.1, then 3.3 %
+at f3997131c and 37939e8ae, against 1.2 %.
 
 Row notes:
 

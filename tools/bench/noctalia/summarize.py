@@ -18,7 +18,7 @@ TREES = ("shell", "daemon", "niri", "labwc", "combined")
 WINDOWS = ("idle", "interaction", "cycle1", "cycles_rest", "rest")
 POINTS = ("startup", "pre-interaction", "post-interaction", "end")
 # v0.1 row 73: Nacre at or under Noctalia on each (lower is better), plus every
-# probed panel's first frame.
+# probed panel's first frame. Interaction CPU is reported, not gated (owner 2026-11-25).
 GATE = [
     ("idle CPU %", "idle.combined.cpu_pct"),
     ("idle wakeups/s", "idle.combined.ctx_per_s"),
@@ -28,9 +28,9 @@ GATE = [
         "memory.pre-interaction.combined.pss_gpu_mib",
     ),
     ("memory after first use, PSS+GPU MiB", "memory.end.combined.pss_gpu_mib"),
-    ("interaction CPU %", "interaction.combined.cpu_pct"),
 ]
 REPORTED = [
+    ("interaction CPU %", "interaction.combined.cpu_pct"),
     ("PSS-only growth MiB", "memory_growth_mib"),
     ("interaction stack CPU %", "interaction.stack.cpu_pct"),
     ("interaction GPU %", "interaction.combined.gpu_pct"),
