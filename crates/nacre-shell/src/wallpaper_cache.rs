@@ -189,12 +189,16 @@ pub(crate) fn hot_retain(keep: &[(ActiveWallpaper, u32, u32)]) {
         *hot = kept;
         released
     };
-    // B0387: freeing the 4K window (~200 MB) took ~20 ms on the caller, Strand's worker, mid close slide.
     if !released.is_empty() {
-        let _ = std::thread::Builder::new()
-            .name("wallpaper-release".into())
-            .spawn(move || drop(released));
+        free_off_thread(released);
     }
+}
+/// B0387: freeing the 4K window (~200 MB) took ~20 ms on the caller, Strand's worker, mid close slide: big
+/// rasters are dropped on a short named thread instead.
+pub(crate) fn free_off_thread(value: impl Send + 'static) {
+    let _ = std::thread::Builder::new()
+        .name("wallpaper-release".into())
+        .spawn(move || drop(value));
 }
 /// (entries, resident bytes) of the held window.
 pub(crate) fn hot_resident() -> (usize, usize) {

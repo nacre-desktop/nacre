@@ -3609,6 +3609,61 @@ async fn a_wheel_burst_starts_one_switch_on_the_last_pick_after_its_quiet_window
     assert!(lab.calls.try_recv().is_err(), "one switch for the burst");
     assert!(extras.state.borrow().wallpaper_pending.is_none());
 }
+/// Two wheel landings, the first still in flight: the later one is the selection sent and kept. Each logs the file
+/// metadata its move read instead of probing the file again on the stage, and is timed for STRAND_FRAMES.
+#[tokio::test(flavor = "current_thread")]
+async fn a_later_landing_wins_over_one_in_flight_and_reuses_its_moves_metadata() {
+    let mut lab = lab_with_activation_gate(vec!["wallpaper.active".into()], true).await;
+    let (extras, open, wake) = open_picker(&mut lab).await;
+    let preview = Arc::new(crate::wallpaper::Preview::default());
+    let queue = extras.wallpaper_actions.clone().unwrap();
+    queue.lock().unwrap().preview = Some(preview.clone());
+    let (first, second) = ("/fixture/next.jpg", "/fixture/animated.gif");
+    for (id, bytes) in [(first, 7), (second, 9)] {
+        // What the move read (the fixtures do not exist: a probe would read zeros).
+        let read = (bytes, 3, 2);
+        extras
+            .state
+            .borrow_mut()
+            .wallpaper_sizes
+            .insert(id.into(), read);
+        extras.act(&format!("wallpaper:wheel:{id}"), &open, wake.clone());
+        extras.state.borrow_mut().wallpaper_fade = Duration::from_millis(1);
+        tokio::time::sleep(WALLPAPER_WHEEL_RELEASE).await;
+        extras.fire_pending_move();
+        let queue = queue.lock().unwrap();
+        let sent = &queue
+            .inflight
+            .as_ref()
+            .expect("the landing was sent")
+            .selection;
+        assert_eq!(sent.id, id);
+        assert_eq!(
+            (sent.file_bytes, sent.source_width, sent.source_height),
+            read
+        );
+    }
+    assert!(extras.state.borrow().frames.landing.0 > 0., "timed");
+    assert_eq!(activated(&mut lab).await, first);
+    assert_eq!(preview.generation_for("extras-boot", first), None);
+    lab.activation_release.take().unwrap().send(()).unwrap();
+    assert_eq!(activated(&mut lab).await, second);
+    for _ in 0..200 {
+        if queue.lock().unwrap().inflight.is_none() {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(5)).await;
+    }
+    assert_eq!(queue.lock().unwrap().error(), None);
+    assert!(
+        preview.generation_for("extras-boot", second).is_some(),
+        "the later pick stays selected"
+    );
+    assert_eq!(
+        extras.state.borrow().wallpaper_shown.as_deref(),
+        Some(second)
+    );
+}
 #[tokio::test(flavor = "current_thread")]
 async fn a_three_second_hold_retargets_the_wallpaper_at_the_cap_and_ends_on_the_last_id() {
     let mut lab = lab_with_topics(vec!["wallpaper.active".into()]).await;
@@ -4562,6 +4617,7 @@ fn strand_frames_reports_one_line_per_burst() {
     );
     assert_eq!(log.frame(at(10), true), None);
     log.stages.extend([4., 6.]);
+    log.landing = (3., 1.5);
     for (ms, moving) in [(18, true), (26, true), (60, true)] {
         assert_eq!(log.frame(at(ms), moving), None);
     }
@@ -4570,11 +4626,12 @@ fn strand_frames_reports_one_line_per_burst() {
         .expect("the settle frame closes the burst");
     assert_eq!(
         line,
-        "STRAND_FRAMES phase=open frames=4 duration_ms=58 interval_mean=14.5 p95=34.0 max=34.0 stages=2 stage_mean_ms=5.0 stage_max_ms=6.0"
+        "STRAND_FRAMES phase=open frames=4 duration_ms=58 interval_mean=14.5 p95=34.0 max=34.0 stages=2 stage_mean_ms=5.0 stage_max_ms=6.0 landing_wall_ms=3.0 landing_cpu_ms=1.5"
     );
     // Only a visit's first burst is its open storyboard.
     assert!(!log.opening);
     assert!(log.last.is_none() && log.intervals.is_empty() && log.stages.is_empty());
+    assert_eq!(log.landing, (0., 0.));
     assert_eq!(
         log.frame(at(90), false),
         None,

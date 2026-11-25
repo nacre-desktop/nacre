@@ -15,19 +15,14 @@ pub(crate) struct Prefetch {
 }
 
 impl Prefetch {
-    /// Replace any earlier plan; `jobs` (pair, width, height, hold) are decoded in order. A `hold`
-    /// job (the strand's +-2 window) stays resident in memory; the rest only warm the disk cache.
-    pub(crate) fn start(&self, jobs: Vec<(ActiveWallpaper, u32, u32, bool)>) {
+    /// Replace any earlier plan. `plan` gives the jobs (pair, width, height, hold), decoded in order; it is made on
+    /// the prefetch thread, not the caller (a strand landing's stage). A `hold` job (the strand's +-2 window) stays
+    /// resident in memory; the rest only warm the disk cache.
+    pub(crate) fn start(
+        &self,
+        plan: impl FnOnce() -> Vec<(ActiveWallpaper, u32, u32, bool)> + Send + 'static,
+    ) {
         let mine = self.epoch.fetch_add(1, Ordering::AcqRel) + 1;
-        let window: Vec<_> = jobs
-            .iter()
-            .filter(|job| job.3)
-            .map(|job| (job.0.clone(), job.1, job.2))
-            .collect();
-        crate::wallpaper_cache::hot_retain(&window);
-        if jobs.is_empty() {
-            return;
-        }
         let (epoch, gate) = (self.epoch.clone(), self.gate.clone());
         let _ = std::thread::Builder::new()
             .name("wallpaper-prefetch".into())
@@ -36,6 +31,24 @@ impl Prefetch {
                     // Wallpaper activation runs at nice 10; let that foreground
                     // selection finish before this cancellable raster worker.
                     libc::setpriority(libc::PRIO_PROCESS, libc::gettid() as u32, 19);
+                }
+                let jobs = plan();
+                {
+                    // The latest plan only, under the gate: an older one still being made never retains its window
+                    // after this one.
+                    let _one = gate.lock().unwrap_or_else(|p| p.into_inner());
+                    if epoch.load(Ordering::Acquire) != mine {
+                        return;
+                    }
+                    let window: Vec<_> = jobs
+                        .iter()
+                        .filter(|job| job.3)
+                        .map(|job| (job.0.clone(), job.1, job.2))
+                        .collect();
+                    crate::wallpaper_cache::hot_retain(&window);
+                }
+                if jobs.is_empty() {
+                    return;
                 }
                 // Nothing heavy while Strand's 675 ms open storyboard runs (five 4K decodes and holds took the
                 // memory bus and the main thread's frames on a busy laptop): wait for it to settle.
@@ -144,5 +157,37 @@ mod tests {
         let ids: Vec<String> = ["a", "b", "c", "d", "e"].map(String::from).to_vec();
         assert_eq!(nearest_first(&ids, Some(2)), ["c", "b", "d", "a", "e"]);
         assert_eq!(nearest_first(&ids, None), ["a", "b", "c", "d", "e"]);
+    }
+
+    /// A landing's re-plan is made on the prefetch thread: its caller, Strand's stage, never waits for it.
+    #[test]
+    fn a_plan_is_made_on_the_prefetch_thread_while_its_caller_goes_on() {
+        use std::{sync::mpsc, time::Duration};
+        let prefetch = Prefetch::default();
+        let (finish, slow) = mpsc::channel::<()>();
+        let (made, plans) = mpsc::channel();
+        let (returned, caller) = mpsc::channel();
+        std::thread::scope(|scope| {
+            scope.spawn(|| {
+                prefetch.start(move || {
+                    let _ = slow.recv();
+                    let _ = made.send(std::thread::current().name().map(str::to_owned));
+                    Vec::new()
+                });
+                let _ = returned.send(());
+            });
+            let returned = caller.recv_timeout(Duration::from_secs(2));
+            // Superseded before it is ready (a later landing, the close): it never touches the held window.
+            prefetch.epoch.fetch_add(1, Ordering::AcqRel);
+            finish.send(()).unwrap();
+            assert!(returned.is_ok(), "the caller waited for its plan");
+            assert_eq!(
+                plans
+                    .recv_timeout(Duration::from_secs(2))
+                    .unwrap()
+                    .as_deref(),
+                Some("wallpaper-prefetch")
+            );
+        });
     }
 }

@@ -180,8 +180,9 @@ struct State {
     warm: Option<crate::shell_control::WarmHold>,
     /// When the open storyboard has settled and the warm hold may be taken.
     warm_due: Option<Instant>,
-    /// Source pixel sizes read once per entry, so a pearl's caption never probes a file twice.
-    wallpaper_sizes: std::collections::BTreeMap<String, (u32, u32)>,
+    /// Source (bytes, width, height) read once per entry, so neither a pearl's caption nor its landing probes a
+    /// file twice.
+    wallpaper_sizes: std::collections::BTreeMap<String, (u64, u32, u32)>,
     /// The desktop peek of this visit: the compositor's hold, or the workspace switch to undo.
     peek: Option<Peek>,
     /// The compositor's answer to the peek request, still being awaited on its own thread (it blocks up to
@@ -220,8 +221,16 @@ struct FrameLog {
     built: Option<bool>,
     /// The next burst is the open storyboard (`phase=open`); later ones are moves and glides.
     opening: bool,
+    /// Wall and CPU ms the burst's landing took on the stage: its fire and the re-plan it sets off (an open's is
+    /// its first plan). The rest of `stages` is the view build.
+    landing: (f32, f32),
 }
 impl FrameLog {
+    /// Adds the stage work since `started` (wall, thread CPU ns) to the burst's landing.
+    fn landed(&mut self, (wall, cpu): (Instant, u64)) {
+        self.landing.0 += wall.elapsed().as_secs_f32() * 1000.;
+        self.landing.1 += bead::core::profile::thread_cpu_ns().saturating_sub(cpu) as f32 / 1e6;
+    }
     /// One built scene; the first one at rest after motion closes the burst and returns its line.
     fn frame(&mut self, now: Instant, moving: bool) -> Option<String> {
         if let Some(last) = self.last
@@ -236,6 +245,7 @@ impl FrameLog {
         }
         let mut gaps = std::mem::take(&mut self.intervals);
         let stages = std::mem::take(&mut self.stages);
+        let landing = std::mem::take(&mut self.landing);
         gaps.sort_by(f32::total_cmp);
         let mean = |v: &[f32]| v.iter().sum::<f32>() / v.len().max(1) as f32;
         let phase = if std::mem::take(&mut self.opening) {
@@ -244,7 +254,7 @@ impl FrameLog {
             "move"
         };
         Some(format!(
-            "STRAND_FRAMES phase={} frames={} duration_ms={:.0} interval_mean={:.1} p95={:.1} max={:.1} stages={} stage_mean_ms={:.1} stage_max_ms={:.1}",
+            "STRAND_FRAMES phase={} frames={} duration_ms={:.0} interval_mean={:.1} p95={:.1} max={:.1} stages={} stage_mean_ms={:.1} stage_max_ms={:.1} landing_wall_ms={:.1} landing_cpu_ms={:.1}",
             phase,
             gaps.len(),
             gaps.iter().sum::<f32>(),
@@ -254,6 +264,8 @@ impl FrameLog {
             stages.len(),
             mean(&stages),
             stages.iter().copied().fold(0., f32::max),
+            landing.0,
+            landing.1,
         ))
     }
 }
@@ -1186,9 +1198,11 @@ impl Extras {
                 && !state.catalogue_result.is_empty()
                 && let Some(preview) = self.wallpaper_preview()
             {
+                let started = (Instant::now(), bead::core::profile::thread_cpu_ns());
                 let (ids, active) =
                     prefetch_paths(&state.catalogue_result, state.wallpaper_focus.as_deref());
-                state.wallpaper_prefetched = preview.prefetch(&ids, active);
+                state.wallpaper_prefetched = preview.prefetch(ids, active);
+                state.frames.landed(started);
             }
             if boot.is_some() && state.catalogue_boot == boot {
                 let key: RowsKey = (
@@ -1712,9 +1726,13 @@ impl Extras {
             return;
         };
         let selected_at = std::time::Instant::now();
-        let (file_bytes, source_width, source_height) = wallpaper_source_metadata(id);
-        self.state.borrow_mut().wallpaper_resolution =
-            Some((id.into(), source_width, source_height));
+        let mut state = self.state.borrow_mut();
+        let (file_bytes, source_width, source_height) = *state
+            .wallpaper_sizes
+            .entry(id.into())
+            .or_insert_with(|| wallpaper_source_metadata(id));
+        state.wallpaper_resolution = Some((id.into(), source_width, source_height));
+        drop(state);
         let selection = WallpaperSelection {
             id: id.into(),
             boot: boot.clone(),
@@ -1752,6 +1770,7 @@ impl Extras {
     }
     /// One retarget of the wallpaper (and of the pre-decoded window around the pearl) for a strand move.
     fn fire_move(&self, id: &str, fade_ms: u32, wake: CallWake) {
+        let started = (Instant::now(), bead::core::profile::thread_cpu_ns());
         let mut state = self.state.borrow_mut();
         state.wallpaper_fired_at = Some(Instant::now());
         state.wallpaper_fade = Duration::from_millis(fade_ms.into());
@@ -1777,6 +1796,9 @@ impl Extras {
         }
         if !unchanged {
             self.activate_wallpaper(id, fade_ms, wake);
+        }
+        if fade_ms == WALLPAPER_MOVE_MS {
+            self.state.borrow_mut().frames.landed(started);
         }
     }
     /// Runs on the runtime's deadline wake: once the running transition has ended, the held-back move (the latest
@@ -1832,11 +1854,11 @@ impl Extras {
                 let mut state = self.state.borrow_mut();
                 state.wallpaper_focus = Some(id.into());
                 state.wallpaper_wheel = wheel;
-                let size = *state.wallpaper_sizes.entry(id.into()).or_insert_with(|| {
-                    let (_, width, height) = wallpaper_source_metadata(id);
-                    (width, height)
-                });
-                state.wallpaper_resolution = Some((id.into(), size.0, size.1));
+                let (_, width, height) = *state
+                    .wallpaper_sizes
+                    .entry(id.into())
+                    .or_insert_with(|| wallpaper_source_metadata(id));
+                state.wallpaper_resolution = Some((id.into(), width, height));
                 state.wallpaper_gliding = state
                     .wallpaper_moved_at
                     .is_some_and(|at| now.duration_since(at) < 2 * WALLPAPER_RETARGET_CAP);

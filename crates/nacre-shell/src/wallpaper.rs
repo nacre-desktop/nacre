@@ -193,13 +193,11 @@ impl Predecoder {
         state.pending = Some(job);
         state.cached = None;
         if !state.running {
+            // A finished worker's handle is replaced (detached) below, never joined on the caller's stage.
             let mut worker = self
                 .worker
                 .lock()
                 .unwrap_or_else(|poison| poison.into_inner());
-            if let Some(previous) = worker.take() {
-                let _ = previous.join();
-            }
             state.running = true;
             let signal = self.signal.clone();
             match std::thread::Builder::new()
@@ -303,11 +301,17 @@ impl Predecoder {
     }
 
     fn clear(&self) {
-        let mut state = self.signal.lock();
-        state.desired = None;
-        state.pending = None;
-        state.cached = None;
-        self.signal.changed.notify_all();
+        let cached = {
+            let mut state = self.signal.lock();
+            state.desired = None;
+            state.pending = None;
+            self.signal.changed.notify_all();
+            state.cached.take()
+        };
+        // A landing clears every output's predecode (20-33 MB each): freed off its stage, like the held window.
+        if let Some(cached) = cached {
+            crate::wallpaper_cache::free_off_thread(cached);
+        }
     }
 }
 
@@ -605,7 +609,7 @@ impl Preview {
 
     /// B0171: decode the catalogue's still images to every output's display size in the
     /// background. Returns false while no output size is known yet (the caller retries later).
-    pub(crate) fn prefetch(&self, ids: &[String], active: Option<usize>) -> bool {
+    pub(crate) fn prefetch(&self, ids: Vec<String>, active: Option<usize>) -> bool {
         let targets: Vec<_> = self
             .predecoders()
             .iter()
@@ -614,27 +618,29 @@ impl Preview {
         if targets.is_empty() {
             return false;
         }
-        // The strand's window (+-2 around the chosen pearl, wrapping like the strand) is held in
-        // memory; the rest of the catalogue only warms the disk cache behind it.
-        let window = crate::wallpaper_prefetch::window(ids, active);
-        let jobs = window
-            .iter()
-            .map(|id| (id, true))
-            .chain(
-                crate::wallpaper_prefetch::nearest_first(ids, active)
-                    .iter()
-                    .filter(|id| !window.contains(id))
-                    .map(|id| (id, false))
-                    .collect::<Vec<_>>(),
-            )
-            .flat_map(|(id, hold)| {
-                targets.iter().filter_map(move |target| {
-                    raster_pair(&target.pair, id)
-                        .map(|pair| (pair, target.width, target.height, hold))
+        // A stat and a pair per catalogue entry and output (3-5 ms): planned on the prefetch thread, off the stage.
+        self.prefetch.start(move || {
+            // The strand's window (+-2 around the chosen pearl, wrapping like the strand) is held in
+            // memory; the rest of the catalogue only warms the disk cache behind it.
+            let window = crate::wallpaper_prefetch::window(&ids, active);
+            window
+                .iter()
+                .map(|id| (id, true))
+                .chain(
+                    crate::wallpaper_prefetch::nearest_first(&ids, active)
+                        .iter()
+                        .filter(|id| !window.contains(id))
+                        .map(|id| (id, false))
+                        .collect::<Vec<_>>(),
+                )
+                .flat_map(|(id, hold)| {
+                    targets.iter().filter_map(move |target| {
+                        raster_pair(&target.pair, id)
+                            .map(|pair| (pair, target.width, target.height, hold))
+                    })
                 })
-            })
-            .collect();
-        self.prefetch.start(jobs);
+                .collect()
+        });
         true
     }
     pub(crate) fn cancel_prefetch(&self) {
