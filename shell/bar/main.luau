@@ -54,17 +54,18 @@ if c.islands then
         if workspace.active and workspace.occupied then busy=true end
     end
     busy=busy or ui.resolve_for_check(ui.bind("bar.panel.open"))==true
-    local fade=ui.animate("bar.thread.fade",busy and .3 or 1,.22,"out-cubic")
-    local segments={id="thread",position="absolute",left=-13,top=23,width=width,height=1,direction="row"}
+    -- A sampled marker on the whole thread layer: its frames patch the opacity, no Luau or relayout per frame.
+    local fade=ui.animated("bar.thread.fade",busy and .3 or 1,.22,"out-cubic")
+    local segments={id="thread",position="absolute",left=-13,top=23,width=width,height=1,direction="row",opacity=fade}
     local count=48
     for i=1,count do
         local at=(i-.5)/count
         local colour=at<=.5 and ui.tint("primary","secondary",at*2) or ui.tint("secondary","tertiary",(at-.5)*2)
-        segments[i]=ui.Box{id="s"..i,width=0,grow=1,height=1,fill=ui.alpha(colour,.6*fade*math.min(1,at/.09,(1-at)/.22))}
+        segments[i]=ui.Box{id="s"..i,width=0,grow=1,height=1,fill=ui.alpha(colour,.6*math.min(1,at/.09,(1-at)/.22))}
     end
     -- The 1 px dark under-line (a fuller orient thread over a dark under-stroke reads on bright skies), fading
     -- with the thread, 220 ms.
-    segments[count+1]=ui.Image{id="under",position="absolute",left=0,top=1,width=width,height=1,path="bar/assets/thread-under.themed.svg",opacity=fade}
+    segments[count+1]=ui.Image{id="under",position="absolute",left=0,top=1,width=width,height=1,path="bar/assets/thread-under.themed.svg"}
     host.fill,host.padding_left,host.padding_right,host.padding_top="transparent",13,13,2
     host[1]=ui.Row(segments)
     -- The apply glint: when a wallpaper is applied (Strand Enter, the centre pearl, a rotation), `bar.wallpaper_applied`
