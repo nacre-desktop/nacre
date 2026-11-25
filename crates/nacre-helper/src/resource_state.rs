@@ -177,6 +177,8 @@ fn nvml_sample(nvml: &Nvml, ids: &[String], deadline: Instant) -> Result<BTreeMa
     }
     Ok(samples)
 }
+/// The dashboard samples NVIDIA every 10 s while open; a minute without a request is a close.
+const NVML_IDLE: Duration = Duration::from_secs(60);
 struct NvmlRequest {
     ids: Vec<String>,
     deadline: Instant,
@@ -193,9 +195,28 @@ pub fn nvidia_samples(ids: &[String]) -> BTreeMap<String, Value> {
         std::thread::Builder::new()
             .name("nacre-nvml".into())
             .spawn(move || {
-                let mut library = None;
+                let mut library: Option<Nvml> = None;
                 let mut library_missing = false;
-                for request in receive {
+                loop {
+                    let next = match library {
+                        Some(_) => receive.recv_timeout(NVML_IDLE),
+                        None => receive
+                            .recv()
+                            .map_err(|_| mpsc::RecvTimeoutError::Disconnected),
+                    };
+                    let request = match next {
+                        Ok(request) => request,
+                        Err(idle) => {
+                            // Unloading NVML returns about 21 MiB; a re-init costs ~16 ms here.
+                            if let Some(Err(error)) = library.take().map(Nvml::shutdown) {
+                                eprintln!("NVIDIA telemetry shutdown: {error}");
+                            }
+                            if idle == mpsc::RecvTimeoutError::Disconnected {
+                                break;
+                            }
+                            continue;
+                        }
+                    };
                     if request.deadline <= Instant::now() {
                         continue;
                     }
@@ -232,11 +253,6 @@ pub fn nvidia_samples(ids: &[String]) -> BTreeMap<String, Value> {
                         .is_err()
                     {
                         eprintln!("NVIDIA telemetry: caller deadline expired");
-                    }
-                }
-                if let Some(library) = library {
-                    if let Err(error) = library.shutdown() {
-                        eprintln!("NVIDIA telemetry shutdown: {error}");
                     }
                 }
             })
@@ -378,10 +394,15 @@ pub fn sensors(
             records.push(json!({"id":hwmon.file_name().unwrap_or_default().to_string_lossy(),"card":null,"vendor":match name.as_str(){"amdgpu"=>"AMD","nouveau"=>"NVIDIA",_=>"Intel"},"driver":name,"temperature":maximum(temperatures(&hwmon)),"usage":null,"frequencyMHz":null}));
         }
     }
+    // NVML would wake a runtime-suspended GPU for a dashboard number: it reads as no data.
     let ids: Vec<_> = records
         .iter()
-        .filter(|record| record["driver"] == "nvidia")
-        .filter_map(|record| record["id"].as_str().map(str::to_owned))
+        .zip(&devices)
+        .filter(|(record, (device, _))| {
+            record["driver"] == "nvidia"
+                && read(&device.join("power/runtime_status")) != "suspended"
+        })
+        .filter_map(|(record, _)| record["id"].as_str().map(str::to_owned))
         .collect();
     if !ids.is_empty() {
         let samples = sample(&ids);
@@ -537,6 +558,12 @@ mod tests {
         assert_eq!(result["gpuPerc"], 0.5);
         assert_eq!(result["gpus"][0]["usage"], 0.0);
         assert_eq!(result["gpus"][1]["temperature"], Value::Null);
+        put(&other, "power/runtime_status", "suspended")?;
+        let result = sensors(root.path(), &mut |ids| {
+            assert_eq!(ids, ["0000:01:00.0"], "a suspended GPU is not woken");
+            BTreeMap::new()
+        });
+        assert_eq!(result["gpus"][1]["usage"], Value::Null);
         assert_eq!(pci_id("00000000:01:00.0"), "0000:01:00.0");
         fs::remove_file(device.join("driver"))?;
         fs::remove_file(other.join("driver"))?;
