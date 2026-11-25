@@ -1770,7 +1770,9 @@ async fn a_wheel_burst_over_strand_steps_live_and_starts_one_switch_for_its_last
             .cloned()
     };
     let mut picks = vec![selection(&runtime)];
+    let mut steps = Vec::new();
     for _ in 0..3 {
+        steps.push(std::time::Instant::now());
         runtime
             .stage(UiEvent::Scroll {
                 x: card.x + card.w / 2.,
@@ -1786,7 +1788,16 @@ async fn a_wheel_burst_over_strand_steps_live_and_starts_one_switch_for_its_last
         picks.windows(2).all(|pair| pair[0] != pair[1]),
         "each wheel step advances the selection by one: {picks:?}"
     );
-    assert!(lab.calls.try_recv().is_err(), "nothing switches mid-burst");
+    // A pending pick lands only when a later stage finds its release passed, so the burst may switch
+    // mid-way only if a loaded host spaced two steps that far apart; then those landings are legitimate.
+    if steps
+        .windows(2)
+        .all(|pair| pair[1] - pair[0] < WALLPAPER_WHEEL_RELEASE)
+    {
+        assert!(lab.calls.try_recv().is_err(), "nothing switches mid-burst");
+    } else {
+        while lab.calls.try_recv().is_ok() {}
+    }
     tokio::time::sleep(WALLPAPER_WHEEL_RELEASE).await;
     let (method, params) = next_wallpaper_runtime_call(&mut runtime, &mut lab.calls).await;
     assert_eq!(method, "wallpaper.activate");
