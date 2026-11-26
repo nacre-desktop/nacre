@@ -1083,6 +1083,25 @@ fn session_without_provider_timestamp_does_not_claim_old_activity() {
     );
 }
 
+#[test]
+fn a_chat_with_an_open_session_is_listed_under_running() {
+    let _guard = serial();
+    let (_, chat) = offline(json!({"available":true,"channels":{}}));
+    chat.st.borrow_mut().launcher = Some(json!({"chats":[
+        {"key":"saved","title":"Saved","provider":"codex","state":"saved","lastActivity":0},
+        {"key":"open","title":"Waiting","provider":"claude","state":"open","lastActivity":0},
+        {"key":"busy","title":"Working","provider":"claude","state":"running","lastActivity":0}
+    ],"projects":[],"warning":""}));
+    let projected = chat.project(&Stores::default());
+    let Value::List(rows) = &projected["launcher.chats"] else {
+        panic!("chat list")
+    };
+    let states: Vec<_> = rows.iter().map(|row| row["state"].clone()).collect();
+    assert_eq!(states, [json!("open"), json!("running"), json!("idle")]);
+    assert_eq!(rows[0]["group"], tr("bead.panel.launcher-running", &[]));
+    assert_eq!(rows[1]["group"], "");
+}
+
 #[tokio::test(flavor = "current_thread")]
 async fn launching_a_window_releases_attached_keyboard_but_keeps_pinned_and_detached_launchers() {
     let _guard = serial();

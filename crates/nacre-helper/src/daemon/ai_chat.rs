@@ -843,7 +843,15 @@ fn append_launcher_row(
         } else {
             Provider::Codex
         },
-        state: launcher_text(item["state"].as_str().unwrap_or("saved"), 32),
+        // Owner 2026-11-25, as in the AI app: an open session waiting for input is "open".
+        state: launcher_text(
+            match item["state"].as_str() {
+                Some("running") => "running",
+                _ if item["session"].as_str().is_some_and(|s| !s.is_empty()) => "open",
+                state => state.unwrap_or("saved"),
+            },
+            32,
+        ),
         last_activity: item["updated_at"].as_f64().unwrap_or(0.0),
     });
 }
@@ -966,6 +974,22 @@ mod tests {
         assert_eq!(chats.len(), 1);
         assert_eq!(records.len(), 1);
         assert_eq!(chats[0].project, "general-chat");
+    }
+
+    #[test]
+    fn launcher_rows_with_an_open_session_are_open_unless_working() {
+        let mut records = BTreeMap::new();
+        let mut chats = Vec::new();
+        for (id, state, session) in [
+            ("a", "running", json!("s1")),
+            ("b", "idle", json!("s2")),
+            ("c", "idle", json!(null)),
+        ] {
+            let row = json!({"id":id,"agent":"claude","title":id,"state":state,"session":session,"project":{"id":"general-chat"}});
+            append_launcher_row(&mut records, &mut chats, row);
+        }
+        let states: Vec<&str> = chats.iter().map(|c| c.state.as_str()).collect();
+        assert_eq!(states, ["running", "open", "idle"]);
     }
 
     #[test]

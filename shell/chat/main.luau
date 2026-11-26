@@ -210,11 +210,13 @@ else
     local DOT=T.spacing.sm
     local HALO=DOT+2*(T.spacing.xs-T.spacing.hairline/2)
     local running_count=0
-    for _,chat in get("launcher.chats") do if chat.state=="running" then running_count+=1 end end
+    for _,chat in get("launcher.chats") do if chat.state=="running" or chat.state=="open" then running_count+=1 end end
     local running_sub=string.lower(ui.tr("bead.panel.launcher-running"))
     add(launcher{id="recent-chats",scroll=ui.bind("launcher.scroll"),position="absolute",left=E,top=rows_top,width=INNER,height=list_h,
         gap=T.spacing.xs,row_height=function(item) return ROW+((item.group or "")~="" and GROUP_H or 0) end,model=ui.bind("launcher.chats"),key="key",render=function(item)
+            -- Working: the pulsing green halo; open and waiting for input: a primary dot (as in the AI app).
             local active=item.state=="running"
+            local open=active or item.state=="open"
             local pulse=active and ui.animate("chat.running-pulse:"..item.key,get("launcher.pulse") or 0,.2,"out-cubic") or 0
             local ws=item.workspace or ""
             local ws_w=ws~="" and ui.text_width(ws,T.fonts.sans,CAPTION)+2*T.spacing.sm or 0
@@ -226,7 +228,7 @@ else
                 ui.Row{id="line",width=INNER-2*PAD_X,height=ROW-2*PAD_Y,gap=T.spacing.compact,align="center",
                     -- Running: the shared pearl recipe (bar/pearl.luau) over a pulsing success fill; idle: a dim dot.
                     ui.Box{id="halo",width=HALO,height=HALO,radius=T.radii.full,fill=active and ui.alpha("success",.25*(.55+.45*pulse)) or "transparent",align="center",justify="center",
-                        ui.Box{id="running-dot",width=DOT,height=DOT,radius=T.radii.full,fill=active and ui.alpha("success",.55+.45*pulse) or ui.alpha("onSurface",.3),
+                        ui.Box{id="running-dot",width=DOT,height=DOT,radius=T.radii.full,fill=active and ui.alpha("success",.55+.45*pulse) or open and "primary" or ui.alpha("onSurface",.3),
                             radial=active and kit.tokens.gradients and pearl.layers(false) or nil}},
                     ui.Column{id="chat-detail",width=text_w,height=ROW-2*PAD_Y,gap=0,
                         ui.Text{id="title",text=item.title,width=text_w,height=TITLE_H,font_size=BODY,font_weight=500,color="onSurface"},
@@ -236,7 +238,7 @@ else
             if (item.group or "")=="" then return row end
             return ui.Column{id="group",width=INNER,height=ROW+GROUP_H,gap=0,
                 ui.Box{id="heading",width=INNER,height=GROUP_H,padding_left=PAD_X,padding_top=T.spacing.sm,
-                    ui.Text{text=active and item.group.." · "..running_count or item.group,width=INNER-PAD_X,height=META_H,font_size=CAPTION,font_weight=600,color="onSurfaceVariant"}},
+                    ui.Text{text=open and item.group.." · "..running_count or item.group,width=INNER-PAD_X,height=META_H,font_size=CAPTION,font_weight=600,color="onSurfaceVariant"}},
                 row}
         end})
     local empty=get("launcher.empty_state")

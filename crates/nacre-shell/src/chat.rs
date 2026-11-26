@@ -371,7 +371,7 @@ fn launcher_rows(data: &Json, query: &str) -> Vec<Json> {
                     .any(|value| value.to_lowercase().contains(query))
         })
         .collect();
-    rows.sort_by_key(|row| row["state"] != "running");
+    rows.sort_by_key(|row| !matches!(row["state"].as_str(), Some("running" | "open")));
     rows
 }
 fn provider_name(provider: Provider) -> &'static str {
@@ -934,6 +934,7 @@ impl Chat {
                     };
                     let state = match row["state"].as_str().unwrap_or("").to_lowercase().as_str() {
                         "running" => "running",
+                        "open" => "open",
                         _ => "idle",
                     };
                     let timestamp = row["lastActivity"].as_f64().unwrap_or(0.);
@@ -956,7 +957,7 @@ impl Chat {
                             &[("count", &((age / 86400.).floor() as u64).to_string())],
                         )
                     };
-                    let next = if state == "running" {
+                    let next = if state != "idle" {
                         "bead.panel.launcher-running"
                     } else if age < 86400. {
                         "bead.panel.launcher-today"
