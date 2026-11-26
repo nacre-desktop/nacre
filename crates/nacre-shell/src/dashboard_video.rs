@@ -25,6 +25,8 @@ pub(super) struct Preview {
     /// Set by the reader after it notifies, cleared when the projection takes the frame.
     unread: Arc<AtomicBool>,
     child: Arc<Mutex<Option<Child>>>,
+    /// Set by Drop: a child the preview thread starts after that is killed at once.
+    stopped: Arc<AtomicBool>,
     reader: Option<std::thread::JoinHandle<()>>,
 }
 impl Preview {
@@ -34,60 +36,78 @@ impl Preview {
             frame: Default::default(),
             unread: Default::default(),
             child: Default::default(),
+            stopped: Default::default(),
             reader: None,
         };
-        // Keep a failed attempt until its source/size/policy changes, rather than
-        // respawning on every dashboard projection when libmpv is unavailable.
-        if preview.spawn(notify).is_err() {
-            stop_child(&preview.child);
-        }
-        preview
-    }
-    fn spawn(&mut self, notify: Option<super::Notify>) -> std::io::Result<()> {
-        let mut child = bead::services::process::command(
-            std::env::current_exe()?.with_file_name("bead-wallpaper-video"),
-        )
-        .arg("--preview")
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::null())
-        .spawn()?;
+        // B0423: the child starts on the preview's own thread, not on the dashboard's resume path
+        // (Bead's process command forces std's fork path: a page-table copy of the shell, ~16 ms
+        // on every open while a video wallpaper plays). A failed attempt is kept until its
+        // source/size/policy changes, rather than respawning on every dashboard projection.
         let request = serde_json::json!({
-            "path": self.request.motion.path,
-            "file_identity": self.request.motion.file_identity,
-            "width": self.request.width, "height": self.request.height,
+            "path": preview.request.motion.path,
+            "file_identity": preview.request.motion.file_identity,
+            "width": preview.request.width, "height": preview.request.height,
         });
-        let input = child.stdin.take();
-        let output = child.stdout.take();
-        *self.child.lock().unwrap() = Some(child);
-        input
-            .ok_or_else(|| std::io::Error::other("preview stdin"))?
-            .write_all(request.to_string().as_bytes())?;
-        let mut output = output.ok_or_else(|| std::io::Error::other("preview stdout"))?;
-        let frame = self.frame.clone();
-        let unread = self.unread.clone();
-        let child = self.child.clone();
-        self.reader = Some(
-            std::thread::Builder::new()
-                .name("dashboard-video".into())
-                .spawn(move || {
-                    pump(&mut output, &frame, &unread, &notify, FRAME_GAP);
-                    stop_child(&child);
-                    frame.lock().unwrap().take();
-                    if let Some(notify) = &notify {
-                        notify(bead::wayland::UiEvent::Model(Default::default()));
-                    }
-                })?,
+        let (frame, unread, child, stopped) = (
+            preview.frame.clone(),
+            preview.unread.clone(),
+            preview.child.clone(),
+            preview.stopped.clone(),
         );
-        Ok(())
+        preview.reader = std::thread::Builder::new()
+            .name("dashboard-video".into())
+            .spawn(move || {
+                if let Ok(mut output) = launch(&request, &child, &stopped) {
+                    pump(&mut output, &frame, &unread, &notify, FRAME_GAP);
+                }
+                stop_child(&child);
+                frame.lock().unwrap().take();
+                if let Some(notify) = &notify {
+                    notify(bead::wayland::UiEvent::Model(Default::default()));
+                }
+            })
+            .ok();
+        preview
     }
     pub fn frame(&self) -> Option<Frame> {
         self.unread.store(false, Ordering::Release);
         self.frame.lock().unwrap().clone()
     }
 }
+/// Start the renderer and send it the request; the caller pumps its frames.
+fn launch(
+    request: &serde_json::Value,
+    slot: &Mutex<Option<Child>>,
+    stopped: &AtomicBool,
+) -> std::io::Result<std::process::ChildStdout> {
+    let mut child = bead::services::process::command(
+        std::env::current_exe()?.with_file_name("bead-wallpaper-video"),
+    )
+    .arg("--preview")
+    .stdin(Stdio::piped())
+    .stdout(Stdio::piped())
+    .stderr(Stdio::null())
+    .spawn()?;
+    let input = child.stdin.take();
+    let output = child.stdout.take();
+    {
+        // Under the slot's lock, so Drop's stop_child either finds this child or it sees `stopped`.
+        let mut slot = slot.lock().unwrap();
+        if stopped.load(Ordering::Acquire) {
+            let _ = child.kill();
+            let _ = child.wait();
+            return Err(std::io::Error::other("preview dropped"));
+        }
+        *slot = Some(child);
+    }
+    input
+        .ok_or_else(|| std::io::Error::other("preview stdin"))?
+        .write_all(request.to_string().as_bytes())?;
+    output.ok_or_else(|| std::io::Error::other("preview stdout"))
+}
 impl Drop for Preview {
     fn drop(&mut self) {
+        self.stopped.store(true, Ordering::Release);
         stop_child(&self.child);
         if let Some(reader) = self.reader.take() {
             let _ = reader.join();
@@ -178,6 +198,7 @@ mod tests {
             frame: Default::default(),
             unread: Default::default(),
             child: Arc::new(Mutex::new(Some(child))),
+            stopped: Default::default(),
             reader: Some(reader),
         });
         let stores = bead::core::Stores::default()
@@ -216,6 +237,7 @@ mod tests {
             frame: Default::default(),
             unread: Default::default(),
             child: Default::default(),
+            stopped: Default::default(),
             reader: None,
         });
         dashboard.project_with_stores(&bead::core::Stores::default());
@@ -247,6 +269,7 @@ mod tests {
             frame: Default::default(),
             unread: Default::default(),
             child: Default::default(),
+            stopped: Default::default(),
             reader: None,
         });
         let stores = bead::core::Stores::default()
@@ -314,6 +337,7 @@ mod tests {
             frame: Arc::new(Mutex::new(Some((7, shown.clone())))),
             unread: Default::default(),
             child: Default::default(),
+            stopped: Default::default(),
             reader: None,
         });
         let root = super::super::tests::root();
@@ -443,5 +467,31 @@ mod tests {
         assert!(read_frame(&mut &u32::MAX.to_le_bytes()[..]).is_err());
         assert!(read_frame(&mut &[2, 0, 0, 0, 1][..]).is_err());
         assert_eq!(&*read_frame(&mut &[2, 0, 0, 0, 1, 2][..]).unwrap(), &[1, 2]);
+    }
+    /// B0423: the child starts on the preview's own thread, so the dashboard's resume never pays its
+    /// fork (in tests the renderer binary is missing, so the old caller-side spawn failed at once).
+    #[test]
+    fn the_preview_child_starts_on_the_preview_thread() {
+        let path = std::env::current_exe().unwrap();
+        let motion = nacre_protocol::wallpaper::WallpaperMotion {
+            kind: nacre_protocol::wallpaper::MotionKind::Video,
+            file_identity: nacre_protocol::wallpaper::WallpaperFileIdentity::from_metadata(
+                &std::fs::metadata(&path).unwrap(),
+            ),
+            path: path.to_string_lossy().into_owned(),
+        };
+        let preview = Preview::start(
+            Request {
+                motion,
+                width: 1,
+                height: 1,
+            },
+            None,
+        );
+        assert!(
+            preview.reader.is_some(),
+            "the spawn runs on the dashboard-video thread, not the caller's"
+        );
+        drop(preview);
     }
 }
