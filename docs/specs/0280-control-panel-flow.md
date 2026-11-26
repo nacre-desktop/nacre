@@ -50,7 +50,8 @@ round (265e4a9ad) go away: the panel node is the body.
   (hover-opened only, below). The next plain open shows the overview. The close ends a running flow at
   once (a Wi-Fi prompt; a pending pairing gets one `bluetooth.pair.cancel`; a scan the panel started is
   stopped), because a parked panel is never dropped, while the closing page stays as shown; the next
-  open starts fresh. A revealing panel draws its own frame joins as it slides; the frame tiles leave it out.
+  open starts fresh. The frame tiles join an open panel (also a revealing one, whose scene keeps its reveal
+  motion at rest); leaving it out drew the straight frame rim across it (owner 2026-11-26).
 
 ## Hover-close policy
 

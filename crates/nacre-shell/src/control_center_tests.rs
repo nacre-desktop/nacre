@@ -1289,12 +1289,12 @@ fn control_center_pages_match_goldens() -> bead_test::Result<()> {
     Ok(())
 }
 
-/// Owner 2026-11-25 (item 9): the frame drawer opens as one slide from the right. Bead hands the frame its
-/// decorations with the opening panel at its final place from the first frame (`sync_decorations_in`), cold or
-/// from the warm cache, so the frame tiles draw nothing for it: the panel's own reveal art grows its joins with
-/// the slide, and its t=0 frame is empty (`control-s*-t0.00.png`).
+/// Owner 2026-11-26: an open control centre (its scene keeps its reveal motion at rest) is joined into the frame.
+/// Leaving every revealing panel out of the tiles drew the frame's straight rim across the open panel: a line
+/// under the bar title over the dashboard, the control centre's join popping in when its slide ended, and the
+/// launcher sitting over the bottom strip instead of growing out of it.
 #[test]
-fn the_frame_draws_nothing_for_an_opening_control_centre() -> bead_test::Result<()> {
+fn the_frame_joins_an_open_control_centre() -> bead_test::Result<()> {
     use crate::placement::{Attachment, Chrome, Frame};
     let _live = crate::placement::LIVE_TEST
         .lock()
@@ -1307,7 +1307,7 @@ fn the_frame_draws_nothing_for_an_opening_control_centre() -> bead_test::Result<
     let output = (1920u32, 1200u32);
     let origin = Frame::DEFAULT.positioner(Attachment::ControlCenter)(&scene, None, (1920, 1200));
     let frame = Chrome::new(Attachment::Attached(bead::core::Edge::Top), &colors)?;
-    let opening = frame.tiles(
+    let open = frame.tiles(
         Frame::DEFAULT,
         output,
         true,
@@ -1317,14 +1317,14 @@ fn the_frame_draws_nothing_for_an_opening_control_centre() -> bead_test::Result<
         }),
     )?;
     let bare = frame.tiles(Frame::DEFAULT, output, true, None)?;
-    assert_eq!(opening.len(), bare.len());
-    for (tile, without) in opening.iter().zip(&bare) {
-        assert!(
-            tile.rect == without.rect && tile.svg == without.svg,
-            "frame tile {:?} draws the panel's join at its final place",
-            tile.rect
-        );
-    }
+    assert!(
+        open.len() != bare.len()
+            || open
+                .iter()
+                .zip(&bare)
+                .any(|(tile, without)| tile.rect != without.rect || tile.svg != without.svg),
+        "the frame draws its straight rim across the open control centre"
+    );
     Ok(())
 }
 

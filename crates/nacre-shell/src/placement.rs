@@ -794,14 +794,10 @@ impl Chrome {
                 && rect.y <= top + 0.5
                 && rect.x + rect.w >= w - right - 0.5
                 && rect.y + rect.h >= h - bottom - 0.5;
-            // A revealing panel grows its own joins with the slide (`RevealArt`). Bead hands it over at
-            // its final place from the first frame, so merged here they stood there before the slide.
-            let reveals = panel
-                .scene
-                .motion
-                .as_ref()
-                .is_some_and(|m| m.reveal && m.art.is_some());
-            if !covers && !reveals {
+            // The open panel's joins belong to the frame (owner 2026-11-26). Leaving out a revealing panel
+            // left the frame's straight rim across every open panel's top or bottom; Bead hands the frame the
+            // panel at its final place from the first frame, which is Bead's to fix for the pre-slide slivers.
+            if !covers {
                 material.push(rect);
             }
         }
