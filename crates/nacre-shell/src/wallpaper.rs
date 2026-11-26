@@ -1536,7 +1536,12 @@ impl bead::wayland::WallpaperProvider for Consumer {
                 .unwrap_or_else(|p| p.into_inner())
                 .fade_started(epoch_ms(), revision);
         }
-        self.preview.take_fade()
+        let fade = self.preview.take_fade();
+        // Row 83 (3a): the video holds its frame for the fade (the shell's default fade is Bead's default).
+        crate::wallpaper_motion::hold_for(Duration::from_millis(
+            fade.unwrap_or_default().duration_ms.into(),
+        ));
+        fade
     }
     fn prepare_transition(&self, output: &str, width: u32, height: u32) -> Option<Vec<u8>> {
         let previous = self.displayed.lock().ok()?.get(output).cloned()?;

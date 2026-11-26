@@ -39,6 +39,46 @@ pub(crate) fn picker_open() -> bool {
     PICKER_OPEN.load(Ordering::Acquire)
 }
 
+/// Row 83 (3a): while a panel slides, a wallpaper fades or a workspace switches, the video holds its frame so
+/// the animation has the GPU to itself (owner trace 2026-11-26: a playing video keeps the iGPU clocked low and
+/// slides miss flips; with a still wallpaper they don't). It is Bead's Hold, as a user pause: the frame stays,
+/// the decoder is kept, so play resumes at once when the hold ends.
+static HOLD: std::sync::Mutex<Option<Instant>> = std::sync::Mutex::new(None);
+/// Wakes the controller for a new hold (its loop otherwise looks every 250 ms, a whole slide).
+static POKE: std::sync::Mutex<Option<mpsc::Sender<Msg>>> = std::sync::Mutex::new(None);
+/// niri's default workspace switch (a critically damped spring) settles in about this long.
+const WORKSPACE_SWITCH_HOLD: Duration = Duration::from_millis(350);
+
+/// Hold the video for `duration` from now; the longest pending hold wins.
+pub(crate) fn hold_for(duration: Duration) {
+    extend(
+        &mut HOLD.lock().unwrap_or_else(|p| p.into_inner()),
+        Instant::now() + duration,
+    );
+    if let Some(poke) = POKE.lock().unwrap_or_else(|p| p.into_inner()).as_ref() {
+        let _ = poke.send(Msg::Poke);
+    }
+}
+fn extend(hold: &mut Option<Instant>, until: Instant) {
+    if hold.is_none_or(|current| current < until) {
+        *hold = Some(until);
+    }
+}
+fn held_until(now: Instant) -> Option<Instant> {
+    HOLD.lock()
+        .unwrap_or_else(|p| p.into_inner())
+        .filter(|until| *until > now)
+}
+/// A hold freezes every output like a user pause.
+fn with_hold(mut map: BTreeMap<String, Inputs>, held: bool) -> BTreeMap<String, Inputs> {
+    if held {
+        for inputs in map.values_mut() {
+            inputs.user_paused = true;
+        }
+    }
+    map
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Mode {
     Full,
@@ -235,6 +275,7 @@ impl Controller {
         renderer: impl Fn() -> std::process::Command + Send + 'static,
     ) -> Option<Self> {
         let (sender, receiver) = mpsc::channel();
+        *POKE.lock().unwrap_or_else(|p| p.into_inner()) = Some(sender.clone());
         let poke = {
             let sender = sender.clone();
             Arc::new(move || {
@@ -316,6 +357,7 @@ fn run(deps: Deps, supervisor: supervisor::Supervisor, receiver: mpsc::Receiver<
     let mut source = None;
     let mut sent: Option<(Decoder, Vec<String>)> = None;
     let mut renderer_state = None;
+    let mut active_workspaces = None;
     loop {
         let mut prefs = deps
             .picker
@@ -369,14 +411,32 @@ fn run(deps: Deps, supervisor: supervisor::Supervisor, receiver: mpsc::Receiver<
                 services.session.locked = state.locked;
                 services.session.sleeping = state.sleeping;
             }
+            // The compositor reports a workspace switch as it starts its animation.
+            let active: Vec<_> = windows
+                .workspaces
+                .iter()
+                .filter(|workspace| workspace.active)
+                .map(|workspace| workspace.id.clone())
+                .collect();
+            if active_workspaces
+                .as_ref()
+                .is_some_and(|last| *last != active)
+            {
+                hold_for(WORKSPACE_SWITCH_HOLD);
+            }
+            active_workspaces = Some(active);
+            let hold = held_until(Instant::now());
             let now = start.elapsed().as_millis() as u64;
             let decision = group.step(
                 &prefs.policy(),
-                &inputs(
-                    &windows,
-                    &services,
-                    prefs,
-                    windows_away(picker_open, deps.overview.as_ref()),
+                &with_hold(
+                    inputs(
+                        &windows,
+                        &services,
+                        prefs,
+                        windows_away(picker_open, deps.overview.as_ref()),
+                    ),
+                    hold.is_some(),
                 ),
                 now,
             );
@@ -393,6 +453,11 @@ fn run(deps: Deps, supervisor: supervisor::Supervisor, receiver: mpsc::Receiver<
             }
             if let Some(deadline) = decision.deadline {
                 wait = Duration::from_millis(deadline.saturating_sub(now) + 1);
+            }
+            if let Some(until) = hold {
+                wait = wait.min(
+                    until.saturating_duration_since(Instant::now()) + Duration::from_millis(1),
+                );
             }
         }
         // This loop also times the scheduled rotation's warm hold (it wakes on every wallpaper topic change).
@@ -955,5 +1020,38 @@ mod tests {
         std::fs::write(&clip, b"replaced with longer content").unwrap();
         assert!(crate::wallpaper::parse_motion(&state(path, "video", true)).is_none());
         let _ = std::fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn a_hold_pauses_every_output_and_play_resumes_when_it_ends() {
+        let (windows, services, prefs) = (desktop(), Services::default(), Prefs::default());
+        let mut group = Group::default();
+        let held = group.step(
+            &prefs.policy(),
+            &with_hold(inputs(&windows, &services, prefs, false), true),
+            0,
+        );
+        assert_eq!(
+            held.decoder,
+            Decoder::Pause,
+            "a slide keeps the frame, not the decoder running"
+        );
+        let after = group.step(
+            &prefs.policy(),
+            &with_hold(inputs(&windows, &services, prefs, false), false),
+            400,
+        );
+        assert_eq!(after.decoder, Decoder::Play);
+    }
+
+    #[test]
+    fn the_longest_pending_hold_wins() {
+        let now = Instant::now();
+        let mut hold = None;
+        extend(&mut hold, now + Duration::from_millis(300));
+        extend(&mut hold, now + Duration::from_millis(100));
+        assert_eq!(hold, Some(now + Duration::from_millis(300)));
+        extend(&mut hold, now + Duration::from_millis(700));
+        assert_eq!(hold, Some(now + Duration::from_millis(700)));
     }
 }

@@ -6455,6 +6455,8 @@ impl SceneSource for Runtime {
             && let Some(duration) = self.session.motion_duration(*open)
         {
             self.pending_panel_animation_duration = Some(duration);
+            // Row 83 (3a): a sliding panel has the GPU to itself; the video wallpaper holds its frame.
+            crate::wallpaper_motion::hold_for(duration);
         }
         if matches!(&event, UiEvent::Reload) {
             #[cfg(test)]
