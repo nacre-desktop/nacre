@@ -1048,6 +1048,16 @@ impl RotationWarm {
     }
     /// A fade started towards `revision`: newer than the plan's, it is the rotation's (or replaced it).
     fn fade_started(&mut self, now: u64, revision: u64) {
+        // Before the window it is not the rotation's: a hotplugged output's first frame bumps the
+        // revision without moving the due, and must not cancel the warm hold to come.
+        // shortcut: a hotplug inside the 3 s lead still ends the hold (that rotation runs cold);
+        // re-seed the plan on such a revision bump if it shows up in the journal.
+        if self
+            .plan
+            .is_some_and(|(due, _)| now + ROTATION_WARM_LEAD_MS < due)
+        {
+            return;
+        }
         self.faded = self.faded.max(revision);
         if !rotation_warm_wanted(now, self.plan, self.faded) {
             self.hold = None;
@@ -2608,6 +2618,20 @@ mod tests {
             8,
             "every take and drop called back once"
         );
+    }
+
+    #[test]
+    fn a_fade_before_the_window_does_not_cancel_the_rotations_warm_hold() {
+        let gate = crate::shell_control::Gate::new();
+        let live = Some(&gate);
+        let mut warm = RotationWarm::default();
+        warm.update(78_000, Some(100_000), 8, live);
+        // An output plugged in at 78 s: its first frame is revision 9, the due stays.
+        warm.fade_started(78_500, 9);
+        warm.update(97_000, Some(100_000), 9, live);
+        assert!(bead::wayland::ShellControl::wallpaper_warm(&*gate));
+        warm.fade_started(100_020, 10);
+        assert!(!bead::wayland::ShellControl::wallpaper_warm(&*gate));
     }
 
     #[test]
