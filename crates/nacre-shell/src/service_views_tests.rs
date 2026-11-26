@@ -1913,6 +1913,56 @@ fn bar_status_states_render_every_attention_state() -> Result<()> {
     Ok(())
 }
 
+/// Row 83 S1 (Bead B0418): the title's width moves on a sampled `ui.animated` marker, so a title change neither
+/// re-runs the bar script on every animation frame nor re-keys the title text: the label is ellipsized once, at
+/// its target width, and only the island grows around it (the eager `ui.animate` re-ellipsized it per frame).
+#[test]
+fn a_growing_title_keeps_its_label_while_the_island_moves() -> Result<()> {
+    let mut values = super::initial_models()?;
+    values.extend(parity_models());
+    values.insert("bead.focused_title".into(), Value::Text("a".into()));
+    let mut h = Harness::load(
+        &root(),
+        Path::new("bar/main.luau"),
+        &root().join("palette.json"),
+        values,
+        Config {
+            width: 1920,
+            height: 50,
+            scale: 1.,
+        },
+    )?;
+    settle_harness_animations(&mut h)?;
+    let title = "A much longer window title than the one the bar showed before";
+    h.update(BTreeMap::from([(
+        "bead.focused_title".into(),
+        Value::Text(title.into()),
+    )]))?;
+    let mut labels = std::collections::BTreeSet::new();
+    for _ in 0..64 {
+        labels.extend(
+            bar_texts(&h)
+                .into_iter()
+                .filter(|(text, _)| text.starts_with("A much"))
+                .map(|(text, _)| text),
+        );
+        let Some(deadline) = h.session.preview_deadline() else {
+            break;
+        };
+        let now = std::time::Instant::now();
+        if deadline > now {
+            std::thread::sleep(deadline.duration_since(now));
+        }
+        h.update(BTreeMap::new())?;
+    }
+    assert_eq!(
+        labels,
+        std::collections::BTreeSet::from([title.to_owned()]),
+        "the title label is re-ellipsized while its width animates"
+    );
+    Ok(())
+}
+
 /// The daemon's `recorder` topic reaches the bar: with the status pill placed at an offset (the owner's layout),
 /// the indicator stands in its own slot left of the pill instead of at the right edge on top of it.
 #[test]

@@ -78,6 +78,14 @@ local function natural_content_width(style)
     local date_width=ui.text_width(shown_date,clock_font,t.detail_font)
     return time_width+date_width+(time_width>0 and date_width>0 and t.item_gap or 0)
 end
+-- `f(width)` over an out-cubic `ui.animated` width: a plain number while it rests, else a track over the driver (Luau cannot do arithmetic on a marker).
+local function follow(drive,rest,f)
+    if not drive then return f(rest) end
+    local from,to=ui.range(drive)
+    if from==to then return f(to) end
+    local lo,hi=math.min(from,to),math.max(from,to)
+    return ui.track(drive,{lo,hi},{f(lo),f(hi)})
+end
 local function clock_content(style,instance_id,available_width)
     local time=ui.resolve_for_check(ui.bind("bar.clock.text")) or ""
     local time_capacity=math.min(time_max,available_width or time_max)
@@ -86,16 +94,18 @@ local function clock_content(style,instance_id,available_width)
         local shown=measure.ellipsize(time,time_capacity,clock_font,t.clock_font)
         local natural=math.min(time_capacity,math.max(math.min(t.clock_min_width,time_capacity),
             ui.text_width(shown,clock_font,t.clock_font)))
-        ui.animate("clock-date-width:"..tostring(instance_id or "clock"),natural,0,"out-cubic")
+        -- Keeps the shared key in step with the width, so a switch to the date style animates from here; the marker is unused.
+        ui.animated("clock-date-width:"..tostring(instance_id or "clock"),natural,0,"out-cubic")
         return status_text{id="time",text=shown,width=natural,max_width=time_capacity,shrink=0,font_size=t.clock_font,font_weight=500,color=t.clock_tone}
     elseif style=="seconds" then
         local seconds=ui.resolve_for_check(ui.bind("bead.desktop.clock.seconds")) or ""
         local capacity=math.min(seconds_max,available_width or seconds_max)
         local value=clock_with_seconds(time,seconds)
         local natural=ui.text_width(measure.ellipsize(value,capacity,clock_font,t.clock_font),clock_font,t.clock_font)
-        local width=preview and natural or math.min(capacity,
-            ui.animate("clock-seconds-width:"..tostring(instance_id or "clock"),natural,.18,"out-cubic"))
-        local shown=measure.ellipsize(value,width,clock_font,t.clock_font)
+        -- Ellipsized once at the target; only the box moves.
+        local target=math.min(capacity,natural)
+        local width=follow(not preview and ui.animated("clock-seconds-width:"..tostring(instance_id or "clock"),natural,.18,"out-cubic") or nil,natural,function(w) return math.min(capacity,w) end)
+        local shown=measure.ellipsize(value,target,clock_font,t.clock_font)
         return status_text{id="time-seconds",text=shown,width=width,max_width=capacity,shrink=0,font_size=t.clock_font,font_weight=500,color=t.clock_tone}
     end
     local date=ui.resolve_for_check(ui.bind("bead.desktop.clock.date")) or ""
@@ -105,13 +115,16 @@ local function clock_content(style,instance_id,available_width)
     local target_time=math.min(time_natural,capacity)
     local target_date=math.min(date_natural,math.max(0,capacity-target_time-(date_natural>0 and t.item_gap or 0)))
     local target=target_time+target_date+(target_date>0 and target_time>0 and t.item_gap or 0)
-    local width=preview and target or math.min(capacity,
-        ui.animate("clock-date-width:"..tostring(instance_id or "clock"),target,.18,"out-cubic"))
-    local time_width=math.min(time_natural,math.max(0,width-(width>time_natural and t.item_gap or 0)))
-    local date_width=math.min(date_natural,math.max(0,width-time_width-(time_width>0 and t.item_gap or 0)))
-    local gap=date_width>0 and time_width>0 and t.item_gap or 0
-    local date_node=status_text{id="date",text=measure.ellipsize(date,date_width,clock_font,t.detail_font),width=date_width,max_width=date_width,shrink=0,font_size=t.detail_font,color="ink2"}
-    local time_node=status_text{id="time",text=measure.ellipsize(time,time_width,clock_font,t.clock_font),width=time_width,max_width=time_width,shrink=0,font_size=t.clock_font,font_weight=500,color=t.clock_tone}
+    local drive=not preview and ui.animated("clock-date-width:"..tostring(instance_id or "clock"),target,.18,"out-cubic") or nil
+    -- The widths derived from the row width are tracks over the same driver; the text is ellipsized once, at the target widths.
+    local function time_at(w) w=math.min(capacity,w); return math.min(time_natural,math.max(0,w-(w>time_natural and t.item_gap or 0))) end
+    local function date_at(w) w=math.min(capacity,w); return math.min(date_natural,math.max(0,w-time_at(w)-(time_at(w)>0 and t.item_gap or 0))) end
+    local width=follow(drive,target,function(w) return math.min(capacity,w) end)
+    local time_width=follow(drive,target,time_at)
+    local date_width=follow(drive,target,date_at)
+    local gap=follow(drive,target,function(w) return date_at(w)>0 and time_at(w)>0 and t.item_gap or 0 end)
+    local date_node=status_text{id="date",text=measure.ellipsize(date,date_at(target),clock_font,t.detail_font),width=date_width,max_width=date_width,shrink=0,font_size=t.detail_font,color="ink2"}
+    local time_node=status_text{id="time",text=measure.ellipsize(time,time_at(target),clock_font,t.clock_font),width=time_width,max_width=time_width,shrink=0,font_size=t.clock_font,font_weight=500,color=t.clock_tone}
     return ui.Row{id="time-date",width=width,height=t.status_height,radius=t.status_radius,gap=gap,align="center",time_node,date_node}
 end
 local function bar(props,settings,_data)

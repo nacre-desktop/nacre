@@ -27,6 +27,14 @@ local function middle_ellipsize(text,width,size)
     end
     return fit(best)
 end
+-- `f(width)` over an out-cubic `ui.animated` width: a plain number while it rests, else a track over the driver (Luau cannot do arithmetic on a marker).
+local function follow(drive,rest,f)
+    if not drive then return f(rest) end
+    local from,to=ui.range(drive)
+    if from==to then return f(to) end
+    local lo,hi=math.min(from,to),math.max(from,to)
+    return ui.track(drive,{lo,hi},{f(lo),f(hi)})
+end
 -- The trace takes the current pearl's colour (context.pearl_accent by workspace index).
 local function trace_accent()
     for _,workspace in ui.resolve_for_check(ui.bind("bead.workspaces")) or {} do
@@ -97,23 +105,25 @@ return {id="title",title="Title",icon="title",category="bar",data={topics={},act
             local full=ui.resolve_for_check(title) or ""
             if min_width==title_min_width and max_width==t.title_max_width and display=="window title" and behavior=="hover"
                 and not props.local_layout and not props.available_width and props.instance.host=="top_bar" and props.instance.slot.region=="centre" then
-            local animated_width=ui.animate("title.width."..props.instance.iid,title_width,.18,"out-cubic")
-            local animated_cue=math.min(t.title_cue_max,animated_width+t.title_icon+t.title_gap+10)
+            local drive=ui.animated("title.width."..props.instance.iid,title_width,.18,"out-cubic")
+            local function cue_at(w) return math.min(t.title_cue_max,w+t.title_icon+t.title_gap+10) end
+            local animated_cue=follow(drive,title_width,cue_at)
+            local cue_halo=follow(drive,title_width,function(w) return cue_at(w)+4 end)
             -- Keep the bound title reactive; resolve its text only when it exceeds
             -- the configured max-width clipping bound and needs an ellipsis.
             local shown=title
-            if ui.text_width(title,font,t.title_font)>animated_width then
-                shown=middle_ellipsize(full,animated_width,t.title_font)
+            if ui.text_width(title,font,t.title_font)>title_width then
+                shown=middle_ellipsize(full,title_width,t.title_font)
             end
             return ui.Group{ui.Row{id="title-cue",position="absolute",left="28%",right="28%",top=c.islands and 5 or 7,height=36,justify="center",visible=ui.bind("bar.title.cue.visible"),
-        ui.Box{id="cue",width=animated_cue+4,height=36,radius=18,fill=ui.alpha("primary",ui.bind("bar.title.cue.halo")),
+        ui.Box{id="cue",width=cue_halo,height=36,radius=18,fill=ui.alpha("primary",ui.bind("bar.title.cue.halo")),
             ui.Box{id="body",position="absolute",left=2,top=2,width=animated_cue,height=32,radius=16,fill=ui.alpha("primary",ui.bind("bar.title.cue.body")),border_width=1,border_color=ui.alpha("primary",ui.bind("bar.title.cue.border"))},
         },
     },
     ui.Button{id="title-band",position="absolute",left="28%",right="28%",top=c.band_top,height=c.band_height,direction="row",justify="center",align="center",fill="transparent",hover_fill="transparent",focus_ring=false,focus_on_pointer=false,activate_on_release=true,edge_hover=true,aria_label=ui.tr("bead.bar.active-window"),on_activate=ui.action("bar.title"),
         -- The drag handle covers the band; it must stay part of the edge-hover target.
-        ui.Row{id="title-content",width=animated_width+t.title_icon+t.title_gap+(c.islands and 32 or 0),height=c.band_height,justify="center",align="center",gap=t.title_gap,drag_payload=props.instance.iid,edge_hover=true,fill=c.i_fill,border_width=c.i_stroke,border_color=c.i_stroke_color,shadow=c.i_shadow,radius=c.islands and t.pill_radius or nil,
-            table.unpack(title_children(shown,animated_width,true,true)),
+        ui.Row{id="title-content",width=follow(drive,title_width,function(w) return w+t.title_icon+t.title_gap+(c.islands and 32 or 0) end),clip_children=true,height=c.band_height,justify="center",align="center",gap=t.title_gap,drag_payload=props.instance.iid,edge_hover=true,fill=c.i_fill,border_width=c.i_stroke,border_color=c.i_stroke_color,shadow=c.i_shadow,radius=c.islands and t.pill_radius or nil,
+            table.unpack(title_children(shown,title_width,true,true)),
         },
         trace(props.instance.iid),
         kit.Tooltip{id="tray-tooltip",edge="top",bar_size=-8,left=0,width="100%",height=30,padding=3,visible=ui.bind("bead.desktop.tray.tooltip.visible"),
@@ -142,23 +152,27 @@ return {id="title",title="Title",icon="title",category="bar",data={topics={},act
                 math.ceil(math.max(min_width-icon_width-gap,ui.text_width(title_text,font,t.title_font))))) or 0
             -- Keep the allocation at its configured maximum reservation while the
             -- rendered child follows the natural title width smoothly.
-            local animated_text_width=show_text and ui.animate("title.width."..props.instance.iid,natural_width,.18,"out-cubic") or 0
-            -- A shrinking max width takes effect immediately even while the existing
-            -- natural-width animation is still moving toward its new target.
-            local text_width=math.max(0,math.min(c.whole_width(animated_text_width),text_capacity))
+            local drive=show_text and ui.animated("title.width."..props.instance.iid,natural_width,.18,"out-cubic") or nil
+            -- The label is ellipsized once, at the target width; only the island and cue move. A shrinking max
+            -- width takes effect immediately, as the clamp applies to the animated endpoints too.
+            local function text_at(w) return math.max(0,math.min(c.whole_width(w),text_capacity)) end
+            local function content_at(w) return math.min(capacity,math.max(math.min(min_width,capacity),icon_width+gap+text_at(w))) end
+            local text_width=text_at(natural_width)
             local shown=show_text and middle_ellipsize(title_text,text_width,t.title_font) or ""
-            local content_width=math.min(capacity,math.max(math.min(min_width,capacity),icon_width+gap+text_width))
             local action=behavior=="click" and ui.action("view.open","dashboard-today")
                 or behavior=="hover" and ui.action("bar.title") or nil
             local kids={}
             if centered then
-                local cue=math.min(t.title_cue_max,content_width+10)
+                local function cue_at(w) return math.min(t.title_cue_max,content_at(w)+10) end
+                local cue=follow(drive,natural_width,cue_at)
+                local cue_halo=follow(drive,natural_width,function(w) return cue_at(w)+4 end)
                 table.insert(kids,ui.Row{id="title-cue",position="absolute",left="28%",right="28%",top=c.islands and 5 or 7,height=36,justify="center",visible=ui.bind("bar.title.cue.visible"),
-                    ui.Box{id="cue",width=cue+4,height=36,radius=18,fill=ui.alpha("primary",ui.bind("bar.title.cue.halo")),
+                    ui.Box{id="cue",width=cue_halo,height=36,radius=18,fill=ui.alpha("primary",ui.bind("bar.title.cue.halo")),
                         ui.Box{id="body",position="absolute",left=2,top=2,width=cue,height=32,radius=16,fill=ui.alpha("primary",ui.bind("bar.title.cue.body")),border_width=1,border_color=ui.alpha("primary",ui.bind("bar.title.cue.border"))}}})
             end
             local pad=c.islands and 32 or 0
-            local content=c.island{id="title-content",width=content_width+pad,height=c.band_height,gap=gap,align="center",justify="center",radius=c.islands and t.pill_radius or nil,
+            local band_width=follow(drive,natural_width,function(w) return content_at(w)+pad end)
+            local content=c.island{id="title-content",width=band_width,height=c.band_height,gap=gap,align="center",justify="center",radius=c.islands and t.pill_radius or nil,
                 drag_payload=props.instance.iid,edge_hover=behavior=="hover",clip_children=true}
             for _,kid in title_children(shown,text_width,show_icon,show_text) do table.insert(content,kid) end
             local row={id=centered and "title-band" or "title-local",height=c.band_height,direction="row",gap=0,align="center",justify="center",
@@ -166,7 +180,7 @@ return {id="title",title="Title",icon="title",category="bar",data={topics={},act
             if centered then
                 row.position="absolute"; row.left="28%"; row.right="28%"; row.top=c.band_top
                 row.fill="transparent"; row.hover_fill="transparent"; row.focus_ring=false
-            else row.width=content_width+pad end
+            else row.width=band_width end
             table.insert(row,ui.Row(content))
             if centered and show_text then
                 table.insert(row,trace(props.instance.iid))
