@@ -29,7 +29,6 @@ pub const WIDTH: f64 = 470.;
 const SANS: &str = "IBM Plex Sans";
 const MONO: &str = "JetBrainsMono Nerd Font";
 const HEARTBEAT: Duration = Duration::from_secs(10);
-const PULSE_TICK: Duration = Duration::from_millis(50);
 const LAUNCHER_REFRESH: Duration = Duration::from_secs(10);
 const LAUNCHER_CACHE_LIMIT: usize = 64 * 1024;
 const LAUNCHER_CACHE_ROWS: usize = 30;
@@ -679,13 +678,13 @@ impl Chat {
         })
     }
     /// The open heartbeat: one wake per interval while the panel is shown.
-    fn tick(&self, live: bool, working: bool) {
+    fn tick(&self, live: bool) {
         let mut ticker = self.ticker.borrow_mut();
         if !live {
             *ticker = None;
             return;
         }
-        let period = if working { PULSE_TICK } else { self.heartbeat };
+        let period = self.heartbeat;
         if ticker
             .as_ref()
             .is_some_and(|current| current.period == period)
@@ -819,25 +818,16 @@ impl Chat {
     pub fn project(&self, stores: &Stores) -> BTreeMap<String, Value> {
         let open = stores.get("panel.open") != Some(&Value::Bool(false));
         if !open {
-            self.tick(false, false);
+            self.tick(false);
             let mut st = self.st.borrow_mut();
             st.parsed = None;
             self.transcript.borrow_mut().release();
             return BTreeMap::new();
         }
         self.poll();
-        let launcher_visible =
-            !matches!(stores.get("chat.section"), Some(Value::Text(section)) if section == "chat");
-        let working = self
-            .st
-            .borrow()
-            .launcher
-            .as_ref()
-            .and_then(|value| value["chats"].as_array())
-            .is_some_and(|rows| {
-                launcher_visible && rows.iter().any(|row| row["state"] == "running")
-            });
-        self.tick(true, working);
+        // Row 83: the running dot breathes on a sampled Bead loop (shell/chat/main.luau), so a running
+        // chat needs no 50 ms wake, projection or Luau run per frame.
+        self.tick(true);
         let handoff = std::mem::take(&mut self.st.borrow_mut().launcher_handoff);
         let section = match stores.get("chat.section") {
             Some(Value::Text(s)) => s.clone(),
@@ -978,16 +968,6 @@ impl Chat {
                 })
                 .collect();
             out.insert("launcher.chats".into(), Value::list(rows));
-            let pulse = if working {
-                let phase = std::time::SystemTime::now()
-                    .duration_since(std::time::UNIX_EPOCH)
-                    .unwrap_or_default()
-                    .as_secs_f64();
-                (0.5 + 0.5 * (phase * std::f64::consts::TAU / 1.6).sin()).clamp(0., 1.)
-            } else {
-                0.
-            };
-            out.insert("launcher.pulse".into(), number(pulse));
             let selected_provider = match stores.get("launcher.provider") {
                 Some(Value::Text(v)) if matches!(v.as_str(), "claude" | "codex") => v.clone(),
                 _ => data["defaultProvider"]

@@ -217,7 +217,8 @@ else
             -- Working: the pulsing green halo; open and waiting for input: a primary dot (as in the AI app).
             local active=item.state=="running"
             local open=active or item.state=="open"
-            local pulse=active and ui.animate("chat.running-pulse:"..item.key,get("launcher.pulse") or 0,.2,"out-cubic") or 0
+            -- Row 83: a sampled 1.6 s Bead loop, so the breathing dot runs no projection or Luau per frame.
+            local pulse=active and ui.pulse("chat.running-pulse:"..item.key,1.6,0,1) or nil
             local ws=item.workspace or ""
             local ws_w=ws~="" and ui.text_width(ws,T.fonts.sans,CAPTION)+2*T.spacing.sm or 0
             local text_w=INNER-2*PAD_X-HALO-T.spacing.compact-(ws_w>0 and ws_w+T.spacing.compact or 0)
@@ -227,8 +228,8 @@ else
                 on_activate=get("launcher.can_open") and action("launcher:open:"..item.key) or nil,
                 ui.Row{id="line",width=INNER-2*PAD_X,height=ROW-2*PAD_Y,gap=T.spacing.compact,align="center",
                     -- Running: the shared pearl recipe (bar/pearl.luau) over a pulsing success fill; idle: a dim dot.
-                    ui.Box{id="halo",width=HALO,height=HALO,radius=T.radii.full,fill=active and ui.alpha("success",.25*(.55+.45*pulse)) or "transparent",align="center",justify="center",
-                        ui.Box{id="running-dot",width=DOT,height=DOT,radius=T.radii.full,fill=active and ui.alpha("success",.55+.45*pulse) or open and "primary" or ui.alpha("onSurface",.3),
+                    ui.Box{id="halo",width=HALO,height=HALO,radius=T.radii.full,fill=active and ui.alpha("success",ui.track(pulse,{0,1},{.1375,.25})) or "transparent",align="center",justify="center",
+                        ui.Box{id="running-dot",width=DOT,height=DOT,radius=T.radii.full,fill=active and ui.alpha("success",ui.track(pulse,{0,1},{.55,1})) or open and "primary" or ui.alpha("onSurface",.3),
                             radial=active and kit.tokens.gradients and pearl.layers(false) or nil}},
                     ui.Column{id="chat-detail",width=text_w,height=ROW-2*PAD_Y,gap=0,
                         ui.Text{id="title",text=item.title,width=text_w,height=TITLE_H,font_size=BODY,font_weight=500,color="onSurface"},

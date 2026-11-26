@@ -30,18 +30,21 @@ pub(crate) fn serial() -> std::sync::MutexGuard<'static, ()> {
         }
     }
 }
+/// Row 83 (3c audit): a running chat's dot breathes on a sampled `ui.pulse`, so the open heartbeat keeps its
+/// pace and nothing projects a wall-clock pulse (it used to wake the view every 50 ms and re-run its Luau).
 #[test]
-fn running_indicator_ticker_starts_stops_and_uses_fast_period_only_while_working() {
+fn a_running_chat_keeps_the_heartbeat_pace_and_projects_no_pulse() {
     let _guard = serial();
     let (_, chat) = offline(json!({"available":true,"channels":{}}));
     *chat.notify.borrow_mut() = Some(Arc::new(|_| {}));
     chat.st.borrow_mut().launcher = Some(json!({"chats":[{"state":"running"}]}));
-    chat.project(&Stores::default());
-    assert_eq!(chat.ticker.borrow().as_ref().unwrap().period, PULSE_TICK);
-    chat.st.borrow_mut().launcher = Some(json!({"chats":[{"state":"saved"}]}));
-    let idle = chat.project(&Stores::default());
-    assert_eq!(chat.ticker.borrow().as_ref().unwrap().period, HEARTBEAT);
-    assert_eq!(idle["launcher.pulse"], number(0.));
+    let running = chat.project(&Stores::default());
+    assert_eq!(
+        chat.ticker.borrow().as_ref().unwrap().period,
+        HEARTBEAT,
+        "a running chat must not speed up the heartbeat"
+    );
+    assert!(!running.contains_key("launcher.pulse"));
     chat.project(&stores(&[("panel.open", Value::Bool(false))]));
     assert!(chat.ticker.borrow().is_none());
 }
@@ -966,7 +969,6 @@ async fn launcher_cache_is_first_frame_and_refreshes_while_actions_stay_availabl
     assert_eq!(rows.len(), 12);
     assert_eq!(rows[0]["title"], "Saved cache title");
     assert_eq!(rows[0]["state"], "idle");
-    assert_eq!(first["launcher.pulse"], number(0.));
     if std::env::var("NACRE_TEST_PERF").as_deref() == Ok("1") {
         assert!(
             first_frame_ms < 30,
@@ -1188,8 +1190,6 @@ async fn launcher_matches_scale_and_detached_goldens() -> bead_test::Result<()> 
     }
     projected.insert("launcher.chats".into(), Value::list(rows));
     projected.insert("panel.open".into(), Value::Bool(true));
-    // The running dot pulses on the wall clock; goldens hold it at rest.
-    projected.insert("launcher.pulse".into(), number(0.));
     for scale in [1., 1.5] {
         let mut regular = harness(projected.clone(), scale)?;
         let nodes = regular.session.view_nodes();
