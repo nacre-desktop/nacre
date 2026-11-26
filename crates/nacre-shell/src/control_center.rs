@@ -85,6 +85,9 @@ pub struct ControlCenter {
     store: RefCell<Option<Arc<dyn Source>>>,
     /// Closed with its daemon leases dropped (row 73), see [`Self::park`].
     parked: std::cell::Cell<bool>,
+    /// A prepared control centre is closed from birth; only a shown one freezes while closed, so the prewarm
+    /// lays out its sections on their data (the open height) before it parks.
+    shown: std::cell::Cell<bool>,
     notify: RefCell<Option<Notify>>,
     st: RefCell<St>,
 }
@@ -298,6 +301,7 @@ impl ControlCenter {
             topics: RefCell::new(topics),
             store: RefCell::new(store),
             parked: Default::default(),
+            shown: Default::default(),
             notify: Default::default(),
             st: Default::default(),
         }
@@ -1456,7 +1460,10 @@ impl ControlCenter {
 
     /// Project the open panel; a hidden panel projects nothing.
     pub fn project(&self, stores: &Stores) -> BTreeMap<String, Value> {
-        if stores.get("panel.open") == Some(&Value::Bool(false)) {
+        if stores.get("panel.open") == Some(&Value::Bool(true)) {
+            self.shown.set(true);
+        }
+        if self.shown.get() && stores.get("panel.open") == Some(&Value::Bool(false)) {
             return BTreeMap::new();
         }
         self.poll();

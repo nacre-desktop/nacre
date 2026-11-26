@@ -232,7 +232,8 @@ fn stale_or_unavailable_topics_publish_no_source() {
     };
     assert!(all.iter().all(|s| s["id"] != "network.wifi"));
     assert_eq!(out["cc.saved_known"], Value::Bool(false));
-    // A hidden panel projects nothing.
+    // A hidden panel projects nothing once it has been shown (a prepared one lays out its sections).
+    control.project(&stores(&[("panel.open", Value::Bool(true))]));
     assert!(
         control
             .project(&stores(&[("panel.open", Value::Bool(false))]))
@@ -4049,4 +4050,29 @@ async fn a_pointer_leave_never_closes_the_dock_by_itself() -> bead_test::Result<
     }
     drop(lab);
     Ok(())
+}
+
+/// A prepared (never shown) control centre lays out its sections on their data, so the prewarm's surface
+/// has the open height; once shown, a closed one projects nothing (row 73).
+#[test]
+fn a_prepared_control_centre_projects_until_it_has_been_shown() {
+    let control = offline();
+    let mut stores = Stores::default()
+        .reconcile(&BTreeMap::from([("panel.open".into(), Value::Bool(false))]))
+        .unwrap();
+    assert!(
+        control.project(&stores).contains_key("cc.src"),
+        "a never-shown control centre projects while closed"
+    );
+    stores
+        .commit(BTreeMap::from([("panel.open".into(), Value::Bool(true))]))
+        .unwrap();
+    assert!(control.project(&stores).contains_key("cc.src"));
+    stores
+        .commit(BTreeMap::from([("panel.open".into(), Value::Bool(false))]))
+        .unwrap();
+    assert!(
+        control.project(&stores).is_empty(),
+        "a shown control centre freezes while closed"
+    );
 }
