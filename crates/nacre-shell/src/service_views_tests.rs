@@ -1288,9 +1288,8 @@ fn no_border_bar_floats_islands_on_a_thread_that_fades_with_windows() -> Result<
             ("bar.height".into(), Value::Number(44.)),
         ]);
         if extras {
+            values.extend(crate::bar_recording::values(true, 75));
             values.extend([
-                ("bar.recording".into(), Value::Bool(true)),
-                ("bar.recording.elapsed".into(), Value::Text("1:15".into())),
                 ("bar.tray.visible".into(), Value::Bool(true)),
                 (
                     "bead.desktop.tray".into(),
@@ -1849,8 +1848,6 @@ fn bar_status_states_render_every_attention_state() -> Result<()> {
             ("bead.desktop.battery".into(), Value::Text("battery_android_alert".into())),
             ("bead.desktop.battery.value".into(), Value::Text("18".into())),
             ("bead.desktop.audio".into(), Value::Text("headphones".into())),
-            ("bar.recording".into(), Value::Bool(true)),
-            ("bar.recording.elapsed".into(), Value::Text("00:42".into())),
             ("bar.stack.style".into(), Value::Text("name".into())),
             ("bar.collections".into(), groups.clone()),
             ("bar.collection.current".into(), Value::Text("niri-collection:1".into())),
@@ -1863,6 +1860,7 @@ fn bar_status_states_render_every_attention_state() -> Result<()> {
                 ),
             ),
         ]));
+        values.extend(crate::bar_recording::values(true, 42));
         let mut h = Harness::load(
             &root(),
             Path::new("bar/main.luau"),
@@ -1885,7 +1883,7 @@ fn bar_status_states_render_every_attention_state() -> Result<()> {
             "headphones",
             "do_not_disturb_on",
             "radio_button_checked",
-            "00:42",
+            "0:42",
             "stacks",
             "Personal",
             "terminal",
@@ -1963,6 +1961,12 @@ fn recording_indicator_has_its_own_slot_beside_a_placed_status_pill() -> Result<
     assert!(
         icon.x < elapsed.x && elapsed.x + elapsed.w < pill_left,
         "indicator {icon:?} {elapsed:?} must end before the pill at {pill_left}"
+    );
+    // The time box is as wide as "0:00" (about 30 px), not the "00:00:00" (about 58 px) it used to reserve, so the
+    // button sits beside the pill with the normal gap (owner 2026-11-26).
+    assert!(
+        elapsed.w < 40.,
+        "the time box reserves no hours: {elapsed:?}"
     );
     bar_golden(&h.pose((0., 0.), 1.)?, "bar-recording-placed-1")
 }

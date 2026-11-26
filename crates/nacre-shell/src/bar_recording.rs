@@ -25,12 +25,13 @@ pub fn elapsed(seconds: u64) -> String {
     }
 }
 pub fn values(on: bool, seconds: u64) -> BTreeMap<String, Value> {
+    let text = if on { elapsed(seconds) } else { String::new() };
+    // The bar reserves the width of this shape ("0:00", "00:00", "0:00:00"), which changes only at 10 min and 1 h.
+    let shape = text.replace(|c: char| c.is_ascii_digit(), "0");
     BTreeMap::from([
         ("bar.recording".into(), Value::Bool(on)),
-        (
-            "bar.recording.elapsed".into(),
-            Value::Text(if on { elapsed(seconds) } else { String::new() }),
-        ),
+        ("bar.recording.elapsed".into(), Value::Text(text)),
+        ("bar.recording.shape".into(), Value::Text(shape)),
     ])
 }
 
@@ -109,6 +110,16 @@ mod tests {
             Value::Text(String::new())
         );
         assert_eq!(values(true, 5)["bar.recording"], Value::Bool(true));
+        for (seconds, shape) in [(5, "0:00"), (600, "00:00"), (3661, "0:00:00"), (0, "0:00")] {
+            assert_eq!(
+                values(true, seconds)["bar.recording.shape"],
+                Value::Text(shape.into())
+            );
+        }
+        assert_eq!(
+            values(false, 99)["bar.recording.shape"],
+            Value::Text(String::new())
+        );
     }
     #[test]
     fn the_ticker_starts_with_the_recording_and_stops_with_it() {

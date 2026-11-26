@@ -25,7 +25,7 @@ local flow,placed,extras_right=widgets.bar_layout(layout,render,width)
 -- The recording stop button (only while recording) and the tray come before the right strip. When the right-hand
 -- widgets are placed (they stand at an offset, so the packed row cannot sit beside them) they get their own slot,
 -- left of the placed widgets with the normal gap, instead of the right edge where they would cover them.
-local extras=table.clone(require("./recording"))
+local extras=require("./recording")(ui.resolve_for_check(ui.bind("bar.recording.shape")) or "")
 for _,node in require("../widgets/tray") do table.insert(extras,node) end
 if c.islands then
     -- No border: the tray and the recording indicator share one small island, only while something shows in it.
