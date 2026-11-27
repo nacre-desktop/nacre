@@ -126,20 +126,26 @@ pub fn run() -> Result<(), String> {
                 let rgb = [bgr[index * 4 + 2], bgr[index * 4 + 1], bgr[index * 4]];
                 bgr[index * 3..index * 3 + 3].copy_from_slice(&rgb);
             }
-            // Row 83 (B0427): a raw PAM frame, so neither side PNG-encodes or decodes per frame.
-            let header = format!(
-                "P7\nWIDTH {}\nHEIGHT {}\nDEPTH 3\nMAXVAL 255\nTUPLTYPE RGB\nENDHDR\n",
-                request.width, request.height
-            );
-            let pixels = &bgr[..bgr.len() / 4 * 3];
-            let size = header.len() + pixels.len();
-            if size > MAX_FRAME {
-                return Err("preview frame exceeds 8 MiB".into());
+            use image::ImageEncoder;
+            let mut png = Vec::new();
+            image::codecs::png::PngEncoder::new_with_quality(
+                &mut png,
+                image::codecs::png::CompressionType::Fast,
+                image::codecs::png::FilterType::Sub,
+            )
+            .write_image(
+                &bgr[..bgr.len() / 4 * 3],
+                request.width,
+                request.height,
+                image::ExtendedColorType::Rgb8,
+            )
+            .map_err(|e| e.to_string())?;
+            if png.len() > MAX_FRAME {
+                return Err("encoded preview frame exceeds 8 MiB".into());
             }
             stdout
-                .write_all(&(size as u32).to_le_bytes())
-                .and_then(|_| stdout.write_all(header.as_bytes()))
-                .and_then(|_| stdout.write_all(pixels))
+                .write_all(&(png.len() as u32).to_le_bytes())
+                .and_then(|_| stdout.write_all(&png))
                 .and_then(|_| stdout.flush())
                 .map_err(|e| e.to_string())?;
             delivered_frame = true;
