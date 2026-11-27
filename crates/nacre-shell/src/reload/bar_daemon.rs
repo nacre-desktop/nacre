@@ -265,18 +265,39 @@ fn audio(snapshot: &Snapshot) -> BTreeMap<String, Value> {
     ])
 }
 
-fn project(name: &str, snapshot: &Snapshot) -> BTreeMap<String, Value> {
+fn project(name: &str, snapshot: &Snapshot, speaker: &Speaker) -> BTreeMap<String, Value> {
     match name {
         "network" => network(snapshot),
         "bluetooth" => bluetooth(snapshot),
         "battery" => battery(snapshot),
-        "audio" => audio(snapshot),
+        "audio" => {
+            let mut values = audio(snapshot);
+            hold_speaker(&mut values, speaker);
+            values
+        }
         _ => BTreeMap::new(),
+    }
+}
+/// The last speaker glyph read from a known level.
+type Speaker = std::sync::Mutex<Option<Value>>;
+/// Owner bug 2026-11-27 ("the sound icon sometimes just shows empty"): an unknown level is not
+/// silence. While the daemon restarts, or the default sink's volumes have not arrived yet (the
+/// daemon lists no sink without channels, so `default_output` is unset), keep the last glyph
+/// instead of `volume_mute`. A known level, a real 0 and mute still change it.
+fn hold_speaker(values: &mut BTreeMap<String, Value>, speaker: &Speaker) {
+    let mut held = speaker.lock().unwrap_or_else(|p| p.into_inner());
+    let known = values.get(KEYS[9]) == Some(&Value::Bool(true))
+        || values.get(KEYS[5]) == Some(&Value::Text("volume_off".into()));
+    if known {
+        *held = values.get(KEYS[5]).cloned();
+    } else if let Some(icon) = held.clone() {
+        values.insert(KEYS[5].into(), icon);
     }
 }
 
 pub struct BarDaemon {
     topics: Vec<(&'static str, Arc<dyn Source>)>,
+    speaker: Arc<Speaker>,
 }
 impl BarDaemon {
     pub fn new(client: &crate::nacre_source::Client) -> source::Result<Self> {
@@ -284,12 +305,15 @@ impl BarDaemon {
             .into_iter()
             .map(|name| client.view_topic(name).map(|source| (name, source)))
             .collect::<source::Result<Vec<_>>>()?;
-        Ok(Self { topics })
+        Ok(Self {
+            topics,
+            speaker: Default::default(),
+        })
     }
     pub fn values(&self) -> BTreeMap<String, Value> {
         let mut values = unavailable();
         for (name, source) in &self.topics {
-            values.extend(project(name, &source.snapshot()));
+            values.extend(project(name, &source.snapshot(), &self.speaker));
         }
         values
     }
@@ -301,8 +325,9 @@ impl BarDaemon {
         for (name, source) in &self.topics {
             let name = *name;
             let wake = wake.clone();
+            let speaker = self.speaker.clone();
             subscriptions.push(source.subscribe(Arc::new(move |snapshot| {
-                wake(project(name, &snapshot));
+                wake(project(name, &snapshot, &speaker));
             }))?);
         }
         Ok(subscriptions)
@@ -552,5 +577,45 @@ mod tests {
         assert_eq!(down[KEYS[5]], Value::Text("volume_mute".into()));
         assert_eq!(down[KEYS[8]], Value::Text("Unavailable".into()));
         assert_eq!(down[KEYS[9]], Value::Bool(false));
+    }
+
+    /// Owner bug 2026-11-27: with sound on, a daemon restart or a default sink whose volumes have
+    /// not arrived yet must not show the empty (silent) speaker; a known 0 or mute still does.
+    #[test]
+    fn an_unknown_level_keeps_the_last_speaker_glyph() {
+        let live = serde_json::json!({
+            "health":{"available":true,"stale":false}, "default_output":"out", "default_input":null,
+            "nodes":{"items":{"out":{"name":"Speakers","kind":"output","volume":0.512,"muted":false,"ready":true,"readback":{"linear_volume":0.512,"perceptual_volume":0.8,"muted":false}}},"order":["out"]}
+        });
+        let speaker = Speaker::default();
+        let icon = |data: &serde_json::Value, connected: bool| {
+            project("audio", &snapshot(data.clone(), connected), &speaker)[KEYS[5]].clone()
+        };
+        let up = Value::Text("volume_up".into());
+        assert_eq!(icon(&live, true), up);
+        // The daemon restarts: the topic is down, then back before the sink's volumes arrive.
+        assert_eq!(
+            icon(&live, false),
+            up,
+            "a daemon restart shows the empty speaker"
+        );
+        let mut switching = live.clone();
+        switching["default_output"] = serde_json::Value::Null;
+        assert_eq!(
+            icon(&switching, true),
+            up,
+            "a sink switch shows the empty speaker"
+        );
+        let mut silent = live.clone();
+        let out = &mut silent["nodes"]["items"]["out"];
+        out["volume"] = 0.0.into();
+        out["readback"]["linear_volume"] = 0.0.into();
+        out["readback"]["perceptual_volume"] = 0.0.into();
+        assert_eq!(icon(&silent, true), Value::Text("volume_mute".into()));
+        let mut muted = live;
+        muted["nodes"]["items"]["out"]["muted"] = true.into();
+        muted["nodes"]["items"]["out"]["readback"]["muted"] = true.into();
+        assert_eq!(icon(&muted, true), Value::Text("volume_off".into()));
+        assert_eq!(icon(&switching, true), Value::Text("volume_off".into()));
     }
 }
