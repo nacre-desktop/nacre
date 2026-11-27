@@ -56,18 +56,23 @@ if c.islands then
     busy=busy or ui.resolve_for_check(ui.bind("bar.panel.open"))==true
     -- A sampled marker on the whole thread layer: its frames patch the opacity, no Luau or relayout per frame.
     local fade=ui.animated("bar.thread.fade",busy and .3 or 1,.22,"out-cubic")
-    local segments={id="thread",position="absolute",left=-13,top=23,width=width,height=1,direction="row",opacity=fade}
-    local count=48
-    for i=1,count do
-        local at=(i-.5)/count
-        local colour=at<=.5 and ui.tint("primary","secondary",at*2) or ui.tint("secondary","tertiary",(at-.5)*2)
-        segments[i]=ui.Box{id="s"..i,width=0,grow=1,height=1,fill=ui.alpha(colour,.6*math.min(1,at/.09,(1-at)/.22))}
-    end
-    -- The 1 px dark under-line (a fuller orient thread over a dark under-stroke reads on bright skies), fading
-    -- with the thread, 220 ms.
-    segments[count+1]=ui.Image{id="under",position="absolute",left=0,top=1,width=width,height=1,path="bar/assets/thread-under.themed.svg"}
+    -- Interaction CPU (Bead C4 class 2): the 48 segments are a pure function of the width, so a workspace change
+    -- (which re-runs the bar) reuses them; the fade stays on the outer row, outside the memo.
+    local segments=ui.memo("bar.thread.segments",{width=width},function(input)
+        local row={id="segments",width=input.width,height=1,direction="row"}
+        local count=48
+        for i=1,count do
+            local at=(i-.5)/count
+            local colour=at<=.5 and ui.tint("primary","secondary",at*2) or ui.tint("secondary","tertiary",(at-.5)*2)
+            row[i]=ui.Box{id="s"..i,width=0,grow=1,height=1,fill=ui.alpha(colour,.6*math.min(1,at/.09,(1-at)/.22))}
+        end
+        -- The 1 px dark under-line (a fuller orient thread over a dark under-stroke reads on bright skies), fading
+        -- with the thread, 220 ms.
+        row[count+1]=ui.Image{id="under",position="absolute",left=0,top=1,width=input.width,height=1,path="bar/assets/thread-under.themed.svg"}
+        return ui.Row(row)
+    end)
     host.fill,host.padding_left,host.padding_right,host.padding_top="transparent",13,13,2
-    host[1]=ui.Row(segments)
+    host[1]=ui.Row{id="thread",position="absolute",left=-13,top=23,width=width,height=1,direction="row",opacity=fade,segments}
     -- The apply glint: when a wallpaper is applied (Strand Enter, the centre pearl, a rotation), `bar.wallpaper_applied`
     -- (a counter Rust bumps on that commit; nothing bumps it yet, and a luma change alone never counts, since Strand
     -- previews activate the real wallpaper on every glide step) starts one soft light (170 x 2.5, primary 40 % toward
