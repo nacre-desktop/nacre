@@ -679,25 +679,29 @@ impl Model {
         }
         let mut history_items = BTreeMap::new();
         let mut history_order = Vec::new();
+        // The window's compact JSON size as a running total: re-encoding the growing window for
+        // every row cost 2,080 row encodes per publish at full history (interaction CPU D1).
+        fn encoded<T: serde::Serialize>(value: &T) -> usize {
+            serde_json::to_vec(value).map_or(usize::MAX, |bytes| bytes.len())
+        }
+        let mut bytes = encoded(&Entities {
+            items: history_items.clone(),
+            order: history_order.clone(),
+        });
         for row in self.history.iter().rev() {
             if history_order.len() >= HISTORY_WINDOW_ROWS {
                 break;
             }
-            let mut candidate_order = history_order.clone();
-            candidate_order.push(row.id.clone());
-            let mut candidate_items = history_items.clone();
-            candidate_items.insert(row.id.clone(), row.notification.clone());
-            let candidate = Entities {
-                items: candidate_items,
-                order: candidate_order,
-            };
-            let candidate_bytes =
-                serde_json::to_vec(&candidate).map_or(usize::MAX, |bytes| bytes.len());
+            // `"id":row` in items and `"id"` in order, each after a comma unless it is the first.
+            let separators = if history_order.is_empty() { 0 } else { 2 };
+            let candidate_bytes = bytes
+                .saturating_add(2 * encoded(&row.id) + 1 + encoded(&row.notification) + separators);
             if candidate_bytes > HISTORY_WINDOW_BYTES {
                 break;
             }
-            history_order = candidate.order;
-            history_items = candidate.items;
+            bytes = candidate_bytes;
+            history_order.push(row.id.clone());
+            history_items.insert(row.id.clone(), row.notification.clone());
         }
         let history_more = history_order.len() < self.history.len();
         NotificationsState {
@@ -2332,6 +2336,64 @@ mod tests {
         assert_eq!(model.snapshot(storage()).inhibited, Some(true));
         model.owner_left(":1.60", now, wall);
         assert_eq!(model.snapshot(storage()).inhibited, Some(false));
+    }
+
+    /// D1: the history window's running size picks exactly the rows the old per-row re-encode did,
+    /// for small rows (cut at 64) and for large, escape-heavy rows (cut at 256 KiB).
+    #[test]
+    fn history_window_running_size_matches_a_full_re_encode() {
+        fn reencoded(model: &Model) -> Vec<EntityId> {
+            let mut items = BTreeMap::new();
+            let mut order: Vec<EntityId> = Vec::new();
+            for row in model.history.iter().rev() {
+                if order.len() >= HISTORY_WINDOW_ROWS {
+                    break;
+                }
+                let mut candidate = Entities {
+                    items: items.clone(),
+                    order: order.clone(),
+                };
+                candidate.order.push(row.id.clone());
+                candidate
+                    .items
+                    .insert(row.id.clone(), row.notification.clone());
+                if serde_json::to_vec(&candidate).unwrap().len() > HISTORY_WINDOW_BYTES {
+                    break;
+                }
+                (items, order) = (candidate.items, candidate.order);
+            }
+            order
+        }
+        let now = Instant::now();
+        let wall = system_now_ms();
+        for (rows, body) in [
+            (70, "small \"quoted\" body\nwith é ✓".to_owned()),
+            (64, "x\"\\\n".repeat(1500)),
+        ] {
+            let mut model = Model::new("boot-a", 1, Vec::new(), false, Policy::default());
+            for index in 0..rows {
+                let mut fixture = notice(&format!("row {index} \u{1F514}"));
+                fixture.body = body.clone();
+                let native = model
+                    .notify(
+                        input(&format!(":1.{}", index + 100), 0, fixture, 0),
+                        now,
+                        wall,
+                    )
+                    .unwrap()
+                    .native_id
+                    .unwrap();
+                model.close_native(native, 3, now, wall);
+            }
+            let window = model.snapshot(storage()).history.order;
+            assert!(!window.is_empty());
+            assert_eq!(
+                window,
+                reencoded(&model),
+                "{rows} rows of a {}-byte body",
+                body.len()
+            );
+        }
     }
 
     #[test]
