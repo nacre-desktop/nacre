@@ -47,6 +47,7 @@ export type Props = {
     edge_hover:any?,
     scroll:any?,
     scroll_steps:any?,
+    overscan:any?,
     scrollbar:any?,
     fill:any?,
     radial:any?,
