@@ -18,7 +18,9 @@ from kit tokens; the outer footprint remains 228 by 38 at default tokens.
 The existing `bead-wallpaper-video` binary gains a bounded `--preview` mode using
 the same libmpv binding and software renderer. One request on stdin describes a
 local, descriptor-pinned source and dimensions; stdout carries length-prefixed
-PNG frames. There is no new video decoder implementation, binary, daemon,
+PNG frames (raw RGB PAM frames since row 83 B0427, 2026-11-27: no per-frame PNG
+encode in the child or decode in the UI, at about 4x the bytes per held frame).
+There is no new video decoder implementation, binary, daemon,
 installed service, persistent cache or per-frame filesystem output. The preview
 mode is a generic source/size/frame output, not a Rust implementation of the UI.
 

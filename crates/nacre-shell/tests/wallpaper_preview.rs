@@ -91,11 +91,14 @@ fn preview_stream_has_changing_frames_and_rejects_invalid_requests() {
                 stdout.read_exact(&mut size).map_err(|e| e.to_string())?;
                 let size = u32::from_le_bytes(size) as usize;
                 if size == 0 || size > 8 * 1024 * 1024 {
-                    return Err("invalid PNG frame length".into());
+                    return Err("invalid frame length".into());
                 }
-                let mut png = vec![0; size];
-                stdout.read_exact(&mut png).map_err(|e| e.to_string())?;
-                let image = ImageReader::new(std::io::Cursor::new(png))
+                let mut frame = vec![0; size];
+                stdout.read_exact(&mut frame).map_err(|e| e.to_string())?;
+                if !frame.starts_with(b"P7\n") {
+                    return Err("preview frames are raw PAM (row 83, B0427)".into());
+                }
+                let image = ImageReader::new(std::io::Cursor::new(frame))
                     .with_guessed_format()
                     .map_err(|e| e.to_string())?
                     .decode()
