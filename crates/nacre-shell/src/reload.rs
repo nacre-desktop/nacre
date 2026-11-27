@@ -8665,7 +8665,10 @@ impl SceneSource for Runtime {
                 || matches!(&event, UiEvent::Command { command, .. } if command == "enter"))
         {
             self.actions.authorize(name)?;
-            quick.act(id);
+            // S2: the guard quick.luau no longer reads (a closing launcher's rows are inert).
+            if self.session.stores.get("panel.open") == Some(&bead::core::Value::Bool(true)) {
+                quick.act(id);
+            }
             let scene = if matches!(&event, UiEvent::Release) {
                 None
             } else {

@@ -481,6 +481,55 @@ mod tests {
         }
         Ok(())
     }
+    /// Interaction CPU S2: opening and closing the launcher re-runs no Luau. quick.luau read
+    /// `panel.open` to make a closing row inert, so every PanelVisibility re-ran the whole launcher
+    /// script; the host refuses that act instead.
+    #[test]
+    fn closing_and_reopening_the_launcher_reruns_no_luau() -> Result<(), Box<dyn std::error::Error>>
+    {
+        use bead::core::Value;
+        let mut values = initial_models()?;
+        values.insert("launcher.quick_allowed".into(), Value::Bool(true));
+        values.insert(
+            "launcher.quick".into(),
+            Value::list(vec![
+                serde_json::json!({"id":"actions.controls.dnd","label":"Do not disturb",
+                "status":"Off","reason":"","on":false,"enabled":true,"pending":false}),
+            ]),
+        );
+        let mut h = bead_test::Harness::load(
+            &root(),
+            Path::new("ui/main.luau"),
+            &root().join("palette.json"),
+            values,
+            bead_test::Config {
+                width: 1164,
+                height: 654,
+                scale: 1.5,
+            },
+        )?;
+        assert!(
+            h.session
+                .view_nodes()
+                .iter()
+                .any(|node| node.action.as_deref() == Some("launcher.quick")),
+            "an enabled quick row renders"
+        );
+        let luau = |h: &mut bead_test::Harness, key: &str, value: Value| {
+            bead::core::profile::take_phases();
+            h.update(std::collections::BTreeMap::from([(key.to_owned(), value)]))
+                .map(|()| bead::core::profile::take_phases()[1])
+        };
+        let closed = luau(&mut h, "panel.open", Value::Bool(false))?;
+        let opened = luau(&mut h, "panel.open", Value::Bool(true))?;
+        let rerun = luau(&mut h, "launcher.search.text", Value::Text("x".into()))?;
+        assert!(rerun > 0, "a search re-runs the launcher's Luau");
+        assert!(
+            closed * 10 < rerun && opened * 10 < rerun,
+            "open/close re-ran the launcher's Luau: close {closed} ns, open {opened} ns, a re-run {rerun} ns"
+        );
+        Ok(())
+    }
     #[test]
     fn launcher_source_fixtures_cover_grid_results_and_prefixes()
     -> Result<(), Box<dyn std::error::Error>> {
