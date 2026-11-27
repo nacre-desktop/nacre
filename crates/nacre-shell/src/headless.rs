@@ -565,9 +565,10 @@ mod tests {
                 .iter()
                 .filter(|node| node.action.as_deref() == Some("select_app"))
                 .count();
+            // Bead U4: the viewport plus three half-viewport bands (~2.5 viewports).
             assert!(
-                visible_rows <= 12,
-                "320-row catalogue should materialize only viewport rows plus overscan, got {visible_rows}"
+                visible_rows <= 20,
+                "320-row catalogue should materialize only viewport rows plus overscan bands, got {visible_rows}"
             );
         }
         h.reload()?;
@@ -704,9 +705,10 @@ mod tests {
             }
             let scene = h.scene();
             let visible = scene.primitives.iter().filter(|p| matches!(p, bead::render::Primitive::Text {text,..} if text.starts_with("Notice "))).count();
+            // Bead U4: the viewport plus three half-viewport bands (~2.5 viewports) of 120 cards.
             assert!(
-                visible < 12,
-                "only viewport cards plus overscan should materialize: {visible}"
+                visible < 28,
+                "only viewport cards plus overscan bands should materialize: {visible}"
             );
             assert!(
                 scene.primitives.iter().any(

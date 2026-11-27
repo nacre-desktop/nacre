@@ -6,7 +6,8 @@ use bead::render::{Palette, PixelFormat, ShmTarget};
 use bead_test::{Config, Frame as Pixels, Harness, Result, Tolerance};
 use std::{collections::BTreeMap, path::Path};
 
-fn tile(canvas: &mut Pixels, rect: Rect, svg: &[u8], scale: f32) -> Result<()> {
+/// `clip` (output space) is the primitive's scene clip, as Bead paints it (B0430).
+fn tile(canvas: &mut Pixels, rect: Rect, svg: &[u8], scale: f32, clip: Option<Rect>) -> Result<()> {
     let width = (rect.w * scale).ceil() as u32;
     let height = (rect.h * scale).ceil() as u32;
     let mut bytes = vec![0; width as usize * height as usize * 4];
@@ -29,6 +30,10 @@ fn tile(canvas: &mut Pixels, rect: Rect, svg: &[u8], scale: f32) -> Result<()> {
             let dx = x + left;
             let dy = y + top;
             if dx < 0 || dy < 0 || dx >= canvas.width as i32 || dy >= canvas.height as i32 {
+                continue;
+            }
+            let (cx, cy) = ((dx as f32 + 0.5) / scale, (dy as f32 + 0.5) / scale);
+            if clip.is_some_and(|c| cx < c.x || cy < c.y || cx >= c.x + c.w || cy >= c.y + c.h) {
                 continue;
             }
             let source = ((y as u32 * width + x as u32) * 4) as usize;
@@ -190,15 +195,18 @@ fn all_popout_and_launcher_placement_masks_match_qml() -> Result<()> {
             )
             .map_err(|e| -> Box<dyn std::error::Error> { e.into() })?
             {
-                tile(&mut pixels, decoration.rect, &decoration.svg, scale)?;
+                tile(&mut pixels, decoration.rect, &decoration.svg, scale, None)?;
             }
-            for primitive in &scene.primitives {
+            let place =
+                |r: Rect| r.translated(x as f32 + scene.offset.0, y as f32 + scene.offset.1);
+            for (index, primitive) in scene.primitives.iter().enumerate() {
                 if let bead::render::Primitive::Image { rect, path, .. } = primitive {
                     tile(
                         &mut pixels,
-                        rect.translated(x as f32 + scene.offset.0, y as f32 + scene.offset.1),
+                        place(*rect),
                         scene.asset_data.get(path).ok_or("Missing contour")?,
                         scale,
+                        scene.clips.get(&index).copied().map(place),
                     )?;
                 }
             }
@@ -318,16 +326,18 @@ fn compose(
         )
         .map_err(|e| -> Box<dyn std::error::Error> { e.into() })?;
     for decoration in tiles {
-        tile(&mut pixels, decoration.rect, &decoration.svg, SCALE)?;
+        tile(&mut pixels, decoration.rect, &decoration.svg, SCALE, None)?;
     }
     if let Some((x, y)) = panel {
-        for primitive in &scene.primitives {
+        let place = |r: Rect| r.translated(x as f32 + scene.offset.0, y as f32 + scene.offset.1);
+        for (index, primitive) in scene.primitives.iter().enumerate() {
             if let bead::render::Primitive::Image { rect, path, .. } = primitive {
                 tile(
                     &mut pixels,
-                    rect.translated(x as f32 + scene.offset.0, y as f32 + scene.offset.1),
+                    place(*rect),
                     scene.asset_data.get(path).ok_or("Missing contour")?,
                     SCALE,
+                    scene.clips.get(&index).copied().map(place),
                 )?;
             }
         }
@@ -348,7 +358,7 @@ fn compose(
             surface,
             (false, lip.edge == Edge::Top, false),
         ) {
-            tile(&mut pixels, rect, svg.as_bytes(), SCALE)?;
+            tile(&mut pixels, rect, svg.as_bytes(), SCALE, None)?;
         }
     }
     Ok(pixels)
@@ -550,6 +560,101 @@ fn configurable_frame_variants_match_their_goldens() -> Result<()> {
             Tolerance::default(),
             &artifacts.join(name),
         )?;
+    }
+    Ok(())
+}
+
+/// B0430 (owner: rim seam at the control centre's join): the frame strip and the joined art draw the
+/// same translucent rim on two surfaces; two coats left a brighter row from the art's left edge. The
+/// art is clipped out of the frame strips, so inside every frame tile the tiles composed with the art
+/// equal the tiles alone (a corner tile the docked panel's opaque body covers stays equal), at both
+/// scales.
+#[test]
+fn the_joined_art_leaves_the_frame_strip_rows_to_the_strip() -> Result<()> {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../shell");
+    let palette = Palette::read(&root.join("palette.json"))?;
+    let frame = frame_with(|_| {});
+    let (w, h) = (OUTPUT.0 as f32, OUTPUT.1 as f32);
+    let fill = palette.get("surface")?;
+    let mut chrome = Chrome::new(Attachment::ControlCenter, &palette)?;
+    chrome.output = OUTPUT;
+    let mut scene = crate::sound::fallback(fill);
+    scene.primitives = vec![bead::render::Primitive::Rounded {
+        radial: None,
+        rect: Rect::new(0., 0., 310., 222.),
+        radius: 16.,
+        fill,
+        border: None,
+    }];
+    chrome.decorate_with(frame, &mut scene)?;
+    let body = body(&scene);
+    let at = frame.panel(Attachment::ControlCenter, (w, h), (body.w, body.h), None);
+    let origin = (
+        (at.x - body.x + scene.bounds.x).round() as i32,
+        (at.y - body.y + scene.bounds.y).round() as i32,
+    );
+    let tiles = chrome
+        .tiles(
+            frame,
+            OUTPUT,
+            true,
+            Some(bead::wayland::DecorationPanel {
+                scene: &scene,
+                origin,
+            }),
+        )
+        .map_err(|e| -> Box<dyn std::error::Error> { e.into() })?;
+    let place = |r: Rect| {
+        r.translated(
+            origin.0 as f32 + scene.offset.0,
+            origin.1 as f32 + scene.offset.1,
+        )
+    };
+    let (index, art, svg) = scene
+        .primitives
+        .iter()
+        .enumerate()
+        .find_map(|(index, p)| match p {
+            bead::render::Primitive::Image { rect, path, .. }
+                if path.to_string_lossy().starts_with("@joined-frame-") =>
+            {
+                Some((index, place(*rect), scene.asset_data[path].clone()))
+            }
+            _ => None,
+        })
+        .ok_or("joined art")?;
+    let clip = scene.clips.get(&index).copied().map(place);
+    for scale in [1., 1.5] {
+        let blank = || Pixels {
+            width: (w * scale) as u32,
+            height: (h * scale) as u32,
+            pixels: vec![0; (w * scale) as usize * (h * scale) as usize * 4],
+        };
+        let (mut strip, mut composed) = (blank(), blank());
+        for decoration in &tiles {
+            tile(&mut strip, decoration.rect, &decoration.svg, scale, None)?;
+            tile(&mut composed, decoration.rect, &decoration.svg, scale, None)?;
+        }
+        tile(&mut composed, art, &svg, scale, clip)?;
+        let at = |p: &Pixels, x: u32, y: u32| {
+            let i = ((y * p.width + x) * 4) as usize;
+            [p.pixels[i], p.pixels[i + 1], p.pixels[i + 2]]
+        };
+        for decoration in &tiles {
+            let r = decoration.rect;
+            let (x0, y0) = ((r.x * scale) as u32, (r.y * scale) as u32);
+            let x1 = (((r.x + r.w) * scale) as u32).min(strip.width);
+            let y1 = (((r.y + r.h) * scale) as u32).min(strip.height);
+            for y in y0..y1 {
+                for x in x0..x1 {
+                    let (s, c) = (at(&strip, x, y), at(&composed, x, y));
+                    assert!(
+                        s.iter().zip(c).all(|(s, c)| s.abs_diff(c) <= 2),
+                        "scale {scale}: ({x},{y}) in tile {r:?}: composed {c:?} against the strip's {s:?}"
+                    );
+                }
+            }
+        }
     }
     Ok(())
 }

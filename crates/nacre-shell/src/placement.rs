@@ -993,12 +993,35 @@ impl Chrome {
         if !replaced {
             return Err("Panel root background missing".into());
         }
+        let index = scene
+            .primitives
+            .iter()
+            .position(|p| matches!(p, Primitive::Image { path: p, .. } if *p == path))
+            .ok_or("Missing frame artwork")?;
+        // B0430: the art leaves the frame strips' rows to the strips (both draw the same translucent
+        // rim there, on two surfaces: two coats made a seam at the art's edge). In scene space, as
+        // `reveal_contour`'s; a side without a frame edge stays unbounded.
+        let edge = |inset: f32, at: f32, open: f32| if inset > 0. { at } else { open };
+        let (x0, y0) = (
+            edge(frame.left, frame.left + 2., -1e6),
+            edge(frame.top, frame.top + 2., -1e6),
+        );
+        let (x1, y1) = (
+            edge(frame.right, output.0 - frame.right - 2., 1e6),
+            edge(frame.bottom, output.1 - frame.bottom - 2., 1e6),
+        );
+        let opening = Rect::new(
+            body.x + x0 - panel.x,
+            body.y + y0 - panel.y,
+            x1 - x0,
+            y1 - y0,
+        );
+        let clip = scene
+            .clips
+            .get(&index)
+            .map_or(opening, |own| own.intersect(opening));
+        scene.clips.insert(index, clip);
         if scene.motion.as_ref().is_some_and(|m| m.reveal) {
-            let index = scene
-                .primitives
-                .iter()
-                .position(|p| matches!(p, Primitive::Image { path: p, .. } if *p == path))
-                .ok_or("Missing frame artwork")?;
             let chrome = self.clone();
             let original = scene.asset_data[&path].clone();
             let crop = Rect::new(

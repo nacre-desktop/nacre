@@ -10447,8 +10447,7 @@ impl SceneSource for Runtime {
             | UiEvent::WallpaperFrame(_)
             | UiEvent::WallpaperRefresh
             | UiEvent::WallpaperFailed(_)
-            | UiEvent::WallpaperTick(_)
-            | UiEvent::HorizontalScroll { .. } => None,
+            | UiEvent::WallpaperTick(_) => None,
             UiEvent::Click { x, y } => {
                 if self.widget_drag_suppress_hover_until_leave
                     && self.session.transfer_candidate_at(x, y).is_some()
@@ -10459,7 +10458,11 @@ impl SceneSource for Runtime {
                 }
                 self.session.click(x, y)?
             }
-            UiEvent::Scroll { x, y, delta } => self.session.scroll(x, y, delta)?,
+            UiEvent::Scroll { x, y, delta } => self.session.scroll(x, y, delta, false)?,
+            // B0419 U5a1: a horizontal wheel or swipe scrolls an axis="x" ui.Scroll.
+            UiEvent::HorizontalScroll { x, y, delta } => self.session.scroll(x, y, delta, true)?,
+            // B0419 U2b2: a scroll plane main was moving came to rest; the worker re-bakes it.
+            UiEvent::ScrollSettled { id } => self.session.scroll_settled(&id)?,
             UiEvent::Action { name, argument } | UiEvent::MotionAction { name, argument } => {
                 let changes = self.session.action_values(&name, argument)?;
                 self.session.update(changes)?

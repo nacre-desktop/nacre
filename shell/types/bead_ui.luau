@@ -48,6 +48,8 @@ export type Props = {
     scroll:any?,
     scroll_steps:any?,
     overscan:any?,
+    ready:any?,
+    axis:any?,
     scrollbar:any?,
     fill:any?,
     radial:any?,

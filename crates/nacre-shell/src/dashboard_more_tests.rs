@@ -457,9 +457,11 @@ fn dashboard_history_lists_scroll_both_edges_virtualize_and_keep_headers_fixed()
         let heading_rect = dashboard_heading_rect(&harness, &heading);
         let rows_at_top = scroll_row_nodes(&harness, action_prefix);
         assert!(rows_at_top.iter().any(|(id, _)| id == &first_id));
+        // Bead U4: a kit list materializes the viewport plus three half-viewport bands (~2.5 viewports);
+        // the last row staying out (below) is what proves the windowing.
         assert!(
-            rows_at_top.len() <= 12,
-            "{} viewport plus overscan should materialize at most 12 rows, got {}",
+            rows_at_top.len() < count,
+            "{} viewport plus overscan bands should materialize fewer than all rows, got {}",
             page.name(),
             rows_at_top.len()
         );
@@ -500,7 +502,9 @@ fn dashboard_history_lists_scroll_both_edges_virtualize_and_keep_headers_fixed()
             last_rect.x + last_rect.w / 2.,
             last_rect.y + last_rect.h / 2.
         ));
-        assert!(rows_at_bottom.len() <= 12);
+        // Bead U4: windowed at the bottom too (half-viewport bands; the first row stays out).
+        assert!(rows_at_bottom.len() < count);
+        assert!(!rows_at_bottom.iter().any(|(id, _)| id == &first_id));
         assert_eq!(dashboard_heading_rect(&harness, &heading), heading_rect);
 
         harness.script([scroll(-100_000.)])?;

@@ -1135,12 +1135,10 @@ fn real_shell_panel_routes_open_and_close_with_prepared_scenes() {
                             !closing.atlas.pixels.is_empty(),
                             "{name}: closing atlas contains the complete surface"
                         );
-                        // B0277: a stationary reveal closes through its reveal contour (the open in
-                        // reverse), which the plane pixels below do not include.
-                        let reshapes = scene
-                            .motion
-                            .as_ref()
-                            .is_some_and(|m| m.reveal && m.slide_distance.is_none());
+                        // B0277: a reveal closes through its reveal contour (the open in reverse),
+                        // which the plane pixels below do not include; with a slide distance too since
+                        // B0431 (the launcher and the docked control centre).
+                        let reshapes = scene.motion.as_ref().is_some_and(|m| m.reveal);
                         if reshapes {
                             assert!(closing.reveal.as_ref().is_some_and(|c| c.valid()));
                         }
