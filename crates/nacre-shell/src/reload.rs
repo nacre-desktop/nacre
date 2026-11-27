@@ -6458,6 +6458,20 @@ impl SceneSource for Runtime {
             // Row 83 (3a): a sliding panel has the GPU to itself; the video wallpaper holds its frame.
             crate::wallpaper_motion::hold_for(duration);
         }
+        // (d)(i): a hero preview frame redraws the shown scene with new pixels. Only with no scene
+        // in flight (that one would be lost); otherwise the projection below takes the frame.
+        if let UiEvent::Model(values) = &mut event
+            && values.remove(crate::dashboard::VIDEO_FRAME_POKE).is_some()
+            && values.is_empty()
+            && self.pending.is_none()
+            && let Some(dashboard) = &self.dashboard
+        {
+            let mut scene = self.session.current_scene();
+            if dashboard.borrow().show_video_frame(&mut scene) {
+                self.pending = Some(scene.clone());
+                return Ok(Some(scene));
+            }
+        }
         if matches!(&event, UiEvent::Reload) {
             #[cfg(test)]
             {

@@ -40,13 +40,21 @@ local level,text=spec.level==true,detail(spec.detail)
 -- the show (`osd-shown` has not left 0 yet), the fill snaps to the value; only changes made while
 -- the pill is visible animate (design review: the bar value tweens 120 ms).
 local shown=ui.animate("osd-shown",get("osd.open") and 1 or 0,0.001,"linear")
-local fill_value=level and ui.animate("osd-level",value,shown>=1 and 0.12 or 0,"out-cubic") or value
+-- A sampled marker (row 83): a level step moves the fill with layout only, no Luau per frame.
+local fill=level and ui.animated("osd-level",value,shown>=1 and 0.12 or 0,"out-cubic") or nil
 local dim=muted or (spec.toggle==true and value<=0)
 local tint=dim and "onSurfaceVariant" or (spec.tint and spec.tint[label]) or "primary"
 local number=muted and ui.tr("bead.osd.muted") or tostring(math.floor(value*100+.5))
 -- The value column always fits "100", so the bar keeps its length while the level moves.
 local value_w=level and math.ceil(math.max(ui.text_width("100",SANS,VALUE),ui.text_width(number,SANS,VALUE))*BOLD) or 0
 local text_w=W-PAD_R-TEXT_X-(level and value_w+GAP or 0)
+-- The fill's width: a plain number at rest, else a track over the marker (no arithmetic on a marker).
+local fill_w=text_w*value
+if fill then
+    local from,to=ui.range(fill)
+    local lo,hi=math.min(from,to),math.max(from,to)
+    fill_w=from==to and text_w*to or ui.track(fill,{lo,hi},{text_w*lo,text_w*hi})
+end
 local title=measure.ellipsize(ui.tr(spec.title),text_w/BOLD,SANS,TITLE)
 local title_w=math.min(text_w,math.ceil(ui.text_width(title,SANS,TITLE)*BOLD))
 -- A level kind reads "Title · detail" on one line over the bar; the others put the detail under the title.
@@ -68,6 +76,6 @@ return kit.Panel{edge="bottom",id="osd",width=W,height=H,on_activate=ui.action("
     ui.Text{id="value",position="absolute",left=W-PAD_R-value_w,top=(H-LINE_H)/2,width=value_w,height=LINE_H,family=SANS,text=level and number or "",text_align="right",font_size=VALUE,font_weight=600,
         color=muted and "onSurfaceVariant" or "onSurface",visible=level},
     ui.Box{id="track",position="absolute",left=TEXT_X,top=top+LINE_H+T.spacing.xs,width=text_w,height=METER_H,radius=METER_H/2,fill="surfaceContainerHighest",visible=level,
-        ui.Image{id="fill",path="osd/assets/progress.themed.svg",width=text_w*fill_value,height=METER_H,visible=not muted},
-        ui.Box{id="muted-fill",width=text_w*fill_value,height=METER_H,radius=METER_H/2,fill=ui.alpha("primary",.35),visible=muted}},
+        ui.Image{id="fill",path="osd/assets/progress.themed.svg",width=fill_w,height=METER_H,visible=not muted},
+        ui.Box{id="muted-fill",width=fill_w,height=METER_H,radius=METER_H/2,fill=ui.alpha("primary",.35),visible=muted}},
 }

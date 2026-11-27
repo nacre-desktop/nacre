@@ -544,6 +544,9 @@ impl Drop for PosterJob {
     }
 }
 type Notify = Arc<dyn Fn(bead::wayland::UiEvent) + Send + Sync>;
+/// Model key a new hero preview frame sends; the runtime answers it with the shown scene and the new
+/// pixels (`Dashboard::show_video_frame`), so a frame runs no projector, Luau or layout.
+pub(crate) const VIDEO_FRAME_POKE: &str = "dashboard.video.frame";
 
 #[path = "dashboard_controls.rs"]
 mod controls;
@@ -1684,7 +1687,8 @@ impl Dashboard {
             "dashboard.wallpaper_image".into(),
             Value::Text(frame.as_ref().map_or_else(
                 || "today-wallpaper".into(),
-                |(sequence, _)| format!("today-wallpaper:{sequence}"),
+                // Stable while video plays: frames swap pixels only (VIDEO_FRAME_POKE).
+                |_| "today-wallpaper:video".into(),
             )),
         );
         out.insert(

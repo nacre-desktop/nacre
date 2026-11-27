@@ -674,6 +674,29 @@ impl Dashboard {
         }
         art.as_ref().is_some_and(|(_, thumb)| thumb.is_some())
     }
+    /// (d)(i): the newest preview frame replaces the hero's pixels in an already shown scene. False
+    /// (nothing changed) when there is no new frame or the hero does not show video yet; the
+    /// projection then switches the hero to video once.
+    pub fn show_video_frame(&self, scene: &mut bead::render::Scene) -> bool {
+        let Some(frame) = self
+            .video
+            .borrow()
+            .as_ref()
+            .and_then(super::video::Preview::frame)
+        else {
+            return false;
+        };
+        let key = std::path::Path::new("@today-wallpaper/video");
+        let shown = scene
+            .primitives
+            .iter()
+            .any(|draw| matches!(draw, bead::render::Primitive::Image { path, .. } if path == key));
+        if shown {
+            scene.asset_data.insert(key.into(), frame.1.clone());
+            *self.video_frame.borrow_mut() = Some(frame);
+        }
+        shown
+    }
     /// Gives the card's `art` image its pixels: the placeholder icon name in the
     /// scene is swapped for the held thumbnail, which the scene then owns.
     pub fn attach_art(&self, scene: &mut bead::render::Scene) {

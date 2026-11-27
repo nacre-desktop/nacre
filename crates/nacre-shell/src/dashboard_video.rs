@@ -140,7 +140,13 @@ fn pump(
         if let Some(notify) = notify
             && !unread.swap(true, Ordering::AcqRel)
         {
-            notify(bead::wayland::UiEvent::Model(Default::default()));
+            notify(bead::wayland::UiEvent::Model(
+                [(
+                    super::VIDEO_FRAME_POKE.into(),
+                    bead::core::Value::Bool(true),
+                )]
+                .into(),
+            ));
         }
         if !park_until(started + gap, stopped) {
             break;
@@ -358,13 +364,14 @@ mod tests {
         .with_video_desktop(Some(crate::desktop::start_services()));
         dashboard.set_raster_scale(1.5);
         // The open hero (940x256 at scale 1.5) shows frame 7 of its live preview.
+        let slot = Arc::new(Mutex::new(Some((7, shown.clone()))));
         *dashboard.video.borrow_mut() = Some(Preview {
             request: Request {
                 motion,
                 width: 1410,
                 height: 384,
             },
-            frame: Arc::new(Mutex::new(Some((7, shown.clone())))),
+            frame: slot.clone(),
             unread: Default::default(),
             child: Default::default(),
             stopped: Default::default(),
@@ -398,7 +405,7 @@ mod tests {
         let values = dashboard.project_with_stores(&h.session.stores);
         assert_eq!(
             values["dashboard.wallpaper_image"],
-            Value::Text("today-wallpaper:7".into()),
+            Value::Text("today-wallpaper:video".into()),
             "the injected preview matches the open hero's request"
         );
         assert!(
@@ -412,6 +419,30 @@ mod tests {
         runtime.services(Box::new(|_| {}));
         let open = runtime.stage(UiEvent::Reload)?.ok_or("open stages")?;
         runtime.session.commit(open.clone());
+        // (d)(i): a new frame redraws the shown scene with new pixels and changes no store, so no
+        // projector, Luau or layout runs. A second frame puts the open's pixels back for the close.
+        runtime.commit();
+        let revision = runtime.session.stores.revision();
+        let poke = || {
+            UiEvent::Model([(crate::dashboard::VIDEO_FRAME_POKE.into(), Value::Bool(true))].into())
+        };
+        for (sequence, bytes) in [(8, std::fs::read(&poster)?.into()), (9, shown.clone())] {
+            *slot.lock().unwrap() = Some((sequence, bytes.clone()));
+            let framed = runtime.stage(poke())?.ok_or("a frame stages")?;
+            runtime.commit();
+            assert_eq!(
+                framed
+                    .asset_data
+                    .get(std::path::Path::new("@today-wallpaper/video")),
+                Some(&bytes),
+                "the frame shows its own pixels"
+            );
+            assert_eq!(
+                runtime.session.stores.revision(),
+                revision,
+                "a frame changes no store"
+            );
+        }
         let before = runtime.session.stores.values().clone();
         let closing = runtime
             .stage(UiEvent::PanelVisibility(false))?
@@ -478,7 +509,7 @@ mod tests {
         runtime.session.commit(reopened.clone());
         assert_eq!(
             runtime.session.stores.get("dashboard.wallpaper_image"),
-            Some(&Value::Text("today-wallpaper:7".into())),
+            Some(&Value::Text("today-wallpaper:video".into())),
             "the reopen keeps the shown frame's image key"
         );
         assert_eq!(

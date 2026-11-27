@@ -26,9 +26,12 @@ Today owns at most one child and one latest-frame slot, caps raster size at
 1600 by 1000 and delivery at 15 fps (30 fps until row 83 (b), 2026-11-27), and rejects frame payloads above 8 MiB.
 While a panel slides, a wallpaper fades or a workspace switches (the desktop video's hold), the child does
 not start and no new frame is shown.
-The child loops without audio. The Image's model key changes for each delivered
-frame, triggering normal Luau scene preparation; cropping, overlays and layout
-remain in the shell. The poster remains the loading image and failure fallback.
+The child loops without audio. Since row 83 (d)(i) (2026-11-27) the Image's model key is stable while video
+plays (`today-wallpaper:video`): each delivered frame sends a host poke that
+the runtime answers with the shown scene and the new pixels, so a frame runs no
+projector, Luau or layout (the first frame after the poster still projects once).
+A reopen with the same request keeps the frame it closed on until its own first
+frame. Cropping, overlays and layout remain in the shell. The poster remains the loading image and failure fallback.
 Source changes replace the child and discard its frames. A failed attempt is
 retained until its request or permission changes, avoiding a respawn loop.
 
