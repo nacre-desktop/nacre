@@ -20,5 +20,8 @@
     "widgets/workspaces/widget.luau",
     "widgets/editing.luau",
     "widgets/desktop-visuals.luau"
+  ],
+  "assets": [
+    "chat/assets/nacre-ai.themed.svg"
   ]
 }

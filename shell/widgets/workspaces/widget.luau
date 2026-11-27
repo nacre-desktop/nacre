@@ -193,7 +193,10 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
                             apps[#apps+1]=ui.Box{id="app"..slot,width=15,height=28,shrink=0,
                                 ui.Image{id="icon",position="absolute",left=(15-t.hint_icon)/2,top=(28-t.hint_icon)/2,icon=icon_name,width=t.hint_icon,height=t.hint_icon}}
                         elseif glyph_name and glyph_name~="" then
-                            apps[#apps+1]=centered_text{id="app"..slot,text=glyph_name,width=15,height=28,shrink=0,family="Material Symbols Rounded",font_size=t.app_font,text_align="center",color="onSurface"}
+                            -- Owner 2026-11-27: a Nacre AI window shows the themed Nacre AI logo, not the brain glyph.
+                            apps[#apps+1]=glyph_name=="neurology" and ui.Box{id="app"..slot,width=15,height=28,shrink=0,
+                                ui.Image{id="icon",position="absolute",left=(15-t.hint_icon)/2,top=(28-t.hint_icon)/2,path="chat/assets/nacre-ai.themed.svg",width=t.hint_icon,height=t.hint_icon}}
+                                or centered_text{id="app"..slot,text=glyph_name,width=15,height=28,shrink=0,family="Material Symbols Rounded",font_size=t.app_font,text_align="center",color="onSurface"}
                             -- Clicking a glyph focuses its window (window.focus); a sibling, as a button cannot nest in a button.
                             local window=item["win"..slot]
                             if focus_on and window and window~="" then
