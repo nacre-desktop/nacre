@@ -567,6 +567,8 @@ pub struct Dashboard {
     video: std::cell::RefCell<Option<video::Preview>>,
     /// The preview frame the hero last showed, held like the poster through the closing reveal.
     video_frame: std::cell::RefCell<Option<(u64, Arc<[u8]>)>>,
+    /// The request `video_frame` came from: a reopen with the same request keeps showing it.
+    video_frame_request: std::cell::RefCell<Option<video::Request>>,
     desktop: Option<Arc<bead::services::Desktop>>,
     desktop_subscription: std::cell::RefCell<Option<bead::services::Subscription>>,
     /// Thumbnail of the active player's art, decoded once per path while visible.
@@ -669,6 +671,7 @@ impl Dashboard {
             poster_job: Default::default(),
             video: Default::default(),
             video_frame: Default::default(),
+            video_frame_request: Default::default(),
             desktop: None,
             desktop_subscription: Default::default(),
             art: Default::default(),
@@ -1662,8 +1665,20 @@ impl Dashboard {
             // projection. Poll it on later updates; retirement still joins it.
             *held = None;
         }
-        *self.video_frame.borrow_mut() =
-            self.video.borrow().as_ref().and_then(video::Preview::frame);
+        {
+            let preview = self.video.borrow();
+            let next = preview.as_ref().and_then(video::Preview::frame);
+            let request = preview.as_ref().map(|preview| &preview.request);
+            let mut from = self.video_frame_request.borrow_mut();
+            // S2 (row 83): a reopened preview shows the frame the panel closed on until its own
+            // first frame. The poster in between is a new image: a structural patch miss and a
+            // hero re-bake (~7 ms) inside every open with a video wallpaper.
+            if next.is_some() || from.as_ref() != request {
+                let mut shown = self.video_frame.borrow_mut();
+                *shown = next;
+                *from = shown.as_ref().and(request.cloned());
+            }
+        }
         let frame = self.video_frame.borrow();
         out.insert(
             "dashboard.wallpaper_image".into(),

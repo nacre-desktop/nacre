@@ -471,6 +471,21 @@ mod tests {
             "the close changes no dashboard value: {changed:?}"
         );
         assert!(moved.is_empty(), "the close repaints nothing: {moved:#?}");
+        // S2 (row 83): the reopen keeps that frame until the new preview's first one; the poster
+        // in between is a new image (a structural miss and a hero re-bake on every video open).
+        let reopened = runtime.stage(UiEvent::PanelVisibility(true))?;
+        let reopened = reopened.unwrap_or_else(|| runtime.session.current_scene());
+        runtime.session.commit(reopened.clone());
+        assert_eq!(
+            runtime.session.stores.get("dashboard.wallpaper_image"),
+            Some(&Value::Text("today-wallpaper:7".into())),
+            "the reopen keeps the shown frame's image key"
+        );
+        assert_eq!(
+            hero(&reopened),
+            hero(&open),
+            "the reopen keeps the shown frame"
+        );
         drop(runtime);
         std::fs::remove_dir_all(dir)?;
         Ok(())
