@@ -784,6 +784,7 @@ impl Chrome {
             bottom,
             ..
         } = frame;
+        let mut joined = None;
         if let Some(panel) = panel {
             let rect = body(panel.scene).translated(
                 panel.origin.0 as f32 - panel.scene.bounds.x,
@@ -799,6 +800,7 @@ impl Chrome {
             // panel at its final place from the first frame, which is Bead's to fix for the pre-slide slivers.
             if !covers {
                 material.push(rect);
+                joined = Some(rect);
             }
         }
         let side_top = if top > 0. { top + 2. } else { 0. };
@@ -841,8 +843,23 @@ impl Chrome {
             .into_iter()
             .filter(|r| r.w > 0. && r.h > 0.)
             .map(|rect| {
+                // A crop inside the joined panel's final rect (a concave corner it covers) is the
+                // panel's art at every pose; drawing it from the final join showed a straight
+                // block while the revealed body was narrower than the fillet. Frame only there.
+                let inside = joined.is_some_and(|p: Rect| {
+                    p.x <= rect.x
+                        && p.y <= rect.y
+                        && p.x + p.w >= rect.x + rect.w
+                        && p.y + p.h >= rect.y + rect.h
+                });
                 let svg = self
-                    .svg(frame, (w, h), &material, rect, engaged)
+                    .svg(
+                        frame,
+                        (w, h),
+                        &material[..material.len() - usize::from(inside)],
+                        rect,
+                        engaged,
+                    )
                     .map_err(|e| e.to_string())?;
                 Ok(bead::wayland::Decoration {
                     rect,

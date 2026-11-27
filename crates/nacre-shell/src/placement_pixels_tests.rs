@@ -566,9 +566,10 @@ fn configurable_frame_variants_match_their_goldens() -> Result<()> {
 
 /// B0430 (owner: rim seam at the control centre's join): the frame strip and the joined art draw the
 /// same translucent rim on two surfaces; two coats left a brighter row from the art's left edge. The
-/// art is clipped out of the frame strips, so inside every frame tile the tiles composed with the art
-/// equal the tiles alone (a corner tile the docked panel's opaque body covers stays equal), at both
-/// scales.
+/// art is clipped out of the frame strips, so inside every frame tile outside the panel the tiles
+/// composed with the art equal the tiles alone, at both scales. Sub-fillet (Bead report): a corner tile
+/// inside the panel's final rect is drawn from the frame alone (from the final join it showed a
+/// straight block while the revealed body was narrower than the fillet); at rest the art covers it.
 #[test]
 fn the_joined_art_leaves_the_frame_strip_rows_to_the_strip() -> Result<()> {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../shell");
@@ -624,30 +625,62 @@ fn the_joined_art_leaves_the_frame_strip_rows_to_the_strip() -> Result<()> {
         })
         .ok_or("joined art")?;
     let clip = scene.clips.get(&index).copied().map(place);
+    let joined = body.translated(
+        origin.0 as f32 - scene.bounds.x,
+        origin.1 as f32 - scene.bounds.y,
+    );
+    let inside = |r: Rect| {
+        joined.x <= r.x
+            && joined.y <= r.y
+            && joined.x + joined.w >= r.x + r.w
+            && joined.y + joined.h >= r.y + r.h
+    };
+    let corners: Vec<_> = tiles.iter().filter(|d| inside(d.rect)).collect();
+    assert!(
+        !corners.is_empty(),
+        "the docked control centre covers a corner tile"
+    );
+    for decoration in &corners {
+        let frame_only = chrome.svg(
+            frame,
+            (w, h),
+            &frame.material((w, h)),
+            decoration.rect,
+            true,
+        )?;
+        assert!(
+            *decoration.svg == *frame_only.as_bytes(),
+            "the corner tile {:?} is drawn from the final join",
+            decoration.rect
+        );
+    }
     for scale in [1., 1.5] {
         let blank = || Pixels {
             width: (w * scale) as u32,
             height: (h * scale) as u32,
             pixels: vec![0; (w * scale) as usize * (h * scale) as usize * 4],
         };
-        let (mut strip, mut composed) = (blank(), blank());
+        let (mut strip, mut composed, mut alone) = (blank(), blank(), blank());
         for decoration in &tiles {
             tile(&mut strip, decoration.rect, &decoration.svg, scale, None)?;
             tile(&mut composed, decoration.rect, &decoration.svg, scale, None)?;
         }
         tile(&mut composed, art, &svg, scale, clip)?;
+        tile(&mut alone, art, &svg, scale, clip)?;
         let at = |p: &Pixels, x: u32, y: u32| {
             let i = ((y * p.width + x) * 4) as usize;
             [p.pixels[i], p.pixels[i + 1], p.pixels[i + 2]]
         };
         for decoration in &tiles {
             let r = decoration.rect;
+            // At rest the art covers a corner tile inside the panel: there it is what shows.
+            let reference = if inside(r) { &alone } else { &strip };
             let (x0, y0) = ((r.x * scale) as u32, (r.y * scale) as u32);
             let x1 = (((r.x + r.w) * scale) as u32).min(strip.width);
             let y1 = (((r.y + r.h) * scale) as u32).min(strip.height);
             for y in y0..y1 {
                 for x in x0..x1 {
-                    let (s, c) = (at(&strip, x, y), at(&composed, x, y));
+                    let (s, c) = (at(reference, x, y), at(&composed, x, y));
                     assert!(
                         s.iter().zip(c).all(|(s, c)| s.abs_diff(c) <= 2),
                         "scale {scale}: ({x},{y}) in tile {r:?}: composed {c:?} against the strip's {s:?}"
