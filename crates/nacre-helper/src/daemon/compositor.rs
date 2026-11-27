@@ -379,6 +379,33 @@ struct NiriMetadata<'a> {
     proportional_x11_widths: bool,
     native: crate::compositor::niri_transport::NacreCapabilities,
 }
+/// The workspace-session ledger, parsed again only when the file's length or mtime changes: every
+/// flush read and parsed it, a few times per workspace switch (interaction CPU D2).
+fn with_session_ledger(path: &std::path::Path, use_ledger: impl FnOnce(&Value)) {
+    type Stamp = (u64, std::time::SystemTime);
+    thread_local! {
+        static LEDGER: RefCell<Option<(PathBuf, Stamp, Value)>> = const { RefCell::new(None) };
+    }
+    let Some(stamp) = std::fs::metadata(path)
+        .ok()
+        .and_then(|meta| Some((meta.len(), meta.modified().ok()?)))
+    else {
+        return;
+    };
+    LEDGER.with(|cached| {
+        let mut cached = cached.borrow_mut();
+        let current = matches!(&*cached, Some((seen, at, _)) if seen == path && *at == stamp);
+        if !current {
+            *cached = std::fs::read(path)
+                .ok()
+                .and_then(|bytes| serde_json::from_slice::<Value>(&bytes).ok())
+                .map(|ledger| (path.to_path_buf(), stamp, ledger));
+        }
+        if let Some((_, _, ledger)) = &*cached {
+            use_ledger(ledger);
+        }
+    });
+}
 fn flush_niri(
     hub: &Shared,
     state: &niri_state::State,
@@ -400,12 +427,10 @@ fn flush_niri(
     if metadata.native.edge_trigger_cues {
         snapshot["capabilities"]["edge_trigger_cues"] = json!(true);
     }
-    if let Some(ledger) = crate::paths::Paths::environment()
-        .ok()
-        .and_then(|paths| std::fs::read(paths.state.join("workspace-session.json")).ok())
-        .and_then(|bytes| serde_json::from_slice::<Value>(&bytes).ok())
-    {
-        annotate_origins(&mut snapshot, &ledger, metadata.socket);
+    if let Ok(paths) = crate::paths::Paths::environment() {
+        with_session_ledger(&paths.state.join("workspace-session.json"), |ledger| {
+            annotate_origins(&mut snapshot, ledger, metadata.socket)
+        });
     }
     publish(hub, &snapshot, "niri", keyboard, ready)?;
     let mut hub = hub.borrow_mut();
@@ -502,7 +527,10 @@ async fn niri(
     let mut due = None;
     let mut last = tokio::time::Instant::now() - Duration::from_millis(100);
     loop {
+        // D2: buffered events first, so one switch's burst is applied before the flush timer fires
+        // (unbiased, `due` raced the lines already read and one switch flushed two or three times).
         tokio::select! {
+                    biased;
                     bytes=line(&mut reader,&mut partial)=>{
                         let event:Value=serde_json::from_slice(&bytes?.ok_or("Compositor event stream ended")?)?;
                         let keyboard_changed=niri_keyboard(&event,&mut keyboard)?;
@@ -733,6 +761,35 @@ pub async fn run(
 #[cfg(test)]
 mod tests {
     use super::*;
+    /// D2: a flush reuses the parsed session ledger until the file's length or mtime changes.
+    #[test]
+    fn the_session_ledger_is_parsed_again_only_after_its_file_changes() {
+        let path = std::env::temp_dir().join(format!("nacre-ledger-{}.json", std::process::id()));
+        let read = || {
+            let mut seen = None;
+            with_session_ledger(&path, |ledger| seen = Some(ledger.clone()));
+            seen
+        };
+        std::fs::write(&path, br#"{"a":1}"#).unwrap();
+        assert_eq!(read(), Some(json!({"a": 1})));
+        std::fs::write(&path, br#"{"a":22}"#).unwrap();
+        assert_eq!(read(), Some(json!({"a": 22})), "a new length is read");
+        let stamp = std::fs::metadata(&path).unwrap().modified().unwrap();
+        std::fs::write(&path, br#"{"a":33}"#).unwrap();
+        std::fs::File::options()
+            .write(true)
+            .open(&path)
+            .unwrap()
+            .set_modified(stamp)
+            .unwrap();
+        assert_eq!(
+            read(),
+            Some(json!({"a": 22})),
+            "same length and mtime: the parsed ledger is reused"
+        );
+        std::fs::remove_file(&path).unwrap();
+        assert_eq!(read(), None, "no ledger, no annotation");
+    }
     #[test]
     fn overview_hover_events_keep_live_window_data_in_the_topic() -> Result<()> {
         let mut state = niri_state::State::new(Default::default());
