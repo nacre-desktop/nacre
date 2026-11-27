@@ -4947,3 +4947,47 @@ fn title_icon_is_ai_logo(h: &Harness) -> bool {
                 && rect.y + rect.h <= content.y + content.h)
     })
 }
+
+/// Interaction CPU S1: a notification count change patches the bar's badge instead of re-running the
+/// bar script (it read the count and the badge text; now a shown flag and a measured binding).
+#[test]
+fn a_notification_count_change_reruns_no_bar_luau() -> Result<()> {
+    let mut values = super::initial_models()?;
+    values.extend(parity_models());
+    values.insert("bar.notifications.count".into(), Value::Number(11.));
+    values.insert("bar.dnd".into(), Value::Bool(false));
+    let mut h = Harness::load(
+        &root(),
+        Path::new("bar/main.luau"),
+        &root().join("palette.json"),
+        values,
+        Config {
+            width: 1920,
+            height: 50,
+            scale: 1.,
+        },
+    )?;
+    settle_harness_animations(&mut h)?;
+    let luau = |h: &mut Harness, key: &str, value: Value| -> Result<u64> {
+        bead::core::profile::take_phases();
+        h.update(BTreeMap::from([(key.to_owned(), value)]))?;
+        Ok(bead::core::profile::take_phases()[1])
+    };
+    let counted = luau(&mut h, "bar.notifications.count", Value::Number(12.))?;
+    let texts: Vec<String> = bar_texts(&h).into_iter().map(|(text, _)| text).collect();
+    assert!(
+        texts.iter().any(|t| t == "12"),
+        "the badge shows the new count: {texts:?}"
+    );
+    let rerun = luau(
+        &mut h,
+        "bead.focused_title",
+        Value::Text("Another window".into()),
+    )?;
+    assert!(rerun > 0, "a title change re-runs the bar's Luau");
+    assert!(
+        counted * 10 < rerun,
+        "a count change re-ran the bar's Luau: {counted} ns against a re-run's {rerun} ns"
+    );
+    Ok(())
+}

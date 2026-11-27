@@ -32,6 +32,8 @@ return {stores={["bar.wallpaper_applied"]=0,["bar.stack.fan"]=0,["bead.desktop.w
     ["bar.title.cue.body"]=function(s) return (.03+.09*s["bead.edge.dwell"])*s["bead.edge.fade"] end,
     ["bar.title.cue.border"]=function(s) return (.06+.18*s["bead.edge.dwell"])*s["bead.edge.fade"] end,
     ["bar.notifications.text"]=function(s) return tostring(math.min(999,s["bar.notifications.count"])) end,
+    ["bar.notifications.shown"]=function(s) return s["bar.notifications.count"]>0 end,
+    ["bar.notifications.badge"]=function(s) return s["bar.notifications.count"]>999 and "999+" or tostring(s["bar.notifications.count"]) end,
     ["bar.notifications.tail"]=function(s) return 7+7.5*#tostring(math.min(999,s["bar.notifications.count"])) end,
     ["bar.notifications.detail.width"]=function(s) return 1+8*#s["bar.notifications.text"] end,
     ["bar.battery.detail.width"]=function(s) return 1+8*#s["bead.desktop.battery.value"] end,

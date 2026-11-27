@@ -74,12 +74,13 @@ end
 -- `kind` is kept for callers' ids.
 local function status_glyph(id,text,_kind,color,badge,_active)
     local box=t.icon_font*t.line_height
-    local count=badge and badges_on and tostring(ui.resolve_for_check(badge) or "") or ""
-    local badge_width=count~="" and math.max(t.badge_size,math.ceil(ui.text_width(count,"IBM Plex Sans",t.badge_font))+2*t.badge_pad) or 0
+    -- A bound badge is measured, not resolved: Bead re-runs the view only when its measured width changes.
+    local count=badge and badges_on and badge or nil
+    local badge_width=count and math.max(t.badge_size,math.ceil(ui.text_width(count,"IBM Plex Sans",t.badge_font))+2*t.badge_pad) or 0
     return ui.Row{id=id,width=t.icon_width,height=box,shrink=0,align="center",justify="center",
         ui.Text{id="ink",width=t.icon_width,height=box,shrink=0,
             text=text,family="Material Symbols Rounded",font_size=t.icon_font,color=color or t.status_tone,text_align="center"},
-        count~="" and ui.Box{id="badge",position="absolute",left=t.icon_width+t.badge_overhang-badge_width,top=(box-t.icon_font)/2-t.badge_lift,width=badge_width,height=t.badge_size,radius=t.badge_size/2,fill=t.glyph_tone,
+        count and ui.Box{id="badge",position="absolute",left=t.icon_width+t.badge_overhang-badge_width,top=(box-t.icon_font)/2-t.badge_lift,width=badge_width,height=t.badge_size,radius=t.badge_size/2,fill=t.glyph_tone,
             ui.Text{id="count",text=count,width=badge_width,height=t.badge_size,font_size=t.badge_font,font_weight=600,family="IBM Plex Sans",text_align="center",color="onTertiary"}} or nil}
 end
 -- Layout snaps every box to whole logical pixels, and text paints wrapped at its box's

@@ -15,8 +15,10 @@ local function bar(props,settings,_data)
     -- D1: the count is a 15 px primary badge on the bell; Do Not Disturb swaps the bell for
     -- do_not_disturb_on and hides the badge.
     local dnd=ui.resolve_for_check(ui.bind("bar.dnd"))==true
-    local count=ui.resolve_for_check(ui.bind("bar.notifications.count")) or 0
-    local badge=not dnd and style~="icon+text" and count>0 and (count>999 and "999+" or ui.bind("bar.notifications.text")) or nil
+    -- Interaction CPU S1: only whether a badge shows is read here; its text is bound and measured as a
+    -- width dependency (status_glyph), so a count change patches the badge instead of re-running the bar.
+    local shown=ui.resolve_for_check(ui.bind("bar.notifications.shown"))==true
+    local badge=not dnd and style~="icon+text" and shown and ui.bind("bar.notifications.badge") or nil
     local text=style=="icon+text" and measure.ellipsize("Notifications",props.available_width and math.max(0,props.available_width-item_width-t.item_gap) or ui.text_width("Notifications",font,t.detail_font),font,t.detail_font) or nil
     local width=text and math.ceil(ui.text_width(text,font,t.detail_font)) or 0
     return (popouts and kit.StatusIcon or ui.Row){id="notifications",width=text and props.available_width or nil,direction="row",height=t.status_height,radius=t.status_radius,gap=text and t.item_gap or 0,padding=0,padding_left=t.status_padding,padding_right=t.status_count_padding,fill="transparent",hover_fill=ui.alpha("onSurface",t.status_hover),align="center",justify=text and "start" or "center",

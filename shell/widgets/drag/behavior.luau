@@ -50,6 +50,8 @@ return {stores={
     end,
     ["bar.updates.text"]=function(s) return tostring(s["bar.updates.count"]) end,
     ["bar.notifications.text"]=function(s) return tostring(math.min(999,s["bar.notifications.count"])) end,
+    ["bar.notifications.shown"]=function(s) return s["bar.notifications.count"]>0 end,
+    ["bar.notifications.badge"]=function(s) return s["bar.notifications.count"]>999 and "999+" or tostring(s["bar.notifications.count"]) end,
     ["bar.notifications.tail"]=function(s) return 7+7.5*#tostring(math.min(999,s["bar.notifications.count"])) end,
     ["bar.notifications.detail.width"]=function(s) return 1+8*#s["bar.notifications.text"] end,
     ["bar.battery.detail.width"]=function(s) return 1+8*#s["bead.desktop.battery.value"] end,
