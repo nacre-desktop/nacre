@@ -23,7 +23,9 @@ installed service, persistent cache or per-frame filesystem output. The preview
 mode is a generic source/size/frame output, not a Rust implementation of the UI.
 
 Today owns at most one child and one latest-frame slot, caps raster size at
-1600 by 1000 and delivery at 30 fps, and rejects frame payloads above 8 MiB.
+1600 by 1000 and delivery at 15 fps (30 fps until row 83 (b), 2026-11-27), and rejects frame payloads above 8 MiB.
+While a panel slides, a wallpaper fades or a workspace switches (the desktop video's hold), the child does
+not start and no new frame is shown.
 The child loops without audio. The Image's model key changes for each delivered
 frame, triggering normal Luau scene preparation; cropping, overlays and layout
 remain in the shell. The poster remains the loading image and failure fallback.

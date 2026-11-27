@@ -64,7 +64,7 @@ fn extend(hold: &mut Option<Instant>, until: Instant) {
         *hold = Some(until);
     }
 }
-fn held_until(now: Instant) -> Option<Instant> {
+pub(crate) fn held_until(now: Instant) -> Option<Instant> {
     HOLD.lock()
         .unwrap_or_else(|p| p.into_inner())
         .filter(|until| *until > now)

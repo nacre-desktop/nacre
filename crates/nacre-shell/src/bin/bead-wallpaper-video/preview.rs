@@ -17,7 +17,8 @@ const MAX_REQUEST: usize = 16 * 1024;
 const MAX_FRAME: usize = 8 * 1024 * 1024;
 const MAX_WIDTH: u32 = 1600;
 const MAX_HEIGHT: u32 = 1000;
-const FRAME_INTERVAL: Duration = Duration::from_nanos(1_000_000_000 / 30);
+/// Matches the dashboard reader's 15 fps cap (row 83 (b)), so no frame is scaled and encoded only to wait.
+const FRAME_INTERVAL: Duration = Duration::from_nanos(1_000_000_000 / 15);
 const FIRST_FRAME_TIMEOUT: Duration = Duration::from_secs(10);
 
 fn valid_dimensions(width: u32, height: u32) -> bool {
