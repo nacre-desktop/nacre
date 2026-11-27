@@ -525,3 +525,31 @@ fn hover_sidebar_keeps_a_focused_composer_open_outside_both_regions() {
     );
     assert!(runtime.session.hover_close_deadline().is_some());
 }
+
+/// ICPU-1 (row 83): the running dot's `ui.pulse` stages every display frame. Those stagings change
+/// no store, so the chat projector runs at most every 100 ms of them, not on every frame.
+#[test]
+fn a_running_chats_pulse_does_not_project_every_frame() {
+    let _guard = serial();
+    let mut runtime = runtime_section(crate::chat::tests::running_chat(), "launcher");
+    runtime.viewport(420, 600);
+    step(&mut runtime, UiEvent::Model(BTreeMap::new()));
+    let calls = std::rc::Rc::new(std::cell::Cell::new(0));
+    let counter = calls.clone();
+    runtime.session.set_projector(Box::new(move |_| {
+        counter.set(counter.get() + 1);
+        Ok(BTreeMap::new())
+    }));
+    runtime.session.set_frame_interval(Duration::from_millis(1));
+    step(&mut runtime, UiEvent::Model(BTreeMap::new()));
+    calls.set(0);
+    for _ in 0..10 {
+        std::thread::sleep(Duration::from_millis(2));
+        step(&mut runtime, UiEvent::Model(BTreeMap::new()));
+    }
+    assert!(
+        calls.get() <= 1,
+        "the pulse projected on {} of 10 frames",
+        calls.get()
+    );
+}

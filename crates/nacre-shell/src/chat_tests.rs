@@ -103,6 +103,14 @@ pub(crate) fn offline(data: Json) -> (Arc<FakeSource>, Chat) {
     let source = Arc::new(FakeSource::new(data).unwrap());
     (source.clone(), Chat::new(None, source, meter))
 }
+/// An offline chat whose launcher list shows one running chat (its dot pulses).
+pub(crate) fn running_chat() -> Chat {
+    let (_, chat) = offline(json!({"available":true,"channels":{}}));
+    chat.st.borrow_mut().launcher = Some(json!({"chats":[
+        {"key":"busy","title":"Working","provider":"claude","state":"running","lastActivity":0}
+    ],"projects":[],"warning":""}));
+    chat
+}
 fn cells(out: &BTreeMap<String, Value>) -> Vec<Json> {
     match &out["chat.cells"] {
         Value::List(items) => items.as_ref().clone(),

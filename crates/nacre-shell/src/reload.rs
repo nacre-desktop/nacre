@@ -3312,6 +3312,8 @@ impl Runtime {
             Ok(changes)
         }));
         self.session.set_projection_coalescing(true);
+        // ICPU-1 (B0426): the launcher's projector reads no clock outside the first open.
+        self.session.set_projector_frames(false);
         self.session.stores = self
             .session
             .stores
@@ -3686,6 +3688,9 @@ impl Runtime {
         let projector = chat.clone();
         self.session
             .set_projector(Box::new(move |stores| Ok(projector.project(stores))));
+        // ICPU-1 (B0426): the running dot's pulse stages every frame; the chat's clock reads
+        // (heartbeat, list refresh, relative times) are coarse, so it projects at most every 100 ms.
+        self.session.set_projector_frames(false);
         self.actions.register("chat.do", "chat.control")?;
         self.actions.grant("chat.control");
         if let Some(chrome) = &mut self.chrome {
