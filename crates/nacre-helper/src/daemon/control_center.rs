@@ -26,7 +26,7 @@ use std::{
     path::{Path, PathBuf},
     process::Stdio,
     sync::{atomic::Ordering::SeqCst, Arc},
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 const STAY_AWAKE_UNIT: &str = "nacre-stay-awake.service";
@@ -88,6 +88,8 @@ thread_local! {
     static REFRESH: std::rc::Rc<tokio::sync::Notify> = std::rc::Rc::new(tokio::sync::Notify::new());
     /// One interactive capture tool (area selection, picker, recorder start) at a time.
     static CAPTURE_BUSY: Cell<bool> = const { Cell::new(false) };
+    /// When the slow members were last read, see [`session`].
+    static SLOW_READ: Cell<Option<Instant>> = const { Cell::new(None) };
 }
 #[cfg(test)]
 pub(crate) fn set_env(env: Option<Env>) {
@@ -1423,6 +1425,7 @@ pub async fn initial(hub: &Shared) -> Result<()> {
         slow: true,
     };
     let prior = empty_state();
+    SLOW_READ.with(|at| at.set(Some(Instant::now())));
     let lights = scan_lights(&env, &probe).await;
     let state = crate::process::offload(move || collect(&env, &probe, &prior, lights)).await?;
     publish(hub, &state)
@@ -1434,6 +1437,7 @@ async fn session(hub: Shared, env: Env) -> Result<()> {
     let refresh = REFRESH.with(std::rc::Rc::clone);
     let mut notices = hub.borrow().observe();
     let mut full = true;
+    let mut first = true;
     let mut state = hub
         .borrow()
         .snapshot(TOPIC)
@@ -1441,10 +1445,20 @@ async fn session(hub: Shared, env: Env) -> Result<()> {
         .unwrap_or_else(empty_state);
     loop {
         let outputs = output_names(&hub);
+        // A session that starts again within one slow period (a launcher reopened) keeps the slow members of the
+        // last read, as a continuing one would: no helper and systemctl children per open. They are then at most
+        // two periods old.
+        let slow = !std::mem::take(&mut first)
+            || SLOW_READ
+                .with(Cell::get)
+                .is_none_or(|at| at.elapsed() >= env.tick * SLOW_EVERY);
+        if slow {
+            SLOW_READ.with(|at| at.set(Some(Instant::now())));
+        }
         let probe = Probe {
             outputs: outputs.clone(),
             ddc: full,
-            slow: true,
+            slow,
         };
         let lights = scan_lights(&env, &probe).await;
         let (read_env, prior) = (env.clone(), state.clone());

@@ -1127,6 +1127,40 @@ fn the_topic_is_produced_only_while_subscribed_and_follows_changes() {
 }
 
 #[test]
+fn a_resubscribe_within_one_slow_period_keeps_the_slow_members() {
+    run(async {
+        let f = Fixture::new();
+        // Thread-local: a test run on one thread keeps the previous test's read.
+        SLOW_READ.with(|at| at.set(None));
+        // The daemon's start-up read, which publishes the topic.
+        initial(&f.hub).await.unwrap();
+        // Ticks long enough that the slow period (five ticks) outlasts the test.
+        let env = Env {
+            tick: Duration::from_secs(5),
+            ..f.env()
+        };
+        let task = tokio::task::spawn_local(serve(f.hub.clone(), env));
+        let reads = |f: &Fixture| f.text("engine.log").matches("control-tools state").count();
+        for open in 1..=2 {
+            let (client, _) = f.hub.borrow_mut().add_client().unwrap();
+            f.hub
+                .borrow_mut()
+                .subscribe(client, &[TOPIC.into()], false)
+                .unwrap();
+            tokio::time::sleep(Duration::from_millis(300)).await;
+            assert_eq!(
+                reads(&f),
+                1,
+                "open {open}: the start-up slow read covers every resubscribe within the period"
+            );
+            f.hub.borrow_mut().remove_client(client);
+            tokio::time::sleep(Duration::from_millis(100)).await;
+        }
+        task.abort();
+    });
+}
+
+#[test]
 fn palette_schedule_is_light_from_sunrise_to_sunset() {
     let day = (7 * 60, 19 * 60);
     assert_eq!(scheduled(6 * 60 + 59, day), (false, 1));
