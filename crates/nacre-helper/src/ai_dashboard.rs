@@ -2713,6 +2713,24 @@ fn run_inner(args: &[String]) -> Result<i32> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // A sibling test thread's fork can briefly hold a just-written script's
+    // write fd, so exec fails with ETXTBSY before anything ran: retry.
+    fn retry_busy<T>(mut call: impl FnMut() -> Result<T>) -> Result<T> {
+        for _ in 0..50 {
+            match call() {
+                Err(error)
+                    if error.downcast_ref::<std::io::Error>().is_some_and(|error| {
+                        error.kind() == std::io::ErrorKind::ExecutableFileBusy
+                    }) =>
+                {
+                    std::thread::sleep(std::time::Duration::from_millis(3));
+                }
+                result => return result,
+            }
+        }
+        call()
+    }
     #[test]
     fn terminal_panic_child() {
         if env::var_os("NACRE_TEST_TERMINAL_PANIC").is_none() {
@@ -2869,7 +2887,7 @@ mod tests {
         )?;
         fs::set_permissions(&fake_tmux, fs::Permissions::from_mode(0o755))?;
 
-        resume_record_request(&encoded, &configured, &fake_tmux)?;
+        retry_busy(|| resume_record_request(&encoded, &configured, &fake_tmux))?;
         assert_eq!(
             fs::read_to_string(capture)?,
             "attach-session\n-t\n=nacre-chat-123\n"
@@ -2948,17 +2966,21 @@ mod tests {
             "resume".into(),
             "thread; $(literal)".into(),
         ];
-        assert!(run_remote_with(&fake, "task-host", &command, false)?
-            .status
-            .success());
+        assert!(
+            retry_busy(|| run_remote_with(&fake, "task-host", &command, false))?
+                .status
+                .success()
+        );
         let interactive = fs::read_to_string(&capture)?;
         assert_eq!(interactive.lines().next(), Some("-t"));
         assert!(interactive.contains("task-host"));
         assert!(interactive.contains("\"$HOME/.local/bin/codex\" 'resume' 'thread; $(literal)'"));
 
-        assert!(run_remote_with(&fake, "task-host", &command, true)?
-            .status
-            .success());
+        assert!(
+            retry_busy(|| run_remote_with(&fake, "task-host", &command, true))?
+                .status
+                .success()
+        );
         let listing = fs::read_to_string(&capture)?;
         assert!(!listing.lines().any(|argument| argument == "-t"));
         Ok(())
@@ -3150,7 +3172,7 @@ mod tests {
         env::set_var("NACRE_AI_SCOPE_LOG", &scope_log);
         let mut child = Command::new("sh");
         child.args(["-c", "printf visible; printf diagnostic >&2"]);
-        launch_background_at(&child, fixture.path())?;
+        retry_busy(|| launch_background_at(&child, fixture.path()))?;
         let log = fixture.path().join(".local/state/nacre/ai/launcher.log");
         let until = std::time::Instant::now() + std::time::Duration::from_secs(2);
         while std::time::Instant::now() < until {
