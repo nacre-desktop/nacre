@@ -27,7 +27,6 @@
     "bar/assets/nacre-logo.themed.svg",
     "bar/assets/pearl-current.themed.svg",
     "bar/assets/pearl-occupied.themed.svg",
-    "bar/assets/workspace-thread.themed.svg",
-    "chat/assets/nacre-ai.themed.svg"
+    "bar/assets/workspace-thread.themed.svg"
   ]
 }

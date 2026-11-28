@@ -121,10 +121,7 @@ fn overview_hover_title_and_app_glyph_render_through_topic_projection_at_both_sc
             title_is(&h, "Focused title"),
             "empty overview space falls back to focused title"
         );
-        assert!(
-            title_icon_is_ai_logo(&h),
-            "the AI window's title shows the Nacre AI logo"
-        );
+        assert!(title_is(&h, "neurology"));
 
         topic["overviewHoveredWindowId"] = serde_json::json!("niri-window:window-b");
         topic["windows"]
@@ -4886,68 +4883,6 @@ fn a_launcher_opened_over_another_view_sends_it_no_launcher_model() -> Result<()
     ));
     Ok(())
 }
-
-/// Owner 2026-11-27: a Nacre AI chat window (the host's `neurology` glyph) shows the themed Nacre AI
-/// logo in the bar's title instead of the brain glyph.
-#[test]
-fn an_ai_chat_title_shows_the_nacre_ai_logo() -> Result<()> {
-    let mut values = super::initial_models()?;
-    values.extend(parity_models());
-    values.extend(BTreeMap::from([
-        (
-            "bead.focused_app_glyph".into(),
-            Value::Text("neurology".into()),
-        ),
-        (
-            "bead.focused_title".into(),
-            Value::Text("Nacre Brain setup for Claude".into()),
-        ),
-    ]));
-    let mut h = Harness::load(
-        &root(),
-        Path::new("bar/main.luau"),
-        &root().join("palette.json"),
-        values,
-        Config {
-            width: 1920,
-            height: 50,
-            scale: 1.,
-        },
-    )?;
-    settle_harness_animations(&mut h)?;
-    let texts: Vec<String> = bar_texts(&h).into_iter().map(|(text, _)| text).collect();
-    assert!(
-        !texts.iter().any(|t| t == "neurology"),
-        "the brain glyph still shows: {texts:?}"
-    );
-    assert!(
-        title_icon_is_ai_logo(&h),
-        "the title shows no Nacre AI logo"
-    );
-    Ok(())
-}
-/// The title shows the themed Nacre AI logo: a themed image inside the title's content box (an app
-/// icon is an `@icon:` path, a glyph is text).
-fn title_icon_is_ai_logo(h: &Harness) -> bool {
-    let Some(content) = h
-        .session
-        .view_nodes()
-        .iter()
-        .find(|node| node.id.ends_with("title-content"))
-        .map(|node| bead::ui::rect(&node.draw))
-    else {
-        return false;
-    };
-    h.scene().primitives.iter().any(|p| {
-        matches!(p, bead::render::Primitive::Image { rect, path, .. }
-            if path.to_string_lossy().starts_with("@themed-")
-                && rect.x >= content.x
-                && rect.x + rect.w <= content.x + content.w
-                && rect.y >= content.y
-                && rect.y + rect.h <= content.y + content.h)
-    })
-}
-
 /// Interaction CPU S1: a notification count change patches the bar's badge instead of re-running the
 /// bar script (it read the count and the badge text; now a shown flag and a measured binding).
 #[test]
