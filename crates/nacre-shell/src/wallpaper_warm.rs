@@ -14,7 +14,7 @@ use std::{
         mpsc::{self, SyncSender, TrySendError},
     },
     thread,
-    time::{Duration, Instant},
+    time::Duration,
 };
 
 type WarmIdentity = (String, String, Vec<[u32; 5]>);
@@ -236,9 +236,11 @@ impl Warmer {
                     };
                     notify(&wake_signal);
 
-                    let mut warmed: Option<(WarmIdentity, Instant)> = None;
+                    // The identity last warmed and Bead's large-image eviction count after it (B0440).
+                    let mut warmed: Option<(WarmIdentity, u64)> = None;
                     let mut deferred = false;
                     while !stop.load(Ordering::Relaxed) {
+                        // Warmed: the 90 s wait only polls the eviction count; nothing re-warms without an eviction.
                         let timeout = if warmed.is_some() && !deferred {
                             Duration::from_secs(90)
                         } else {
@@ -277,10 +279,11 @@ impl Warmer {
                             active_path,
                             geometries.iter().map(WarmGeometry::bits).collect(),
                         );
-                        if warmed
-                            .as_ref()
-                            .is_some_and(|(previous, at)| previous == &identity && at.elapsed() < Duration::from_secs(90))
-                        {
+                        if still_warm(
+                            warmed.as_ref(),
+                            &identity,
+                            bead::render::large_image_evictions(),
+                        ) {
                             continue;
                         }
 
@@ -368,7 +371,8 @@ impl Warmer {
                             geometry.inner.1,
                             geometry.scale
                         );
-                        warmed = complete.then(|| (identity, Instant::now()));
+                        // Read after the warm, so its own evictions don't trigger the next one.
+                        warmed = complete.then(|| (identity, bead::render::large_image_evictions()));
                     }
                 }
             })
@@ -638,9 +642,39 @@ fn resolve_wallpaper_handles(scene: &mut bead::render::Scene, entries: &[Json]) 
     }
 }
 
+/// The same identity stays warm until Bead's large-image cache evicts something (B0440); the old
+/// 90 s re-warm redid the whole catalogue on every timeout.
+fn still_warm(
+    warmed: Option<&(WarmIdentity, u64)>,
+    identity: &WarmIdentity,
+    evictions: u64,
+) -> bool {
+    warmed.is_some_and(|(previous, seen)| previous == identity && *seen == evictions)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_warmed_identity_rewarms_only_after_an_eviction() {
+        let identity: WarmIdentity = ("boot".into(), "/w/a.png".into(), vec![[1, 2, 3, 4, 5]]);
+        let warmed = Some((identity.clone(), 7));
+        assert!(
+            still_warm(warmed.as_ref(), &identity, 7),
+            "no eviction: no re-warm, however long it has been"
+        );
+        assert!(
+            !still_warm(warmed.as_ref(), &identity, 8),
+            "an eviction re-warms"
+        );
+        let other: WarmIdentity = ("boot".into(), "/w/b.png".into(), vec![[1, 2, 3, 4, 5]]);
+        assert!(
+            !still_warm(warmed.as_ref(), &other, 7),
+            "a new wallpaper warms"
+        );
+        assert!(!still_warm(None, &identity, 7));
+    }
 
     fn geometry(width: f32, scale: f32) -> WarmGeometry {
         WarmGeometry {
