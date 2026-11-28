@@ -13,7 +13,14 @@ pub const IMAGES: [&str; 7] = ["jpg", "jpeg", "png", "webp", "gif", "tif", "tiff
 pub const VIDEOS: [&str; 6] = ["mp4", "webm", "mkv", "mov", "avi", "m4v"];
 const THUMBNAIL_LIMIT_BYTES: u64 = 256 * 1024;
 const PREVIEW_LIMIT_BYTES: u64 = 2 * 1024 * 1024;
+/// Cached thumbnails kept beyond the library's own (stale or outside posters); the catalogue keeps every library entry.
 const THUMBNAIL_CACHE_COUNT: usize = 128;
+/// A single preview outside the catalogue only bounds the cache (the catalogue's row limit); the next
+/// catalogue call evicts stale entries.
+const THUMBNAIL_CACHE_CEILING: usize = 2048;
+/// The picker's catalogue call stops creating thumbnails after this and returns the rest from the cache,
+/// inside the daemon's 12 s helper timeout; the shell's thumbnail retries ask for them again.
+const CATALOGUE_WORK_BUDGET: Duration = Duration::from_secs(6);
 
 /// What shapes prepared palette data: the pinned Orient engine plus the helper code that
 /// assembles the palette from it. Unrelated helper deploys keep every prepared palette.
@@ -114,7 +121,11 @@ fn video_poster_key(path: &Path) -> Result<String> {
     ))
 }
 
-fn trim_thumbnail_cache(cache: &Path, keep_keys: &std::collections::HashSet<String>) -> Result<()> {
+fn trim_thumbnail_cache(
+    cache: &Path,
+    keep_keys: &std::collections::HashSet<String>,
+    spare: usize,
+) -> Result<()> {
     let mut files = fs::read_dir(cache)?
         .filter_map(std::result::Result::ok)
         .filter_map(|entry| {
@@ -142,7 +153,7 @@ fn trim_thumbnail_cache(cache: &Path, keep_keys: &std::collections::HashSet<Stri
                 })
         })
         .count()
-        .min(THUMBNAIL_CACHE_COUNT);
+        .min(spare);
     let mut kept = 0;
     for (key, path, meta) in files {
         let valid = meta
@@ -154,8 +165,7 @@ fn trim_thumbnail_cache(cache: &Path, keep_keys: &std::collections::HashSet<Stri
             if preview.exists() {
                 fs::remove_file(preview)?;
             }
-        } else if keep_keys.contains(&key) || kept < THUMBNAIL_CACHE_COUNT.saturating_sub(protected)
-        {
+        } else if keep_keys.contains(&key) || kept < spare.saturating_sub(protected) {
             if !keep_keys.contains(&key) {
                 kept += 1;
             }
@@ -649,10 +659,14 @@ impl Media {
             }
         }
         if let Some(keep_keys) = keep_keys.as_mut() {
+            // The catalogue trims once at the end, keeping every library entry.
             keep_keys.insert(key.clone());
-            trim_thumbnail_cache(&cache, keep_keys)?;
         } else {
-            trim_thumbnail_cache(&cache, &std::collections::HashSet::from([key.clone()]))?;
+            trim_thumbnail_cache(
+                &cache,
+                &std::collections::HashSet::from([key.clone()]),
+                THUMBNAIL_CACHE_CEILING,
+            )?;
         }
         Ok(json!({"thumbnail":thumb,"preview":preview}))
     }
@@ -785,6 +799,18 @@ impl Media {
     }
 
     pub fn catalog_with_ids(&self, ids: Option<&[String]>) -> Result<Value> {
+        self.catalog_within(ids, None)
+    }
+
+    /// `budget` bounds thumbnail creation (the first requested entry is always attempted); entries
+    /// past it come back from the cache, as unrequested ones do.
+    pub fn catalog_within(
+        &self,
+        ids: Option<&[String]>,
+        budget: Option<Duration>,
+    ) -> Result<Value> {
+        let started = std::time::Instant::now();
+        let mut attempted = 0usize;
         fs::create_dir_all(&self.library)?;
         fs::create_dir_all(self.library.join("Dynamic"))?;
         let mut entries = walkdir::WalkDir::new(&self.library)
@@ -818,11 +844,11 @@ impl Media {
                 let id = canonical.to_string_lossy().into_owned();
                 let materialize = requested
                     .as_ref()
-                    .is_none_or(|requested| requested.contains(&id));
+                    .is_none_or(|requested| requested.contains(&id))
+                    && (attempted == 0 || budget.is_none_or(|budget| started.elapsed() < budget));
                 if materialize {
-                    match self
-                        .describe_preserving(&canonical, requested.as_ref().map(|_| &mut keep_keys))
-                    {
+                    attempted += 1;
+                    match self.describe_preserving(&canonical, Some(&mut keep_keys)) {
                         Ok(mut value) => {
                             let targeted = requested
                                 .as_ref()
@@ -870,6 +896,21 @@ impl Media {
                     }
                     rows.push(value);
                 }
+            }
+        }
+        // Keep every library entry's thumbnail: a fixed count below the library size made each call
+        // regenerate them all (260 files: 85-122 s).
+        keep_keys.extend(rows.iter().filter_map(|row| {
+            Path::new(row["thumbnail"].as_str()?)
+                .file_name()?
+                .to_str()?
+                .strip_suffix("-thumbnail.jpg")
+                .map(str::to_owned)
+        }));
+        let cache = self.cache();
+        if cache.is_dir() {
+            if let Err(error) = trim_thumbnail_cache(&cache, &keep_keys, THUMBNAIL_CACHE_COUNT) {
+                eprintln!("Wallpaper thumbnail cache trim: {error}");
             }
         }
         let presets = self.palette_presets()?;
@@ -2193,7 +2234,9 @@ pub fn run(args: &[String]) -> Result<i32> {
         let media = Media::new(paths.clone(), paths.assets())?;
         let mut cli = crate::palette_cli::Cli::environment(true)?;
         match action.as_str() {
-            "catalog" => media.catalog_with_ids(catalogue_ids.as_deref()),
+            "catalog" => {
+                media.catalog_within(catalogue_ids.as_deref(), Some(CATALOGUE_WORK_BUDGET))
+            }
             "prewarm" => media.prewarm_catalogue(
                 &mut cli,
                 catalogue_ids.as_deref().ok_or("Missing catalogue ids")?,
@@ -2293,6 +2336,7 @@ mod thumbnail_cache_tests {
         trim_thumbnail_cache(
             directory.path(),
             &std::collections::HashSet::from([current.clone()]),
+            THUMBNAIL_CACHE_COUNT,
         )?;
         let thumbnails = fs::read_dir(directory.path())?
             .filter_map(std::result::Result::ok)
@@ -2310,6 +2354,82 @@ mod thumbnail_cache_tests {
         assert!(thumbnails
             .iter()
             .all(|entry| entry.metadata().unwrap().len() <= THUMBNAIL_LIMIT_BYTES));
+        Ok(())
+    }
+
+    /// CATALOGUE-WARM: a library larger than the cache count keeps every thumbnail, so a repeat call
+    /// creates none (red: each call trimmed to 128 and regenerated the rest).
+    #[test]
+    fn a_library_beyond_the_thumbnail_count_stays_warm() -> Result<()> {
+        let (home, media) = media_fixture()?;
+        let count = THUMBNAIL_CACHE_COUNT + 12;
+        for index in 0..count {
+            image::DynamicImage::new_rgba8(8, 8)
+                .save(media.library.join(format!("wall-{index:03}.png")))?;
+        }
+        let thumbnails = |media: &Media| -> Result<Vec<(PathBuf, std::time::SystemTime)>> {
+            let mut found = fs::read_dir(media.cache())?
+                .filter_map(std::result::Result::ok)
+                .filter(|entry| {
+                    entry
+                        .file_name()
+                        .to_string_lossy()
+                        .ends_with("-thumbnail.jpg")
+                })
+                .map(|entry| Ok((entry.path(), entry.metadata()?.modified()?)))
+                .collect::<Result<Vec<_>>>()?;
+            found.sort();
+            Ok(found)
+        };
+        media.catalog()?;
+        let first = thumbnails(&media)?;
+        assert_eq!(first.len(), count, "every library thumbnail stays cached");
+        std::thread::sleep(Duration::from_millis(20));
+        let again = media.catalog()?;
+        assert_eq!(
+            thumbnails(&media)?,
+            first,
+            "a repeat call creates no thumbnail"
+        );
+        assert!(again["entries"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|row| row["thumbnail"] != ""));
+        // A preview outside the library keeps the library's thumbnails.
+        let outside = home.path().join("outside.png");
+        image::DynamicImage::new_rgba8(8, 8).save(&outside)?;
+        media.previews(&outside)?;
+        assert_eq!(thumbnails(&media)?.len(), count + 1);
+        // The listing evicts entries outside the library once it fills the cache count.
+        media.catalog_with_ids(Some(&[]))?;
+        assert_eq!(thumbnails(&media)?, first);
+        Ok(())
+    }
+
+    #[test]
+    fn a_budgeted_catalogue_returns_every_requested_row_and_attempts_one() -> Result<()> {
+        let (_home, media) = media_fixture()?;
+        let ids = (0..3)
+            .map(|index| {
+                let path = media.library.join(format!("wall-{index}.png"));
+                image::DynamicImage::new_rgba8(8, 8).save(&path)?;
+                Ok(path.to_string_lossy().into_owned())
+            })
+            .collect::<Result<Vec<_>>>()?;
+        let made = |catalogue: &Value| {
+            let rows = catalogue["entries"].as_array().unwrap();
+            assert!(ids
+                .iter()
+                .all(|id| rows.iter().any(|row| row["path"] == id.as_str())));
+            rows.iter().filter(|row| row["thumbnail"] != "").count()
+        };
+        assert_eq!(
+            made(&media.catalog_within(Some(&ids), Some(Duration::ZERO))?),
+            1
+        );
+        // Later calls reach the rest: the shell retries missing thumbnails.
+        assert_eq!(made(&media.catalog_within(Some(&ids), None)?), 3);
         Ok(())
     }
 
