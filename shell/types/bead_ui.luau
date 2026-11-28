@@ -52,6 +52,7 @@ export type Props = {
     axis:any?,
     on_settle:any?,
     snap:any?,
+    motion:any?,
     scrollbar:any?,
     fill:any?,
     radial:any?,
