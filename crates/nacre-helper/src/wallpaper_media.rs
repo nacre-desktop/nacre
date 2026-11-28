@@ -214,7 +214,7 @@ pub struct Media {
     pub hour: Option<u32>,
     pub palette_command: Option<PaletteCommand>,
 }
-const PALETTE_CACHE_COUNT: usize = 64;
+pub(crate) const PALETTE_CACHE_COUNT: usize = 64;
 const PALETTE_PREWARM_COUNT: usize = 32;
 const CATALOGUE_PALETTE_LIMIT: usize = 64;
 
@@ -1555,7 +1555,14 @@ impl Media {
                 if let Some(mode) = mode {
                     words.extend(["--mode".into(), mode.into()]);
                 }
-                let data = self.query_palette(cli, words)?;
+                // A clip the decoder cannot sample (a truncated download) must not cost the rest of the batch.
+                let data = match self.query_palette(cli, words) {
+                    Ok(data) => data,
+                    Err(error) => {
+                        eprintln!("Wallpaper palette prewarm {source}: {error}");
+                        continue;
+                    }
+                };
                 atomic(&marker, &data)?;
                 computed += 1;
                 data
@@ -2677,6 +2684,36 @@ mod thumbnail_cache_tests {
             .count();
         assert_eq!(markers, 64);
         assert_eq!(fs::read(unrelated)?, b"keep");
+        Ok(())
+    }
+
+    #[test]
+    fn a_wallpaper_the_palette_engine_cannot_sample_skips_only_itself() -> Result<()> {
+        let (_home, mut media) = media_fixture()?;
+        let broken = media.library.join("a-truncated.png");
+        let good = media.library.join("b-good.png");
+        image::DynamicImage::new_rgb8(16, 16).save(&broken)?;
+        image::DynamicImage::new_rgb8(16, 16).save(&good)?;
+        let ids = [broken.canonicalize()?, good.canonicalize()?]
+            .map(|path| path.to_string_lossy().into_owned());
+        let mut palette: Value =
+            serde_json::from_slice(&fs::read(media.assets.join("reference-style.json"))?)?;
+        palette["name"] = json!("dynamic");
+        palette["input"] = json!({});
+        let palette_text = serde_json::to_string(&palette)?;
+        media.palette_command = Some(Box::new(move |command| {
+            if command.iter().any(|word| word.contains("a-truncated")) {
+                return Err("Video decoder produced no sample".into());
+            }
+            Ok(Some(palette_text.clone()))
+        }));
+        let mut cli = test_palette_cli(&media)?;
+        let batch = media.prewarm_catalogue(&mut cli, &ids)?;
+        assert_eq!(
+            batch["prepared"], 1,
+            "the good wallpaper after it still gets its palette"
+        );
+        assert_eq!(batch["computed"], 1);
         Ok(())
     }
 

@@ -1486,19 +1486,30 @@ pub async fn catalogue(
             true,
         )
     })?;
-    // Palettes are computed in the background and read back from the marker cache: the entries asked for first, or
-    // (a full listing) every entry still without one, so Strand's caption has its dots before a pearl is focused.
-    let wanted: Vec<String> = match request.ids.as_deref().filter(|ids| !ids.is_empty()) {
+    enqueue_palette_prewarm(&palette_prewarm_ids(
+        request.ids.as_deref(),
+        &catalogue.entries,
+    ));
+    Ok(catalogue)
+}
+
+/// Palettes are computed in the background and read back from the marker cache: the entries asked for first, or
+/// (a full listing) every entry still without one, so Strand's caption has its dots before a pearl is focused.
+/// A library larger than the marker cache gets them from its visible cards' requests instead: prewarming all of it
+/// would evict as many markers as it computes, and the next listing would queue them again.
+fn palette_prewarm_ids(
+    ids: Option<&[String]>,
+    entries: &[nacre_protocol::wallpaper::WallpaperCatalogueEntry],
+) -> Vec<String> {
+    match ids.filter(|ids| !ids.is_empty()) {
         Some(ids) => ids.to_vec(),
-        None => catalogue
-            .entries
+        None if entries.len() > crate::wallpaper_media::PALETTE_CACHE_COUNT => Vec::new(),
+        None => entries
             .iter()
             .filter(|entry| entry.palette.is_none())
             .map(|entry| entry.id.clone())
             .collect(),
-    };
-    enqueue_palette_prewarm(&wanted);
-    Ok(catalogue)
+    }
 }
 
 #[cfg(test)]
@@ -1510,6 +1521,33 @@ mod tests {
         os::unix::fs::{symlink, PermissionsExt},
         time::Duration,
     };
+
+    #[test]
+    fn a_full_listing_prewarms_palettes_only_while_the_library_fits_their_cache() {
+        let entry = |index: usize| nacre_protocol::wallpaper::WallpaperCatalogueEntry {
+            id: format!("/library/{index}.png"),
+            kind: nacre_protocol::wallpaper::WallpaperKind::Image,
+            animated: false,
+            title: String::new(),
+            thumbnail: String::new(),
+            preview: String::new(),
+            active: false,
+            palette: None,
+            video_predecode: None,
+        };
+        let fits: Vec<_> = (0..3).map(entry).collect();
+        let large: Vec<_> = (0..=crate::wallpaper_media::PALETTE_CACHE_COUNT)
+            .map(entry)
+            .collect();
+        assert_eq!(palette_prewarm_ids(None, &fits).len(), 3);
+        assert_eq!(palette_prewarm_ids(Some(&[]), &fits).len(), 3);
+        assert!(
+            palette_prewarm_ids(None, &large).is_empty(),
+            "a library beyond the marker cache would evict what it prewarms"
+        );
+        let visible = ["/library/7.png".to_owned()];
+        assert_eq!(palette_prewarm_ids(Some(&visible), &large), visible);
+    }
 
     fn fixture() -> Result<(tempfile::TempDir, Paths, Shared)> {
         let home = tempfile::tempdir()?;
