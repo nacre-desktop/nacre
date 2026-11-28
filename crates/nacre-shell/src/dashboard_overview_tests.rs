@@ -417,11 +417,14 @@ fn today_stages_system_samples_only_while_open_and_only_when_a_shown_reading_mov
         hidden,
         "hidden: no projection"
     );
-    let cpu =
-        |runtime: &crate::reload::Runtime| match runtime.session.stores.get("dashboard.gauges") {
-            Some(Value::List(gauges)) => gauges[0]["value"].clone(),
-            _ => Json::Null,
-        };
+    let cpu = |runtime: &crate::reload::Runtime| match runtime
+        .session
+        .stores
+        .get("dashboard.gauge.cpu.value")
+    {
+        Some(Value::Text(value)) => json!(value),
+        _ => Json::Null,
+    };
     let scene = runtime
         .stage(UiEvent::PanelVisibility(true))?
         .ok_or("showing stages")?;
@@ -445,10 +448,25 @@ fn today_stages_system_samples_only_while_open_and_only_when_a_shown_reading_mov
     );
     system.publish(sample(42., 6 << 30, 50 << 30))?;
     let wake = rx.recv_timeout(std::time::Duration::from_millis(500))?;
+    bead::core::profile::take_phases();
     let scene = runtime
         .stage(wake)?
         .ok_or("open: a shown reading restages")?;
+    let sample_luau = bead::core::profile::take_phases()[1];
+    assert!(
+        scene
+            .primitives
+            .iter()
+            .any(|p| matches!(p, bead::render::Primitive::Text { text, .. } if text == "42%")),
+        "the reading patches into the scene"
+    );
     runtime.session.commit(scene);
     assert_eq!(cpu(&runtime), json!("42%"));
+    // Red before the bound gauge stores: the sample re-ran the whole page (~1.5 ms of Luau in a debug
+    // build); bound, it patches (~30 us).
+    assert!(
+        sample_luau < 300_000,
+        "a gauge sample patches without the page's Luau: {sample_luau} ns"
+    );
     Ok(())
 }

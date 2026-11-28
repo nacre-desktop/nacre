@@ -147,17 +147,16 @@ return function()
     for i,metric in ipairs(gauges) do
         local w=l.host/3
         local diameter=math.min(w-12,l.metrics-28,64)
-        local fraction=type(metric.fraction)=="number" and metric.fraction or 0
         gaugeRow[i]=ui.Box{id=metric.id,width=w,height=l.metrics,fill="transparent",
             ui.Arc{id="track",position="absolute",left=(w-diameter)/2+2,top=2,
                 width=diameter-4,height=diameter-4,start_angle=-90,sweep_angle=360,
                 stroke_width=4,color=ui.alpha("onSurface",.15),round_caps=true},
             ui.Arc{id="value",position="absolute",left=(w-diameter)/2+2,top=2,
                 width=diameter-4,height=diameter-4,start_angle=-90,
-                sweep_angle=math.max(0,math.min(1,fraction))*360,
+                sweep_angle=ui.bind("dashboard.gauge."..metric.id..".sweep"),
                 stroke_width=4,color="primary",round_caps=true},
             ui.Text{id="reading",position="absolute",left=0,top=(diameter-24)/2,width=w,height=24,
-                text=metric.value,font_size=14*4/3,font_weight=600,text_align="center",color="ink"},
+                text=ui.bind("dashboard.gauge."..metric.id..".value"),font_size=14*4/3,font_weight=600,text_align="center",color="ink"},
             ui.Text{id="label",position="absolute",left=0,top=diameter+8,width=w,height=20,
                 text=metric.label,font_size=10*4/3,text_align="center",color="ink3"}}
     end

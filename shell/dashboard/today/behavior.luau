@@ -104,6 +104,10 @@ local dashboard={stores={
         ["dashboard.artist"]="",["dashboard.album"]="",["dashboard.player_identity"]="",["dashboard.track"]=tr("bead.dashboard.playback-unavailable"),["dashboard.track_detail"]=tr("bead.dashboard.playback-unavailable-detail"),
     ["dashboard.can_previous"]=false,["dashboard.can_toggle"]=false,["dashboard.can_next"]=false,
     ["dashboard.gauges"]={{id="cpu",label=tr("bead.dashboard.gauge-cpu"),icon="developer_board",value="—",detail=tr("bead.dashboard.gauge-unavailable")},{id="memory",label=tr("bead.dashboard.gauge-memory"),icon="memory",value="—",detail=tr("bead.dashboard.gauge-unavailable")},{id="storage",label=tr("bead.dashboard.gauge-storage"),icon="storage",value="—",detail=tr("bead.dashboard.gauge-unavailable")}},
+    -- Bound per gauge (page.luau), so a system sample patches the reading and arc without re-running the page.
+    ["dashboard.gauge.cpu.value"]="—",["dashboard.gauge.cpu.sweep"]=0,
+    ["dashboard.gauge.memory.value"]="—",["dashboard.gauge.memory.sweep"]=0,
+    ["dashboard.gauge.storage.value"]="—",["dashboard.gauge.storage.sweep"]=0,
     ["dashboard.can_seek"]=false,["dashboard.art"]=false,
     ["dashboard.net_down"]={},["dashboard.net_up"]={},["dashboard.net_rate"]="—",["dashboard.net_up_rate"]="—",["dashboard.net_peak"]="",
     ["dashboard.customize"]=false,["dashboard.state"]="unavailable",["dashboard.progress"]=0,["dashboard.minutes"]=25,

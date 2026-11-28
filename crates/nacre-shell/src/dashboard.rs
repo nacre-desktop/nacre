@@ -433,7 +433,9 @@ fn invalid() -> source::Error {
 }
 /// What Today draws from `dashboard.system`: the host card, and a label, the whole-percent reading and
 /// its arc (at that percent) per gauge. Its wake compares these, so the 1 Hz samples that move none of
-/// them (process lists, a few memory pages, CPU tenths) neither wake nor restage the page.
+/// them (process lists, a few memory pages, CPU tenths) neither wake nor restage the page. The list
+/// holds only each gauge's id and label; the reading and sweep are scalar stores the page binds, so a
+/// sample patches them without re-running the page's Luau.
 fn today_system(data: &Json, now: fn() -> u64) -> BTreeMap<String, Value> {
     let mut out = BTreeMap::new();
     if let Ok(CoreSnapshot::System(s)) = checked("dashboard.system", data)
@@ -445,10 +447,24 @@ fn today_system(data: &Json, now: fn() -> u64) -> BTreeMap<String, Value> {
         gauges[2] = json!({"id":"storage","label":tr("bead.dashboard.gauge-storage", &[]),
             "value":disk.map_or("—".into(), |d| format!("{:.0}%", d.used as f64 * 100. / d.total as f64)),
             "fraction":disk.map(|d| (d.used as f64 / d.total as f64).clamp(0.,1.))});
-        let shown = gauges.iter().map(|g| {
-            json!({"id":g["id"],"label":g["label"],"value":g["value"],
-            "fraction":g["fraction"].as_f64().map(|f| (f * 100.).round() / 100.)})
-        });
+        for gauge in &gauges {
+            let id = gauge["id"].as_str().unwrap_or_default();
+            let value = gauge["value"].as_str().unwrap_or("—");
+            let fraction = gauge["fraction"]
+                .as_f64()
+                .map_or(0., |f| (f * 100.).round() / 100.);
+            out.insert(
+                format!("dashboard.gauge.{id}.value"),
+                Value::Text(value.into()),
+            );
+            out.insert(
+                format!("dashboard.gauge.{id}.sweep"),
+                Value::Number(fraction.clamp(0., 1.) * 360.),
+            );
+        }
+        let shown = gauges
+            .iter()
+            .map(|g| json!({"id":g["id"],"label":g["label"]}));
         out.insert("dashboard.gauges".into(), Value::list(shown.collect()));
     }
     out
