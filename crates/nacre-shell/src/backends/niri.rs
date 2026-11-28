@@ -311,6 +311,51 @@ pub fn encode_action(snapshot: &Snapshot, action: &Action) -> Result<NativeActio
         }
     })
 }
+/// Apply niri events until EOF or stop. One snapshot per burst (interaction CPU S4): a workspace switch
+/// arrives as several events in one read (~7.8 bar stagings per switch), so publish only once the
+/// buffer holds no further complete event.
+fn pump<R: std::io::Read>(
+    reader: &mut BufReader<R>,
+    reducer: &mut Reducer,
+    stop: &std::sync::atomic::AtomicBool,
+    mut outputs: impl FnMut() -> Result<HashMap<String, niri_ipc::Output>, Error>,
+    mut publish: impl FnMut(Snapshot),
+) -> Result<(), Error> {
+    let mut line = String::new();
+    let mut changed = false;
+    while !stop.load(Ordering::SeqCst) {
+        line.clear();
+        let n = reader.read_line(&mut line).map_err(protocol)?;
+        if n == 0 {
+            return Err(Error::Disconnected("niri event stream EOF".into()));
+        }
+        if line.len() > 4 * 1024 * 1024 {
+            return Err(protocol("niri event too large"));
+        }
+        let event: Event = serde_json::from_str(&line).map_err(protocol)?;
+        if std::env::var_os("BEAD_RECORD_IPC").is_some() {
+            super::record(
+                "niri-event",
+                serde_json::to_value(&event).map_err(protocol)?,
+            );
+        }
+        let topology = matches!(
+            event,
+            Event::WorkspacesChanged { .. } | Event::ConfigLoaded { .. }
+        );
+        if reducer.apply(event) || topology {
+            if topology {
+                reducer.outputs = outputs()?;
+            }
+            changed = true;
+        }
+        if changed && !reader.buffer().contains(&b'\n') {
+            publish(reducer.snapshot());
+            changed = false;
+        }
+    }
+    Ok(())
+}
 pub fn spawn(transport: Transport, shared: Arc<Shared>) -> JoinHandle<()> {
     thread::spawn(move || {
         super::worker_signals();
@@ -345,32 +390,13 @@ pub fn spawn(transport: Transport, shared: Arc<Shared>) -> JoinHandle<()> {
                     ..Reducer::default()
                 };
                 attempt = 0;
-                while !shared.stop.load(Ordering::SeqCst) {
-                    line.clear();
-                    let n = reader.read_line(&mut line).map_err(protocol)?;
-                    if n == 0 {
-                        return Err(Error::Disconnected("niri event stream EOF".into()));
-                    }
-                    if line.len() > 4 * 1024 * 1024 {
-                        return Err(protocol("niri event too large"));
-                    }
-                    let event: Event = serde_json::from_str(&line).map_err(protocol)?;
-                    super::record(
-                        "niri-event",
-                        serde_json::to_value(&event).map_err(protocol)?,
-                    );
-                    let topology = matches!(
-                        event,
-                        Event::WorkspacesChanged { .. } | Event::ConfigLoaded { .. }
-                    );
-                    if reducer.apply(event) || topology {
-                        if topology {
-                            reducer.outputs = transport.outputs()?;
-                        }
-                        shared.publish(reducer.snapshot());
-                    }
-                }
-                Ok(())
+                pump(
+                    &mut reader,
+                    &mut reducer,
+                    &shared.stop,
+                    || transport.outputs(),
+                    |snapshot| shared.publish(snapshot),
+                )
             })();
             if shared.stop.load(Ordering::SeqCst) {
                 break;
@@ -424,6 +450,64 @@ mod peek_tests {
         let _ = std::fs::remove_file(&path);
         let listener = UnixListener::bind(&path).unwrap();
         (path, listener)
+    }
+
+    /// S4: a burst of events read in one go publishes one snapshot; events that arrive one by one
+    /// still publish each (red: one snapshot per applied event).
+    #[test]
+    fn a_burst_of_niri_events_publishes_one_snapshot() {
+        let lines: Vec<String> = include_str!("fixtures/niri-ipc.jsonl")
+            .lines()
+            .map(|l| serde_json::from_str::<serde_json::Value>(l).unwrap())
+            .filter(|r| r["kind"] == "niri-event")
+            .filter(|r| {
+                [
+                    "WorkspacesChanged",
+                    "WindowsChanged",
+                    "WorkspaceActivated",
+                    "WindowFocusChanged",
+                ]
+                .iter()
+                .any(|k| r["data"].get(*k).is_some())
+            })
+            .map(|r| r["data"].to_string() + "\n")
+            .collect();
+        assert!(lines.len() >= 4, "fixture events");
+        /// Hands out one line per read, as a compositor that writes each event on its own.
+        struct OneByOne(std::collections::VecDeque<Vec<u8>>);
+        impl std::io::Read for OneByOne {
+            fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+                let Some(next) = self.0.pop_front() else {
+                    return Ok(0);
+                };
+                let n = next.len().min(buf.len());
+                buf[..n].copy_from_slice(&next[..n]);
+                if n < next.len() {
+                    self.0.push_front(next[n..].to_vec());
+                }
+                Ok(n)
+            }
+        }
+        let run = |source: Box<dyn std::io::Read>| {
+            let mut published = 0;
+            let mut reducer = Reducer::default();
+            let stop = std::sync::atomic::AtomicBool::new(false);
+            let ended = pump(
+                &mut BufReader::new(source),
+                &mut reducer,
+                &stop,
+                || Ok(HashMap::new()),
+                |_| published += 1,
+            );
+            assert!(matches!(ended, Err(Error::Disconnected(_))));
+            published
+        };
+        let burst = run(Box::new(std::io::Cursor::new(lines.concat().into_bytes())));
+        let drip = run(Box::new(OneByOne(
+            lines.iter().map(|l| l.clone().into_bytes()).collect(),
+        )));
+        assert_eq!(burst, 1, "one read, one snapshot");
+        assert!(drip > 1, "events read one by one each publish: {drip}");
     }
 
     #[test]
