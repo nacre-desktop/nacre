@@ -193,6 +193,16 @@ fn trim_thumbnail_cache(
     Ok(())
 }
 
+/// The poster-independent state a palette marker hashes (Media::marker_inputs).
+struct MarkerInputs {
+    active: Value,
+    engine: String,
+    scheme: Value,
+    config: Value,
+    settings: Value,
+    saved: Value,
+}
+
 pub struct Media {
     pub paths: Paths,
     pub assets: PathBuf,
@@ -811,6 +821,7 @@ impl Media {
     ) -> Result<Value> {
         let started = std::time::Instant::now();
         let mut attempted = 0usize;
+        let inputs = self.marker_inputs()?;
         fs::create_dir_all(&self.library)?;
         fs::create_dir_all(self.library.join("Dynamic"))?;
         let mut entries = walkdir::WalkDir::new(&self.library)
@@ -855,7 +866,7 @@ impl Media {
                                 .is_some_and(|requested| requested.contains(&id));
                             if (targeted || full_catalogue)
                                 && palette_count < CATALOGUE_PALETTE_LIMIT
-                                && self.attach_cached_palette(&mut value)?
+                                && self.attach_cached_palette(&mut value, &inputs)?
                             {
                                 palette_count += 1;
                             }
@@ -875,7 +886,7 @@ impl Media {
                                     .is_some_and(|requested| requested.contains(&id));
                                 if (targeted || full_catalogue)
                                     && palette_count < CATALOGUE_PALETTE_LIMIT
-                                    && self.attach_cached_palette(&mut value)?
+                                    && self.attach_cached_palette(&mut value, &inputs)?
                                 {
                                     palette_count += 1;
                                 }
@@ -890,7 +901,7 @@ impl Media {
                         .is_some_and(|requested| requested.contains(&id));
                     if (targeted || full_catalogue)
                         && palette_count < CATALOGUE_PALETTE_LIMIT
-                        && self.attach_cached_palette(&mut value)?
+                        && self.attach_cached_palette(&mut value, &inputs)?
                     {
                         palette_count += 1;
                     }
@@ -919,13 +930,12 @@ impl Media {
             json!({"entries":rows,"preferences":self.settings()?,"media":self.media_state()?,"errors":errors,"palettes":palettes}),
         )
     }
-    fn attach_cached_palette(&self, item: &mut Value) -> Result<bool> {
+    fn attach_cached_palette(&self, item: &mut Value, inputs: &MarkerInputs) -> Result<bool> {
         let Some(poster) = item["poster"].as_str().map(Path::new) else {
             return Ok(false);
         };
         let source = item["path"].as_str().map(Path::new);
-        let scheme = state::read(&self.paths.state.join("scheme.json"), json!({}))?;
-        let settings = self.settings()?;
+        let (scheme, settings) = (&inputs.scheme, &inputs.settings);
         let automatic = json::truthy(&settings["paletteAutoMode"]);
         let selected_mode = settings["paletteMode"].as_str().unwrap_or("dark");
         let modes = if automatic {
@@ -942,7 +952,8 @@ impl Media {
         };
         let mut cached = None;
         for mode in modes {
-            let Ok(marker) = self.palette_marker(
+            let Ok(marker) = self.palette_marker_with(
+                inputs,
                 poster,
                 scheme["flavour"].as_str().unwrap_or("default"),
                 None,
@@ -1992,6 +2003,32 @@ impl Media {
         }
         Ok(json!(copied))
     }
+    /// What every palette marker shares. A catalogue reads it once: each owned-settings read is a
+    /// daemon round trip, and per-row reads made a 257-file list call take 5 s.
+    fn marker_inputs(&self) -> Result<MarkerInputs> {
+        let runtime = self.paths.share.join("palette-runtime");
+        let cli = runtime.join("venv/bin/nacre_shell");
+        let marker = runtime.join("orient-build.json");
+        let legacy = if marker.exists() {
+            fs::read_to_string(marker)?
+        } else if cli.exists() {
+            nanos(&fs::metadata(cli)?).to_string()
+        } else {
+            "uninstalled".into()
+        };
+        Ok(MarkerInputs {
+            active: self.media_state()?,
+            engine: format!("{}:{legacy}", palette_code_identity()),
+            scheme: state::read(&self.paths.state.join("scheme.json"), json!({}))?,
+            config: state::read(&self.paths.config.join("cli.json"), json!({}))?,
+            settings: self.settings()?,
+            saved: crate::owned_settings::read(
+                &self.paths.config.join("colors.json"),
+                "colors",
+                json!({}),
+            )?,
+        })
+    }
     pub fn palette_marker(
         &self,
         poster: &Path,
@@ -2001,9 +2038,37 @@ impl Media {
         mode: Option<&str>,
         personality: Option<&str>,
     ) -> Result<PathBuf> {
+        self.palette_marker_with(
+            &self.marker_inputs()?,
+            poster,
+            flavour,
+            harmony,
+            source,
+            mode,
+            personality,
+        )
+    }
+    #[allow(clippy::too_many_arguments)] // The shared inputs plus palette_marker's own.
+    fn palette_marker_with(
+        &self,
+        inputs: &MarkerInputs,
+        poster: &Path,
+        flavour: &str,
+        harmony: Option<bool>,
+        source: Option<&Path>,
+        mode: Option<&str>,
+        personality: Option<&str>,
+    ) -> Result<PathBuf> {
         use chrono::Timelike;
+        let MarkerInputs {
+            active,
+            engine,
+            scheme,
+            config,
+            settings,
+            saved,
+        } = inputs;
         let meta = fs::metadata(poster)?;
-        let active = self.media_state()?;
         let selected = source
             .filter(|path| !path.as_os_str().is_empty())
             .map(Path::to_path_buf)
@@ -2019,25 +2084,6 @@ impl Media {
             .filter(|path| path.is_file())
             .unwrap_or(poster);
         let original_meta = fs::metadata(original)?;
-        let runtime = self.paths.share.join("palette-runtime");
-        let cli = runtime.join("venv/bin/nacre_shell");
-        let marker = runtime.join("orient-build.json");
-        let legacy = if marker.exists() {
-            fs::read_to_string(marker)?
-        } else if cli.exists() {
-            nanos(&fs::metadata(cli)?).to_string()
-        } else {
-            "uninstalled".into()
-        };
-        let engine = format!("{}:{legacy}", palette_code_identity());
-        let scheme = state::read(&self.paths.state.join("scheme.json"), json!({}))?;
-        let config = state::read(&self.paths.config.join("cli.json"), json!({}))?;
-        let settings = self.settings()?;
-        let saved = crate::owned_settings::read(
-            &self.paths.config.join("colors.json"),
-            "colors",
-            json!({}),
-        )?;
         let absolute = crate::paths::weak_canonical(poster)?;
         let choice = saved["wallpapers"]
             .get(absolute.to_string_lossy().as_ref())
