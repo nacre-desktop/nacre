@@ -10601,6 +10601,11 @@ impl SceneSource for Runtime {
     fn scroll_step_regions(&self) -> Vec<bead::wayland::StepRegion> {
         self.session.scroll_step_regions()
     }
+    /// B0419 U5a2: without the viewports a worker-path scroll burst never sends ScrollSettled
+    /// (no on_settle, no plane re-bake at rest).
+    fn scroll_viewports(&self) -> Vec<bead::render::ScrollViewport> {
+        self.session.scroll_viewports()
+    }
     fn outside_dismiss(&self) -> bool {
         self.session.stores.get("chat.pinned") != Some(&bead::core::Value::Bool(true))
     }

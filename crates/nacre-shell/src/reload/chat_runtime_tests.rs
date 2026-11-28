@@ -553,3 +553,17 @@ fn a_running_chats_pulse_does_not_project_every_frame() {
         calls.get()
     );
 }
+
+/// B0419 U5a2: the runtime hands Bead its scroll viewports, or a worker-path scroll burst never
+/// sends ScrollSettled (no on_settle, no plane re-bake at rest).
+#[test]
+fn the_runtime_forwards_its_scroll_viewports() {
+    let _guard = serial();
+    let mut runtime = runtime_section(crate::chat::tests::running_chat(), "launcher");
+    runtime.viewport(420, 600);
+    step(&mut runtime, UiEvent::Model(BTreeMap::new()));
+    assert!(
+        !bead::wayland::SceneSource::scroll_viewports(&runtime).is_empty(),
+        "the chat list's ui.Scroll is not handed to Bead"
+    );
+}

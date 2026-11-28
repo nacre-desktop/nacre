@@ -50,6 +50,8 @@ export type Props = {
     overscan:any?,
     ready:any?,
     axis:any?,
+    on_settle:any?,
+    snap:any?,
     scrollbar:any?,
     fill:any?,
     radial:any?,
