@@ -12,7 +12,7 @@ use std::{
     collections::BTreeMap,
     rc::Rc,
     sync::Arc,
-    time::{Duration, Instant},
+    time::{Duration, Instant, SystemTime},
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -161,6 +161,10 @@ struct State {
     catalogue_refreshing: bool,
     /// Until when a closed Strand wakes the runtime to send that refresh once the daemon boot is known.
     refresh_until: Option<Instant>,
+    /// When the full listing in flight was sent, and when the last accepted one was (this boot): an open lists
+    /// again only if a library folder changed after that, see [`library_changed`].
+    catalogue_list_sent: Option<SystemTime>,
+    catalogue_listed_at: Option<SystemTime>,
     catalogue_result: Vec<Json>,
     /// The projected picker rows with what they were built from; rebuilt only when that changes, since
     /// project() runs on every Strand frame. `catalogue_generation` counts entry edits the key cannot see.
@@ -573,6 +577,49 @@ pub struct Extras {
     /// A closed Strand with its daemon leases dropped (N0231b), see [`Self::park`].
     parked: std::cell::Cell<bool>,
 }
+/// Whether a library folder (the entries' common folder, its parent or a folder below it) changed after
+/// `listed_at`: a file added, removed or renamed in it. A catalogue never listed in this boot counts as changed.
+fn library_changed(entries: &[Json], listed_at: Option<SystemTime>) -> bool {
+    let Some(listed_at) = listed_at else {
+        return true;
+    };
+    let paths: Vec<&std::path::Path> = entries
+        .iter()
+        .filter_map(|entry| entry["id"].as_str().map(std::path::Path::new))
+        .collect();
+    let Some(mut root) = paths.first().and_then(|path| path.parent()) else {
+        return false;
+    };
+    for path in &paths {
+        while !path.starts_with(root)
+            && let Some(parent) = root.parent()
+        {
+            root = parent;
+        }
+    }
+    // And the common folder's parent, so a library kept in one subfolder sees a new sibling folder (not the home
+    // folder or the root, whose entries change for other reasons).
+    let home = std::env::var_os("HOME").map(std::path::PathBuf::from);
+    let parent = root
+        .parent()
+        .filter(|parent| parent.parent().is_some() && Some(*parent) != home.as_deref());
+    let folders: std::collections::BTreeSet<&std::path::Path> = paths
+        .iter()
+        .flat_map(|path| {
+            path.ancestors()
+                .skip(1)
+                .take_while(|folder| folder.starts_with(root))
+        })
+        .chain(parent)
+        .collect();
+    // shortcut: an unreadable folder counts as unchanged (its parent records the removal); a removed library root
+    // itself waits for the next boot's refresh.
+    folders.into_iter().any(|folder| {
+        std::fs::metadata(folder)
+            .and_then(|metadata| metadata.modified())
+            .is_ok_and(|modified| modified > listed_at)
+    })
+}
 fn preload_wallpaper_catalogue(state: &mut State, boot: &str, active_path: &str) -> bool {
     if state.catalogue_preloaded || !state.catalogue_result.is_empty() {
         return false;
@@ -943,6 +990,7 @@ impl Extras {
                 state.catalogue_request_boot = None;
                 state.catalogue_result.clear();
                 state.catalogue_preloaded = false;
+                state.catalogue_listed_at = None;
                 state.catalogue_request_ids.clear();
                 state.catalogue_request_handles.clear();
                 state.catalogue_pending_handles.clear();
@@ -973,13 +1021,18 @@ impl Extras {
             if open && let Some(boot) = boot.as_ref() {
                 preload_wallpaper_catalogue(&mut state, boot, &wallpaper_active_path);
             }
+            // An empty catalogue lists on open; a shown one lists again when the library changed since its last
+            // listing (files added during the session, or a snapshot from an earlier run), not on every reopen.
             if open
                 && boot.is_some()
                 && state.catalogue.is_none()
-                && !state.catalogue_preloaded
-                && state.catalogue_result.is_empty()
-                && state.catalogue_boot != boot
-                && (wallpaper_opened || state.catalogue_request_boot != boot)
+                && ((!state.catalogue_preloaded
+                    && state.catalogue_result.is_empty()
+                    && state.catalogue_boot != boot
+                    && (wallpaper_opened || state.catalogue_request_boot != boot))
+                    || (wallpaper_opened
+                        && !state.catalogue_result.is_empty()
+                        && library_changed(&state.catalogue_result, state.catalogue_listed_at)))
             {
                 state.catalogue_refresh_boot = boot.clone();
                 if state.catalogue_boot != boot {
@@ -987,10 +1040,9 @@ impl Extras {
                 }
                 state.catalogue_request_ids.clear();
                 state.catalogue_request_handles.clear();
+                state.catalogue_list_sent = Some(SystemTime::now());
                 state.catalogue =
                     self.begin("wallpaper.catalogue", json!({"ids": []}), wake.clone());
-                // Keep the last valid snapshot across closes. Only an empty/missing catalogue
-                // needs a full refresh; otherwise every reopen would respawn the ID scan.
                 if state.catalogue.is_some() {
                     state.catalogue_request_boot = boot.clone();
                 }
@@ -1011,6 +1063,7 @@ impl Extras {
                 if state.catalogue_result.is_empty() {
                     state.catalogue_refresh_boot = boot.clone();
                 } else {
+                    state.catalogue_list_sent = Some(SystemTime::now());
                     state.catalogue =
                         self.begin("wallpaper.catalogue", json!({"ids": []}), wake.clone());
                     if state.catalogue.is_some() {
@@ -1122,6 +1175,7 @@ impl Extras {
                                 });
                         state.catalogue_result = incoming;
                         state.catalogue_boot = boot.clone();
+                        state.catalogue_listed_at = state.catalogue_list_sent.take();
                     } else {
                         for entry in incoming {
                             let Some(id) = entry["id"].as_str() else {

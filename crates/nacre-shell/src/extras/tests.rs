@@ -4762,6 +4762,53 @@ async fn snapshot_loaded_catalogue_refreshes_once_per_boot_while_closed_without_
 }
 
 #[tokio::test(flavor = "current_thread")]
+async fn an_opened_strand_lists_again_only_after_its_library_changed() {
+    let library = std::env::temp_dir().join(format!("nacre-strand-library-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&library);
+    std::fs::create_dir_all(library.join("Picks")).unwrap();
+    let old = library.join("Picks/old.jpg").to_string_lossy().into_owned();
+    std::fs::write(&old, b"").unwrap();
+    let mut lab = lab_with_catalogue(json!([
+        {"id":old,"kind":"image","animated":false,"title":"Old","thumbnail":"","preview":"","active":true}
+    ]))
+    .await;
+    let wallpaper = Extras::new(Kind::Wallpaper, lab.client.clone()).unwrap();
+    snapshot_loaded(&wallpaper, "");
+    wallpaper.state.borrow_mut().catalogue_result = vec![snapshot_entry(&old, "image", "")];
+    let (open, closed) = (panel(true), panel(false));
+    let full = ("wallpaper.catalogue".to_owned(), json!({"ids":[]}));
+    let wake = || -> Option<CallWake> { Some(Arc::new(|| {})) };
+    // A snapshot from an earlier run was never listed in this boot: its first open lists.
+    wallpaper.project(&open, wake());
+    let first = tokio::time::timeout(Duration::from_secs(2), lab.calls.recv()).await;
+    assert_eq!(
+        first.ok().flatten(),
+        Some(full.clone()),
+        "the first open lists"
+    );
+    settle_refresh(&wallpaper, &open).await;
+    wallpaper.project(&closed, wake());
+    wallpaper.project(&open, wake());
+    wallpaper.project(&closed, wake());
+    assert!(
+        lab.calls.try_recv().is_err(),
+        "an unchanged library is not listed again, open or closed"
+    );
+    // Folder mtimes come from the kernel's coarse clock.
+    tokio::time::sleep(Duration::from_millis(20)).await;
+    std::fs::create_dir(library.join("Candidates")).unwrap();
+    std::fs::write(library.join("Candidates/new.jpg"), b"").unwrap();
+    wallpaper.project(&open, wake());
+    let relisted = tokio::time::timeout(Duration::from_secs(2), lab.calls.recv()).await;
+    let _ = std::fs::remove_dir_all(&library);
+    assert_eq!(
+        relisted.ok().flatten(),
+        Some(full),
+        "a folder of new wallpapers reaches the next open"
+    );
+}
+
+#[tokio::test(flavor = "current_thread")]
 async fn catalogue_refresh_drops_stale_predecode_and_keeps_warm_thumbnails() {
     let mut lab = lab_with_topics(vec!["wallpaper.active".into()]).await;
     let wallpaper = Extras::new(Kind::Wallpaper, lab.client.clone()).unwrap();
