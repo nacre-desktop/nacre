@@ -212,13 +212,16 @@ else
     local running_count=0
     for _,chat in get("launcher.chats") do if chat.state=="running" or chat.state=="open" then running_count+=1 end end
     local running_sub=string.lower(ui.tr("bead.panel.launcher-running"))
+    -- The running dots breathe only while the sidebar is fully open; through its slides and while parked they hold the
+    -- pulse's first value (a pulse in the sliding layer re-prepared the whole layer every frame, P1 2026-11-28).
+    local settled=get("panel.settled")~=false
     add(launcher{id="recent-chats",scroll=ui.bind("launcher.scroll"),position="absolute",left=E,top=rows_top,width=INNER,height=list_h,
         gap=T.spacing.xs,row_height=function(item) return ROW+((item.group or "")~="" and GROUP_H or 0) end,model=ui.bind("launcher.chats"),key="key",render=function(item)
             -- Working: the pulsing green halo; open and waiting for input: a primary dot (as in the AI app).
             local active=item.state=="running"
             local open=active or item.state=="open"
             -- Row 83: a sampled 1.6 s Bead loop, so the breathing dot runs no projection or Luau per frame.
-            local pulse=active and ui.pulse("chat.running-pulse:"..item.key,1.6,0,1) or nil
+            local pulse=active and settled and ui.pulse("chat.running-pulse:"..item.key,1.6,0,1) or nil
             local ws=item.workspace or ""
             local ws_w=ws~="" and ui.text_width(ws,T.fonts.sans,CAPTION)+2*T.spacing.sm or 0
             local text_w=INNER-2*PAD_X-HALO-T.spacing.compact-(ws_w>0 and ws_w+T.spacing.compact or 0)
@@ -228,8 +231,8 @@ else
                 on_activate=get("launcher.can_open") and action("launcher:open:"..item.key) or nil,
                 ui.Row{id="line",width=INNER-2*PAD_X,height=ROW-2*PAD_Y,gap=T.spacing.compact,align="center",
                     -- Running: the shared pearl recipe (bar/pearl.luau) over a pulsing success fill; idle: a dim dot.
-                    ui.Box{id="halo",width=HALO,height=HALO,radius=T.radii.full,fill=active and ui.alpha("success",ui.track(pulse,{0,1},{.1375,.25})) or "transparent",align="center",justify="center",
-                        ui.Box{id="running-dot",width=DOT,height=DOT,radius=T.radii.full,fill=active and ui.alpha("success",ui.track(pulse,{0,1},{.55,1})) or open and "primary" or ui.alpha("onSurface",.3),
+                    ui.Box{id="halo",width=HALO,height=HALO,radius=T.radii.full,fill=active and ui.alpha("success",pulse and ui.track(pulse,{0,1},{.1375,.25}) or .1375) or "transparent",align="center",justify="center",
+                        ui.Box{id="running-dot",width=DOT,height=DOT,radius=T.radii.full,fill=active and ui.alpha("success",pulse and ui.track(pulse,{0,1},{.55,1}) or .55) or open and "primary" or ui.alpha("onSurface",.3),
                             radial=active and kit.tokens.gradients and pearl.layers(false) or nil}},
                     ui.Column{id="chat-detail",width=text_w,height=ROW-2*PAD_Y,gap=0,
                         ui.Text{id="title",text=item.title,width=text_w,height=TITLE_H,font_size=BODY,font_weight=500,color="onSurface"},

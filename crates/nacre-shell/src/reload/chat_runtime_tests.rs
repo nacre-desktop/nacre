@@ -554,6 +554,47 @@ fn a_running_chats_pulse_does_not_project_every_frame() {
     );
 }
 
+/// P1 2026-11-28: a running chat's dot breathes only while the sidebar is fully open. Through its slides
+/// and while parked it holds still (a pulse in the sliding layer re-prepared the whole layer each frame).
+#[test]
+fn a_running_chats_pulse_holds_still_while_the_sidebar_slides() {
+    let _guard = serial();
+    let mut runtime = runtime_section(crate::chat::tests::running_chat(), "launcher");
+    runtime.viewport(420, 600);
+    step(
+        &mut runtime,
+        UiEvent::Model(BTreeMap::from([(
+            "view.edge".into(),
+            bead::core::Value::Text("left".into()),
+        )])),
+    );
+    let pulsing = |runtime: &Runtime| runtime.session.preview_deadline().is_some();
+    assert!(pulsing(&runtime), "a shown running chat breathes");
+    step(&mut runtime, UiEvent::PanelVisibility(false));
+    step(&mut runtime, UiEvent::Model(BTreeMap::new()));
+    assert!(
+        !pulsing(&runtime),
+        "a closing or parked sidebar holds its dot still"
+    );
+    step(&mut runtime, UiEvent::PanelVisibility(true));
+    assert!(
+        runtime.session.motion_duration(true).is_some(),
+        "the sidebar slides open"
+    );
+    runtime.presented(0);
+    step(&mut runtime, UiEvent::Model(BTreeMap::new()));
+    assert!(!pulsing(&runtime), "the opening slide holds the dot still");
+    let hold = runtime
+        .panel_animation_hold_until
+        .expect("the slide holds the view");
+    std::thread::sleep(hold.saturating_duration_since(std::time::Instant::now()));
+    step(&mut runtime, UiEvent::Model(BTreeMap::new()));
+    assert!(
+        pulsing(&runtime),
+        "the dot breathes again once the sidebar is fully open"
+    );
+}
+
 /// B0419 U5a2: the runtime hands Bead its scroll viewports, or a worker-path scroll burst never
 /// sends ScrollSettled (no on_settle, no plane re-bake at rest).
 #[test]

@@ -6463,6 +6463,22 @@ impl SceneSource for Runtime {
             // Row 83 (3a): a sliding panel has the GPU to itself; the video wallpaper holds its frame.
             crate::wallpaper_motion::hold_for(duration);
         }
+        // The sidebar's running pulses wait for `panel.settled`: false from each visibility change until the
+        // slide's hold ends (wakeup_at wakes the view then), so no pulse animates inside a sliding layer.
+        if self.chat.is_some()
+            && let UiEvent::Model(values) = &mut event
+        {
+            let settled = self.session.stores.get("panel.open")
+                != Some(&bead::core::Value::Bool(false))
+                && self.pending_panel_animation_duration.is_none()
+                && self
+                    .panel_animation_hold_until
+                    .is_none_or(|until| now >= until);
+            if self.session.stores.get("panel.settled") == Some(&bead::core::Value::Bool(!settled))
+            {
+                values.insert("panel.settled".into(), bead::core::Value::Bool(settled));
+            }
+        }
         // (d)(i): a hero preview frame redraws the shown scene with new pixels. Only with no scene
         // in flight (that one would be lost); otherwise the projection below takes the frame.
         if let UiEvent::Model(values) = &mut event
@@ -9388,6 +9404,9 @@ impl SceneSource for Runtime {
                     self.tray_requested_close = false;
                 }
                 let mut values = panel_visibility_changes(open, self.launcher.is_some());
+                if self.chat.is_some() {
+                    values.insert("panel.settled".into(), bead::core::Value::Bool(false));
+                }
                 // Owner 2026-11-14: a closed dock forgets its page, so the lip (hover, push or
                 // key) always reopens the overview; only a status click's model picks a section.
                 // Owner 2026-11-16: forgotten on the next open, not at the close, which slides
