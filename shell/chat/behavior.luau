@@ -2,6 +2,8 @@
 -- Stores below are projected by `chat.rs`; the view only reads them.
 return {stores={
     ["panel.open"]=true,["panel.hover_opened"]=false,["panel.anchor_hovered"]=false,["view.detached"]=false,["view.edge"]="left",
+    -- False through the sidebar's slides and while it is parked (reload.rs): the running dots pulse only when true.
+    ["panel.settled"]=true,
     ["chat.labels"]={},["chat.section"]="launcher",["chat.pinned"]=false,["chat.height"]=0,["chat.edge"]=0,["chat.button"]=0,["chat.inner"]=0,
     ["chat.draft"]="",["chat.placeholder"]="",
     ["chat.scroll"]=0,["chat.extent"]=0,["chat.cells"]={},["chat.empty"]=true,
